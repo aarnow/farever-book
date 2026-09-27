@@ -408,18 +408,6 @@ class MenuWindow:
         t = msg.get("t")
         if t == "state":
             self._push(msg.get("d") or {})
-        elif t == "sheet":
-            # The status icon sprite sheet, once per page load. Passed as JSON
-            # arguments for the same reason the state is — it is a data URI,
-            # and interpolating half a megabyte into a script expression is a
-            # different kind of mistake but still a mistake.
-            try:
-                self.window.evaluate_js(
-                    "window.setIconSheet(%s,%d,%d)"
-                    % (json.dumps(msg.get("uri") or ""),
-                       int(msg.get("cell") or 64), int(msg.get("cols") or 16)))
-            except Exception as e:
-                _log(f"icon sheet push failed: {e!r}")
         elif t == "show":
             self.show()
         elif t == "hide":

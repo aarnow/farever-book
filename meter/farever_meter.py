@@ -45,7 +45,6 @@ import json
 import math
 import os
 import queue
-import random
 import re
 import subprocess
 import sys
@@ -277,63 +276,9 @@ KILL_TOAST_SECS = 8.0       # how long the time stays on screen
 RESET_TOAST_SECS = 2.2
 RESET_TOAST_TEXT = ("Reset Successful",
                     "Awaiting new combat data")
-# The codex toast gets its own strip below the kill time, for the same reason
-# the kill time has one: mastering a codex entry and killing a boss are the
-# same event often enough (a boss IS a codex entry, and one kill masters it)
-# that sharing a line would have them overwrite each other.
-TOP_STRIP_CODEX = 288
-# Much shorter than the kill toast. This one fires on ordinary kills, so it has
-# to be gone before the next one arrives or a grind turns the strip into a
-# permanent fixture. The completion toast holds longer — it's the rare one.
-CODEX_TOAST_SECS = 2.2
-CODEX_MASTER_TOAST_SECS = 6.0
-# st.Player.notifyCodexUnit__impl's `kind` argument. Measured: the names are
-# NOT what they suggest — CodexDiscovered is rank 1, CodexCompleted is an
-# INTERMEDIATE rank-up, and only CodexMastered means the entry is finished.
-CODEX_DISCOVERED = "CodexDiscovered"
-CODEX_RANKED = "CodexCompleted"
-CODEX_MASTERED = "CodexMastered"
 
-# The sparkly tracker's panel, below the codex line. It PERSISTS while a
-# sparkling unit is in range rather than flashing like the toasts above it, so
-# it gets the bottom of the stack where nothing else will overwrite it.
-TOP_STRIP_SPARKLY = 336
-# The arrow's half-width in degrees is not a constant here — the glyph is drawn
-# from these three radii, which keep it readable at every UI scale.
-SPARKLY_ARROW_R = 15.0          # px at 100%, the arrow's reach from centre
-SPARKLY_PAD = 9
-# Which categories the tracker will point at. CRITTERS ONLY, deliberately.
-#
-# The game's Spark flag covers 36 units and only ten are critters; the rest are
-# the rare `_U` variants of ordinary mobs — Sparkling Builder (a bee),
-# Sparkling Skunk, Sparkling Crab. Those are combat spawns you meet by walking
-# into them, not things you cross a zone to find, and having the panel announce
-# one made the tracker useless for what it is for. The MAP still haloes every
-# sparkling unit, because marking a rare variant you can see is information
-# rather than a directive.
-SPARKLY_TRACK_CATS = ("critter",)
 
-# Sparkling critters the tracker stays quiet about, by unit kind rather than by
-# display name — the id is what the game replicates, and a name is a localized
-# string that can change under us.
-#
-# Sheep_Spark ("Sparkling Woolybell") is a fixed-point respawn: it comes back on
-# a timer in the same spot, so it is free rather than found. The tracker points
-# at the NEAREST sparkling critter, and a guaranteed one sitting in a known
-# place wins that contest more or less permanently — which is how one farmable
-# sheep ends up hiding the nine that are actually worth crossing a zone for.
-#
-# Deliberately not applied to the map: the halo there is information about what
-# is around you, and this list is about what deserves to interrupt you. Same
-# split SPARKLY_TRACK_CATS already draws.
-SPARKLY_TRACK_SKIP = ("Sheep_Spark",)
 
-# Once a sparkly leaves the sweep the panel lingers this long before going.
-# The client streams entities in and out (see WorldSnapshot), so a sparkling
-# critter at range drops out for a second or two at a time — without this the
-# panel would blink while you were running toward it, which is the one moment
-# it has to hold still.
-SPARKLY_KEEP_SECS = 6.0
 
 OVERLAY_ALPHA = 0.94
 # Extra see-through on top of that, from the Transparency slider. 0 leaves the
@@ -390,641 +335,35 @@ TOGGLEABLE_ELEMENTS = (
     ("meter", "Damage meter"),
     ("detail", "Breakdown"),
     ("rift", "Rift timer"),
-    ("minimap", "Minimap"),
-    ("compass", "Compass"),
-    # One row for ALL the buff trays, not one per tray. The trays are made and
-    # unmade from the Buffs tab, so a Windows-tab row per tray would be a list
-    # that changes shape under you; this is the "get them all off my screen"
-    # control, and which individual trays exist is the other tab's business.
-    # See _element_show_key for how the per-tray windows share this one mode.
-    ("buffs", "Buff trays"),
 )
-
-# ---------------------------------------------------------------------------
-# Buff trays
-# ---------------------------------------------------------------------------
-# Four is a ceiling, not a target: the windows are built once at startup and
-# the machinery that shows, fades and positions overlay windows is keyed by
-# name, so they cannot be created on demand without making all of that
-# dynamic. Four separately-placeable trays is more than the screen has good
-# corners for, and each one holds as many buffs as you like.
-BUFF_TRAY_MAX = 4
-BUFF_TRAY_KEY = "buffs"                     # the TOGGLEABLE_ELEMENTS row
-# How long "is anything in this tray up?" is reused for. Asked from the 30Hz
-# visibility pass, answered from a set the hook rewrites far more slowly.
-TRAY_LIVE_CACHE_SECS = 0.15
-
-# Icon edge in pixels, before the UI scale is applied.
-BUFF_ICON_MIN, BUFF_ICON_MAX = 20, 72
-BUFF_ICON_DEFAULT = 44
-# Gap between icons, as a fraction of the icon — so spacing stays proportional
-# when the size slider moves rather than crowding at large sizes.
-BUFF_GAP_RATIO = 0.16
-# How the icons run. Stored as "row"/"col"; shown as words, because a dropdown
-# reading "col" is the internal name leaking onto the screen.
-BUFF_LAYOUTS = ("row", "col")
-BUFF_LAYOUT_LABEL = {"row": "Across", "col": "Down"}
-BUFF_LAYOUT_BY_LABEL = {v: k for k, v in BUFF_LAYOUT_LABEL.items()}
-
-# When a tracked buff is NOT up. Showing a dark placeholder keeps the tray a
-# fixed size and the icons in fixed places, which is what makes it readable
-# with peripheral vision — the thing you are actually doing with a buff tray.
-# Hiding them makes a tidier overlay that reshuffles as buffs come and go.
-# Which way a tray grows as icons are added or drop off.
-#
-# The saved position stops being the window's top-left and becomes its ANCHOR:
-# the edge (or centre) that holds still while the rest moves. Without this a
-# tray always grew right/down from a fixed left edge, which is wrong for one
-# put against the right of the screen — it grew off it — and wrong for one
-# centred under the crosshair, which drifted sideways as buffs came and went.
-BUFF_ALIGNS = ("start", "center", "end")
-BUFF_ALIGN_START, BUFF_ALIGN_CENTER, BUFF_ALIGN_END = BUFF_ALIGNS
-# Labelled by what they DO, which depends on the direction the tray is laid
-# out in — "end" means leftwards across and upwards down.
-BUFF_ALIGN_LABELS = {
-    "row": {BUFF_ALIGN_START: "Grow right",
-            BUFF_ALIGN_CENTER: "Grow from centre",
-            BUFF_ALIGN_END: "Grow left"},
-    "col": {BUFF_ALIGN_START: "Grow down",
-            BUFF_ALIGN_CENTER: "Grow from centre",
-            BUFF_ALIGN_END: "Grow up"},
-}
-
-BUFF_INACTIVE_MODES = ("Dim placeholder", "Hide")
-BUFF_INACTIVE_DIM, BUFF_INACTIVE_HIDE = BUFF_INACTIVE_MODES
-
-# "Where IS tray 3?" — opening the Buffs tab, or selecting a tray, makes that
-# tray announce itself on screen for a moment. It overrides every hiding rule
-# while it runs, because the whole question being answered is "where is the one
-# I cannot see", and a tray that is off, empty, or hidden is exactly the tray
-# you have lost. See _reveal_tray.
-BUFF_REVEAL_SECS = 2.2
-BUFF_REVEAL_HZ = 1.6
-# An empty tray has no icons to outline, so the reveal draws one cell-sized
-# marker carrying the tray's number — something to see, and something to drag.
-BUFF_REVEAL_EMPTY_CELL = 46
-
-# The flash when a buff lands, and the warning flash before it drops.
-BUFF_FLASH_SECS = 0.6           # how long the "it's up" flash lasts
-BUFF_FLASH_HZ = 6.0             # flashes per second while it runs
-BUFF_EXPIRY_WARN_SECS = 3.0     # when the about-to-drop pulse starts
-BUFF_EXPIRY_WARN_HZ = 2.5
-# A buff whose remaining time is under this reads in tenths ("2.4") instead of
-# whole seconds, which is the range where a tenth actually changes a decision.
-BUFF_TIMER_PRECISE_UNDER = 5.0
-
-# The ink the cooldown wedge and the not-up wash are drawn in.
-#
-# A FIXED DARK, deliberately not a theme colour. Everything else in the overlay
-# sits on one of our own panels, so it takes the theme's body colour; a buff
-# icon sits on the game's artwork with nothing behind it, and "shade this" only
-# ever means "make it darker". Drawn from the palette instead, this used
-# BG_BODY — which on the parchment themes is #F2E1CB, so the spent half of
-# every cooldown came out BLEACHED CREAM and the icons read as damaged.
-BUFF_SHADE = "#0B0906"
-# How hard the two shadings hit, as an alpha over the icon.
-#
-# These are composited INTO the icon with Pillow rather than drawn over it on
-# the canvas, because Tk's `stipple` — the only translucency a canvas offers —
-# is silently IGNORED on this build. Measured 2026-08-08: a gray50-stippled
-# black arc and a gray50-stippled black rectangle over white both came out
-# 100% dark, so every "half-shaded" thing drawn that way was a solid slab.
-# Anything that needs to look see-through has to be made see-through before it
-# reaches the canvas.
-BUFF_SWEEP_ALPHA = 0.55        # the spent side of the cooldown clock
-BUFF_DIM_ALPHA = 0.72          # a tracked buff that is not currently up
-
-# The about-to-drop pulse. Not FG_WARN, for the same reason the shade above is
-# not BG_BODY: FG_WARN is tuned to stay readable ON THE CREAM BODY and comes
-# out a muddy brick over the game's own artwork, where the pulse actually
-# lives. This is a red picked to be seen at the edge of vision.
-BUFF_WARN_INK = "#FF3B30"
-
-# The cooldown wedge is quantised, because each distinct fraction is a separate
-# composited image. 48 steps is 7.5 degrees — smooth enough that the edge
-# glides rather than ticks, and on the shortest buffs worth tracking (about 4
-# seconds) it still moves twelve times a second.
-BUFF_SWEEP_STEPS = 48
-# Composited icons are cached, and the cache is emptied wholesale when it gets
-# big rather than kept in LRU order: it refills lazily within a frame or two,
-# and the bookkeeping would cost more than the misses.
-BUFF_ICON_CACHE_MAX = 900
-
-# What a brand-new tray comes up as. Everything here is overridable per tray
-# from the Buffs tab; these are only what you get before touching anything.
-# The per-tray ticks, as (config key, what the button says when it is ON).
-# Driven from a table for the same reason TOGGLEABLE_ELEMENTS is: adding a
-# switch should be one line here and one line in the draw pass, not four.
-BUFF_TRAY_FLAGS = (
-    ("stacks", "Stack count"),
-    ("sweep", "Clock sweep"),
-    ("timer", "Time remaining"),
-    ("flash", "Flash when it lands"),
-    ("warn", "Pulse before it drops"),
-)
-
-# The picker's viewport height at 100%. Taller than the Social lists because
-# this one is browsed rather than scanned — you are looking for a buff by name
-# among 217 of them.
-BUFF_PICK_LIST_H = 190
-# How many rows the picker draws at once. Each row is now an icon, a name and
-# a wrapped description — several widgets — so building the whole list on every
-# keystroke is visibly slow. The search box is how you reach the rest, and the
-# count label says how many matched so a capped list never looks like the whole
-# answer. Lower than it was, because the rows got taller and heavier.
-BUFF_PICK_MAX_ROWS = 25
-BUFF_PICK_ICON = 26            # icon edge in the picker, at 100%
-# Where the two numbers sit on an icon, and how big they are.
-#
-# Both are per tray because the right answer depends on the tray: a row of
-# small icons wants the timer big and centred with no stack count at all, while
-# a stack-heavy build wants the count large and the timer tucked in a corner.
-# The defaults are the corners they shipped in, which keeps them from colliding
-# out of the box.
-#
-# Each entry is (anchor, x fraction, y fraction). The inset is applied inward
-# from whichever edges the anchor touches, so a corner label sits off the
-# rounded edge and a centred one is not pushed around by it.
-BUFF_TEXT_POSITIONS = {
-    "Top left": ("nw", 0.0, 0.0),
-    "Top": ("n", 0.5, 0.0),
-    "Top right": ("ne", 1.0, 0.0),
-    "Left": ("w", 0.0, 0.5),
-    "Centre": ("center", 0.5, 0.5),
-    "Right": ("e", 1.0, 0.5),
-    "Bottom left": ("sw", 0.0, 1.0),
-    "Bottom": ("s", 0.5, 1.0),
-    "Bottom right": ("se", 1.0, 1.0),
-}
-BUFF_TEXT_POS_NAMES = tuple(BUFF_TEXT_POSITIONS)
-BUFF_TEXT_INSET = 0.045        # of the icon edge, so it holds at every size
-
-# Text size as a PERCENTAGE of a base derived from the icon, not an absolute
-# point size: an 18pt number is unreadable on a 24px icon and lost on a 72px
-# one, and a tray's icon size is already a slider. 100% is the size the trays
-# shipped with.
-BUFF_TEXT_SCALE_MIN, BUFF_TEXT_SCALE_MAX = 50, 220
-BUFF_TEXT_BASE_RATIO = 0.30    # icon edge -> text height at 100%
-BUFF_PICK_DESC_WRAP = 300      # px before the description wraps, at 100%
-
-
-def _blank_trays():
-    """A fresh set of tray configs — one per slot, only the first switched on.
-
-    Always BUFF_TRAY_MAX of them, because the index IS the identity: a tray's
-    window, its saved position and its settings all key off the same slot.
-    """
-    trays = [dict(BUFF_TRAY_DEFAULTS, keys=[]) for _ in range(BUFF_TRAY_MAX)]
-    for t in trays[1:]:
-        t["on"] = False
-    return trays
-
-
-def _sanitise_trays(saved):
-    """Validate a saved tray list into a usable one.
-
-    Field by field, like every other setting here: a file written by a newer
-    build, or hand-edited, should cost you the one value rather than the
-    arrangement you spent time on.
-    """
-    trays = _blank_trays()
-    if not isinstance(saved, list):
-        return trays
-    for i, row in enumerate(saved[:BUFF_TRAY_MAX]):
-        if not isinstance(row, dict):
-            continue
-        t = trays[i]
-        for flag in ("on", "lock", "stacks", "sweep", "timer", "flash", "warn"):
-            if isinstance(row.get(flag), bool):
-                t[flag] = row[flag]
-        sz = row.get("size")
-        if isinstance(sz, int) and BUFF_ICON_MIN <= sz <= BUFF_ICON_MAX:
-            t["size"] = sz
-        if row.get("layout") in BUFF_LAYOUTS:
-            t["layout"] = row["layout"]
-        if row.get("align") in BUFF_ALIGNS:
-            t["align"] = row["align"]
-        if row.get("inactive") in BUFF_INACTIVE_MODES:
-            t["inactive"] = row["inactive"]
-        for which in ("stacks", "timer"):
-            if row.get(f"{which}_pos") in BUFF_TEXT_POSITIONS:
-                t[f"{which}_pos"] = row[f"{which}_pos"]
-            v = row.get(f"{which}_size")
-            if (isinstance(v, int)
-                    and BUFF_TEXT_SCALE_MIN <= v <= BUFF_TEXT_SCALE_MAX):
-                t[f"{which}_size"] = v
-        # x/y are absent for a set saved before positions followed the
-        # character; those trays keep whatever the shared position cache last
-        # put them at, which is where their windows already are.
-        for axis in ("x", "y"):
-            if isinstance(row.get(axis), int):
-                t[axis] = row[axis]
-        keys = row.get("keys")
-        if isinstance(keys, list):
-            # Deliberately NOT filtered against status_meta: a key the current
-            # metadata doesn't know is far more likely to be a buff from a game
-            # version this install hasn't regenerated for than a typo, and
-            # silently dropping it would quietly empty someone's tray on a
-            # patch day. An unknown key draws as a placeholder under its own id
-            # and starts working again the moment the data catches up.
-            t["keys"] = [k for k in keys if isinstance(k, str) and k]
-    return trays
-
-
-def _trays_to_json(trays):
-    """One tray list, as it goes into the settings file."""
-    out = []
-    for t in trays:
-        row = {"on": bool(t.get("on")),
-               "lock": bool(t.get("lock")),
-               "size": int(t.get("size", BUFF_ICON_DEFAULT)),
-               "layout": t.get("layout", "row"),
-               "inactive": t.get("inactive", BUFF_INACTIVE_DIM),
-               "stacks": bool(t.get("stacks")),
-               "stacks_pos": t.get("stacks_pos", "Bottom right"),
-               "stacks_size": int(t.get("stacks_size", 100)),
-               "sweep": bool(t.get("sweep")),
-               "timer": bool(t.get("timer")),
-               "timer_pos": t.get("timer_pos", "Top left"),
-               "timer_size": int(t.get("timer_size", 100)),
-               "flash": bool(t.get("flash")),
-               "warn": bool(t.get("warn")),
-               "keys": list(t.get("keys") or ())}
-        for axis in ("x", "y"):
-            if isinstance(t.get(axis), int):
-                row[axis] = t[axis]
-        out.append(row)
-    return out
 
 
 def _initial_shown():
-    """The live "is this window on screen" map, keyed by WINDOW.
-
-    Not the same key space as `_show`, which holds the Show / Hide / Show-in-ESC
-    setting and is keyed by ELEMENT. The two were identical until the buff
-    trays, which are four windows sharing one element — so every window key has
-    to be seeded here or _want_visible raises a KeyError on the first sync.
-    """
-    keys = {k: True for k, _ in TOGGLEABLE_ELEMENTS}
-    keys.pop(BUFF_TRAY_KEY, None)          # an element, not a window
-    for i in range(BUFF_TRAY_MAX):
-        keys[f"{BUFF_TRAY_KEY}#{i}"] = True
-    return keys
+    """The live "is this window on screen" map, keyed by WINDOW."""
+    return {k: True for k, _ in TOGGLEABLE_ELEMENTS}
 
 
 def _element_show_key(key):
-    """The TOGGLEABLE_ELEMENTS row a window key answers to.
+    """The TOGGLEABLE_ELEMENTS row a window key answers to (the same key)."""
+    return key
 
-    Every window is its own element except the buff trays, which are four
-    windows ("buffs#0".."buffs#3") sharing one Show / Hide / Show-in-ESC
-    setting. Splitting them would put four near-identical rows on the Windows
-    tab for something the Buffs tab already governs per tray.
-    """
-    return key.split("#", 1)[0]
-
-
-BUFF_TRAY_DEFAULTS = {
-    "on": True,
-    "lock": False,
-    "size": BUFF_ICON_DEFAULT,
-    "layout": "row",
-    # Grows right/down from where you put it, which is what trays did before
-    # this was a choice — so an upgrade moves nobody's tray.
-    "align": BUFF_ALIGN_START,
-    "inactive": BUFF_INACTIVE_DIM,
-    "stacks": True,
-    "stacks_pos": "Bottom right",
-    "stacks_size": 100,
-    "sweep": True,
-    "timer": True,
-    "timer_pos": "Top left",
-    "timer_size": 100,
-    "flash": True,
-    "warn": True,
-    "keys": (),
-}
 
 # Elements the out-of-combat rule doesn't touch. The rift countdown is most use
 # exactly when you're standing around between pulls, so hiding it out of combat
-# would hide it for its whole useful life. The minimap is the same case only
-# more so: its whole job is telling you what's around while you're travelling,
-# which is by definition out of combat.
-OOC_EXEMPT = ("rift", "minimap", "compass")
+# would hide it for its whole useful life.
+OOC_EXEMPT = ("rift",)
 
-# Elements that stand down while the game has a boss/elite healthbar up. The
-# compass has to: the game's bar lands on the same strip of screen. The minimap
-# joins it because a boss pull is when you are watching the fight rather than
-# navigating — and because two navigation panels leaving together reads as
-# intentional, where one leaving looks like a glitch.
-# Not a setting: the escape menu brings both back, so nothing is unreachable.
-BOSS_HIDDEN = ("compass", "minimap")
 
-# ---------------------------------------------------------------------------
-# Minimap
-# ---------------------------------------------------------------------------
-# Two orientations:
-#
-#   Rotating (default) — the map turns under you, so you are always facing the
-#   top of it. Matches how you're actually looking at the world, which is what
-#   most people want from a minimap while moving.
-#
-#   Fixed — north is always up and the arrow turns instead. Landmarks stay
-#   where you last saw them, which is better for learning a zone.
-#
-# Rotating costs one extra rotate per entity per frame; at a few dozen entities
-# that is nothing next to the canvas work.
-MINIMAP_MODES = ("Rotating", "Fixed")
-
-# How often the hook sweeps the world. Higher costs a little CPU in the game
-# process (~1ms per sweep) and a message per tick; below about 8/sec the dots
-# visibly step rather than glide, which is what makes a minimap feel laggy.
-# Ultra sits just above the agent's own 30ms floor. At ~30/sec the sweep costs
-# a few percent of one core in the game process plus a message per tick, which
-# is why it's opt-in rather than the default.
-MINIMAP_RATES = (("Ultra", 33), ("High", 60), ("Medium", 110), ("Low", 250))
-MINIMAP_RATE_MS = dict(MINIMAP_RATES)
-MINIMAP_RATE_NAMES = [n for n, _ in MINIMAP_RATES]
-MINIMAP_SIZE = 405          # square, in pixels at 100% UI scale
-# World units from centre to edge. This and MINIMAP_SIZE move together: what
-# matters is units-per-pixel, not either number alone. 120 units on the old
-# 270px panel was the density that made a fight readable; 175 on 405px is
-# looser than that and still shows half again as much ground as 120 did.
-# Landed on by eye, from 250 — which fit more in but had started to shrink a
-# fight back toward the couple of pixels the range exists to avoid.
-MINIMAP_RANGE = 175
-# The world-map backdrop under the minimap markers. Assets are built offline
-# by hltools/build_map_assets.py from the game's own map tiles and committed —
-# the meter never reads game files at runtime. The blend pulls the artwork
-# toward the panel colour so the markers stay the loudest thing on the map.
-MAPS_DIR = ROOT / "assets" / "maps"
-# The buff tracker's icons, on the same terms as the map tiles above: built
-# offline by hltools/build_status_icons.py out of the game's own ability
-# atlases and committed, so the meter never reads an 857MB pak at runtime.
-STATUS_DIR = ROOT / "assets" / "status"
-MINIMAP_BG_TINT = 0.45
 # The canvas is redrawn at roughly twice the sweep rate. Matching them exactly
 # would beat against the hook's timer and drop or double frames; drawing a bit
 # faster than the data arrives keeps motion even.
 
-# The floor and ceiling the range is allowed to take. The Zoom control below
-# moves it between these and nowhere else.
-#
-# The ceiling is the hook's foe cull (SWEEP_RADIUS_FOE) and not a pixel
-# further. Everything else — chests, orbs, obelisks, respawn points,
-# activities, players — is already swept from the WHOLE layer at any distance,
-# so those keep appearing however far you zoom out; foes are the one category
-# with a radius. If the map could see past the cull it would show navigation
-# markers with the mobs thinning out around them, which reads as the map
-# breaking rather than as the cull it is. The two edges coincide, and that is
-# the invariant: MOVE THEM TOGETHER OR NOT AT ALL.
-#
-# 1750 rather than the 600 this shipped with, because chests and orbs are the
-# thing people actually zoom out to find and 600u is barely a corner of a zone.
-# It is a clean slider step, too: the range is MINIMAP_RANGE*100/zoom%, so
-# 175/1750 lands the slider's low end at exactly 10% instead of a step that
-# rounds inward and can never quite reach the ceiling.
-#
-# What this DOESN'T buy is a treasure map. Chests stream — measured, four or
-# five loaded in a zone that holds 47 — so zooming out shows the ones the
-# client knows about, not the ones that are there.
-MINIMAP_RANGE_MIN, MINIMAP_RANGE_MAX = 80, 1750
 
-# Zoom is a percentage because that is what it looks like on screen: 100% is
-# the range the map shipped with, larger numbers magnify, smaller ones pull
-# back. BOTH ends are DERIVED from the range floor and ceiling rather than
-# typed in, so they cannot drift apart from them — a hand-written bound is
-# exactly how a slider ends up with a dead end after someone edits a constant.
-# Rounded inward to whole slider steps so neither extreme can request a range
-# fractionally outside what the clamp allows.
-MINIMAP_ZOOM_STEP = 5
-MINIMAP_ZOOM_MIN = -(-int(MINIMAP_RANGE / MINIMAP_RANGE_MAX * 100)
-                     // MINIMAP_ZOOM_STEP) * MINIMAP_ZOOM_STEP
-MINIMAP_ZOOM_MAX = (int(MINIMAP_RANGE / MINIMAP_RANGE_MIN * 100)
-                    // MINIMAP_ZOOM_STEP) * MINIMAP_ZOOM_STEP
-
-# Icon scale, as a percentage applied ON TOP of MINIMAP_ICON_SCALE. One
-# multiplier over the whole style table is the entire trick: every marker keeps
-# its size RELATIVE to the others (an obelisk stays half again a chest), so
-# this makes them all bigger or smaller without flattening them to one size.
-MINIMAP_ICONS_MIN, MINIMAP_ICONS_MAX = 60, 200
-
-# How each category is drawn: colour, radius in pixels, and shape. Kept in one
-# table so the legend, the draw pass and any future re-skin can't disagree.
-# Drawn in list order, so later entries land on top — see the note inside.
-# Tuned for a DARK panel, which both themes now use — a map is easier to read
-# when the markers are the bright thing on it rather than the background being
-# brightest. The meter's own body colour is deliberately not reused here: the
-# damage tables want to look like parchment and a map does not.
-MINIMAP_STYLE = (
-    # Players go FIRST, which puts them UNDERNEATH everything else. There are
-    # usually several, they cluster on the same spot, and a stack of chevrons
-    # will happily bury the one chest you were looking for. The map is for
-    # finding things in the world; the people are the part already on screen.
-    ("hero",     {"fill": "#5FAEFF", "r": 5.5, "shape": "chevron"}),
-    # Teal. Close to the respawn point's mint on a colour wheel, which would
-    # matter if they shared a shape — a diamond against a small square is the
-    # thing telling them apart, and this one is bluer and much more saturated.
-    ("activity", {"fill": "#25D0D0", "r": 4.0, "shape": "diamond"}),
-    # Half again the size of the rest. An obelisk is a fixed landmark you
-    # navigate by rather than something you might walk past, and the monolith
-    # silhouette — a tall block with a dark eye — is the one glyph here that
-    # carries detail worth seeing.
-    ("obelisk",  {"fill": "#C48CFF", "r": 6.6, "shape": "monolith"}),
-    # The soulstone's own colour, taken off the thing in the world rather than
-    # picked from a palette: it is a hot magenta crystal with a lighter core,
-    # and matching it is what makes the marker identifiable before you've
-    # learned the legend. Purple enough to sit near the obelisk's lavender, so
-    # the two are told apart by SHAPE — a shard against a standing stone.
-    ("soulstone", {"fill": "#FF3DC4", "r": 4.6, "shape": "shard"}),
-    # Dark blue, but only as dark as the panel allows: the Dark themes draw on
-    # a deep navy, and a respawn point any deeper than this stops being a
-    # marker and becomes a hole in the map. Measured against that body it still
-    # comes out about three times its brightness. Distinct from the players'
-    # light blue by being far darker, and from everything else by shape.
-    ("respawn",  {"fill": "#2B5FD9", "r": 3.0, "shape": "square"}),
-    # A plain square. It briefly had a black cross through it to separate it
-    # from the respawn point, which is also a square — at nine pixels that read
-    # as busy rather than as a chest, and the two are told apart by colour
-    # perfectly well.
-    ("chest",    {"fill": "#FF9E3D", "r": 3.5, "shape": "square"}),
-    ("orb",      {"fill": "#FFD400", "r": 3.6, "shape": "dot",
-                  "ring": "#A24BE0"}),
-    # Gathering nodes, mineable only — the hook drops depleted ones outright
-    # (hitPoints 0, waiting on their respawn timer), so a marker here always
-    # means "walk over and you can gather it". Both get pictorial glyphs
-    # rather than borrowed geometry: a silver rock cluster and a green leaf
-    # are what the things ARE, which beats any legend. Slightly larger radii
-    # than the squares and dots carry — an irregular silhouette has less
-    # visual mass than a solid square of the same r, so these sit level with
-    # the chest rather than over it.
-    ("ore",      {"fill": "#C9D3DC", "r": 5.2, "shape": "rock"}),
-    ("herb",     {"fill": "#5ED97A", "r": 5.0, "shape": "leaf"}),
-    # The smallest thing on the map, and drawn last so it sits on top of
-    # everything. There are far more of these than anything else — a pack is a
-    # dozen dots on one spot — so size is what keeps them from swamping the
-    # markers you navigate by. Hovering one still works: the hit test has its
-    # own slack (MINIMAP_TIP_RADIUS) and doesn't shrink with the dot.
-    ("foe",      {"fill": "#FF5348", "r": 2.4, "shape": "dot"}),
-    # Critters (the game calls them Companions) — frogs, rabbits, squirrels.
-    # Green because they are the one unit category that will never hurt you,
-    # and a pawprint because at this size a shape reads faster than a colour:
-    # a green dot among red ones is a mob you misjudged, a paw is obviously
-    # something else. Drawn AFTER foes so a critter in a pack still shows.
-    # Slightly larger than a foe dot for the same reason the ore rock is —
-    # an irregular silhouette carries less visual mass than a solid disc.
-    ("critter",  {"fill": "#6BE06B", "r": 4.2, "shape": "paw"}),
-)
-MINIMAP_STYLE_MAP = dict(MINIMAP_STYLE)
-MINIMAP_ORDER = [k for k, _ in MINIMAP_STYLE]
-
-# Per-material styling for gathering nodes, keyed by the CDB Gatherable row id
-# the hook ships as `g` — prefix-matched, since rows come as Foo_Small /
-# Foo_Large. The shape stays the category (rock = ore, leaf = herb); the fill
-# is the material, roughly the colour of the thing itself. Rarity is the
-# game's own data, not a judgement call: each node's hitLoot item in data.cdb
-# carries a rarity, and TungsteneOre and ZealotusPetal are the two Rare ones —
-# everything else reads Common. The rares get a halo ring and a size bump, the
-# same "this one is special" grammar the orb's ring already speaks.
-NODE_STYLES = (
-    ("Ore_Copper",   {"fill": "#E28B58"}),   # copper: warm and brown
-    ("Ore_Iron",     {"fill": "#C9D3DC"}),   # iron: the plain silver
-    ("Ore_Tin",      {"fill": "#9FB8CE"}),   # tin: paler and colder than iron
-    # Tungsten is dark metal under a bright halo — the dark body is what lets
-    # the halo carry "rare" instead of the fill having to shout it.
-    ("Tungstene",    {"fill": "#6E7F94", "ring": "#F2F7FF", "rare": True}),
-    ("Madrigold",    {"fill": "#E8C558"}),   # marigold gold
-    ("Lavendula",    {"fill": "#B08FE8"}),   # lavender
-    ("AncientThyme", {"fill": "#3FA86B"}),   # deep thyme green
-    ("Zealotus",     {"fill": "#E8506E", "ring": "#FFD9E4", "rare": True}),
-)
-NODE_RARE_SCALE = 1.18          # on top of the category radius
-
-
-def _node_style(g):
-    """The material override for a node's `g` (Gatherable row id), or None —
-    None falls back to the category style, which is what an unmapped material
-    added in a future patch should do rather than vanish."""
-    if g:
-        for prefix, st in NODE_STYLES:
-            if g.startswith(prefix):
-                return st
-    return None
-
-
-# The minimap's own show/hide, grouped the way you'd think about them rather
-# than one tick per sweep category: nobody wants orbs without chests.
-#
-# Obelisks, respawn points and soulstones are deliberately absent and always
-# drawn. They're the landmarks you navigate BY — there are a handful in a zone,
-# they never move, and they're the least likely thing anyone wants gone. A tick
-# each would be four more rows of menu for a problem nobody has.
-MINIMAP_FILTERS = (
-    ("collect",    "Collectibles", ("orb", "chest")),
-    # One tick for both node kinds: there are no professions to specialise —
-    # everyone gathers everything — so ore-without-herbs isn't a want the way
-    # chests-without-orbs isn't.
-    ("nodes",      "Ore & herb nodes", ("ore", "herb")),
-    ("players",    "Players",      ("hero",)),
-    ("activities", "Activities",   ("activity",)),
-    # Critters are NOT here: they graduated from a tick to a three-state
-    # cycle of their own (MINIMAP_CRITTER_MODES) when the collection filter
-    # arrived — same shape as enemies, for the same reason.
-)
-# category -> which tick governs it, built once rather than searched per marker.
-MINIMAP_FILTER_OF = {cat: key for key, _label, cats in MINIMAP_FILTERS
-                     for cat in cats}
-
-# Enemies are the one category with THREE useful states rather than two, so
-# they get a cycling button instead of a tick. "Missing from codex" is the
-# whole reason: with 493 codex mobs in the game, the interesting question
-# while you finish a codex is not "are enemies shown" but "which of these do
-# I still need". Cycling rather than a Tk dropdown because every other row in
-# this menu is a labelled button and a combobox in the middle of them reads as
-# a different program.
-MINIMAP_FOE_MODES = (
-    ("all",   "Enemies: all"),
-    ("codex", "Enemies: only missing from codex"),
-    ("off",   "Enemies: hidden"),
-)
-MINIMAP_FOE_MODE_KEYS = [k for k, _ in MINIMAP_FOE_MODES]
-MINIMAP_FOE_LABEL = dict(MINIMAP_FOE_MODES)
-
-# Critters used to be an ordinary tick; the collection gave them the same
-# three states enemies have. "Only uncollected" is the codex filter's twin:
-# with 74 catchable companions, the question while filling the collection is
-# not "are critters shown" but "which of these do I still need a net for".
-# The middle state hides a critter as soon as its KIND is in the account's
-# Collection.pets list (measured 2026-08-07: that list holds plain unit
-# kinds, and the game's own already-caught check — Collection.hasPet — takes
-# exactly this string).
-MINIMAP_CRITTER_MODES = (
-    ("all",         "Critters: all"),
-    ("uncollected", "Critters: only uncollected"),
-    ("off",         "Critters: hidden"),
-)
-MINIMAP_CRITTER_MODE_KEYS = [k for k, _ in MINIMAP_CRITTER_MODES]
-MINIMAP_CRITTER_LABEL = dict(MINIMAP_CRITTER_MODES)
-
-# The compass gets its own pair, deliberately not shared with the map's. The
-# two panels answer different questions — "what is around me" against "which
-# way is that" — and wanting chests on one but not the other is an ordinary
-# thing to want. Soulstones have no tick for the same reason obelisks have none
-# on the map: there is at most one in range and it's the thing you're looking
-# for.
-COMPASS_FILTERS = (
-    ("collect", "Collectibles", ("orb", "chest")),
-    # Same single tick as the map's: no professions, so nobody farms ore
-    # without herbs. The compass pair stays independent of the map's — see
-    # the note above these tables.
-    ("nodes",   "Ore & herb nodes", ("ore", "herb")),
-    ("party",   "Party Members", ("hero",)),
-)
-COMPASS_FILTER_OF = {cat: key for key, _label, cats in COMPASS_FILTERS
-                     for cat in cats}
-# Every marker on the MAP is drawn this much larger than the table says. One
-# multiplier rather than eight edited radii, so the relative sizes above — which
-# are tuned against each other, not against the panel — survive a resize. The
-# compass deliberately doesn't use it: markers there sit on a 38px strip with
-# numbers under them, and have no room to grow.
-MINIMAP_ICON_SCALE = 1.20
-
-# What the hover strip says with nothing under the cursor. It doubles as the
-# hint that hovering does anything, which is why it isn't blank.
-# Two lines even when idle, so the box never changes height under the cursor.
-# The second line says how to get a cursor at all: the map only takes the mouse
-# once the game has let go of it, which isn't something you'd guess.
-MINIMAP_TIP_IDLE = ("hover a marker for details\n"
-                    "Press L-ALT or ESC to enable free mouse")
-MINIMAP_TIP_RADIUS = 9          # px of slack around a marker, at 100% scale
-# Names are elided rather than allowed to set the panel width. A long one
-# ("Fragrant Garlic Seedling") otherwise stretches the whole minimap sideways
-# on hover and snaps it back on leave, which moves the map out from under the
-# cursor you were pointing with.
-MINIMAP_TIP_MAXLEN = 22
-
-# Hover labels. Separate from the style table because these are prose for a
-# human, not drawing instructions.
-# States that just mean "normal, still there". A marker only reaches the map if
-# it's still worth going to, so saying "Closed" on every chest and obelisk is
-# noise — "Obelisk" is the whole message. Anything NOT on this list is shown:
-# Locked, or a state no one has seen yet, which is how an unfamiliar one makes
-# itself known instead of passing for ordinary.
-# "None" is on the list because a soulstone has no state machine at all — every
-# one of them reads it, so "Soulstone · None" would be noise on every marker
-# rather than the warning an unfamiliar state is meant to be.
-MINIMAP_PLAIN_STATES = ("Closed", "Enabled", "Idle", "Active", "Default", "None")
 
 # Short class tags for the meter. The game's own names come off ent.Unit.kind,
 # which for a hero is its class rather than a creature id.
 CLASS_ABBR = {"Warrior": "War", "Mage": "Mag", "Priest": "Pst", "Rogue": "Rog"}
 
-# The Social tab tints each class so a long roster can be scanned by shape
-# rather than read line by line. Muted on purpose: this is a list you look
-# things up in, not a chart, and four saturated colours down a column fight the
-# names for attention. Anything unrecognised (a class a patch adds) falls back
-# to plain body text rather than picking a colour at random.
-CLASS_COLORS = {"Warrior": "#D98A5A", "Mage": "#6FA8DC",
-                "Priest": "#C9B87A", "Rogue": "#87B37A"}
 
 # The meter's name and class columns, in monospace cells. They used to be one
 # 17-cell field with the class in brackets after the name; a class of its own is
@@ -1034,19 +373,6 @@ METER_NAME_CELLS = 13
 METER_CLASS_CELLS = 4
 
 
-def _short_dist(units):
-    """A distance narrow enough to sit under a compass marker.
-
-    No unit suffix: every number on that strip is world units, and at four
-    characters wide the "u" is the difference between two neighbouring markers
-    reading cleanly and their labels touching. Thousands are abbreviated for the
-    same reason — "2.7k" where "2731" would be, since nothing you do with a
-    bearing that far out depends on the last two digits."""
-    if units < 1000:
-        return f"{units:.0f}"
-    return f"{units / 1000.0:.1f}k"
-
-
 def _class_tag(kind):
     """(War) for Warrior. Anything unrecognised falls back to its first three
     letters rather than disappearing — a new class should look odd, not absent."""
@@ -1054,216 +380,10 @@ def _class_tag(kind):
         return ""
     return CLASS_ABBR.get(kind) or kind[:3].title()
 
-MINIMAP_LABELS = {
-    "hero": "Player", "foe": "Enemy", "chest": "Chest", "orb": "Orb",
-    "obelisk": "Obelisk", "respawn": "Respawn point", "activity": "Activity",
-    "soulstone": "Soulstone", "ore": "Ore", "herb": "Herb",
-    "critter": "Critter",
-}
 
-# A sparkling unit — the cdb's own Spark flag — gets a halo and a size bump,
-# the same "this one is special" grammar the rare gathering nodes already
-# speak. Gold rather than the category colour so it reads as rarity and not as
-# another kind of critter, and it applies to sparkling MOBS too (the rare `_U`
-# variants), which is why it lives here rather than in the critter style.
-SPARK_RING = "#FFE68A"
-SPARK_SCALE = 1.45
 
-# ---------------------------------------------------------------------------
-# Compass
-# ---------------------------------------------------------------------------
-# A strip of bearings across the top of the view. It answers a different
-# question from the minimap: not "what is around me" but "which way is that",
-# and it answers it out to the full sweep radius rather than the map's 120u —
-# so the thing you're walking toward stays on screen long after it has left
-# the map.
-COMPASS_W = 460             # px at 100% scale
-# Three bands, top to bottom: cardinals, markers, distances. The strip grew
-# from 26px when the distances arrived — they need a line of their own, since
-# tucking them beside the glyphs made two markers half a degree apart overlap
-# into an unreadable smear.
-COMPASS_H = 38
-COMPASS_CARD_Y = 0.15       # cardinal letter, as a fraction of the height
-COMPASS_TICK_TOP = 0.28     # its tick, below the letter
-COMPASS_TICK_BOT = 0.36
-# Marker centres. Lifted when the pill shrank: the tallest glyphs reach about
-# 7px from their centre (the soulstone's shard, a player's chevron), and at
-# 0.56 those were poking through the pill's lower edge — which reads as a
-# drawing mistake, where the numbers hanging below it reads as a choice.
-COMPASS_MARK_Y = 0.50
-COMPASS_DIST_Y = 0.87       # the distance under each one
-# How much of that height the pill actually covers. It stops just above the
-# distances on purpose, so the numbers hang off its lower edge onto the game
-# rather than sitting inside a band that has to be tall enough to hold them.
-# The strip reads as a narrow bar with figures under it, which is a smaller
-# thing on screen than the same information boxed in.
-COMPASS_PILL_H = 0.72
-# Minimum px between two distance labels at 100% scale. "1.2k ↑" is about this
-# wide, so anything closer would be printing one number over another; the
-# nearer marker keeps its label and the farther one goes without.
-COMPASS_DIST_GAP = 30
-# Each distance sits on its own little black badge, because it's the only text
-# on the overlay that hangs off a panel onto the scenery. An outline was tried
-# first and looked like exactly what it was: eight offset copies of the text,
-# filling the gaps between thin italic strokes until the number read as a
-# blot. A shape behind the text is both cleaner and cheaper.
-#
-# The badge carries its own contrast, so its ink is a constant rather than
-# something derived from the panel — on the parchment theme the panel's ink is
-# nearly black, and nearly black on black is not a badge.
-COMPASS_DIST_BOX = "#000000"
-COMPASS_DIST_BOX_INK = "#EDEFF5"
-# Tk canvas items have no alpha, so the badge can't be knocked back where it's
-# drawn: on the colorkey window a pixel is either a solid colour or a hole to
-# the game, nothing between. It spent two versions faking it with a "gray75"
-# stipple — three-quarters of the pixels painted, a quarter left as holes —
-# which averages to the right darkness and reads as dither the moment you look
-# at it. The boxes now live on their own layered window glued under the
-# compass (see _build_compass), because whole-window opacity is the one kind
-# of blending Windows does give us. This is that window's opacity, multiplied
-# by whatever the compass itself is currently faded to (_sync_badgewin), so
-# the badges keep exactly the knocked-back-relative-to-the-numbers look the
-# stipple was approximating.
-COMPASS_DIST_BOX_ALPHA = 0.75
-COMPASS_DIST_PAD_X = 3.0        # px at 100%, around the text
-COMPASS_DIST_PAD_Y = 0.5
-# Square corners, and not for want of trying. The badge is 13px tall — a 12px
-# linespace plus the padding — and Tk's only rounded shape is a smoothed
-# polygon, whose spline overshoots at that size: measured at radius 3, 5 and 6
-# on a 14px box, it clipped exactly one pixel per corner and filled the rest
-# straight back in. A rectangle is what it was already drawing, minus the
-# pretence and four extra points.
-COMPASS_FOV = 180.0         # degrees of bearing shown, centred on your view
-# No range limit, except where a category earns one. The agent sends these from
-# the whole layer rather than a radius around you (see SWEEP_RADIUS_FOE in
-# meter_hook.js), and the point of the strip is the thing you're walking to,
-# which is exactly the thing that is far away. Measured: a world zone holds
-# ~250 entities of which a handful are on this list, so "everything" is a
-# smaller number than it sounds.
-# Enemies, respawn points and activities are deliberately absent: the strip is
-# for things you're travelling to, and a compass crowded with mobs is a smear.
-# Obelisks are off it too — there are ten in a zone, they're permanent scenery,
-# and at whole-map range they were most of what the strip was carrying.
-COMPASS_CATS = ("chest", "orb", "hero", "soulstone", "obelisk", "ore", "herb")
-# Two categories keep a radius, and they're the two that are worth knowing
-# about when you're near one and noise when you aren't — which is the opposite
-# of how the chests and party members on this strip behave. Obelisks came off
-# the compass entirely at one point for that reason: ten in a zone, permanently
-# there, and at whole-map range they were most of what the strip was carrying.
-# With a radius they're useful again without being the wallpaper.
-COMPASS_LIMITS = {"soulstone": 200.0, "obelisk": 200.0,
-                  # Nodes are the obelisk case again: static, always some in
-                  # the loaded area, and at whole-map range they'd be most of
-                  # what the strip carries. Near one, the bearing is useful;
-                  # the map is what answers "where's the nearest one at all".
-                  "ore": 200.0, "herb": 200.0}
-# The ground plane is left-handed against the screen — the same fact
-# MINIMAP_MIRROR_X exists for — so the axis that trigonometry calls north is
-# the game's SOUTH. Naming +y "north" gave a compass that was a mirror of a
-# real one: facing its N put E on your left. E and W sit on the mirror axis and
-# so are unmoved; only N and S trade places. If these ever look wrong again,
-# check the handedness rather than the eye: with the heading set to N, E must
-# come out RIGHT of centre through _compass_x. A reflected compass is
-# self-consistent and looks perfectly ordinary until you compare it to the sky.
-COMPASS_CARDINALS = ((0.0, "E"), (90.0, "S"), (180.0, "W"), (270.0, "N"))
 
-# The player arrow: whatever stands furthest off the panel, so it's the
-# brightest thing on a dark map and the darkest on a light one. A constant white
-# arrow vanished on the Farever panel, which is exactly the failure the note
-# below warns about — a colour that happens to equal its background.
-MINIMAP_ME_LIFT = 0.92
-# How far marker colours are darkened on a light panel. 0.35 keeps every hue
-# recognisable (the orb stays yellow, the soulstone stays magenta) while
-# clearing the parchment: measured against MAP_BODY_FAREVER, the palest marker
-# still lands well below it in luma.
-MINIMAP_LIGHT_DARKEN = 0.35
 
-# The map panel gets its own background ("map_body" on each theme) rather than
-# the meter's parchment body — the damage tables want to look like parchment
-# and a map does not. Everything else on the panel (rings, the hover strip, the
-# up/down carets) is DERIVED from that one colour rather than listed per theme,
-# so a re-tint is a one-line change and can't leave a stale colour behind. That
-# has bitten this file before: the view cone spent a release invisible because
-# it was blended toward a constant that happened to equal the background.
-# The view cone out of the player marker. Drawn under everything else and
-# blended toward the panel, so it reads as a hint of where you're looking
-# rather than as another object on the map.
-# The view line, blended toward the theme's ACCENT rather than toward the
-# player marker's own colour — the marker is near enough the panel that blending
-# toward it draws nothing, which is how the old view cone spent a release
-# invisible.
-MINIMAP_VIEW_LINE = 0.60
-
-# The up/down caret is drawn in whichever of black or white stands out against
-# the panel — black on the Farever parchment, white on the dark and rift ones.
-# Chosen from the body's brightness rather than listed per theme, so it
-# stays right on its own if the palette is ever retuned. It's a symbol rather
-# than a shade of the marker it belongs to, and it has to read on something
-# already faded halfway into the background.
-MINIMAP_Z_MARK_DARK = "#000000"
-MINIMAP_Z_MARK_LIGHT = "#FFFFFF"
-MINIMAP_PARTY_RING = "#9BE8FF"  # the ring that marks a group member
-
-# Angles from the game need no correction at all, which took a while to
-# establish and two wrong guesses along the way.
-#
-# The camera's curDirection was measured against ground truth — the azimuth
-# from the render camera's own pos to its target, read out of h3d.Camera — and
-# the two agree to 0.00 degrees through a full swing. So curDirection IS the
-# world azimuth of the view, in the same frame as posx/posy, and rotationZ is
-# the same convention for entities.
-#
-# The sign flip and half-turn offset that used to live here were compensating
-# for a misread, not for the game. What they actually did was mirror the map,
-# which is why it never quite made sense to look at: on a mirrored map every
-# turn goes the wrong way and no single fix ever makes it right.
-#
-# The game's ground plane is the opposite handedness to the screen's, so with
-# forward drawn up, the player's right-hand side comes out on the LEFT. Found
-# the honest way: an enemy standing to the left was being drawn to the right.
-#
-# Mirroring the horizontal axis once, here, is the whole fix. It is also what
-# the two earlier "corrections" in this file were flailing at — a yaw sign flip
-# and a half-turn offset, both of which rotate rather than mirror, and no
-# amount of rotation turns a mirrored map the right way round. That is why
-# every fix moved the problem somewhere else instead of ending it.
-#
-# One consequence worth noting, since it reads as a bug either way: on the
-# correct map, turning the camera left sweeps the world left. The map shows the
-# world relative to you, and both axes have to agree about which way that is.
-MINIMAP_MIRROR_X = -1.0
-
-# A flat map can't tell you that a mob is on the gantry above you or in the
-# tunnel below, and those are very different news. Anything further than this
-# in elevation is drawn faded toward the background rather than hidden, so it
-# still reads as present but not as something you can walk to.
-# 30 rather than something tighter because the measured distribution is
-# bimodal, not gradual: everything on your own floor came in at 0-12 units of
-# elevation (slopes and ledges), and everything genuinely on another level at
-# 154-173. Anywhere in that gap gives the same answer, so this sits clear of
-# terrain rather than close to it.
-# Smoothing for the game's own streaming churn — see WorldSnapshot._steady.
-# A marker is drawn once it has been present ACROSS this long, which at any
-# refresh rate means at least two sweeps and so never a single-frame flash.
-#
-# 0.25 rather than a round 0.30 because the default sweep is 150ms and 0.30 is
-# exactly two of them: the third sighting then spans the threshold to within
-# float error (measured 0.2999999999999545 >= 0.30 == False) and the marker
-# waits an extra tick. A threshold that lands on a multiple of the tick rate is
-# a coin flip; this one sits between two.
-MARKER_SHOW_SECS = 0.25
-# ...and kept this long after it stops arriving. Sized from the measured
-# dropouts, which ran to 2.1s; under that and the marker still blinks, well
-# over it and a looted chest sits on the map for no reason.
-MARKER_KEEP_SECS = 2.5
-# World units of player movement between sweeps that means "somewhere else
-# entirely" — a teleport, a rift, a zone change. Held markers are wrong rather
-# than late after one of those, so the tracker is dropped. Well above anything
-# running or mounted covers in a sweep, and well below a zone hop.
-MARKER_RESET_JUMP = 300.0
-
-MINIMAP_Z_FADE = 30.0       # world units of elevation before dimming kicks in
-MINIMAP_Z_DIM = 0.4         # how much of the original colour survives
 
 # Rifts open on the hour. The countdown is just the wall clock — reading the
 # game's own world-event schedule turned out to report the running event rather
@@ -1279,8 +399,6 @@ BG_BODY_SOFT = "#E8D5B8"
 BG_HEADER = "#54A4A9"
 BG_HEADER_COMBAT = "#C9612A"
 BG_HEADER_UNLOCKED = "#5E9C4A"   # green — the escape menu is open / draggable
-BTN_ON_BG = BG_HEADER_UNLOCKED   # a control-menu button whose mode is active
-BTN_ON_BG_ACTIVE = "#4E8340"     # ...the same button, hovered/pressed
 BG_BAR_TRACK = "#D9C09A"
 FG_HEADER = "#FFFFFF"
 FG_HEADER_DIM = "#DCE9EA"   # captions in a header bar — readable on all tints
@@ -1421,23 +539,18 @@ THEME_FONT_KEYS = tuple(k for k, (family, *_rest) in FONT_SPECS.items()
 # Farever-styled whatever theme you're wearing (see _pick_theme), and a panel
 # that kept its own colours while changing its typeface would look broken
 # rather than themed.
-THEME_FONT_GROUPS = ("meter", "detail", "minimap", "compass")
+THEME_FONT_GROUPS = ("meter", "detail")
 # The floor is where the fonts stop moving: sizes are clamped at 6pt inside
 # _set_group_scale, and every body font in FONT_SPECS has hit that clamp by
 # ~55%. A slider that goes lower would keep moving while the window stayed
 # put — the same lie the MIN_W comment below warns about.
 UI_SCALE_MIN, UI_SCALE_MAX = 50, 175      # percent
-# The independently-scaled window groups, in the order the menu lists them.
-# Wide enough for the longest label in the menu ("Damage meter"), so the label
-# column is uniform and every control lines up under it.
-FIELD_LABEL_CHARS = 13
 
 # The settings panel's tabs, in the order it lists them down the left. General
 # stays the landing page — it is what you open the panel for most of the time.
 # History and Social sit under it because they are the pages you open to READ
 # rather than to change something; the configuration pages follow.
-MENU_TABS = ("Help", "General", "History", "Social", "Buffs", "Actions",
-             "Windows", "Map")
+MENU_TABS = ("Help", "General", "History", "Actions", "Windows")
 # Where EVERY launch lands. Help rather than General: the settings are
 # discoverable by reading them, and the one thing the panel cannot tell you by
 # being looked at is what any of it is for. Held in memory only — the tab
@@ -1468,16 +581,12 @@ HELP_DIR = (ROOT / "web" / "help") if FROZEN else (
 # lands in the last group, so a new file appears rather than disappearing.
 HELP_GROUPS = (
     ("Getting started", ("10-steam", "20-stopping")),
-    ("The overlay", ("30-buff-trays", "40-social", "50-map")),
-    ("Collecting", ("60-critters", "70-codex")),
 )
 
 SCALE_GROUPS = (
     ("meter", "Meter"),
     ("detail", "Breakdown"),
     ("menu", "Settings"),
-    ("minimap", "Minimap"),
-    ("compass", "Compass"),
 )
 # Where each group's slider starts when nothing is saved; absent means 100%.
 # The settings panel defaults to 130: it's read at arm's length mid-game with
@@ -1486,9 +595,6 @@ SCALE_GROUPS = (
 # fonts-at-100 assumption inside _set_group_scale holds either way — a saved
 # value, including an explicit 100, always wins over this table.
 SCALE_DEFAULTS = {"menu": 1.30}
-# Wider than the UI's: a minimap is worth making genuinely large on a big
-# screen, and genuinely small when it's only there for a glance.
-MINIMAP_SCALE_MIN, MINIMAP_SCALE_MAX = 50, 250
 # Minimum widths, at 100%. They're pixel values, so the scale slider has to
 # scale them too or scaling down just hits the floor and nothing moves.
 # The menu is wide because its tabs run down the LEFT rather than across the
@@ -1500,36 +606,7 @@ MINIMAP_SCALE_MIN, MINIMAP_SCALE_MAX = 50, 250
 # "health restored" and started meaning "healing done", and the floor had to
 # grow with it or the new column would be drawn off the right edge of every
 # window narrow enough to be at the old minimum.
-MIN_W = {"meter": 404, "detail": 320, "menu": 620, "prompt": 320,
-         "update": 380}
-# The update offer's body text wrap. Wider than the rift prompt's because it
-# explains what pressing the button will do, which is two sentences rather than
-# a question.
-UPDATE_OFFER_WRAP = 400
-MENU_NAV_W = 128                           # the tab strip, at 100%
-# The Social list's viewport. Fixed rather than growing with the roster: the
-# menu is already the tallest window the overlay puts on screen, and a hub of
-# 40 people would otherwise run it off the bottom of the display.
-SOCIAL_LIST_H = 300
-# Monospace cells for the roster's name and class columns, so the buttons on
-# the right all start at the same x however long the names are.
-SOCIAL_NAME_CELLS = 17
-SOCIAL_CLASS_CELLS = 8
-STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/{}"
-# How the Social roster can be ordered. "name" is a directory and keeps YOU at
-# the top, because the first thing you check is that the list is about the
-# shard you think it is. "level" is a ranking, so it does not pin anyone —
-# a leaderboard with someone glued to the first row is not a leaderboard.
-SOCIAL_SORTS = ("name", "level")
-SOCIAL_SORT_LABEL = {"name": "Sort: Name", "level": "Sort: Level"}
-# The Social tab's two views. "shard" is live state and can show class/level;
-# "session" is an accumulated log and deliberately cannot — see WorldSnapshot.
-SOCIAL_PAGES = (("shard", "Current Shard"), ("session", "This session"))
-# The session log's own ordering. Recency first by default: the log exists to
-# answer "who was that just now", and the answer is at the top.
-SESSION_SORTS = ("recent", "name")
-SESSION_SORT_LABEL = {"recent": "Sort: Last seen", "name": "Sort: Name"}
-SOCIAL_SEEN_CELLS = 7
+MIN_W = {"meter": 404, "detail": 320, "menu": 620, "prompt": 320}
 
 # ---- combat history ----
 # The floor a finished encounter has to clear to be worth keeping. Both, not
@@ -1539,61 +616,9 @@ SOCIAL_SEEN_CELLS = 7
 # walk-bys out of the list, not to judge which fights were interesting.
 HISTORY_MIN_SECS = 5.0
 HISTORY_MIN_EVENTS = 5
-# Rows in the history list, and the widths that keep their columns lined up.
-HISTORY_LIST_H = 300
-HISTORY_NAME_CELLS = 26
-# The list holds every session, so a bare "17:30" is ambiguous the moment you
-# have two days of datasets. The date appears exactly when it stops being
-# obvious — the same rule the rift report card uses for its title — which is
-# why this column is sized for "Aug 04 17:30" and not for a clock.
-HISTORY_WHEN_CELLS = 13
-HISTORY_META_CELLS = 15
-# How many entries the browser draws at once. NOT a cap on what is stored —
-# nothing here ever deletes a file — only on how many rows are built, because
-# a session that ran all night is thousands of frames tk would build one at a
-# time. The count label always says the true total.
-HISTORY_PAGE = 200
 # Per-player skill/heal rows in a dataset's detail view.
 HISTORY_DETAIL_SKILLS = 12
-HISTORY_PAGES = (("list", "Datasets"), ("detail", "Dataset"))
 
-
-def _seen_ago(secs):
-    """How long ago, in the width of a table cell.
-
-    Anyone still on your shard has their timestamp refreshed every sweep, so
-    "now" is not an approximation — it is the column saying they are still
-    here, which is the distinction the log is actually for.
-    """
-    if secs < 45:
-        return "now"
-    mins = int(secs // 60)
-    if mins < 1:
-        return "now"
-    if mins < 60:
-        return f"{mins}m"
-    hrs, rem = divmod(mins, 60)
-    return f"{hrs}h{rem:02d}m"
-
-
-def _short_secs(secs):
-    """A remaining time that fits in the corner of a buff icon.
-
-    Deliberately loses precision as the number grows: at 40 minutes nobody is
-    reading the seconds, and the width is what decides whether the glyph sits
-    on the icon or across it. Under a minute it stays bare seconds, because
-    that is the range where a buff tracker is actually being read.
-    """
-    secs = max(0, int(secs))
-    if secs < 60:
-        return str(secs)
-    mins = secs // 60
-    if mins < 60:
-        return f"{mins}m"
-    return f"{mins // 60}h"
-
-
-WARN_WRAP = 460                            # the red banner's wrap, at 100%
 
 MAP_BODY_DARK = "#121C30"       # the deep navy the panels shipped with
 MAP_BODY_FAREVER = BG_BODY_SOFT  # ...and the parchment version of the same
@@ -1933,181 +958,6 @@ def ask_directory(title):
     return Path(d) if d else None
 
 
-def _version_tuple(s):
-    """(2, 1) from "2.1" or "v2.1"; None for anything that isn't a plain
-    numeric version. The repo also carries a `farever` tag, and a name-shaped
-    tag is not something to compare a version against."""
-    parts = (s or "").strip().lstrip("vV").split(".")
-    if not parts or not all(p.isdigit() for p in parts):
-        return None
-    return tuple(int(p) for p in parts)
-
-
-def _fetch_json(url):
-    import urllib.request
-    req = urllib.request.Request(url, headers={
-        "User-Agent": f"FareverMeter/{VERSION}",
-        "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=UPDATE_TIMEOUT) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
-
-
-def _fetch_release_notes(tag):
-    """The release body for a tag, or None. Same never-fail-loudly rule as the
-    version check: a missing what's-new window is not worth a dialog."""
-    try:
-        rel = _fetch_json(UPDATE_API_RELEASE_TAG + str(tag))
-    except Exception as e:
-        print(f"[update] couldn't fetch the notes for {tag}: {e}",
-              file=sys.stderr)
-        return None
-    body = (rel or {}).get("body")
-    return body.strip() if body and body.strip() else None
-
-
-# Deliberately crude: the notes are GitHub Markdown and this is a Tk text
-# widget, so the goal is "reads cleanly", not fidelity. Headings keep their
-# text, emphasis and code ticks come off, links keep their label, and the
-# blockquote/rule furniture becomes whitespace.
-_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]+\)")
-_MD_HEAD = re.compile(r"^\s{0,3}#{1,6}\s*")
-_MD_RULE = re.compile(r"^\s*([-*_])(\s*\1){2,}\s*$")
-
-
-def _markdown_to_text(md):
-    out = []
-    for line in md.splitlines():
-        if _MD_RULE.match(line):
-            out.append("")
-            continue
-        line = _MD_HEAD.sub("", line)
-        line = re.sub(r"^\s{0,3}>\s?", "", line)
-        line = _MD_LINK.sub(r"\1", line)
-        line = line.replace("**", "").replace("`", "")
-        out.append(line.rstrip())
-    text = "\n".join(out)
-    # Collapse the runs of blank lines the stripping leaves behind.
-    return re.sub(r"\n{3,}", "\n\n", text).strip()
-
-
-def _release_installer_asset(rel):
-    """(download_url, size) of the release's Setup.exe, or (None, 0).
-
-    Matched on the name the build script writes rather than "first asset":
-    a release can grow extra attachments (notes, checksums) without the
-    updater downloading one of those instead."""
-    for a in rel.get("assets") or []:
-        name = (a.get("name") or "")
-        if name.startswith("FareverMeter-") and name.endswith("-Setup.exe") \
-                and a.get("browser_download_url"):
-            return a["browser_download_url"], int(a.get("size") or 0)
-    return None, 0
-
-
-def _latest_version():
-    """The newest published version as (tuple, name, url, asset_url,
-    asset_size), or None.
-
-    Releases first, tags as the fallback: the repo has so far shipped tags
-    without a Release object behind them, and /releases/latest answers 404 in
-    that state — so tags-only has to work or the check never fires. Only a
-    real Release carries an installer asset; the tag fallback leaves it None,
-    which is what sends the notice down the open-the-browser path."""
-    try:
-        rel = _fetch_json(UPDATE_API_RELEASE)
-        v = _version_tuple(rel.get("tag_name"))
-        if v:
-            asset_url, asset_size = _release_installer_asset(rel)
-            return (v, rel.get("tag_name"), rel.get("html_url") or REPO_URL,
-                    asset_url, asset_size)
-    except Exception:
-        pass            # no published release yet — normal, fall through
-    try:
-        tags = _fetch_json(UPDATE_API_TAGS)
-    except Exception as e:
-        print(f"[update] check skipped: {e}", file=sys.stderr)
-        return None
-    best = None
-    for t in tags or []:
-        v = _version_tuple(t.get("name"))
-        # The tag list is not ordered by version, so this takes the highest
-        # rather than trusting the first entry.
-        if v and (best is None or v > best[0]):
-            best = (v, t.get("name"), f"{REPO_URL}/releases", None, 0)
-    return best
-
-
-# The check runs at startup and again on every loading screen (see the zone
-# handler), which is the closest thing the meter has to "the player is between
-# things and would not mind hearing about a new version".
-#
-# Throttled, because loading screens are not rare: GitHub's unauthenticated API
-# allows about 60 requests an hour per IP, and a rift session can put you
-# through more zone changes than that. Once a newer version HAS been found
-# there is nothing left to learn, so the checks stop entirely.
-UPDATE_RECHECK_SECS = 900.0        # 15 minutes between checks at most
-_update_checked_at = [0.0]         # time.monotonic of the last attempt
-UPDATE_BTN_FLASH_MS = 4000         # how long the manual button shows a result
-
-
-def _record_newer(found):
-    """Publish a check result into UPDATE if it names a newer version than
-    this build; returns whether it did. Shared by the automatic check and the
-    menu's manual button, so the two can't drift on what "newer" means.
-    "latest" is written last: the overlay's tick treats it as the ready flag,
-    and the asset fields have to be in place before it fires."""
-    mine = _version_tuple(VERSION)
-    if not found or mine is None:
-        return False
-    v, name, url, asset_url, asset_size = found
-    if v <= mine:
-        return False
-    UPDATE["asset"], UPDATE["asset_size"] = asset_url, asset_size
-    UPDATE["latest"], UPDATE["url"] = name, url
-    print(f"[update] {name} is available (running {VERSION}) — {url}"
-          + ("" if asset_url else " (no installer asset — notice will "
-             "open the browser instead of self-updating)"),
-          file=sys.stderr)
-    return True
-
-
-def check_for_update(announce=False):
-    """Ask GitHub whether there's a newer version, on a background thread.
-
-    Never blocks startup and never fails loudly: being offline, rate-limited or
-    caught in a GitHub outage should cost the notice, not the meter. Set
-    FAREVER_NO_UPDATE_CHECK to skip the request entirely.
-
-    `announce` also logs the boring "up to date" answer. The startup check does;
-    the loading-screen ones don't, or the log fills with a line every 15 minutes
-    saying nothing happened."""
-    if os.environ.get("FAREVER_NO_UPDATE_CHECK"):
-        if announce:
-            print("[update] check disabled by FAREVER_NO_UPDATE_CHECK.",
-                  file=sys.stderr)
-        return
-    if UPDATE["latest"]:
-        return          # already found one; the notice is up, stop asking
-    now = time.monotonic()
-    # Set before the thread starts, so two zone changes in quick succession
-    # can't put two requests in flight.
-    if not announce and now - _update_checked_at[0] < UPDATE_RECHECK_SECS:
-        return
-    _update_checked_at[0] = now
-
-    def work():
-        found = _latest_version()
-        if _record_newer(found):
-            # Automatic discovery, so the overlay may offer the update rather
-            # than only writing a line into the menu. Set after _record_newer,
-            # which publishes the asset fields the offer needs.
-            UPDATE["prompt"] = True
-        elif found and announce:
-            print(f"[update] up to date (running {VERSION}).", file=sys.stderr)
-
-    threading.Thread(target=work, daemon=True, name="update-check").start()
-
-
 # Finishing the update is the INSTALLER's job, not a helper's.
 #
 # This used to hand off to a detached, hidden PowerShell script that polled
@@ -2132,25 +982,6 @@ def check_for_update(announce=False):
 # entry is flagged `skipifsilent`, so under the old flow it never once ran.
 #
 # What is left is one ShellExecute of a file the user just agreed to install.
-
-
-def open_installer(installer: Path):
-    """Open the downloaded installer the same way a double-click would.
-
-    os.startfile is ShellExecute: a normal, visible, user-facing launch with no
-    interpreter, no hidden window and no policy bypass in sight. Raises on
-    failure, and the caller falls back to the browser."""
-    os.startfile(str(installer))  # noqa: S606 - a file the user chose to run
-
-
-def _contrast_ink(bg, dark=MINIMAP_Z_MARK_DARK, light=MINIMAP_Z_MARK_LIGHT):
-    """Black or white, whichever is readable on `bg`. Rec. 601 luma, which is
-    close enough for picking between two extremes."""
-    try:
-        r, g, b = (int(bg[i:i + 2], 16) for i in (1, 3, 5))
-    except (ValueError, IndexError):
-        return dark
-    return dark if (0.299 * r + 0.587 * g + 0.114 * b) > 140 else light
 
 
 def _pretty_id(sid: str) -> str:
@@ -3238,177 +2069,22 @@ class HistoryStore:
 STEAM64_BASE = 76561197960265728
 
 
-def steam64_from_uid(uid):
-    """st.Player.uid -> the player's SteamID64, or None if it isn't one.
-
-    The uid arrives as "S" followed by the Steam ACCOUNT ID's bytes in hex —
-    but in LITTLE-ENDIAN order, the order they sit in memory, not the order you
-    would write the number. So `S1688cc03` is not 0x1688cc03; the bytes are
-    16 88 cc 03, which read back as 0x03cc8816 = 63735830.
-
-    That trap is the whole reason this function exists rather than an inline
-    int(uid[1:], 16): read it the natural way and you get a wrong number that
-    still looks like a plausible account id, so nothing downstream complains —
-    it just sends you to a stranger's profile. Measured and calibrated
-    2026-08-02 against both steam_get_steam_id() and the Steam registry's
-    ActiveUser value; see frida/steamid_probe.js.
-
-    Trailing zero bytes are trimmed by the game, so short uids are normal
-    (an old, low-numbered account), not corruption.
-    """
-    if not uid or not isinstance(uid, str) or uid[0] != "S":
-        return None
-    h = uid[1:]
-    if not h or len(h) > 8:
-        return None
-    try:
-        # An odd length means the leading (most significant) byte lost its zero
-        # nibble; pad on the left so the byte boundaries line up again.
-        raw = bytes.fromhex(h.zfill(len(h) + (len(h) & 1)))
-    except ValueError:
-        return None
-    return STEAM64_BASE + int.from_bytes(raw, "little")
-
-
 class WorldSnapshot:
-    """The latest sweep of nearby entities, for the minimap.
+    """Who you are, who is in your group, and which class every player is.
 
-    Deliberately last-wins rather than accumulating: this is a live picture of
-    where things are *now*, and a stale entity is worse than a missing one. The
-    hook has already culled to radius and dropped everything not worth drawing,
-    so this just holds what arrived.
-
-    ...with one exception, which is what `_steady` below is for. The game's own
-    entity lists churn at distance, and it shows up on the map as markers
-    blinking. Measured over 191 frames (28.7s):
-
-      * five entities — a chest and three orbs in one distant cluster —
-        appeared in a SINGLE frame and were never seen again, and
-      * four distant markers (838-1240u) vanished together for 8 and then 14
-        frames, about 1.2s and 2.1s, before coming back.
-
-    Both are the game streaming, not the sweep: they arrive and leave in
-    clusters, and nothing here can stop it. So the picture is smoothed on the
-    way in — see MARKER_SHOW_SECS and MARKER_KEEP_SECS."""
+    Fed by two hook messages: `hero` (the local hero plus the group roster the
+    meter's party filter reads) and `shard` (every player the client holds
+    state for, each with its class). The meter's own rows come from damage
+    events, which carry no class, so this is where the class tag comes from."""
 
     def __init__(self):
         self._lock = threading.Lock()
-        self.me = {"x": 0, "y": 0, "r": 0.0}
-        self.ents = []
-        self.stamp = 0.0
-        # key -> [entity, first_seen, last_seen]. Only what the game sends is
-        # ever in here; this decides WHEN it's drawn, never what.
-        self._tracked = {}
-        # Both come from the hook's `hero` message, which already carries the
-        # group roster it reads for the meter's party filter. Reusing it means
-        # "who is in my group" has one answer, and it covers group members who
-        # haven't dealt damage yet — which the meter's own per-player flag
-        # can't, since that's only set when someone lands a hit.
         self.party = frozenset()
         self.local = None
-        # name -> class, harvested from the sweep. The meter's own rows come
-        # from damage events, which carry no class, so this is where it lives.
+        # name -> class ("Warrior", "Mage", ...). Kept rather than replaced
+        # wholesale: a player who leaves the layer shouldn't lose their tag on
+        # the meter while their damage is still on it.
         self.classes = {}
-        # The whole-shard roster behind the Social tab: every player the client
-        # holds state for, which is a much wider set than `ents` (the minimap
-        # sweep is culled to what is near you). Rows are
-        # {n, uid, k, lvl, me} exactly as the hook sent them.
-        self.shard = []
-        # Everyone seen since the meter started, accumulated from the shard
-        # roster and never pruned — that is the whole point of it, since the
-        # question it answers is "who was that earlier". Keyed by
-        # (uid, name) rather than uid alone: one Steam account owns several
-        # characters, and collapsing them would silently rename whichever alt
-        # you saw first. Level and class are deliberately NOT kept — they are
-        # only true while the player is on your layer, and a stale level is
-        # worse than no level.
-        self.seen = {}
-
-    @staticmethod
-    def _key(e):
-        """A stable identity for an entity across frames, or None to pass it
-        straight through unsmoothed.
-
-        Static things are keyed by where they are — the sweep rounds positions
-        to whole units and scenery doesn't move, so this is exact. Players are
-        keyed by name, which follows them as they run. Foes get no key on
-        purpose: they move, they're unnamed until the CDB lookup lands, and
-        they're the one category where a delay would matter — a mob appearing
-        late is worse than a mob flickering.
-
-        Critters are exempt for the same reason and it matters more, not less:
-        they wander constantly, so a position key would mint a fresh marker on
-        every step (none of which ever survives MARKER_SHOW_SECS) while the
-        stale ones sat in _tracked for MARKER_KEEP_SECS. That reads as critters
-        that flicker AND leave ghosts behind them — and it would have had the
-        sparkly tracker still pointing at a rabbit that walked off."""
-        cat = e.get("c")
-        if cat == "hero":
-            return ("hero", e.get("n")) if e.get("n") else None
-        if cat in ("foe", "critter"):
-            return None
-        return (cat, e.get("x"), e.get("y"), e.get("z"))
-
-    def _steady(self, ents, now):
-        """The entities worth drawing, given what's been seen recently.
-
-        Two rules, one for each way the game's churn shows up:
-
-        * nothing is drawn until it has been present for MARKER_SHOW_SECS, which
-          is what kills the single-frame flashes, and
-        * something that stops arriving is kept for MARKER_KEEP_SECS, which
-          bridges the multi-second dropouts.
-
-        The cost of the second rule is that a chest you just looted lingers for
-        a moment. That's the right side to err on: the alternative is the map
-        twitching at you while you're trying to read it."""
-        fresh = {}
-        for e in ents:
-            key = self._key(e)
-            if key is None:
-                continue
-            fresh[key] = e
-        # Age out what hasn't been seen in a while, and refresh what has.
-        for key, ent in fresh.items():
-            row = self._tracked.get(key)
-            if row is None:
-                self._tracked[key] = [ent, now, now]
-            else:
-                row[0], row[2] = ent, now
-        for key in [k for k, r in self._tracked.items()
-                    if now - r[2] > MARKER_KEEP_SECS]:
-            del self._tracked[key]
-        out = [e for e in ents if self._key(e) is None]     # foes, unsmoothed
-        for _key, (ent, first, last) in self._tracked.items():
-            # Seen ACROSS at least that long — not "first seen that long ago".
-            # A one-frame flash has last == first and never qualifies; were this
-            # measured against now, the flash would sit in its grace period
-            # quietly ageing until it passed the test, which is the exact
-            # marker this exists to suppress.
-            if last - first >= MARKER_SHOW_SECS:
-                out.append(ent)
-        return out
-
-    def update(self, payload):
-        with self._lock:
-            me = payload.get("me") or self.me
-            now = time.monotonic()
-            # A big jump means a teleport, a rift or a zone change, and every
-            # marker being held over from the last place is then wrong rather
-            # than merely late. Cheaper and more reliable than watching for the
-            # events that cause it, since it catches all of them.
-            if math.hypot(me.get("x", 0) - self.me.get("x", 0),
-                          me.get("y", 0) - self.me.get("y", 0)) > MARKER_RESET_JUMP:
-                self._tracked.clear()
-            self.me = me
-            self.ents = self._steady(payload.get("ents") or [], now)
-            self.stamp = now
-            for e in self.ents:
-                if e.get("c") == "hero" and e.get("n") and e.get("k"):
-                    # Kept rather than replaced wholesale: a player who walks
-                    # out of range shouldn't lose their tag on the meter while
-                    # their damage is still on it.
-                    self.classes[e["n"]] = e["k"]
 
     def set_hero(self, name, party):
         with self._lock:
@@ -3418,49 +2094,9 @@ class WorldSnapshot:
 
     def set_shard(self, rows):
         with self._lock:
-            self.shard = list(rows or ())
-            # ONE timestamp for the whole batch, not one per row. Everyone
-            # currently on the shard then shares an identical `last`, so a
-            # recency sort puts them in a single stable block instead of
-            # reshuffling them against each other every two seconds.
-            now = time.monotonic()
-            for r in self.shard:
-                name, uid = r.get("n"), r.get("uid")
-                if not name:
-                    continue
-                key = (uid, name)
-                e = self.seen.get(key)
-                if e is None:
-                    self.seen[key] = {"n": name, "uid": uid,
-                                      "me": bool(r.get("me")),
-                                      "first": now, "last": now}
-                else:
-                    e["last"] = now
-
-    def seen_players(self):
-        """Everyone encountered this session, unordered.
-
-        Copies rather than the stored dicts: the hook thread rewrites `last` on
-        every sweep, and handing the UI the live objects would let it read a
-        row mid-update. Ordering is the tab's business, as with roster()."""
-        with self._lock:
-            return [dict(v) for v in self.seen.values()]
-
-    def roster(self):
-        """The shard roster, as the hook last sent it.
-
-        Deliberately unordered here: which order it is shown in is the tab's
-        business (the user can pick), and sorting in both places is how the two
-        end up disagreeing.
-        """
-        with self._lock:
-            return list(self.shard)
-
-    def read(self):
-        """A snapshot for the draw pass. Copied under the lock because the
-        overlay iterates it on the Tk thread while the hook thread replaces it."""
-        with self._lock:
-            return self.me, list(self.ents), self.stamp
+            for r in rows or ():
+                if r.get("n") and r.get("k"):
+                    self.classes[r["n"]] = r["k"]
 
     def who(self):
         with self._lock:
@@ -3469,592 +2105,6 @@ class WorldSnapshot:
     def class_of(self, name):
         with self._lock:
             return self.classes.get(name)
-
-    def fresh(self, max_age=2.0):
-        with self._lock:
-            return self.stamp > 0 and (time.monotonic() - self.stamp) < max_age
-
-
-class StatusSnapshot:
-    """Which buffs and debuffs are on you right now, and when each one ends.
-
-    The hook sends this on CHANGE ONLY — a resting buff bar produces no traffic
-    at all — so this class holds the last set and lets the UI ask for it as
-    often as it likes.
-
-    **The clock.** The hook cannot send "8.4 seconds left" because by the time
-    the UI draws it, it isn't. It sends the expiry in the GAME's clock
-    (startTime + duration) alongside the reading of that clock which goes with
-    it, and this converts the pair once into a deadline on the HOST's monotonic
-    clock. Everything after that is local arithmetic at whatever rate the UI
-    redraws.
-
-    That conversion is only legitimate because the two clocks were measured
-    against each other: over a 200s window the offset between the game's
-    serverNow and the wall clock held to a 0.52s spread with no cumulative
-    trend — and 0.5s is exactly the game clock's own quantisation, which is the
-    other half of why this class exists. serverNow only advances twice a
-    second, so a countdown driven straight off it visibly steps. Latched
-    against monotonic time it glides.
-
-    **The two ways a buff has no countdown**, which look identical on screen
-    and must not be confused in the data:
-
-      * `refreshDuration == 0` — the game's own "this one has no timer".
-        Dash, Under water, Surge of Violence: they end on an event, not a
-        clock. The hook omits the expiry entirely and these show as simply up.
-      * A status caught mid-construction, with startTime still 0. Also no
-        expiry, but it will get one within a tick or two.
-
-    Neither may be rendered as expired, which is what computing an expiry from
-    a zero start would do.
-    """
-
-    def __init__(self):
-        self._lock = threading.Lock()
-        # key -> row. See status_key(): item statuses are keyed by their item,
-        # because they all share the one kind.
-        self._live = {}
-        self.stamp = 0.0
-        # Every key seen since the meter started, with what it was called and
-        # when it was last up. This is what puts "you have actually had this
-        # one" at the top of the picker, and it is deliberately never pruned —
-        # the question it answers is "what was that buff I had earlier".
-        self.seen = {}
-
-    def update(self, payload):
-        """Take a `status` message from the hook.
-
-        `now` is the game clock reading that the expiries in this same message
-        are relative to. It can be None if the clock walk failed, in which case
-        nothing gets a countdown — better a tray with no numbers than a tray
-        counting down from a number nobody measured.
-        """
-        rows = payload.get("list")
-        if not isinstance(rows, list):
-            return
-        now_game = payload.get("now")
-        mono = time.monotonic()
-        live, seen_now = {}, []
-        for r in rows:
-            kind = r.get("k")
-            if not isinstance(kind, str) or not kind:
-                continue
-            item = r.get("i") if isinstance(r.get("i"), str) else None
-            key = status_key(kind, item)
-            expiry = r.get("e")
-            row = {
-                "key": key,
-                "kind": kind,
-                "item": item,
-                "name": status_name(kind, item),
-                "stacks": max(1, int(r.get("s") or 1)),
-                # None means "no countdown", and the two callers that draw a
-                # sweep both check it. Note the guard on now_game: an expiry
-                # without a clock to measure it against is not a deadline.
-                "ends": (mono + (float(expiry) - float(now_game)))
-                        if (isinstance(expiry, (int, float))
-                            and isinstance(now_game, (int, float))) else None,
-                # The buff's NOMINAL length, which is the denominator for a
-                # clock swipe. Emphatically not `duration`, which grows every
-                # time the buff is refreshed — see the hook's own notes.
-                "full": float(r["n"]) if isinstance(r.get("n"), (int, float))
-                        and r["n"] > 0 else None,
-            }
-            live[key] = row
-            seen_now.append(row)
-        with self._lock:
-            self._live = live
-            self.stamp = mono
-            for row in seen_now:
-                e = self.seen.get(row["key"])
-                if e is None:
-                    self.seen[row["key"]] = {"key": row["key"],
-                                             "kind": row["kind"],
-                                             "item": row["item"],
-                                             "name": row["name"],
-                                             "first": mono, "last": mono}
-                else:
-                    e["last"] = mono
-                    # A rename can only come from the metadata being reloaded,
-                    # but taking the newer one costs nothing and stops a stale
-                    # label outliving a self-heal.
-                    e["name"] = row["name"]
-
-    def live(self, mono=None):
-        """The statuses currently up, each with `left` in seconds.
-
-        Rows whose deadline has passed are dropped HERE rather than waiting for
-        the hook to notice: the hook only re-sends when the set changes, and
-        between a buff expiring and the game rebuilding its array there is a
-        window where the tray would otherwise show a buff at -0.3s.
-        """
-        mono = time.monotonic() if mono is None else mono
-        with self._lock:
-            rows = list(self._live.values())
-        out = []
-        for r in rows:
-            if r["ends"] is None:
-                out.append(dict(r, left=None))
-                continue
-            left = r["ends"] - mono
-            if left <= 0:
-                continue
-            out.append(dict(r, left=left))
-        return out
-
-    def seen_keys(self):
-        """Everything that has been on you this session, for the picker.
-
-        Copies, for the same reason WorldSnapshot.seen_players does: the hook
-        thread rewrites `last` while the UI reads."""
-        with self._lock:
-            return [dict(v) for v in self.seen.values()]
-
-    def ready(self):
-        """Whether the hook has ever reported statuses.
-
-        Deliberately NOT a freshness window like WorldSnapshot.fresh(). The
-        minimap can demand a sweep in the last two seconds because it gets one
-        several times a second no matter what; statuses are sent on change
-        only, so a player standing still with a stable buff bar sends nothing
-        for minutes at a time and an age check would call that stale. The only
-        thing worth distinguishing here is "we have heard from the hook" from
-        "we never connected", which is what the empty-tray hint needs.
-        """
-        with self._lock:
-            return self.stamp > 0
-
-
-class _HistoryRow:
-    """One reusable dataset line in the History browser.
-
-    Same reasoning, and the same measurement, as _BuffPickRow: building these
-    from scratch cost 131ms for 27 rows while reading and parsing the folder
-    behind them cost 0.89ms — so the browser's whole cost was Tk making
-    widgets. HISTORY_PAGE is 200 and the history folder grows without bound, so
-    on a well-used install that was heading for a full second of frozen UI
-    every time the tab was raised.
-
-    Built once, re-pointed at a different dataset on each show(). The Report
-    button is packed and unpacked rather than created conditionally, because
-    only rifts have one and a row must be able to become either kind.
-    """
-
-    def __init__(self, ov):
-        self.ov = ov
-        self.entry = None
-        self._packed = False
-        f = ov.fonts_m
-        self.frame = tk.Frame(ov.history_list, bg=BG_BODY)
-        self.mark = tk.Label(self.frame, text=" ", bg=BG_BODY, fg=FG_DIM,
-                             font=f["mono"], width=1)
-        self.mark.pack(side="left")
-        self.name = tk.Label(self.frame, text="", bg=BG_BODY, fg=FG_TEXT,
-                             font=f["mono"], width=HISTORY_NAME_CELLS,
-                             anchor="w")
-        self.name.pack(side="left")
-        self.when = tk.Label(self.frame, text="", bg=BG_BODY, fg=FG_DIM,
-                             font=f["mono"], width=HISTORY_WHEN_CELLS,
-                             anchor="w")
-        self.when.pack(side="left")
-        self.meta = tk.Label(self.frame, text="", bg=BG_BODY, fg=FG_DIM,
-                             font=f["mono"], width=HISTORY_META_CELLS,
-                             anchor="w")
-        self.meta.pack(side="left")
-        # Packed right-to-left, so Details ends up left of Report.
-        self.btn_details = self._mini("Details", self._details)
-        self.btn_report = self._mini("Report", self._report)
-        self.btn_report.pack_forget()
-        self._report_packed = False
-
-    def _mini(self, text, cmd):
-        b = tk.Button(self.frame, text=text, command=cmd,
-                      font=self.ov.fonts_m["ui"], bg=BG_BODY_SOFT,
-                      fg=FG_TEXT, activebackground=BG_BAR_TRACK,
-                      activeforeground=FG_VALUE, relief="flat", bd=0,
-                      padx=8, pady=1, highlightthickness=1,
-                      highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        b.pack(side="right", padx=(4, 0))
-        return b
-
-    def _details(self):
-        if self.entry:
-            self.ov._enqueue(
-                lambda s=self.entry: self.ov._open_history_entry(s))()
-
-    def _report(self):
-        if self.entry:
-            self.ov._enqueue(
-                lambda s=self.entry: self.ov._open_history_report(s))()
-
-    def show(self, r):
-        self.entry = r
-        if not self._packed:
-            self.frame.pack(fill="x", pady=1)
-            self._packed = True
-        rift = r["kind"] == "rift"
-        cfg = self.ov._cfg
-        # A rift is the one dataset that opens two ways, so it is marked. The
-        # colour is the report card's own, which is where clicking it goes.
-        cfg(self.mark, text="◆" if rift else " ",
-            fg=RIFT_GLOW if rift else FG_DIM)
-        cfg(self.name, text=r["name"][:HISTORY_NAME_CELLS],
-            fg=FG_VALUE if rift else FG_TEXT)
-        cfg(self.when, text=self.ov._when_text(r["at"]))
-        cfg(self.meta,
-            text=f"{self.ov._mmss(r['duration'])}  {int(r['total']):,}")
-        if rift and not self._report_packed:
-            self.btn_report.pack(side="right", padx=(4, 0))
-            self._report_packed = True
-        elif not rift and self._report_packed:
-            self.btn_report.pack_forget()
-            self._report_packed = False
-
-    def hide(self):
-        if self._packed:
-            self.frame.pack_forget()
-            self._packed = False
-        self.entry = None
-
-
-class _BuffPickRow:
-    """One reusable row in the Buffs tab's picker.
-
-    Exists purely for speed, and the numbers are the justification: rebuilding
-    the picker's rows from scratch measured 297ms for 25 rows while deciding
-    what belonged in them took 1.4ms. Tk widget creation was the whole cost, it
-    ran on every keystroke, and the search box felt broken as a result.
-
-    So each row is created once and then re-pointed at whatever status should
-    occupy it. `hide()` unpacks without destroying, because a search that
-    narrows and then widens again must not pay to rebuild what it just threw
-    away.
-
-    The command bound to the Track button cannot be baked in at construction —
-    the row stands for a different status every time it is shown — so it reads
-    `self.key` through a closure that is set on each show().
-    """
-
-    def __init__(self, ov):
-        self.ov = ov
-        self.key = None
-        self._packed = False
-        self._img = None                # keeps the PhotoImage referenced
-        f = ov.fonts_m
-        self.frame = tk.Frame(ov.buff_list, bg=BG_BODY)
-        self.dot = tk.Label(self.frame, text="", bg=BG_BODY, fg=ACCENT,
-                            font=f["ui_tiny_i"], width=2, anchor="w")
-        self.dot.pack(side="left")
-        # One label for the icon, always packed. An empty image is a blank of
-        # the right width, which keeps the name column aligned whether or not
-        # a status has art — the previous version packed a spacer Frame
-        # instead, which is another widget per row for the same effect.
-        self.icon = tk.Label(self.frame, bg=BG_BODY, bd=0)
-        self.icon.pack(side="left", padx=(0, 6))
-        self.text_col = tk.Frame(self.frame, bg=BG_BODY)
-        self.text_col.pack(side="left", fill="x", expand=True)
-        self.name = tk.Label(self.text_col, text="", bg=BG_BODY, fg=FG_TEXT,
-                             font=f["ui"], anchor="w")
-        self.name.pack(side="top", fill="x")
-        self.desc = tk.Label(self.text_col, text="", bg=BG_BODY, fg=FG_DIM,
-                             font=f["ui_tiny_i"], anchor="w", justify="left",
-                             wraplength=BUFF_PICK_DESC_WRAP)
-        self.desc_packed = False
-        self.btn = tk.Button(
-            self.frame, text="Track", command=self._clicked, font=f["ui"],
-            bg=BG_BODY_SOFT, fg=FG_TEXT, activebackground=BG_BAR_TRACK,
-            activeforeground=FG_VALUE, relief="flat", bd=0, padx=10, pady=0,
-            highlightthickness=1, highlightbackground=BG_BAR_TRACK,
-            cursor="hand2")
-        self.btn.pack(side="left", padx=(6, 0))
-
-    def _clicked(self):
-        if self.key:
-            self.ov._enqueue(lambda k=self.key: self.ov._track_buff(k))()
-
-    def show(self, row, tracked, icon_px):
-        self.key = row["key"]
-        if not self._packed:
-            self.frame.pack(fill="x", pady=1)
-            self._packed = True
-        # Guarded throughout — see Overlay._cfg. Clicking Track re-renders the
-        # whole list, but only ONE row's contents actually changed, and Tk
-        # charges full price for setting a label to what it already says.
-        cfg = self.ov._cfg
-        cfg(self.dot, text="●" if row["seen"] else "")
-        img = self.ov.status_icons.get(row["key"], icon_px)
-        # Tk does not own its PhotoImages; the row holds the reference so a
-        # cache eviction elsewhere cannot blank the column.
-        self._img = img
-        if img is not None:
-            cfg(self.icon, image=img, width=0, height=0)
-        else:
-            cfg(self.icon, image="", width=icon_px // 8 or 1, height=1)
-        cfg(self.name, text=row["name"], fg=FG_DIM if tracked else FG_TEXT)
-        if row["desc"]:
-            cfg(self.desc, text=row["desc"])
-            if not self.desc_packed:
-                self.desc.pack(side="top", fill="x")
-                self.desc_packed = True
-        elif self.desc_packed:
-            self.desc.pack_forget()
-            self.desc_packed = False
-        cfg(self.btn,
-            text="Tracked" if tracked else "Track",
-            state="disabled" if tracked else "normal",
-            fg=FG_DIM if tracked else FG_TEXT,
-            disabledforeground=FG_DIM,
-            cursor="arrow" if tracked else "hand2")
-
-    def hide(self):
-        if self._packed:
-            self.frame.pack_forget()
-            self._packed = False
-        self.key = None
-
-
-class StatusIcons:
-    """Status icons, cut from the committed sheet on demand.
-
-    assets/status/icons.webp is one grid of 64px cells; icons.json maps a
-    status id to a cell. Several statuses legitimately share a cell (a skill's
-    debuff and its self-buff half are one picture), which is why the index is
-    id -> cell rather than a list.
-
-    Cropped and scaled lazily, then cached by (cell, size): a tray asks for the
-    same handful of icons every frame, and Tk needs a live PhotoImage per size
-    anyway. The cache is also what keeps the images ALIVE — Tk does not own its
-    PhotoImages, and one dropped on the floor after being drawn shows up as a
-    blank square, which is the classic version of this bug.
-
-    Pillow is optional, exactly as it is for the map backdrop and the parse
-    screenshots: without it (or without the asset) every lookup returns None
-    and the trays fall back to drawing coloured tiles.
-    """
-
-    def __init__(self):
-        self._sheet = None
-        self._index = None
-        self._cell = 64
-        self._cols = 16
-        self._cache = {}
-        # (cell, size, dim) -> the sweep step currently cached for it, so the
-        # previous frame's wedge can be dropped instead of piling up.
-        self._sweep_slot = {}
-        self._tried = False
-        self._warned = False
-
-    def _ensure(self):
-        if self._tried:
-            return self._sheet is not None
-        self._tried = True
-        try:
-            from PIL import Image
-            meta = json.loads(
-                (STATUS_DIR / "icons.json").read_text(encoding="utf-8"))
-            img = Image.open(STATUS_DIR / "icons.webp").convert("RGBA")
-        except ImportError:
-            print("[meter] buff icons need Pillow (pip install pillow) — "
-                  "trays will draw coloured tiles.", file=sys.stderr)
-            return False
-        except Exception as e:
-            print(f"[meter] couldn't load the buff icon sheet ({e}) — trays "
-                  "will draw coloured tiles.", file=sys.stderr)
-            return False
-        self._sheet = img
-        self._index = meta.get("ids") or {}
-        self._cell = int(meta.get("cell") or 64)
-        self._cols = int(meta.get("cols") or 16)
-        print(f"[meter] buff icons loaded: {meta.get('count')} icons for "
-              f"{len(self._index)} statuses", file=sys.stderr)
-        return True
-
-    def has(self, kind):
-        return bool(self._ensure() and kind in (self._index or {}))
-
-    def get(self, kind, size, dim=False, spent=None):
-        """A Tk PhotoImage of `kind`'s icon at `size` px, or None.
-
-        None is a normal answer, not a failure: 60-odd statuses have no icon in
-        the cdb at all, and the caller draws a coloured tile for those.
-
-        `dim` knocks the whole icon back, for a tracked buff that is not up.
-        `spent` (0..1) darkens that fraction of a clock face, clockwise from
-        twelve — the cooldown sweep. Both are composited here rather than drawn
-        over the icon on the canvas, because Tk's stipple does nothing on this
-        build (see BUFF_SWEEP_ALPHA) and a canvas shape has no alpha of its own.
-
-        The cost of that is one image per distinct (icon, size, shading), which
-        is why `spent` arrives quantised — see BUFF_SWEEP_STEPS.
-        """
-        if not self._ensure():
-            return None
-        cell = (self._index or {}).get(kind)
-        if cell is None:
-            return None
-        size = max(8, int(size))
-        step = None
-        if spent is not None and spent > 0.001:
-            step = min(BUFF_SWEEP_STEPS,
-                       int(round(spent * BUFF_SWEEP_STEPS)))
-        key = (cell, size, bool(dim), step)
-        hit = self._cache.get(key)
-        if hit is not None:
-            return hit
-        try:
-            img = self._render(cell, size, dim, step)
-        except Exception as e:
-            if not self._warned:
-                self._warned = True
-                print(f"[meter] buff icon render failed ({e}) — falling back "
-                      "to coloured tiles.", file=sys.stderr)
-            return None
-        # A sweeping icon only ever needs its CURRENT step — the fraction moves
-        # one way and never comes back — so the previous one is dropped rather
-        # than accumulating. Without this a tracked buff mints 48 images as it
-        # ticks down, and four full trays would blow through any sane cap every
-        # few seconds and spend the whole time re-rendering what it had just
-        # thrown away.
-        if step is not None:
-            slot = (cell, size, bool(dim))
-            old = self._sweep_slot.get(slot)
-            if old is not None and old != step:
-                self._cache.pop((cell, size, bool(dim), old), None)
-            self._sweep_slot[slot] = step
-        if len(self._cache) >= BUFF_ICON_CACHE_MAX:
-            self._cache.clear()
-            self._sweep_slot.clear()
-        self._cache[key] = img
-        return img
-
-    def _render(self, cell, size, dim, step):
-        from PIL import Image, ImageDraw, ImageTk
-        c = self._cell
-        x, y = (cell % self._cols) * c, (cell // self._cols) * c
-        tile = self._sheet.crop((x, y, x + c, y + c))
-        if size != c:
-            # LANCZOS down, which is the only direction that happens: the
-            # sheet is stored at 64 and the trays draw between ~24 and ~48.
-            tile = tile.resize((size, size), Image.LANCZOS)
-        if dim or step:
-            shade = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-            d = ImageDraw.Draw(shade)
-            ink = _hex_rgb(BUFF_SHADE)
-            if dim:
-                d.rectangle((0, 0, size, size),
-                            fill=ink + (int(255 * BUFF_DIM_ALPHA),))
-            elif step:
-                # Pillow's pieslice takes degrees CLOCKWISE from three
-                # o'clock, so twelve is -90. The wedge covers the SPENT part,
-                # growing clockwise, which is the direction every cooldown
-                # clock in every game turns.
-                sweep = 360.0 * step / BUFF_SWEEP_STEPS
-                d.pieslice((0, 0, size - 1, size - 1), start=-90,
-                           end=-90 + sweep,
-                           fill=ink + (int(255 * BUFF_SWEEP_ALPHA),))
-            # alpha_composite, not paste: the icon has its own alpha (the
-            # rounded corners), and pasting would punch the shade's square
-            # straight through it.
-            tile = Image.alpha_composite(tile, shade)
-        return ImageTk.PhotoImage(tile)
-
-
-class MapBackdrop:
-    """The world map under the minimap markers.
-
-    Loads assets/maps/<world>.webp plus the transform its builder wrote next
-    to it: image_px = (world - origin) * px_per_unit, +y DOWN (the world's +y
-    is south, measured). The transform comes from the game's own
-    tile grid (576 world units per tile), cross-checked against questlog.gg's
-    markers, so there is nothing here to calibrate — only to crop.
-
-    Pillow is optional exactly like it is for the parse screenshots: without
-    it (or without the asset) every call returns None and the minimap simply
-    keeps its flat panel."""
-
-    SQRT2 = 1.4143          # crop margin so corners survive a rotation
-
-    def __init__(self):
-        self._world = None
-        self._img = None       # PIL RGB image, or None
-        self._meta = None
-        self._failed = set()   # worlds not to retry every tick
-
-    @staticmethod
-    def available_world(zone_sig):
-        """Match the hook's Main.getMapId() sig to a shipped asset. Fuzzy on
-        purpose — the sig's exact spelling is the game's business; an asset
-        named w1_siagarta answers to any sig that mentions siagarta."""
-        if not zone_sig:
-            return None
-        s = str(zone_sig).lower()
-        try:
-            candidates = sorted(MAPS_DIR.glob("*.json"))
-        except OSError:
-            return None
-        for p in candidates:
-            world = p.stem
-            frag = world.split("_", 1)[-1].lower()
-            if frag and (frag in s or s in world.lower()):
-                return world
-        return None
-
-    def _ensure(self, world):
-        if world == self._world:
-            return self._img is not None
-        if world in self._failed:
-            return False
-        try:
-            from PIL import Image
-            meta = json.loads((MAPS_DIR / f"{world}.json").read_text())
-            img = Image.open(MAPS_DIR / f"{world}.webp").convert("RGB")
-        except ImportError:
-            print("[meter] map backdrop needs Pillow (pip install pillow) — "
-                  "keeping the flat minimap.", file=sys.stderr)
-            self._failed.add(world)
-            return False
-        except Exception as e:
-            print(f"[meter] couldn't load map asset {world!r}: {e}",
-                  file=sys.stderr)
-            self._failed.add(world)
-            return False
-        self._world, self._img, self._meta = world, img, meta
-        print(f"[meter] map backdrop loaded: {world} "
-              f"({meta['width']}x{meta['height']})", file=sys.stderr)
-        return True
-
-    def crop(self, world, wx, wy, half_units, out_px, heading=None):
-        """An out_px-square PIL image of the map centred on world (wx, wy)
-        showing ±half_units. `heading` None means fixed mode (north up);
-        otherwise the camera azimuth, and the image is turned so that heading
-        points up — the same convention as _minimap_px, and PROVEN against it
-        by map_bg_check.py rather than trusted from the derivation. Returns
-        None when there's nothing to draw (no asset, centre off the map)."""
-        if not self._ensure(world):
-            return None
-        from PIL import Image
-        m = self._meta
-        s = float(m["px_per_unit"])
-        cx = (wx - m["origin_x"]) * s
-        cy = (wy - m["origin_y"]) * s
-        if not (0 <= cx < m["width"] and 0 <= cy < m["height"]):
-            return None          # an instance reusing odd coordinates
-        half_px = half_units * s
-        r = half_px * (self.SQRT2 if heading is not None else 1.0)
-        box = (int(round(cx - r)), int(round(cy - r)),
-               int(round(cx + r)), int(round(cy + r)))
-        im = self._img.crop(box)   # pads with black past the world's edge
-        if heading is not None:
-            # PIL rotates content counterclockwise; heading+90deg brings the
-            # camera azimuth to the top. See map_bg_check.py for the proof.
-            im = im.rotate(math.degrees(heading) + 90.0,
-                           resample=Image.BILINEAR)
-            c = im.size[0] / 2.0
-            hp = int(round(half_px))
-            im = im.crop((int(round(c)) - hp, int(round(c)) - hp,
-                          int(round(c)) + hp, int(round(c)) + hp))
-        return im.resize((out_px, out_px), Image.BILINEAR)
 
 
 class GameUIState:
@@ -4081,18 +2131,6 @@ class GameUIState:
         # arrives, which is a real state worth distinguishing from "no shard":
         # the settings panel says "..." rather than claiming to know.
         self._server = None
-        # unit kind -> codex rank, mirrored from the replicated store. Empty
-        # until the first `codex` message; the map filter treats "no mirror
-        # yet" as "show everything" rather than hiding the world, because an
-        # empty dict and a fully-mastered codex are indistinguishable here.
-        self._codex_ranks: dict[str, int] = {}
-        self._codex_seen = False
-        # Unit kinds of the account's collected companions, mirrored from
-        # Collection.pets. Same no-mirror-yet rule as the codex: an empty set
-        # and "the list hasn't arrived" are indistinguishable, so the filter
-        # only trusts this once a `pets` message has landed.
-        self._pets: set[str] = set()
-        self._pets_seen = False
 
     def set_zone(self, sig, world_map=None):
         """layer.world.level from the hook — the loaded level's name, sent
@@ -4126,82 +2164,10 @@ class GameUIState:
         with self._lock:
             return self._server
 
-    def set_codex_ranks(self, entries):
-        """The whole kind -> [killCount, rank] mirror from the hook, replacing
-        what we had.
 
-        Replaced rather than merged on purpose: switching character is a
-        different codex entirely, and merging would leave the old character's
-        mastered mobs hidden from the new one's map.
 
-        A bare int is still accepted as a rank so an older agent (or a replayed
-        message) doesn't wipe the mirror — it just carries no kill count."""
-        clean = {}
-        for kind, v in entries.items():
-            if not isinstance(kind, str):
-                continue
-            if isinstance(v, (list, tuple)) and len(v) == 2 \
-                    and all(isinstance(n, int) for n in v):
-                clean[kind] = (v[0], v[1])
-            elif isinstance(v, int):
-                clean[kind] = (0, v)
-        with self._lock:
-            self._codex_ranks = clean
-            self._codex_seen = True
 
-    def set_codex_rank(self, kind, rank, kills=None):
-        """One entry moved, between full refreshes."""
-        if not isinstance(kind, str) or not isinstance(rank, int):
-            return
-        with self._lock:
-            prev = self._codex_ranks.get(kind)
-            self._codex_ranks[kind] = (
-                kills if isinstance(kills, int) else (prev[0] if prev else 0),
-                rank)
 
-    def codex_rank(self, kind):
-        """This character's rank for `kind` — 0 for a mob never killed, which
-        is what an absent key means in the replicated store."""
-        with self._lock:
-            e = self._codex_ranks.get(kind)
-            return e[1] if e else 0
-
-    def codex_kills(self, kind):
-        """Lifetime kills of `kind` on this character, or None if we have no
-        figure. Distinct from 0: "never killed" and "the mirror hasn't arrived"
-        would otherwise both read as zero, and only one of them is worth
-        printing on a toast."""
-        with self._lock:
-            e = self._codex_ranks.get(kind)
-            return e[0] if e else None
-
-    def codex_ready(self):
-        """Whether a mirror has arrived at all. False means "don't filter" —
-        see the note on _codex_ranks."""
-        with self._lock:
-            return self._codex_seen
-
-    def set_pets(self, kinds):
-        """The whole collected-companion list from the hook, replacing what we
-        had. Replaced rather than merged like the codex mirror — though here
-        it matters less: Collection.pets is ACCOUNT-wide (measured), so a
-        character switch shows the same list."""
-        if not isinstance(kinds, (list, tuple)):
-            return
-        with self._lock:
-            self._pets = {k for k in kinds if isinstance(k, str)}
-            self._pets_seen = True
-
-    def pet_collected(self, kind):
-        """Whether this critter kind is already in the account's collection."""
-        with self._lock:
-            return kind in self._pets
-
-    def pets_ready(self):
-        """Whether a collection mirror has arrived. False means "don't
-        filter" — same reasoning as codex_ready."""
-        with self._lock:
-            return self._pets_seen
 
     def zone_sig(self):
         with self._lock:
@@ -4231,9 +2197,6 @@ class GameUIState:
         with self._lock:
             self._boss_bar = max(0, int(count))
 
-    def boss_bar_up(self) -> bool:
-        with self._lock:
-            return self._boss_bar > 0
 
     def set_window(self, name: str, is_open: bool):
         if not name:
@@ -4489,7 +2452,6 @@ HK_RESET = 1
 # reinstall. Mutated in place for the same reason — the thread closed over this
 # object, not over the name.
 RESET_BIND = {"vk": VK_OEM_5, "shift": True, "ctrl": False, "alt": False}
-RESET_BIND_DEFAULT = dict(RESET_BIND)
 # Virtual-key codes whose names aren't derivable. Everything else falls back to
 # its character (A-Z, 0-9 are their own VK) or a bare hex code, so an unusual
 # keyboard shows something rather than nothing.
@@ -4547,32 +2509,7 @@ VERSION = "4.0.1"
 
 REPO = "brudrbear/FareverMeter"
 REPO_URL = f"https://github.com/{REPO}"
-UPDATE_API_RELEASE = f"https://api.github.com/repos/{REPO}/releases/latest"
-UPDATE_API_TAGS = f"https://api.github.com/repos/{REPO}/tags"
-UPDATE_TIMEOUT = 5.0
-# Filled in by the checker thread, read by the overlay's refresh tick.
-# `asset` is the Setup.exe download URL when the release has one — that's what
-# lets the notice self-update instead of just opening the browser.
-# "prompt" is set ONLY by the automatic checks (startup and loading screens),
-# never by the menu's manual button: a click already reports its own answer on
-# the button, and popping a dialog at someone who just asked the question is
-# telling them what they already know. The overlay consumes the flag.
-UPDATE = {"latest": None, "url": REPO_URL, "asset": None, "asset_size": 0,
-          "prompt": False}
 
-# The self-updater's working directory: the downloaded installer and the
-# helper script that runs it after the meter exits. Under DATA_HOME so an
-# update never needs to write into the install directory it's replacing.
-UPDATE_DIR = DATA_HOME / "updates"
-# Left by the outgoing build, read and deleted by the one that replaces it —
-# see _show_whats_new. Lives beside the installer rather than with the settings
-# because it belongs to the update, not to the user's preferences.
-UPDATED_MARKER = UPDATE_DIR / "just_updated.json"
-UPDATE_API_RELEASE_TAG = f"https://api.github.com/repos/{REPO}/releases/tags/"
-
-# True in the shipped build (PyInstaller sets it). Only that build can
-# self-update: a from-source run has no installed copy to replace.
-IS_FROZEN = bool(getattr(sys, "frozen", False))
 
 QUIT_LABEL = "Stop the meter"
 
@@ -4773,293 +2710,7 @@ def start_hotkeys(callbacks: dict, target_pid):
 # thing a from-source run needs.
 ICON_FILE = ROOT / "assets" / "farevermeter.ico"
 
-# ---- cue sounds ----
-# All three ride the single "Enable sounds" setting; there is no per-cue switch.
-SOUND_FILES = {
-    "pull": ROOT / "assets" / "boss_pulled.wav",
-    "legendary": ROOT / "assets" / "legendary_pickup.mp3",
-}
 
-# Cues that pick at random from a FOLDER instead of playing one fixed file.
-#
-# A folder rather than a list in here because the point is adding to it without
-# touching code: drop a file in, and the next boss kill can play it. The
-# folders are re-read on every play, so that works while the meter is running —
-# no restart, no rebuild. Filenames are never parsed, which is what lets a file
-# keep its creator's name.
-#
-# TWO folders per cue, and the second is the one that matters to anyone who
-# didn't build this:
-#
-#   assets/<cue>       ships with the meter. In an installed build this lives
-#                      inside the program folder, so anything added there is
-#                      wiped by the next update.
-#   sounds/<cue>       yours, under %LOCALAPPDATA%\FareverMeter alongside your
-#                      settings and history — the same place that already
-#                      survives updates. Created on demand; absent is normal.
-#
-# Anything MCI's mpegvideo driver opens will do; .mp3 and .wav are both
-# measured working. A cue whose folders are all missing or empty retires ALONE
-# and says so, exactly as a missing fixed file does.
-SOUND_USER_DIR = _WRITABLE / "sounds"
-SOUND_POOLS = {
-    "victory": "victory",
-    # Fires when a codex entry is MASTERED — see on_codex_notify. A pool from
-    # the start for the same reason victory is one.
-    "codex": "codex",
-}
-SOUND_POOL_EXTS = (".mp3", ".wav", ".wma", ".m4a", ".aac")
-SOUND_VOLUME_DEFAULT = 60         # percent
-SOUND_VOLUME_MAX = 100
-
-
-def _sound_pool_dirs(key):
-    """Where a cue's files can live: shipped first, then yours."""
-    name = SOUND_POOLS.get(key)
-    if name is None:
-        return []
-    return [ROOT / "assets" / name, SOUND_USER_DIR / name]
-
-
-def _sound_pool_files(key):
-    """Every playable file across a cue's folders, sorted and de-duplicated by
-    name so a user file shadowing a shipped one doesn't play twice.
-
-    An absent folder is not an error here — only "nothing to add"."""
-    out, seen = [], set()
-    for d in _sound_pool_dirs(key):
-        try:
-            entries = sorted(d.iterdir())
-        except OSError:
-            continue                      # missing or unreadable: normal
-        for p in entries:
-            if (p.is_file() and p.suffix.lower() in SOUND_POOL_EXTS
-                    and p.name.lower() not in seen):
-                seen.add(p.name.lower())
-                out.append(p)
-    return out
-
-# st.item.Weapon.rarity, read live off equipped gear. Capitalised, and one of
-# a small set — Legendary / Epic / Rare were all observed. Compared exactly:
-# a case-insensitive match would hide the day the game renames it.
-LEGENDARY_RARITY = "Legendary"
-
-
-class SoundPlayer:
-    """Plays the boss-fight cues through Windows' MCI, via ctypes.
-
-    MCI rather than winsound because winsound is WAV-only and has no volume
-    control at all, and rather than a bundled audio library because this ships
-    as a PyInstaller build where every dependency is megabytes the user
-    downloads. Both files are opened with `type mpegvideo`: measured, that
-    driver handles the .wav and the .mp3 alike AND honours `setaudio volume`,
-    which the waveaudio driver does not.
-
-    EVERY MCI call happens on this class's own worker thread, and that is not
-    tidiness — it's required. MCI ties a device's lifetime to the thread that
-    opened it. Opening the files on a short-lived helper thread and playing
-    them from another looks fine (the open returns success) and is then
-    silent: every later command fails with "the specified device is not open".
-    Measured, and the reason this class owns a thread instead of a lock.
-
-    Commands are queued, so callers never block: MCI `play` is asynchronous
-    anyway, and the Tk thread must not wait on audio. Files are opened once and
-    kept open, so a cue starts when it's asked for rather than after a disk
-    read.
-
-    Two kinds of cue: a fixed file (SOUND_FILES) and a random pick from a
-    folder (SOUND_POOLS). Devices are keyed by PATH rather than by cue, since
-    a pool has many files and each needs its own.
-    """
-
-    def __init__(self):
-        self._lock = threading.Lock()         # guards _enabled/_volume/_broken
-        self._enabled = False
-        self._volume = SOUND_VOLUME_DEFAULT
-        self._broken = False                  # give up quietly after a failure
-        self._q: queue.Queue = queue.Queue()
-        self._thread = None
-        # Worker-thread-only state; no lock needed, nothing else touches it.
-        self._open: dict[str, str] = {}       # path -> MCI alias
-        self._checked = False                 # verified a cue actually played
-        self._reported: set[str] = set()      # cues already moaned about once
-        self._last: dict[str, str] = {}       # cue -> last path played, to vary
-        self._alias_n = 0                     # unique suffix per opened device
-        try:
-            self._mci = ctypes.windll.winmm.mciSendStringW
-        except Exception:
-            self._mci = None
-            self._broken = True
-
-    # ---- worker thread ----
-
-    def _send(self, cmd: str) -> str | None:
-        """Returns MCI's reply on success (often ""), or None on failure."""
-        if self._mci is None:
-            return None
-        try:
-            buf = ctypes.create_unicode_buffer(256)
-            if self._mci(cmd, buf, 256, None) != 0:
-                return None
-            return buf.value
-        except Exception:
-            return None
-
-    def _alias_for_path(self, path) -> str | None:
-        """An open MCI device for `path`, opened once and kept.
-
-        Keyed by path, not by cue: a pool plays several files and each needs
-        its own device, and two cues sharing a file should share the device."""
-        k = str(path)
-        if k in self._open:
-            return self._open[k]
-        if not path.is_file():
-            return None
-        self._alias_n += 1
-        alias = f"fmsnd_{os.getpid()}_{self._alias_n}"
-        if self._send(f'open "{path}" type mpegvideo alias {alias}') is None:
-            return None
-        self._open[k] = alias
-        with self._lock:
-            vol = self._volume
-        self._send(f"setaudio {alias} volume to {vol * 10}")
-        return alias
-
-    def _pick(self, key: str):
-        """Which file this cue should play now, or None if it has none.
-
-        Pools are re-read here rather than cached, so a file dropped into the
-        folder is picked up on the next play without a restart. With more than
-        one to choose from the previous pick is excluded, which is the
-        difference between a pool and a coin that keeps landing the same way."""
-        if key in SOUND_POOLS:
-            files = _sound_pool_files(key)
-            if not files:
-                return None
-            if len(files) > 1:
-                last = self._last.get(key)
-                choices = [p for p in files if str(p) != last] or files
-            else:
-                choices = files
-            pick = random.choice(choices)
-            self._last[key] = str(pick)
-            return pick
-        path = SOUND_FILES.get(key)
-        return path if (path is not None and path.is_file()) else None
-
-    def _do_play(self, key: str):
-        path = self._pick(key)
-        if path is None:
-            # NOTHING TO PLAY silences that cue only. This used to set _broken
-            # and take every other cue down with it, which meant one absent
-            # asset silenced the boss fanfare too — and silently, since the
-            # line below is the only trace. Cues ship independently, and a pool
-            # folder can legitimately be emptied, so neither may mute the rest.
-            #
-            # Complained about once, but retried every time: a pool is read off
-            # disk on each play, so dropping the first file into an empty
-            # folder starts working immediately rather than after a restart.
-            if key not in self._reported:
-                self._reported.add(key)
-                if key in SOUND_POOLS:
-                    where = " or ".join(str(d) for d in _sound_pool_dirs(key))
-                else:
-                    where = str(SOUND_FILES.get(key) or "(unregistered)")
-                print(f"[meter] sound {key!r} has nothing to play in {where}; "
-                      "that cue is off, the others still play",
-                      file=sys.stderr)
-            return
-        alias = self._alias_for_path(path)
-        if alias is None:
-            with self._lock:
-                self._broken = True       # MCI itself failed: stop retrying
-            print(f"[meter] sound {key!r} unavailable ({path.name}); "
-                  "sounds disabled", file=sys.stderr)
-            return
-        # `from 0` so a second pull retriggers the cue instead of being ignored
-        # because the previous play hasn't finished.
-        self._send(f"stop {alias}")
-        if self._send(f"play {alias} from 0") is None:
-            print(f"[meter] sound {key!r} failed to play", file=sys.stderr)
-            return
-        # Once per session, confirm the device really is producing audio rather
-        # than accepting commands into the void — that failure mode has already
-        # happened once here, and it is completely silent without this.
-        if not self._checked:
-            self._checked = True
-            mode = self._send(f"status {alias} mode")
-            if mode is not None and mode.strip() and mode.strip() != "playing":
-                print(f"[meter] sound device reports {mode.strip()!r} rather "
-                      "than 'playing' — cues may be silent", file=sys.stderr)
-
-    def _run(self):
-        while True:
-            job = self._q.get()
-            try:
-                op = job[0]
-                if op == "quit":
-                    for alias in self._open.values():
-                        self._send(f"stop {alias}")
-                        self._send(f"close {alias}")
-                    self._open.clear()
-                    return
-                if op == "prime":
-                    # Fixed cues only. Pool files open on their first play
-                    # instead: a pool is meant to grow, and priming one would
-                    # both hold a device per file and freeze the folder's
-                    # contents at startup, which is the thing pools exist to
-                    # avoid. The cost is a disk read the first time a given
-                    # file comes up — inaudible on a fanfare that follows a
-                    # boss dying.
-                    for key in SOUND_FILES:
-                        p = SOUND_FILES[key]
-                        if p.is_file():
-                            self._alias_for_path(p)
-                elif op == "volume":
-                    for alias in self._open.values():
-                        self._send(f"setaudio {alias} volume to {job[1] * 10}")
-                elif op == "play":
-                    self._do_play(job[1])
-            except Exception:
-                pass          # a bad cue must never take the meter with it
-
-    # ---- public API, callable from any thread ----
-
-    def start(self):
-        """Spin the worker up and open both files on it. Must be called before
-        anything will play — the worker is the only thread MCI will accept
-        commands from for these devices."""
-        with self._lock:
-            if self._mci is None or self._thread is not None:
-                return
-            self._thread = threading.Thread(target=self._run, daemon=True,
-                                            name="farever-meter-sound")
-            self._thread.start()
-        self._q.put(("prime",))
-
-    def set_enabled(self, on: bool):
-        with self._lock:
-            self._enabled = bool(on)
-
-    def set_volume(self, pct: int):
-        with self._lock:
-            self._volume = max(0, min(SOUND_VOLUME_MAX, int(pct)))
-            vol = self._volume
-        self._q.put(("volume", vol))
-
-    def play(self, key: str):
-        with self._lock:
-            if not self._enabled or self._broken or not self._volume:
-                return
-        self._q.put(("play", key))
-
-    def close(self):
-        with self._lock:
-            if self._thread is None:
-                return
-            thread = self._thread
-        self._q.put(("quit",))
-        thread.join(timeout=2.0)
 
 
 WM_TRAY = 0x0400 + 1                      # WM_APP + 1
@@ -5536,25 +3187,6 @@ class MenuBridge:
         self.overlay._enqueue(run)()
 
 
-def _align_options(tray):
-    """The alignment choices, worded for the way this tray is laid out."""
-    return list(BUFF_ALIGN_LABELS[tray.get("layout", "row")].values())
-
-
-def _align_label(tray):
-    return BUFF_ALIGN_LABELS[tray.get("layout", "row")].get(
-        tray.get("align", BUFF_ALIGN_START), "Grow right")
-
-
-def _align_from_label(tray, label):
-    """...and back again. Keyed off the tray's layout, so the same label text
-    cannot mean two things."""
-    for key, text in BUFF_ALIGN_LABELS[tray.get("layout", "row")].items():
-        if text == label:
-            return key
-    return BUFF_ALIGN_START
-
-
 def _parse_help(text):
     """Turn one help article into (title, blurb, spec blocks).
 
@@ -5644,47 +3276,11 @@ def _wants_params(fn):
 # ---------------------------------------------------------------------------
 class Overlay:
     def __init__(self, session: PartySession, target_pid, ui_state=None,
-                 world=None, statuses=None, configure=None):
+                 world=None, configure=None):
         self.session = session
         self.target_pid = target_pid
         self.ui_state = ui_state if ui_state is not None else GameUIState()
         self.world = world if world is not None else WorldSnapshot()
-        self.statuses = statuses if statuses is not None else StatusSnapshot()
-        self.status_icons = StatusIcons()
-        # One config dict per tray, always BUFF_TRAY_MAX of them so the index
-        # is the identity — a tray's saved position, its window and its
-        # settings all key off the same slot, and deleting tray 2 has to leave
-        # trays 3 and 4 where they are rather than shuffling them up.
-        self._trays = _blank_trays()
-        # Which character's trays are loaded. None until the hook identifies
-        # the hero, and the trays are saved under that name — see
-        # set_character(). A character with no saved set starts blank rather
-        # than inheriting the last one, so an alt is never cluttered with a
-        # class's buffs it cannot cast.
-        self._tray_char = None
-        # name -> the saved tray list, for every character seen. Kept whole so
-        # switching back and forth costs nothing and never loses a layout.
-        self._trays_by_char = {}
-        self._tray_edit = 0            # which tray the Buffs tab is editing
-        # kind -> when it was last seen up, for the flash-on-appear. Kept here
-        # rather than in the snapshot because it is a property of what has been
-        # DRAWN, not of what the game reported: a tray that was hidden while a
-        # buff came and went should not flash it on the way back.
-        self._buff_first_seen = {}
-        # tray index -> monotonic deadline while it is announcing itself.
-        # Empty almost always; see _reveal_tray.
-        self._tray_reveal = {}
-        # The live status set, reused across one visibility pass — see
-        # _tray_has_live for why it is cached rather than rebuilt per tray.
-        self._tray_live = {}
-        self._tray_live_at = 0.0
-        # Which trays were revealing on the previous draw, so the draw pass can
-        # spot a reveal STARTING or LAPSING and re-run the visibility rules.
-        self._tray_revealed_last = set()
-        # (face, pixel height) -> Font, for the numbers drawn on icons. Their
-        # size follows the tray's icon size and its own scale setting, so they
-        # cannot come from the fixed FONT_SPECS sets.
-        self._buff_fonts = {}
         # Pushes settings to the running hook (currently just the sweep rate).
         # A no-op when there's no hook, so the overlay stays testable on its own.
         self._configure = configure or (lambda **kw: None)
@@ -5714,12 +3310,6 @@ class Overlay:
         # was without remembering how big it was would be half a feature.
         # Filled in below, once the saved positions have been read.
         self._panel_geom = {}
-        # Its search boxes. The Tk panel kept these in StringVars owned by the
-        # widgets; the web panel has no widgets on this side, so the text lives
-        # here where the spec builder can read it back.
-        self._social_query_text = ""
-        self._buff_query_text = ""
-        self._social_note_text = ""
         self._help_open = None      # which help article is open, if any
         # Deliberately NOT saved to disk. Every launch opens on Help, and the
         # tab then follows you for the rest of the session — so pressing Escape
@@ -5729,9 +3319,7 @@ class Overlay:
         self._history_query_text = ""
         self._history_note_text = ""
         self._hide_ooc = False         # "hide out of combat" setting
-        self._social_sort = "name"     # Social roster order; see SOCIAL_SORTS
         self._best_times = self._load_best_times()   # fastest boss kills, secs by kind
-        self._session_sort = "recent"  # session log order; see SESSION_SORTS
         # _show is what the player asked for, _shown is what's actually mapped
         # (they differ while out-of-combat hiding is in effect).
         self._show = {k: ELEMENT_SHOW for k, _ in TOGGLEABLE_ELEMENTS}
@@ -5761,59 +3349,11 @@ class Overlay:
         self._action_q = []
         self._q_lock = threading.Lock()
         self._quit_armed = False       # the Quit button's second-click window
-        self._update_shown = False     # the update notice is applied once
-        self._update_offer_open = False   # the offer popup is on screen
-        self._update_offer_done = False   # ...and has been answered, once ever
-        self._updating = False         # self-update running: overlay hidden
-        self._upd_checking = False     # manual check in flight (button armed)
-        self._upd_resolving = False    # re-asking GitHub for the installer
-        self._upd_btn_after = None     # pending after() resetting the button
-        self._dl = None                # download progress, written off-thread
-        self._updwin = None            # the "Updating ..." progress window
         self._game_exit_win = None     # the "Farever has stopped" prompt
         self._game_gone = False        # the game process died; hide everything
-        self._whats_new_win = None     # the post-update release notes
-        self._map_mode = MINIMAP_MODES[0]   # "Rotating" — you always face up
+
         self._transparency = 0              # percent, on top of OVERLAY_ALPHA
-        # Per-category ticks for each panel; everything on until told otherwise.
-        self._map_filters = {key: True for key, _label, _cats in MINIMAP_FILTERS}
-        self._compass_filters = {key: True
-                                 for key, _label, _cats in COMPASS_FILTERS}
-        # Enemies have their own three-state mode; see MINIMAP_FOE_MODES.
-        self._foe_mode = "all"
-        # ...and so do critters, since the collection filter (see
-        # MINIMAP_CRITTER_MODES).
-        self._critter_mode = "all"
-        # Codex popups — both the per-kill count and the completion fanfare.
-        # On by default: it's the visible half of the codex feature, and a
-        # feature nobody can see until they find a tick is a feature nobody
-        # finds. The map filter is deliberately NOT gated on this.
-        self._codex_alerts = True
-        # Points at the nearest sparkling unit whenever one is in range. On by
-        # default: it costs nothing while none is around (the panel stays
-        # hidden) and a rare spawn you never noticed is the case it exists for.
-        self._sparkly_on = True
-        self._map_rate = "High"        # Ultra exists but is opt-in
-        # The world-map backdrop. On by default: it only ever draws when a
-        # shipped asset matches the zone, so "on with no asset" costs nothing.
-        self._map_bg_on = True
-        # Both percentages, both defaulting to "as it shipped". Zoom drives
-        # _map_range (see _apply_map_zoom); icons multiply the style table's
-        # radii without touching their ratios.
-        self._map_zoom = 100
-        self._map_icons = 100
-        self._map_backdrop = MapBackdrop()
-        self._map_photo = None         # the reused PhotoImage, sized lazily
-        self._map_bg_key = None        # (zone sig) -> resolved world, cached
-        self._map_bg_world = None
-        # Every cue — boss pull, boss kill, legendary drop — rides this one
-        # setting. Off by default: an overlay that starts making noise on its
-        # own the first time you meet a boss is a bad first impression, and the
-        # checkbox plays a sample the moment you turn it on.
-        self._sounds_on = False
-        self._sound_volume = SOUND_VOLUME_DEFAULT
         self._auto_reset_boss = False
-        self.sounds = SoundPlayer()
         # One scale per window group. Each window wants a size that suits its
         # job — the meter one that suits reading numbers, the map one that
         # suits the screen it covers — and a single slider means at least one
@@ -5822,7 +3362,6 @@ class Overlay:
         self._game_hwnd = None         # cached; re-resolved if it goes stale
         self._cursor_free = False      # game has released the mouse (Alt, menus)
         self._focused = True           # Farever is the window you're looking at
-        self._last_cam = None          # last camera heading seen; see _draw_minimap
         # True while the countdown has nothing to count down to. The window is
         # hidden in that state unless the escape menu is open, so it isn't
         # sitting there saying "No rift upcoming" for six minutes of every hour.
@@ -5865,8 +3404,8 @@ class Overlay:
         self._history = HistoryStore()
         self._history_on = False
         self._history_entries = []
-        self._history_sig = None
-        self._history_row_widgets = []
+        self._history_note_job = None
+        self._binding_now = False       # waiting for a keypress to rebind reset
         self._history_detail = None     # the dataset the detail page is showing
 
         # Before any widget exists: the dropdowns and Show/hide ticks are built
@@ -5898,7 +3437,6 @@ class Overlay:
         #            (rift timer, hint, parse banner, rift prompt)
         #   fonts_d  the breakdown
         #   fonts_m  the control menu
-        #   fonts_map the minimap
         def _font_set():
             out = {}
             for key, (family, size, *style) in FONT_SPECS.items():
@@ -5911,11 +3449,8 @@ class Overlay:
         self.fonts = _font_set()
         self.fonts_d = _font_set()
         self.fonts_m = _font_set()
-        self.fonts_map = _font_set()
-        self.fonts_compass = _font_set()
         self._font_sets = {"meter": self.fonts, "detail": self.fonts_d,
-                           "menu": self.fonts_m, "minimap": self.fonts_map,
-                           "compass": self.fonts_compass}
+                           "menu": self.fonts_m}
         self.root.title("Farever+ Party Meter")
         self.detail = tk.Toplevel(self.root)
         self.detail.title("Farever+ Breakdown")
@@ -5942,18 +3477,9 @@ class Overlay:
         self.promptwin.title("Farever+ Prompt")
         self.reportwin = tk.Toplevel(self.root)
         self.reportwin.title("Farever+ Rift Report")
-        self.updatewin = tk.Toplevel(self.root)
-        self.updatewin.title("Farever+ Update")
+
         self.riftwin = tk.Toplevel(self.root)
         self.riftwin.title("Farever+ Rift Timer")
-        self.mapwin = tk.Toplevel(self.root)
-        self.mapwin.title("Farever+ Minimap")
-        self.compasswin = tk.Toplevel(self.root)
-        self.compasswin.title("Farever+ Compass")
-        # The compass's badge underlay — the translucent boxes behind the
-        # distance numbers live here, one window down. See _build_compass.
-        self.badgewin = tk.Toplevel(self.root)
-        self.badgewin.title("Farever+ Compass Badges")
         # Confirmation that a manual reset happened. Its own window, managed
         # by hand like the other toasts rather than through the fade system:
         # it answers a keypress and has to be on screen in the same frame.
@@ -5961,23 +3487,9 @@ class Overlay:
         self.resetwin.title("Farever+ Reset")
         self.killwin = tk.Toplevel(self.root)
         self.killwin.title("Farever+ Kill Time")
-        self.codexwin = tk.Toplevel(self.root)
-        self.codexwin.title("Farever+ Codex")
-        self.sparklywin = tk.Toplevel(self.root)
-        self.sparklywin.title("Farever+ Sparkly Tracker")
-        # Built up front, all four of them, whether or not you use any: every
-        # other overlay window is, and the show/fade/position machinery is
-        # keyed by a name it expects to exist from startup. An unused tray is
-        # a withdrawn window costing nothing.
-        self.buffwins = [tk.Toplevel(self.root) for _ in range(BUFF_TRAY_MAX)]
-        for i, w in enumerate(self.buffwins):
-            w.title(f"Farever+ Buff Tray {i + 1}")
         for win in (self.root, self.detail, self.menu, self.hintwin,
                     self.parsewin, self.promptwin, self.reportwin,
-                    self.updatewin, self.riftwin, self.mapwin,
-                    self.compasswin, self.badgewin, self.killwin,
-                    self.codexwin, self.sparklywin, self.resetwin,
-                    *self.buffwins):
+                    self.riftwin, self.killwin, self.resetwin):
             win.overrideredirect(True)
             win.attributes("-topmost", True)
             win.configure(bg=TRANSPARENT_KEY)
@@ -5988,31 +3500,21 @@ class Overlay:
             # Rounding has to be (re-)applied on every map, not once here: Tk
             # rebuilds a toplevel's Windows wrapper as it applies the wm
             # attributes above, and the DWM setting dies with the old hwnd.
-            win.bind("<Map>", self._on_map_round, add="+")
-        for win in (self.root, self.detail, self.menu, self.riftwin,
-                    self.mapwin, self.compasswin, *self.buffwins):
+            win.bind("<Map>", self._on_win_map, add="+")
+        for win in (self.root, self.detail, self.menu, self.riftwin):
             win.attributes("-alpha", OVERLAY_ALPHA)
-        # Not the badge underlay: its opacity is never its own — always the
-        # compass's times COMPASS_DIST_BOX_ALPHA, applied by _sync_badgewin.
-        # Invisible until the first sync so it can't flash solid black.
-        self.badgewin.attributes("-alpha", 0.0)
-        # Keys must match TOGGLEABLE_ELEMENTS — except the buff trays, which
-        # are registered one window per key ("buffs#0" ...) while sharing the
-        # single "buffs" mode. _element_show_key is what marries the two.
+        # Keys must match TOGGLEABLE_ELEMENTS.
         self._element_win = {"meter": self.root, "detail": self.detail,
-                             "rift": self.riftwin, "minimap": self.mapwin,
-                             "compass": self.compasswin}
-        for i, w in enumerate(self.buffwins):
-            self._element_win[f"{BUFF_TRAY_KEY}#{i}"] = w
+                             "rift": self.riftwin}
         # Every window that fades: the two toggleable ones, plus the control
         # menu and its hint, which follow the game's escape menu.
         self._fade_win = dict(self._element_win, menu=self.menu,
                               hint=self.hintwin, prompt=self.promptwin,
-                              report=self.reportwin, update=self.updatewin)
+                              report=self.reportwin)
         self._shown["menu"] = self._shown["hint"] = False
         self._shown["prompt"] = False
         self._shown["report"] = False
-        self._shown["update"] = False
+
         self._shown["rift"] = False     # nothing to show until a timer arrives
         # Live opacity of each faded window, driven by _step_fade. The menu pair
         # starts at zero: they're withdrawn until the escape menu opens.
@@ -6022,32 +3524,26 @@ class Overlay:
         self._alpha = {k: self._alpha_for(k) for k in self._fade_win}
         self._alpha["menu"] = self._alpha["hint"] = 0.0
         self._alpha["prompt"] = self._alpha["rift"] = 0.0
-        self._alpha["report"] = self._alpha["update"] = 0.0
+        self._alpha["report"] = 0.0
         for key, win in self._fade_win.items():
             if self._alpha[key]:
                 win.attributes("-alpha", self._alpha[key])
         self._fade_secs = {k: FADE_SECS for k in self._fade_win}
         self._fade_secs["menu"] = self._fade_secs["hint"] = MENU_FADE_SECS
         self._fade_secs["prompt"] = self._fade_secs["report"] = PANEL_FADE_SECS
-        self._fade_secs["update"] = PANEL_FADE_SECS
+
         self._fade_job = None          # pending `after` id for the fade driver
 
         self._build_meter()
         self._build_detail()
-        self._build_menu()
         self._build_hint()
         self._build_parse()
         self._build_reset_toast()
         self._build_kill_toast()
-        self._build_codex_toast()
-        self._build_sparkly_tracker()
         self._build_prompt()
         self._build_report()
-        self._build_update_offer()
+
         self._build_rift()
-        self._build_minimap()
-        self._build_compass()
-        self._build_buff_trays()
         self.root.update_idletasks()
         self._place_windows(pos)
         # Restored scales can only be applied now: they resize the fonts every
@@ -6060,16 +3556,8 @@ class Overlay:
         restored.update(self._pending_scales or {})
         for group, factor in restored.items():
             if group in self._scales and abs(factor - 1.0) > 0.001:
-                self._scale_vars[group].set(int(round(factor * 100)))
                 self._set_group_scale(group, factor)
         self._pending_scales = None
-        # Push the restored audio settings into the player, then start its
-        # worker — the files are opened there, off this thread, because MCI
-        # `open` touches the disk and would otherwise sit in front of the first
-        # frame the overlay draws.
-        self.sounds.set_enabled(self._sounds_on)
-        self.sounds.set_volume(self._sound_volume)
-        self.sounds.start()
         # The control menu and its hint only exist while the game's escape menu
         # is up; _sync_game_ui maps them in. The parse banner is mapped by parse
         # mode itself, and deliberately answers to nothing else — a countdown
@@ -6080,10 +3568,6 @@ class Overlay:
         self.resetwin.withdraw()
         # Nor this one: the kill-time toast maps itself when a boss dies.
         self.killwin.withdraw()
-        # ...nor the codex toast, which maps itself on a kill that counts.
-        self.codexwin.withdraw()
-        # ...nor the sparkly tracker, which maps itself when one is in range.
-        self.sparklywin.withdraw()
         # DERIVED from _shown rather than hand-listed, because the hand-listed
         # version had exactly one failure mode and it happened: add a faded
         # window, forget to add it here, and it starts MAPPED. A Toplevel left
@@ -6097,9 +3581,6 @@ class Overlay:
         for key, win in self._fade_win.items():
             if not self._shown[key]:
                 win.withdraw()
-        # The badge underlay isn't a faded window — it shadows the compass,
-        # and this first sync is where it picks up the compass's real state.
-        self._sync_badgewin()
         self.root.after(60, self._apply_clickthrough)
         self._install_hotkeys()
 
@@ -6128,8 +3609,7 @@ class Overlay:
             except Exception:
                 return {}
         out = {}
-        for key in ("meter", "detail", "menu", "rift", "minimap", "compass",
-                    *(f"buffs{i}" for i in range(BUFF_TRAY_MAX))):
+        for key in ("meter", "detail", "menu", "rift"):
             try:
                 out[key] = at(d[key]["x"], d[key]["y"])
             except Exception:
@@ -6178,17 +3658,6 @@ class Overlay:
             self.riftwin.geometry(f"+{rw[0]}+{rw[1]}")
         else:
             self._default_rift_pos()
-        mm = pos.get("minimap")
-        if mm and self._pos_visible(*mm):
-            self.mapwin.geometry(f"+{mm[0]}+{mm[1]}")
-        else:
-            self._default_minimap_pos()
-        cp = pos.get("compass")
-        if cp and self._pos_visible(*cp):
-            self.compasswin.geometry(f"+{cp[0]}+{cp[1]}")
-        else:
-            self._default_compass_pos()
-        self._apply_tray_positions(pos)
         mn = pos.get("menu")
         if mn and self._pos_visible(*mn):
             self.menu.geometry(f"+{mn[0]}+{mn[1]}")
@@ -6218,33 +3687,7 @@ class Overlay:
         w = max(self.riftwin.winfo_reqwidth(), self.riftwin.winfo_width(), 120)
         self.riftwin.geometry(f"+{l + ((r - l) - w) // 2}+{t + TOP_STRIP_RIFT}")
 
-    def _default_compass_pos(self):
-        """Top-centre of the game window, where a compass belongs and where
-        nothing else of ours sits."""
-        self.compasswin.update_idletasks()
-        l, t, r, _b = self._game_rect()
-        w = max(self.compasswin.winfo_reqwidth(),
-                self.compasswin.winfo_width(), 200)
-        self.compasswin.geometry(f"+{l + ((r - l) - w) // 2}+{t + 8}")
 
-    def _default_minimap_pos(self):
-        """Bottom-left of the game window. The meter stack owns the right side,
-        and a minimap wants a corner it can keep."""
-        self.mapwin.update_idletasks()
-        l, _t, _r, b = self._game_rect()
-        h = max(self.mapwin.winfo_reqheight(), self.mapwin.winfo_height(), 200)
-        self.mapwin.geometry(f"+{l + 24}+{b - h - 24}")
-
-    def _default_buff_pos(self, i):
-        """Stacked up the low-centre of the game window, above where a game's
-        own action bar sits and clear of the meter on the right and the minimap
-        on the left. Each tray starts a row higher than the last so four fresh
-        trays do not land on top of each other — after that they are dragged
-        wherever you want, and remembered."""
-        l, _t, r, b = self._game_rect()
-        step = int(BUFF_ICON_DEFAULT * self._scales["meter"] * 1.6)
-        self.buffwins[i].geometry(
-            f"+{l + (r - l) // 2 - 100}+{b - 220 - i * step}")
 
     def _default_detail_pos(self):
         # Just below the meter, left-aligned with it. The meter is usually
@@ -6288,10 +3731,6 @@ class Overlay:
         theme = THEME_MODE_ALIASES.get(data.get("theme"), data.get("theme"))
         if theme in THEME_MODES:
             self._theme_mode = theme
-        if data.get("map_mode") in MINIMAP_MODES:
-            self._map_mode = data["map_mode"]
-        if data.get("map_rate") in MINIMAP_RATE_MS:
-            self._map_rate = data["map_rate"]
         t = data.get("transparency")
         if isinstance(t, int) and 0 <= t <= TRANSPARENCY_MAX:
             self._transparency = t
@@ -6304,80 +3743,26 @@ class Overlay:
                 RESET_BIND.update(
                     {"vk": vk} | {m: bool(bind.get(m))
                                   for m in ("shift", "ctrl", "alt")})
-        # Per-key rather than wholesale, so a file written before a category
-        # existed leaves that one at its default instead of dropping the lot.
-        for name, table, into in (
-                ("map_filters", MINIMAP_FILTERS, self._map_filters),
-                ("compass_filters", COMPASS_FILTERS, self._compass_filters)):
-            saved_filters = data.get(name)
-            if not isinstance(saved_filters, dict):
-                continue
-            for key, _label, _cats in table:
-                if isinstance(saved_filters.get(key), bool):
-                    into[key] = saved_filters[key]
-        # Enemies used to be an ordinary tick in map_filters; it is a
-        # three-state mode now. Carry the old setting across rather than
-        # silently turning enemies back on for anyone who had them off.
-        if isinstance(data.get("codex_alerts"), bool):
-            self._codex_alerts = data["codex_alerts"]
-        if isinstance(data.get("sparkly_tracker"), bool):
-            self._sparkly_on = data["sparkly_tracker"]
-        fm = data.get("foe_mode")
-        if fm in MINIMAP_FOE_MODE_KEYS:
-            self._foe_mode = fm
-        else:
-            old = data.get("map_filters")
-            if isinstance(old, dict) and old.get("enemies") is False:
-                self._foe_mode = "off"
-        # Critters were an ordinary tick until 3.7.3; carry an unticked box
-        # across as "hidden" rather than silently turning them back on.
-        cm = data.get("critter_mode")
-        if cm in MINIMAP_CRITTER_MODE_KEYS:
-            self._critter_mode = cm
-        else:
-            old = data.get("map_filters")
-            if isinstance(old, dict) and old.get("critters") is False:
-                self._critter_mode = "off"
         if data.get("mode") in ("party", "all"):
             self.mode = data["mode"]
         if isinstance(data.get("hide_ooc"), bool):
             self._hide_ooc = data["hide_ooc"]
-        if isinstance(data.get("map_bg"), bool):
-            self._map_bg_on = data["map_bg"]
-        z = data.get("map_zoom")
-        if isinstance(z, int) and MINIMAP_ZOOM_MIN <= z <= MINIMAP_ZOOM_MAX:
-            self._map_zoom = z
-        ic = data.get("map_icons")
-        if isinstance(ic, int) and MINIMAP_ICONS_MIN <= ic <= MINIMAP_ICONS_MAX:
-            self._map_icons = ic
-        if isinstance(data.get("sounds_on"), bool):
-            self._sounds_on = data["sounds_on"]
         if isinstance(data.get("auto_reset_boss"), bool):
             self._auto_reset_boss = data["auto_reset_boss"]
         if isinstance(data.get("rift_auto_view"), bool):
             self._rift_auto_view = data["rift_auto_view"]
         if isinstance(data.get("history_on"), bool):
             self._history_on = data["history_on"]
-        if data.get("social_sort") in SOCIAL_SORTS:
-            self._social_sort = data["social_sort"]
-        if data.get("session_sort") in SESSION_SORTS:
-            self._session_sort = data["session_sort"]
-        vol = data.get("sound_volume")
-        if isinstance(vol, int) and 0 <= vol <= SOUND_VOLUME_MAX:
-            self._sound_volume = vol
         # Scales can only be applied once the fonts exist, so they're parked
         # here and used after the windows are built.
         saved = data.get("scales")
         if not isinstance(saved, dict):
-            # Written by the build with one global slider plus a separate
-            # minimap one. The global value becomes the meter's, which is the
-            # window it mostly stood for.
-            saved = {"meter": data.get("ui_scale"),
-                     "minimap": data.get("map_scale")}
+            # Written by the build with one global slider. The global value
+            # becomes the meter's, which is the window it mostly stood for.
+            saved = {"meter": data.get("ui_scale")}
         pending = {}
         for group, _label in SCALE_GROUPS:
-            lo, hi = ((MINIMAP_SCALE_MIN, MINIMAP_SCALE_MAX) if group == "minimap"
-                      else (UI_SCALE_MIN, UI_SCALE_MAX))
+            lo, hi = UI_SCALE_MIN, UI_SCALE_MAX
             try:
                 v = float(saved.get(group))
             except (TypeError, ValueError):
@@ -6392,21 +3777,6 @@ class Overlay:
         # that invariant; this covers a hand-edited file).
         if isinstance(data.get("sort_heal"), bool):
             self._sort_heal = data["sort_heal"] and self._show_heal
-        # `mount_*` and `glider_*` keys from before 3.5 are simply not read.
-        # A settings file is a record of what you chose, not a schema — an
-        # upgrade that erased unknown keys would take your window positions
-        # with it the first time someone ran an older build afterwards.
-        # Trays are per character. `buff_trays` is what a pre-3.8.1 file wrote
-        # and what we still load before the hook has identified the hero — the
-        # trays have to be on screen from the first frame, and which character
-        # you are is not known for a second or two after that.
-        self._trays = _sanitise_trays(data.get("buff_trays"))
-        by_char = data.get("buff_trays_by_char")
-        if isinstance(by_char, dict):
-            self._trays_by_char = {
-                name: _sanitise_trays(rows)
-                for name, rows in by_char.items()
-                if isinstance(name, str) and name}
         show = data.get("show")
         if isinstance(show, dict):
             for key, _label in TOGGLEABLE_ELEMENTS:
@@ -6430,26 +3800,10 @@ class Overlay:
             SETTINGS_CACHE.parent.mkdir(parents=True, exist_ok=True)
             SETTINGS_CACHE.write_text(json.dumps({
                 "theme": self._theme_mode,
-                "map_mode": self._map_mode,
-                "map_rate": self._map_rate,
                 "transparency": self._transparency,
                 "reset_bind": dict(RESET_BIND),
-                "map_filters": {k: bool(self._map_filters.get(k, True))
-                                for k, _label, _cats in MINIMAP_FILTERS},
-                "compass_filters": {
-                    k: bool(self._compass_filters.get(k, True))
-                    for k, _label, _cats in COMPASS_FILTERS},
-                "foe_mode": self._foe_mode,
-                "critter_mode": self._critter_mode,
-                "codex_alerts": bool(self._codex_alerts),
-                "sparkly_tracker": bool(self._sparkly_on),
                 "mode": self.mode,
                 "hide_ooc": self._hide_ooc,
-                "map_bg": bool(self._map_bg_on),
-                "map_zoom": int(self._map_zoom),
-                "map_icons": int(self._map_icons),
-                "sounds_on": bool(self._sounds_on),
-                "sound_volume": int(self._sound_volume),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "rift_auto_view": bool(self._rift_auto_view),
                 "scales": {g: round(self._scales[g], 3)
@@ -6458,25 +3812,12 @@ class Overlay:
                          for k, _label in TOGGLEABLE_ELEMENTS},
                 "show_heal": bool(self._show_heal),
                 "sort_heal": bool(self._sort_heal),
-                "social_sort": self._social_sort,
-                "session_sort": self._session_sort,
                 "history_on": bool(self._history_on),
-                # The live set, which is also what a character with no saved
-                # trays of its own falls back to reading on the next launch
-                # before its hero is identified.
-                "buff_trays": _trays_to_json(self._trays),
-                "buff_trays_by_char": {
-                    name: _trays_to_json(rows)
-                    for name, rows in self._trays_by_char.items()},
             }, indent=2))
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
 
     def _save_pos(self):
-        # Tray positions are NOT written here — they follow the character, so
-        # they live in the tray record and go out with the settings. Everything
-        # else on screen is one window per install and belongs in this file.
-        self._capture_tray_positions()
         self._save_settings()
         try:
             POSITION_CACHE.write_text(json.dumps({
@@ -6489,10 +3830,6 @@ class Overlay:
                 "menu": {"x": self.menu.winfo_x(), "y": self.menu.winfo_y()},
                 "rift": {"x": self.riftwin.winfo_x(),
                          "y": self.riftwin.winfo_y()},
-                "minimap": {"x": self.mapwin.winfo_x(),
-                            "y": self.mapwin.winfo_y()},
-                "compass": {"x": self.compasswin.winfo_x(),
-                            "y": self.compasswin.winfo_y()},
                 # Whatever the panel last told us it was — see MenuBridge.geom.
                 # Falls back to the geometry we started it with, so closing the
                 # meter without ever having moved the panel doesn't wipe it.
@@ -6723,14 +4060,7 @@ class Overlay:
         }
 
     def _menu_banner(self):
-        """The panel's top line: how to stop the meter, or — once a newer build
-        is known about — the notice for it. Same swap the Tk panel's warn_lbl
-        did, as data."""
-        if UPDATE.get("latest"):
-            tail = ("Click here to update now." if self._can_self_update()
-                    else "Click here to download it.")
-            return {"t": f"Farever+ {UPDATE['latest']} is available — you're "
-                         f"running {VERSION}.  {tail}", "update": True}
+        """The panel's top line: how to stop the meter."""
         return {"t": SHUTDOWN_HINT, "update": False}
 
     # -- Help -------------------------------------------------------------
@@ -6865,11 +4195,8 @@ class Overlay:
         builder = {
             "General": self._page_general,
             "Windows": self._page_windows,
-            "Map": self._page_map,
             "Actions": self._page_actions,
             "History": self._page_history,
-            "Social": self._page_social,
-            "Buffs": self._page_buffs,
             "Help": self._page_help,
         }.get(tab)
         return builder() if builder else []
@@ -6892,31 +4219,10 @@ class Overlay:
                                "resets the encounter, as it does above."},
             {"k": "button", "id": "toggle_auto_reset",
              "t": self._tick(self._auto_reset_boss, "Auto reset on boss pull")},
-            {"k": "button", "id": "toggle_codex_alerts",
-             "t": self._tick(self._codex_alerts, "Codex alerts")},
-            {"k": "button", "id": "toggle_sparkly",
-             "t": self._tick(self._sparkly_on, "Sparkly Tracker")},
-            {"k": "note", "t": "Codex alerts: the running count on each kill "
-                               "and the fanfare when an entry fills — the "
-                               "map's 'only missing from codex' filter is "
-                               "separate and keeps working either way. Sparkly "
-                               "tracker: a pointer to the nearest sparkling "
-                               "critter, as far out as the game will tell us "
-                               "about it."},
             {"k": "field", "t": "Reset data",
              "c": {"k": "label", "t": ("press a key…" if self._binding_now
                                        else bind_label())}},
             {"k": "button", "id": "begin_bind", "t": "Change that key"},
-
-            {"k": "section", "t": "Sound"},
-            {"k": "button", "id": "toggle_sounds",
-             "t": self._tick(self._sounds_on, "Enable sounds")},
-            # Live, unlike the rest: this one costs a single MCI call and
-            # hearing the level while you drag is the entire point of it.
-            {"k": "field", "t": "Volume",
-             "c": {"k": "slider", "id": "set_volume", "v": self._sound_volume,
-                   "min": 0, "max": SOUND_VOLUME_MAX, "step": 5,
-                   "live": True, "unit": "%"}},
 
             {"k": "section", "t": "Look"},
             {"k": "field", "t": "Theme",
@@ -6946,7 +4252,6 @@ class Overlay:
         one thing, so it gets one row — the pre-tabs menu listed the same five
         windows twice, a screen apart, under SCALING and SHOW / HIDE."""
         out = [{"k": "section", "t": "Each window: visibility · size"}]
-        scale_of = dict(SCALE_GROUPS)
         for key, label in TOGGLEABLE_ELEMENTS:
             out.append({"k": "field", "t": label,
                         "c": {"k": "select", "id": f"show:{key}",
@@ -6955,8 +4260,7 @@ class Overlay:
         for group, label in SCALE_GROUPS:
             if group == "menu":
                 continue        # it has its own slider on General
-            lo, hi = ((MINIMAP_SCALE_MIN, MINIMAP_SCALE_MAX)
-                      if group == "minimap" else (UI_SCALE_MIN, UI_SCALE_MAX))
+            lo, hi = UI_SCALE_MIN, UI_SCALE_MAX
             out.append({"k": "field", "t": f"{label} size",
                         "c": {"k": "slider", "id": f"scale:{group}",
                               "v": int(round(self._scales[group] * 100)),
@@ -6972,51 +4276,6 @@ class Overlay:
         ]
         return out
 
-    # -- Map --------------------------------------------------------------
-    def _page_map(self):
-        # Three states rather than a tick, so the marker says which one it is;
-        # a hollow circle for "hidden" keeps the row reading as a filter.
-        foe = {"all": "☑", "codex": "◪",
-               "off": "☐"}.get(self._foe_mode, "☑")
-        crit = {"all": "☑", "uncollected": "◪",
-                "off": "☐"}.get(self._critter_mode, "☑")
-        out = [
-            {"k": "section", "t": "Minimap"},
-            {"k": "field", "t": "Style",
-             "c": {"k": "select", "id": "set_map_mode", "v": self._map_mode,
-                   "o": list(MINIMAP_MODES)}},
-            {"k": "field", "t": "Refresh",
-             "c": {"k": "select", "id": "set_map_rate", "v": self._map_rate,
-                   "o": list(MINIMAP_RATE_NAMES)}},
-            {"k": "field", "t": "Zoom",
-             "c": {"k": "slider", "id": "set_map_zoom", "v": self._map_zoom,
-                   "min": MINIMAP_ZOOM_MIN, "max": MINIMAP_ZOOM_MAX,
-                   "step": 5, "unit": "%"}},
-            {"k": "field", "t": "Icon scale",
-             "c": {"k": "slider", "id": "set_map_icons", "v": self._map_icons,
-                   "min": MINIMAP_ICONS_MIN, "max": MINIMAP_ICONS_MAX,
-                   "step": 5, "unit": "%"}},
-            {"k": "button", "id": "toggle_map_bg",
-             "t": self._tick(self._map_bg_on, "World map background")},
-        ]
-        for key, label, _cats in MINIMAP_FILTERS:
-            out.append({"k": "button", "id": f"mapfilter:{key}",
-                        "t": self._tick(self._map_filters.get(key, True),
-                                        label)})
-        out += [
-            {"k": "button", "id": "cycle_foe_mode",
-             "t": f"{foe}  " + MINIMAP_FOE_LABEL.get(self._foe_mode,
-                                                     "Enemies: all")},
-            {"k": "button", "id": "cycle_critter_mode",
-             "t": f"{crit}  " + MINIMAP_CRITTER_LABEL.get(self._critter_mode,
-                                                          "Critters: all")},
-            {"k": "section", "t": "Compass"},
-        ]
-        for key, label, _cats in COMPASS_FILTERS:
-            out.append({"k": "button", "id": f"compassfilter:{key}",
-                        "t": self._tick(
-                            self._compass_filters.get(key, True), label)})
-        return out
 
     # -- Actions ----------------------------------------------------------
     def _page_actions(self):
@@ -7121,208 +4380,8 @@ class Overlay:
         ]
         return out
 
-    def _page_social(self):
-        """Two views of the same people. 'Current shard' is live state and can
-        show class and level; 'This session' is an accumulated log and
-        deliberately cannot — those two facts are only true while a player is
-        on your layer, and a level from twenty minutes ago is worse than none.
-        """
-        page = self._social_page
-        rows = []
-        for p in (self._social_rows_data() or []):
-            rows.append({
-                "name": p.get("name", ""),
-                "cls": p.get("cls", "") if page == "shard" else "",
-                "meta": p.get("meta", ""),
-                # Copy first so it sits left of Profile, as the Tk rows had it.
-                # Both are dropped entirely when the uid has not arrived yet —
-                # a button that cannot do anything is worse than no button.
-                "btns": ([{"id": "copy_steam", "t": "Copy ID",
-                           "p": {"uid": p.get("uid", ""),
-                                 "name": p.get("name", "")}},
-                          {"id": "open_profile", "t": "Profile",
-                           "p": {"uid": p.get("uid", "")}}]
-                         if p.get("uid") else []),
-            })
-        # Labelled with the order it IS in, not the one it would switch to —
-        # the same convention every other standing setting here uses. The two
-        # pages sort by different things: the session log has no level to rank
-        # by, so it offers last-seen instead.
-        sort = (SOCIAL_SORT_LABEL[self._social_sort] if page == "shard"
-                else SESSION_SORT_LABEL[self._session_sort])
-        return [
-            {"k": "chips", "id": "set_social_page", "v": page,
-             "o": [{"v": k, "t": label} for k, label in SOCIAL_PAGES],
-             "extra": [{"id": "toggle_social_sort", "t": sort},
-                       {"id": "reload_social", "t": "Refresh"}]},
-            {"k": "search", "id": "social_query",
-             "v": (self._social_query_text or ""),
-             "count": f"{len(rows)} shown"},
-            # Fills whatever height the panel has rather than stopping at a
-            # fixed box — a roster is the one page where more room is always
-            # worth more rows.
-            {"k": "list", "id": "social", "grow": True, "rows": rows,
-             "empty": ("Nobody on this shard yet." if page == "shard"
-                       else "Nobody logged this session yet.")},
-            # A transient confirmation ("Copied ...") wins while it lasts;
-            # otherwise the note is re-derived every push rather than left at
-            # whatever an earlier event set it to. It used to be the latter,
-            # which is how "Waiting for the roster" stayed on screen under
-            # thirty-one listed players.
-            {"k": "note", "t": (self._social_note_text
-                                if self._social_note_transient
-                                else self._social_idle_note())},
-        ]
 
-    def _page_buffs(self):
-        cur = self._tray(self._tray_edit)
-        others = len([n for n in self._trays_by_char if n != self._tray_char])
-        clash = (cur.get("timer") and cur.get("stacks")
-                 and cur.get("timer_pos") == cur.get("stacks_pos"))
-        out = [
-            {"k": "section", "t": "Tray"},
-            # Whose trays these are. Without it, editing an alt's set looks
-            # exactly like editing your main's — and the moment they differ,
-            # that is a setting you will change on the wrong character.
-            {"k": "note", "t": (
-                f"Trays for {self._tray_char}."
-                + (f" {others} other character{'' if others == 1 else 's'} "
-                   f"saved." if others else "")
-                if self._tray_char else
-                "Waiting for the game to say which character you are — these "
-                "are the trays this install last used.")},
-            {"k": "chips", "id": "pick_tray", "v": self._tray_edit,
-             "o": [{"v": i,
-                    "t": f"{i + 1}" + (
-                        f" ({len(self._tray(i).get('keys') or ())})"
-                        if self._tray(i).get("keys") else "")}
-                   for i in range(BUFF_TRAY_MAX)],
-             "extra": [
-                 {"id": "toggle_tray_on", "on": bool(cur.get("on")),
-                  "t": "☑  Tray on" if cur.get("on")
-                       else "☐  Tray off"},
-                 {"id": "toggle_tray_lock",
-                  "t": "\U0001F512  Locked" if cur.get("lock")
-                       else "\U0001F513  Unlocked"},
-             ]},
-        ]
-        # A tray that is switched off draws nothing, so every control below is
-        # configuring something invisible. The page stops here rather than
-        # offering a screen of settings whose effect cannot be seen — the
-        # switch above is the only one that does anything until it is on.
-        # What it watches is kept: turning a tray off is not the same as
-        # emptying it, and the count on the selector says so.
-        if not cur.get("on"):
-            n_keys = len(cur.get("keys") or ())
-            out.append(
-                {"k": "note",
-                 "t": (f"This tray is off. It still remembers "
-                       f"{n_keys} buff{'' if n_keys == 1 else 's'} — turn it "
-                       f"back on to see them and change how it looks."
-                       if n_keys else
-                       "This tray is off. Turn it on to choose what it "
-                       "watches and how it looks.")})
-            return out
-        out += [
-            {"k": "section", "t": "Look"},
-            {"k": "field", "t": "Icon size",
-             "c": {"k": "slider", "id": "set_tray_size",
-                   "v": int(cur.get("size") or BUFF_ICON_DEFAULT),
-                   "min": BUFF_ICON_MIN, "max": BUFF_ICON_MAX, "step": 2}},
-            {"k": "field", "t": "Direction",
-             "c": {"k": "select", "id": "set_tray_layout",
-                   "v": BUFF_LAYOUT_LABEL.get(cur.get("layout", "row"), "Row"),
-                   "o": [BUFF_LAYOUT_LABEL[k] for k in BUFF_LAYOUTS]}},
-            # Which way it grows. The options are named for the direction the
-            # tray is actually laid out in, so "end" reads as Grow left across
-            # and Grow up down.
-            {"k": "field", "t": "Alignment",
-             "c": {"k": "select", "id": "set_tray_align",
-                   "v": _align_label(cur), "o": _align_options(cur)}},
-            {"k": "note", "t": "Where you place a tray is the edge that holds "
-                               "still — so one against the right of the screen "
-                               "can grow left instead of off it."},
-            {"k": "field", "t": "When not up",
-             "c": {"k": "select", "id": "set_tray_inactive",
-                   "v": cur.get("inactive", BUFF_INACTIVE_DIM),
-                   "o": list(BUFF_INACTIVE_MODES)}},
-        ]
-        for flag, label in BUFF_TRAY_FLAGS:
-            out.append({"k": "button", "id": f"trayflag:{flag}",
-                        "t": self._tick(cur.get(flag), label)})
-        out.append({"k": "section", "t": "Numbers on the icon"})
-        for which, label in (("timer", "Time left"), ("stacks", "Stacks")):
-            out += [
-                {"k": "field", "t": label,
-                 "c": {"k": "select", "id": f"traypos:{which}",
-                       "v": cur.get(f"{which}_pos",
-                                    BUFF_TRAY_DEFAULTS[f"{which}_pos"]),
-                       "o": list(BUFF_TEXT_POS_NAMES)}},
-                {"k": "field", "t": f"{label} size",
-                 "c": {"k": "slider", "id": f"traytext:{which}",
-                       "v": int(cur.get(f"{which}_size") or 100),
-                       "min": BUFF_TEXT_SCALE_MIN, "max": BUFF_TEXT_SCALE_MAX,
-                       "step": 10, "unit": "%"}},
-            ]
-        if clash:
-            # Allowed and occasionally deliberate (one of them switched off),
-            # so this warns rather than forbids.
-            out.append({"k": "note", "warn": True, "t":
-                        "Time left and Stacks are both in the "
-                        f"{str(cur.get('timer_pos', '')).lower()} corner — "
-                        "they will draw on top of each other."})
-        tracked = list(cur.get("keys") or ())
-        out += [
-            {"k": "section", "t": "Tracking"},
-            {"k": "list", "id": "tracked", "h": 180,
-             "empty": "This tray is watching nothing yet.",
-             # _buff_label, not status_name: an item status carries its item in
-             # the key ("item:Cook_11") and status_name cannot resolve that, so
-             # the list was showing raw keys where the tray itself shows names.
-             # This is the same call the tray's placeholders use.
-             "rows": [{"t": self._buff_label(k),
-                       "icon": _status_icon_index().get(k),
-                       "btns": [{"id": "untrack_buff", "t": "Remove",
-                                 "p": {"key": k}}]}
-                      for k in tracked]},
-            {"k": "section", "t": "Add a buff"},
-            {"k": "search", "id": "buff_query",
-             "v": (self._buff_query_text or ""),
-             "count": ""},
-            {"k": "list", "id": "buffpick", "h": 220,
-             "empty": "Nothing matches that.",
-             "rows": self._buff_pick_spec_rows(tracked)},
-        ]
-        return out
 
-    def _buff_pick_spec_rows(self, tracked):
-        """The picker's rows, filtered by its search box. Every status the game
-        defines, not merely the ones you have proc'd — the list comes out of
-        data.cdb, so a buff can be set up before you have ever had it."""
-        # Rows are {key, name, desc, seen} — already sorted with the statuses
-        # you have actually had this session first. The icon is a CELL NUMBER
-        # in the shipped sheet; the panel already has the sheet itself (see
-        # _send_icon_sheet) and works the position out from this.
-        icons = _status_icon_index()
-        q = (self._buff_query_text or "").strip().lower()
-        out = []
-        for row in (self._buff_pick_rows() or []):
-            key, name = row.get("key"), row.get("name") or ""
-            if key in tracked:
-                continue
-            if q and q not in name.lower():
-                continue
-            # The mark that answers "I just had that, what was it" — the whole
-            # reason the seen ones sort to the top.
-            desc = row.get("desc") or ""
-            out.append({"t": ("● " if row.get("seen") else "") + name,
-                        "icon": icons.get(key),
-                        "meta": desc[:90] + ("…" if len(desc) > 90 else ""),
-                        "btns": [{"id": "track_buff", "t": "Add",
-                                  "p": {"key": key}}]})
-            if len(out) >= 120:     # the panel scrolls; the pipe needn't carry
-                break               # a thousand rows nobody will scroll to
-        return out
 
     # ---- what the panel is allowed to ask for --------------------------
     def _menu_actions(self):
@@ -7341,11 +4400,7 @@ class Overlay:
             "toggle_mode": self._toggle_mode,
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
             "toggle_auto_reset": self._toggle_auto_reset_boss,
-            "toggle_codex_alerts": self._toggle_codex_alerts,
-            "toggle_sparkly": self._toggle_sparkly,
             "begin_bind": self._begin_bind_capture,
-            "toggle_sounds": self._toggle_sounds,
-            "set_volume": lambda p: self._set_volume(p.get("value", 0)),
             "set_theme": lambda p: self._set_theme_mode(p.get("value")),
             "set_transparency":
                 lambda p: self._set_transparency(p.get("value", 0)),
@@ -7355,14 +4410,6 @@ class Overlay:
             # -- Windows
             "toggle_heal": self._toggle_heal,
             "toggle_hide_ooc": self._toggle_hide_ooc,
-            # -- Map
-            "set_map_mode": lambda p: self._set_map_mode(p.get("value")),
-            "set_map_rate": lambda p: self._set_map_rate(p.get("value")),
-            "set_map_zoom": lambda p: self._set_map_zoom(p.get("value", 100)),
-            "set_map_icons": lambda p: self._set_map_icons(p.get("value", 100)),
-            "toggle_map_bg": self._toggle_map_bg,
-            "cycle_foe_mode": self._cycle_foe_mode,
-            "cycle_critter_mode": self._cycle_critter_mode,
             # -- Actions
             "reopen_report": self._reopen_report,
             "open_parses": self._open_parses,
@@ -7382,46 +4429,17 @@ class Overlay:
             "copy_history": self._copy_history,
             "history_query": lambda p: self._set_panel_query(
                 "_history_query_text", p.get("value", "")),
-            # -- Social
-            "set_social_page": lambda p: self._set_social_page(p.get("value")),
-            "reload_social": self._refresh_social_clicked,
-            # One button, two settings — which one it means depends on the page
-            # you are looking at, exactly as the two Tk buttons did.
-            "toggle_social_sort": (
-                self._toggle_social_sort if self._social_page == "shard"
-                else self._toggle_session_sort),
-            "copy_steam": lambda p: self._copy_steamid(
-                p.get("name", ""), steam64_from_uid(p.get("uid") or None)),
-            "open_profile": lambda p: self._open_profile(p.get("uid") or None),
-            "social_query": lambda p: self._set_panel_query(
-                "_social_query_text", p.get("value", "")),
-            # -- Buffs
-            "pick_tray": lambda p: self._pick_tray(int(p.get("value", 0))),
-            "toggle_tray_on": self._toggle_tray_on,
-            "toggle_tray_lock": self._toggle_tray_lock,
-            "set_tray_size": lambda p: self._set_tray_field(
-                "size", int(p.get("value", BUFF_ICON_DEFAULT))),
-            "set_tray_layout": lambda p: self._set_tray_field(
-                "layout", BUFF_LAYOUT_BY_LABEL.get(p.get("value"), "row")),
-            "set_tray_inactive": lambda p: self._set_tray_field(
-                "inactive", p.get("value")),
-            "set_tray_align": lambda p: self._set_tray_align(p.get("value")),
-            "track_buff": lambda p: self._track_buff(p.get("key")),
-            "untrack_buff": lambda p: self._untrack_buff(p.get("key")),
-            "buff_query": lambda p: self._set_panel_query(
-                "_buff_query_text", p.get("value", "")),
             # -- the panel's own chrome
             "set_tab": lambda p: self._set_menu_tab(p.get("value")),
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),
             "help_close": lambda: setattr(self, "_help_open", None),
             "open_support": lambda: self._open_url(SUPPORT_URL),
-            "check_updates": self._check_updates_clicked,
-            "banner_clicked": self._on_update_click,
+            "banner_clicked": lambda: None,
             "escape": self._panel_escape,
             "boot": self._panel_booted,
             "rendered": lambda p: None,     # telemetry; nothing to do with it
         }
-        # The generated ids: one per window, filter and tray flag. Built in a
+        # The generated ids: one per window and size slider. Built in a
         # loop for the same reason the Tk rows were — a filter added to the
         # tuple gets its control and its handler together, or neither.
         for key, _label in TOGGLEABLE_ELEMENTS:
@@ -7431,53 +4449,9 @@ class Overlay:
             acts[f"scale:{group}"] = (
                 lambda p, g=group: self._set_group_scale(
                     g, int(p.get("value", 100)) / 100))
-        for key, _label, _cats in MINIMAP_FILTERS:
-            acts[f"mapfilter:{key}"] = (
-                lambda p, k=key: self._toggle_map_filter(k))
-        for key, _label, _cats in COMPASS_FILTERS:
-            acts[f"compassfilter:{key}"] = (
-                lambda p, k=key: self._toggle_compass_filter(k))
-        for flag, _label in BUFF_TRAY_FLAGS:
-            acts[f"trayflag:{flag}"] = (
-                lambda p, f=flag: self._toggle_tray_flag(f))
-        for which in ("timer", "stacks"):
-            acts[f"traypos:{which}"] = (
-                lambda p, w=which: self._set_tray_field(
-                    f"{w}_pos", p.get("value")))
-            acts[f"traytext:{which}"] = (
-                lambda p, w=which: self._set_tray_field(
-                    f"{w}_size", int(p.get("value", 100))))
         return acts
 
-    # -- small adapters the panel needs and the Tk menu got from its vars --
-    def _set_tray_field(self, field, value):
-        """One setting on the tray being edited. The Tk panel read these off
-        its own IntVars; the web panel sends the value, so there is one place
-        that writes them instead of six near-identical handlers."""
-        self._tray(self._tray_edit)[field] = value
-        self._save_settings()
 
-    def _set_tray_align(self, label):
-        """Change which edge holds still — WITHOUT moving the tray.
-
-        The anchor has to be re-derived from where the window actually is, or
-        switching from Grow right to Grow left would leave the old anchor
-        meaning something else and jump the tray by its own width.
-        """
-        i = self._tray_edit
-        t = self._tray(i)
-        try:
-            win = self.buffwins[i]
-            w, h = win.winfo_width(), win.winfo_height()
-            x, y = win.winfo_x(), win.winfo_y()
-        except tk.TclError:
-            t["align"] = _align_from_label(t, label)
-            self._save_settings()
-            return
-        t["align"] = _align_from_label(t, label)
-        dx, dy = self._tray_offset(t, w, h)
-        t["x"], t["y"] = x + dx, y + dy
-        self._save_settings()
 
     def _set_panel_query(self, attr, text):
         """A search box changed. Stored on the overlay rather than in a Tk
@@ -7546,13 +4520,6 @@ class Overlay:
             self._panel_visible = visible
             self._panel_reassert = 0
             (self.menubridge.show if visible else self.menubridge.hide)()
-            if not visible:
-                # Arriving at the Buffs page makes every configured tray point
-                # at itself for a few seconds. That answers "which one is
-                # which" while you are LOOKING at the page — once the panel is
-                # gone it is just a row of trays refusing to hide, so the
-                # reveal ends with the panel rather than on its own timer.
-                self._tray_reveal = {}
         if visible:
             # Belt and braces on top of the edge test above. Topmost is not a
             # standing property — anything else claiming it takes it away, and
@@ -7575,42 +4542,8 @@ class Overlay:
     def _panel_booted(self):
         """The panel's page finished loading. Its idea of the state is nothing
         at all, so the next push has to go even if it matches the last one."""
-        self._send_icon_sheet()
         self.menubridge.invalidate()
 
-    def _send_icon_sheet(self):
-        """Hand the panel the status icon sheet, once.
-
-        The whole 411KB sheet as one data URI, not 242 cropped images. It is a
-        sprite sheet and the panel treats it as one: a row carries a cell
-        NUMBER and the CSS works out the background-position, so adding icons
-        to a list costs an integer per row rather than an image.
-
-        Sent on its own message rather than inside the state, because the state
-        is rebuilt several times a second and compared field by field — half a
-        megabyte of base64 in that comparison would cost more than everything
-        else the panel does put together.
-        """
-        if self._icon_sheet_sent:
-            return
-        try:
-            raw = (STATUS_DIR / "icons.webp").read_bytes()
-            meta = json.loads(
-                (STATUS_DIR / "icons.json").read_text(encoding="utf-8"))
-        except OSError as e:
-            print(f"[meter] no status icon sheet for the panel: {e}",
-                  file=sys.stderr)
-            self._icon_sheet_sent = True        # don't retry every boot
-            return
-        import base64
-        self._icon_sheet_sent = True
-        self.menubridge.send({
-            "t": "sheet",
-            "uri": "data:image/webp;base64,"
-                   + base64.b64encode(raw).decode("ascii"),
-            "cell": int(meta.get("cell") or 64),
-            "cols": int(meta.get("cols") or 16),
-        })
 
     def _panel_typing(self, on):
         """A search box in the panel gained or lost the caret. Same handshake
@@ -7669,896 +4602,7 @@ class Overlay:
         self._panel_visible = False
         self.menubridge.invalidate()
 
-    def _social_rows_data(self):
-        """The Social list, as plain dicts for the panel.
 
-        Reuses the same ordering the Tk rows used so the two cannot disagree
-        about who is at the top — see _sorted_roster for why name pins you and
-        level pins nobody.
-        """
-        # The hook's rows use short keys — n, k, lvl, uid, me, last — not the
-        # spelled-out ones. Getting that wrong is why the tab rendered
-        # twenty-nine rows with a Copy ID button and no name on any of them:
-        # the count was right because the rows were real, and every field was
-        # empty because none of the names matched.
-        q = (self._social_query_text or "").strip().lower()
-        out = []
-        if self._social_page == "session":
-            rows = list(self.world.seen_players() or [])
-            now = time.monotonic()
-            for r in rows:
-                r["ago"] = _seen_ago(max(0.0, now - r.get("last", now)))
-            if self._session_sort == "name":
-                rows.sort(key=lambda r: (r.get("n") or "").lower())
-            else:
-                rows.sort(key=lambda r: (-r.get("last", 0.0),
-                                         (r.get("n") or "").lower()))
-            for r in rows:
-                name = r.get("n") or "?"
-                if q and q not in name.lower():
-                    continue
-                # No class or level here, deliberately: both come off a live
-                # entity and are only true while the player is on your layer.
-                out.append({"name": name, "cls": "",
-                            "meta": r.get("ago") or "",
-                            "uid": str(r.get("uid") or "")})
-            return out
-
-        for r in (self._sorted_roster() or []):
-            name = r.get("n") or "?"
-            if q and q not in name.lower():
-                continue
-            lvl = r.get("lvl")
-            # "you" goes in the meta column, not appended to the name — the
-            # name is also what the Copy confirmation quotes back.
-            meta = " · ".join(x for x in ((f"lvl {lvl}" if lvl else ""),
-                                          ("you" if r.get("me") else "")) if x)
-            out.append({"name": name, "cls": _class_tag(r.get("k")),
-                        "meta": meta, "uid": str(r.get("uid") or "")})
-        return out
-
-    def _build_menu(self):
-        """The control menu: what used to be hotkeys, as buttons. Only on screen
-        while the game's escape menu is — which is also the only time the game
-        has a usable cursor — so it never needs to be click-through."""
-        # Every OptionMenu on the panel, so their popups can be dismissed with
-        # it. A posted dropdown is its own toplevel and knows nothing about the
-        # window it belongs to — hide the menu with one open and the list of
-        # choices stays on screen by itself. See _unpost_menus.
-        self._option_menus = []
-        border = tk.Frame(self.menu, bg=BG_BORDER, padx=2, pady=2)
-        border.pack(fill="both", expand=True)
-
-        # Green like the other two headers get while it's on screen — the menu
-        # only ever exists in the unlocked state, so this never changes.
-        self.m_header = tk.Frame(border, bg=BG_HEADER_UNLOCKED)
-        self.m_header.pack(fill="x")
-        self.m_title = tk.Label(self.m_header, text="Farever+ Controls",
-                                bg=BG_HEADER_UNLOCKED, fg=FG_HEADER,
-                                font=self.fonts_m["ui_b"], anchor="w",
-                                padx=8, pady=4)
-        self.m_title.pack(side="left")
-        # Which build you're actually running, where you'd look for it. Dimmer
-        # than the title: it answers a question rather than asking for
-        # attention, and it's the first thing worth knowing when something
-        # behaves differently from what the notes describe. Draggable along
-        # with the rest of the header — a strip you can't grab is a strip that
-        # feels broken.
-        self.m_version = tk.Label(self.m_header, text=f"v{VERSION}",
-                                  bg=BG_HEADER_UNLOCKED, fg=FG_HEADER,
-                                  font=self.fonts_m["ui_tiny_i"], anchor="e",
-                                  padx=8, pady=4)
-        self.m_version.pack(side="right")
-        # The same link the Actions tab carries, up where the eye goes for
-        # "what is this thing" — beside the version. A real button, and kept
-        # OUT of the drag binding below on purpose: the header drags, the
-        # button clicks, and no widget does both.
-        self.m_repo = tk.Button(self.m_header, text="GitHub",
-                                command=self._enqueue(self._open_repo),
-                                bg=BG_HEADER_UNLOCKED, fg=FG_HEADER,
-                                activebackground=BG_HEADER,
-                                activeforeground=FG_HEADER,
-                                font=self.fonts_m["ui_tiny_i"],
-                                relief="flat", bd=0, padx=6, pady=0,
-                                cursor="hand2", highlightthickness=0)
-        self.m_repo.pack(side="right", pady=4)
-        # Its neighbour: ask GitHub for a newer build right now, answered on
-        # the button itself. The automatic check already runs at startup and
-        # on loading screens, but silently — this is for "did my update
-        # land?" and "am I current?", asked deliberately. It shares the
-        # automatic check's plumbing but not its 15-minute throttle: a click
-        # is a question, and a question deserves a fresh answer.
-        self.m_update = tk.Button(self.m_header, text="Check updates",
-                                  command=self._enqueue(
-                                      self._check_updates_clicked),
-                                  bg=BG_HEADER_UNLOCKED, fg=FG_HEADER,
-                                  activebackground=BG_HEADER,
-                                  activeforeground=FG_HEADER,
-                                  font=self.fonts_m["ui_tiny_i"],
-                                  relief="flat", bd=0, padx=6, pady=0,
-                                  cursor="hand2", highlightthickness=0)
-        self.m_update.pack(side="right", pady=4)
-        self._bind_drag(self.menu,
-                        (self.m_header, self.m_title, self.m_version))
-
-        body = tk.Frame(border, bg=BG_BODY, padx=8, pady=8)
-        body.pack(fill="both", expand=True)
-
-        # Top of the menu: how to stop the meter, quietly. Both exits unload
-        # the hook and detach, so there's nothing left to warn about — and when
-        # a new version is out this line becomes the notice for it.
-        self.warn_lbl = tk.Label(body, text=SHUTDOWN_HINT,
-                                 bg=BG_BODY, fg=FG_DIM,
-                                 font=self.fonts_m["ui_sm_b"],
-                                 anchor="w", justify="left",
-                                 wraplength=WARN_WRAP)
-        self.warn_lbl.pack(fill="x", pady=(0, 6))
-
-        # Tabs rather than the old two-column wall. The menu had grown a row at
-        # a time until every visit meant reading all of it; four pages mean the
-        # page you're on is the only thing asking to be read. All four frames
-        # sit stacked in ONE grid cell and the active one is raised, so the
-        # holder takes the size of the largest page and the window never
-        # changes size when you switch — a settings panel that jumps around
-        # under the cursor is worse than a dense one.
-        tabs_wrap = tk.Frame(body, bg=BG_BODY)
-        tabs_wrap.pack(fill="both", expand=True)
-        # The navbar is a fixed-width column with propagation off, so a long
-        # tab name widens the label and not the strip — otherwise adding one
-        # verbose tab would shove every page sideways.
-        navbar = self.menu_nav = tk.Frame(
-            tabs_wrap, bg=BG_BODY,
-            width=int(MENU_NAV_W * self._scales["menu"]))
-        navbar.pack(side="left", fill="y")
-        navbar.pack_propagate(False)
-        tk.Frame(tabs_wrap, bg=BG_BAR_TRACK, width=1).pack(
-            side="left", fill="y", padx=(8, 0))
-        holder = tk.Frame(tabs_wrap, bg=BG_BODY)
-        holder.pack(side="left", fill="both", expand=True, padx=(10, 0))
-        holder.grid_rowconfigure(0, weight=1)
-        holder.grid_columnconfigure(0, weight=1)
-        # NOT reset here: the tab is remembered across runs and _load_settings
-        # has already restored it. This line used to pin it to General, which
-        # is how a remembered tab would have been quietly thrown away.
-        self._menu_tab = getattr(self, "_menu_tab", MENU_TAB_DEFAULT)
-        self._menu_tab_btns = {}
-        self._menu_tab_frames = {}
-        # General stays the landing page — it is what you open the menu for
-        # most of the time. History and Social sit directly under it because
-        # they are the pages you open to READ rather than to change something;
-        # the configuration pages follow. History is above Social because it
-        # is about the fight you just finished, which is the more common
-        # reason to be looking.
-        for name in ("General", "History", "Social", "Buffs", "Actions",
-                     "Windows", "Map"):
-            b = tk.Button(navbar, text=name, anchor="w",
-                          command=self._enqueue(
-                              lambda n=name: self._set_menu_tab(n)),
-                          font=self.fonts_m["ui_b"], relief="flat", bd=0,
-                          padx=12, pady=6, cursor="hand2",
-                          highlightthickness=1)
-            b.pack(fill="x", pady=(0, 3))
-            self._menu_tab_btns[name] = b
-            f = tk.Frame(holder, bg=BG_BODY)
-            f.grid(row=0, column=0, sticky="nsew")
-            self._menu_tab_frames[name] = f
-        soc = self._menu_tab_frames["Social"]
-        gen = self._menu_tab_frames["General"]
-        hist = self._menu_tab_frames["History"]
-        winb = self._menu_tab_frames["Windows"]
-        mp = self._menu_tab_frames["Map"]
-        act = self._menu_tab_frames["Actions"]
-        buf = self._menu_tab_frames["Buffs"]
-
-        def section(parent, text, first=False):
-            row = tk.Frame(parent, bg=BG_BODY)
-            row.pack(fill="x", pady=(2 if first else 10, 4))
-            tk.Label(row, text=text, bg=BG_BODY, fg=ACCENT,
-                     font=self.fonts_m["ui_sm_b"], anchor="w").pack(side="left")
-            # The rule line carries the heading across the row, which is what
-            # lets the headings be quiet: the eye finds the break, not the word.
-            tk.Frame(row, bg=BG_BAR_TRACK, height=1).pack(
-                side="left", fill="x", expand=True, padx=(8, 0))
-
-        def button(parent, cmd):
-            b = tk.Button(parent, text="", command=cmd, anchor="w",
-                          font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-                          activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-                          relief="flat", bd=0, padx=10, pady=5,
-                          highlightthickness=1, highlightbackground=BG_BAR_TRACK,
-                          cursor="hand2")
-            b.pack(fill="x", pady=2)
-            return b
-
-        def field(parent, label):
-            """A labelled control row, for the things that aren't buttons.
-
-            The label column is a fixed width so every control in it starts at
-            the same x and ends up the same length. Left to size themselves,
-            "Meter" and "Breakdown" hand their sliders different amounts of
-            leftover row, and four sliders that should read identically at 100%
-            end up visibly different lengths with their handles in different
-            places."""
-            row = tk.Frame(parent, bg=BG_BODY)
-            row.pack(fill="x", pady=2)
-            # `width` on a Label is authoritative — it's a requested size in
-            # average character widths, and longer text doesn't grow it.
-            tk.Label(row, text=label, bg=BG_BODY, fg=FG_TEXT,
-                     font=self.fonts_m["ui"], anchor="w", padx=2,
-                     width=FIELD_LABEL_CHARS).pack(side="left")
-            return row
-
-        # One styling for every dropdown and every slider, in one place each —
-        # the old menu configured five OptionMenus by hand, identically, and
-        # they only stayed identical by luck.
-        def dropdown(row, var, values, command, width=None):
-            opt = tk.OptionMenu(row, var, *values, command=command)
-            opt.config(
-                bg=BG_BODY_SOFT, fg=FG_TEXT, activebackground=BG_BAR_TRACK,
-                activeforeground=FG_VALUE, relief="flat", bd=0, anchor="w",
-                padx=10, pady=3, font=self.fonts_m["ui"], cursor="hand2",
-                highlightthickness=1, highlightbackground=BG_BAR_TRACK,
-                direction="right")
-            opt["menu"].config(
-                bg=BG_BODY, fg=FG_TEXT, activebackground=BTN_ON_BG,
-                activeforeground=FG_HEADER, bd=0, relief="flat",
-                font=self.fonts_m["ui"])
-            if width is not None:
-                opt.config(width=width)
-            self._option_menus.append(opt)
-            return opt
-
-        def slider(row, var, lo, hi, on_release, length=120):
-            scl = tk.Scale(
-                row, from_=lo, to=hi, resolution=5, orient="horizontal",
-                variable=var, showvalue=True, bg=BG_BODY, fg=FG_DIM,
-                troughcolor=BG_BAR_TRACK, activebackground=BTN_ON_BG,
-                highlightthickness=0, bd=0, sliderrelief="flat",
-                font=self.fonts_m["ui_tiny_i"], length=length, cursor="hand2")
-            scl.bind("<ButtonRelease-1>", on_release)
-            return scl
-
-        # ---- Social: two views of the same people ----
-        # "Current Shard" is st.GameLayer.players — everyone the client holds
-        # state for right now, which is far more than the people rendered
-        # around you, and carries a class and level because their entities are
-        # live. "This session" is the accumulated log of everyone seen since
-        # the meter started, and deliberately carries NEITHER: those two facts
-        # are only true while the player is on your layer, and showing a level
-        # from twenty minutes ago would be worse than showing none.
-        #
-        # Sub-tabs run horizontally here precisely because the main navigation
-        # is vertical — the change of axis is what makes them read as a second
-        # level rather than as more of the same list.
-        subbar = tk.Frame(soc, bg=BG_BODY)
-        subbar.pack(fill="x", pady=(2, 8))
-        sub_holder = tk.Frame(soc, bg=BG_BODY)
-        sub_holder.pack(fill="both", expand=True)
-        sub_holder.grid_rowconfigure(0, weight=1)
-        sub_holder.grid_columnconfigure(0, weight=1)
-        self._social_page = "shard"
-        self._social_page_btns = {}
-        self._social_page_frames = {}
-        for key, label in SOCIAL_PAGES:
-            b = tk.Button(subbar, text=label,
-                          command=self._enqueue(
-                              lambda k=key: self._set_social_page(k)),
-                          font=self.fonts_m["ui_b"], relief="flat", bd=0,
-                          padx=14, pady=3, cursor="hand2",
-                          highlightthickness=1)
-            b.pack(side="left", padx=(0, 4))
-            self._social_page_btns[key] = b
-            f = tk.Frame(sub_holder, bg=BG_BODY)
-            f.grid(row=0, column=0, sticky="nsew")
-            self._social_page_frames[key] = f
-        # Top right, on the sub-tab row so it reads as belonging to the whole
-        # tab: it reloads BOTH pages. The button exists because the pages
-        # don't poll — see _reload_social.
-        self.btn_social_refresh = tk.Button(
-            subbar, text="Refresh",
-            command=self._enqueue(self._refresh_social_clicked),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=2, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_social_refresh.pack(side="right")
-
-        def search_row(parent, var):
-            """The search line shared by both pages. Returns the row (so a
-            caller can add its own controls) and the count label."""
-            row = tk.Frame(parent, bg=BG_BODY)
-            row.pack(fill="x", pady=(0, 6))
-            tk.Label(row, text="Search", bg=BG_BODY, fg=FG_TEXT,
-                     font=self.fonts_m["ui"], anchor="w").pack(side="left")
-            ent = tk.Entry(
-                row, textvariable=var, font=self.fonts_m["ui"],
-                bg=BG_BODY_SOFT, fg=FG_TEXT, insertbackground=FG_VALUE,
-                relief="flat", bd=0, highlightthickness=1,
-                highlightbackground=BG_BAR_TRACK, highlightcolor=ACCENT)
-            ent.pack(side="left", fill="x", expand=True, padx=(8, 8))
-            # focus_FORCE, not focus_set: the menu is an overrideredirect
-            # window, so Tk does not believe it holds the focus and focus_set
-            # alone leaves the caret dead even now that the window can activate.
-            ent.bind("<Button-1>", lambda _e, w=ent: w.focus_force())
-            ent.bind("<FocusIn>", lambda _e: self._set_typing(True))
-            ent.bind("<FocusOut>", lambda _e: self._set_typing(False))
-            # Esc and Return both mean "done typing". Esc matters most: while
-            # this box holds the keyboard, the game cannot see its own Escape,
-            # so the first press leaves the box and the second reaches the game
-            # and closes its menu. Swallowed ("break") so the first press isn't
-            # also read as something else on the way past.
-            for seq in ("<Escape>", "<Return>", "<KP_Enter>"):
-                ent.bind(seq, lambda _e: (self._stop_typing(), "break")[1])
-            count = tk.Label(row, text="", bg=BG_BODY, fg=FG_DIM,
-                             font=self.fonts_m["ui_tiny_i"], anchor="e")
-            count.pack(side="right")
-            return row, count
-
-        def scroll_list(parent, height=SOCIAL_LIST_H):
-            """A scrolling viewport of real widgets.
-
-            Canvas + inner frame is the only way tk gives you a scrollable
-            stack of widgets, and each row carries buttons so a Listbox is out.
-            Written once and used by both pages — two hand-built copies of this
-            plumbing is two places for the scrollregion to go stale."""
-            wrap = tk.Frame(parent, bg=BG_BODY)
-            wrap.pack(fill="both", expand=True)
-            canvas = tk.Canvas(
-                wrap, bg=BG_BODY, highlightthickness=0, bd=0,
-                height=int(height * self._scales["menu"]))
-            vsb = tk.Scrollbar(wrap, orient="vertical", command=canvas.yview)
-            canvas.configure(yscrollcommand=vsb.set)
-            vsb.pack(side="right", fill="y")
-            canvas.pack(side="left", fill="both", expand=True)
-            inner = tk.Frame(canvas, bg=BG_BODY)
-            sw = canvas.create_window((0, 0), window=inner, anchor="nw")
-            # The inner frame drives the scrollregion; the canvas drives the
-            # inner frame's WIDTH. Without the second half the rows keep their
-            # natural width and the buttons never reach the right-hand edge.
-            inner.bind("<Configure>",
-                       lambda _e: canvas.configure(
-                           scrollregion=canvas.bbox("all")))
-            canvas.bind("<Configure>",
-                        lambda e: canvas.itemconfigure(sw, width=e.width))
-
-            # Registered for the app-wide wheel dispatcher rather than bound
-            # here — see _on_wheel. `wrap` and not `canvas`, so the scrollbar
-            # (a sibling of the canvas, not a child) scrolls the list too.
-            self._scroll_areas[str(wrap)] = canvas
-            return canvas, inner
-
-        # -- Current Shard --
-        shard_pg = self._social_page_frames["shard"]
-        self._social_query = tk.StringVar()
-        srow, self.social_count = search_row(shard_pg, self._social_query)
-        # Labelled with the order it IS in, not the one it would switch to —
-        # the same convention the rest of the menu's standing settings use.
-        # Shard-only: the session log has no level to rank by.
-        self.btn_social_sort = tk.Button(
-            srow, text=SOCIAL_SORT_LABEL[self._social_sort],
-            command=self._enqueue(self._toggle_social_sort),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=2, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_social_sort.pack(side="right", padx=(0, 8))
-        self.social_canvas, self.social_list = scroll_list(shard_pg)
-
-        # -- This session --
-        sess_pg = self._social_page_frames["session"]
-        self._session_query = tk.StringVar()
-        qrow, self.session_count = search_row(sess_pg, self._session_query)
-        self.btn_session_sort = tk.Button(
-            qrow, text=SESSION_SORT_LABEL[self._session_sort],
-            command=self._enqueue(self._toggle_session_sort),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=2, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_session_sort.pack(side="right", padx=(0, 8))
-        self.session_canvas, self.session_list = scroll_list(sess_pg)
-
-        # Rebuilt rows live here so a refresh can drop them wholesale. Rebuild
-        # is cheap at this size and far simpler than diffing a list whose
-        # members come and go as people zone in and out.
-        self._social_row_widgets = []
-        self._session_row_widgets = []
-        self._social_sig = None
-        self._session_sig = None
-        self._social_note_job = None
-        self._social_note_transient = False
-        self._social_query.trace_add(
-            "write", lambda *_a: self._rebuild_social())
-        self._session_query.trace_add(
-            "write", lambda *_a: self._rebuild_session())
-
-        # Shared by both pages: the empty-state explanation, and the
-        # confirmation line for a copy — see _social_note.
-        self.social_note = tk.Label(
-            soc, text="", bg=BG_BODY, fg=FG_DIM, font=self.fonts_m["ui_sm_b"],
-            anchor="w", justify="left", wraplength=WARN_WRAP)
-        self.social_note.pack(fill="x", pady=(6, 0))
-        self._set_social_page("shard")
-
-        # ---- General: what the meter does, and how the overlay looks ----
-        # Commands are queued rather than run inline: they mutate overlay state
-        # the refresh loop also touches, and _drain runs them on the Tk thread.
-        section(gen, "METER", first=True)
-        self.btn_mode = button(gen, self._enqueue(self._toggle_mode))
-        # Directly under the mode button, because it is that button on a timer:
-        # the rift decides when it gets pressed instead of you.
-        self.btn_rift_auto_view = button(
-            gen, self._enqueue(self._toggle_rift_auto_view))
-        tk.Label(gen,
-                 text=("Presses the button above for you at both rift "
-                       "boundaries — all-players going in, party-only coming "
-                       "out — instead of asking. Each switch resets the "
-                       "encounter, as it does above."),
-                 bg=BG_BODY, fg=FG_DIM, font=self.fonts_m["ui_tiny_i"],
-                 anchor="w", justify="left",
-                 wraplength=WARN_WRAP).pack(fill="x", pady=(0, 2))
-        self.btn_auto_reset = button(gen,
-                                     self._enqueue(self._toggle_auto_reset_boss))
-        # One switch for the whole codex feature's popups — the running count
-        # on every kill AND the completion fanfare. They're one thing to want
-        # or not want, and a second tick for "the rare one only" would be a
-        # setting nobody goes looking for.
-        self.btn_codex_alerts = button(
-            gen, self._enqueue(self._toggle_codex_alerts))
-        self.btn_sparkly = button(gen, self._enqueue(self._toggle_sparkly))
-        tk.Label(gen,
-                 text=("Codex alerts: the running count on each kill and the "
-                       "fanfare when an entry fills — the map's 'only missing "
-                       "from codex' filter is separate and keeps working "
-                       "either way. Sparkly tracker: a pointer to the nearest "
-                       "sparkling critter, as far out as the game will tell us "
-                       "about it. Sparkling versions of ordinary mobs still "
-                       "get a halo on the map but are not tracked."),
-                 bg=BG_BODY, fg=FG_DIM, font=self.fonts_m["ui_tiny_i"],
-                 anchor="w", justify="left",
-                 wraplength=WARN_WRAP).pack(fill="x", pady=(0, 2))
-        row = field(gen, "Reset data")
-        self.btn_bind = tk.Button(
-            row, text="", command=self._begin_bind_capture, anchor="w",
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=3, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_bind.pack(side="right", expand=True, fill="x", padx=(8, 0))
-        # True while the button is listening for a keypress.
-        self._binding_now = False
-
-        section(gen, "SOUND")
-        self.btn_sounds = button(gen, self._enqueue(self._toggle_sounds))
-        # Live rather than on release, unlike Transparency — this one costs a
-        # single MCI call, and hearing the level while you drag is the point.
-        row = field(gen, "Volume")
-        self._volume_var = tk.IntVar(value=self._sound_volume)
-        slider(row, self._volume_var, 0, SOUND_VOLUME_MAX,
-               lambda _e: self._on_volume_pick()).pack(
-            side="right", expand=True, fill="x", padx=(8, 0))
-
-        section(gen, "LOOK")
-        row = field(gen, "Theme")
-        self._theme_var = tk.StringVar(value=self._theme_mode)
-        self.opt_theme = dropdown(row, self._theme_var, THEME_MODES,
-                                  self._on_theme_pick)
-        self.opt_theme.pack(side="right", expand=True, fill="x", padx=(8, 0))
-        # Released rather than live, like the scale sliders: every step
-        # reconfigures five windows.
-        row = field(gen, "Transparency")
-        self._transp_var = tk.IntVar(value=self._transparency)
-        slider(row, self._transp_var, 0, TRANSPARENCY_MAX,
-               lambda _e: self._on_transparency_pick()).pack(
-            side="right", expand=True, fill="x", padx=(8, 0))
-
-        # ---- History: every finished encounter, kept as data ----
-        # The whole tab is one opt-in and what it unlocks. Off, the page is
-        # the checkbox and the paragraph explaining it — showing a folder path
-        # and an empty browser for a feature that isn't recording anything
-        # would read as a broken feature rather than an unused one.
-        section(hist, "COMBAT HISTORY", first=True)
-        self.btn_history = button(hist, self._enqueue(self._toggle_history))
-        tk.Label(hist,
-                 text=("The meter keeps one encounter at a time — a reset, a "
-                       "zone change or a boss pull throws it away. With this "
-                       "on, each finished encounter is saved to disk first, "
-                       "named for whatever took the most damage and where. "
-                       "Rift reports are saved here too, with the per-skill "
-                       "detail the card has no room for."),
-                 bg=BG_BODY, fg=FG_DIM, font=self.fonts_m["ui_tiny_i"],
-                 anchor="w", justify="left",
-                 wraplength=WARN_WRAP).pack(fill="x", pady=(0, 2))
-        # Everything below is packed and unpacked as one unit — see
-        # _apply_history_visibility.
-        self.history_body = tk.Frame(hist, bg=BG_BODY)
-
-        section(self.history_body, "WHERE IT IS SAVED")
-        # A path you can click, not a path you have to retype. Styled as a
-        # link rather than a button because that is what it is: the folder is
-        # the feature's real interface, and nothing in the meter can delete
-        # from it.
-        self.btn_history_path = tk.Label(
-            self.history_body, text=str(self._history.dir), bg=BG_BODY,
-            fg=ACCENT, font=self.fonts_m["ui_sm_b"], anchor="w",
-            justify="left", cursor="hand2", wraplength=WARN_WRAP)
-        self.btn_history_path.pack(fill="x", pady=(0, 1))
-        self.btn_history_path.bind(
-            "<Button-1>", lambda _e: self._enqueue(
-                self._open_history_folder)())
-        tk.Label(self.history_body,
-                 text=("Nothing in the meter ever deletes from this folder. "
-                       "Tidy it up yourself when you want the space back."),
-                 bg=BG_BODY, fg=FG_DIM, font=self.fonts_m["ui_tiny_i"],
-                 anchor="w", justify="left",
-                 wraplength=WARN_WRAP).pack(fill="x", pady=(0, 2))
-
-        section(self.history_body, "DATASETS")
-        # Two pages in one grid cell, same lift-don't-relayout trick the main
-        # tabs use: the list, and one dataset opened out of it.
-        hist_holder = tk.Frame(self.history_body, bg=BG_BODY)
-        hist_holder.pack(fill="both", expand=True)
-        hist_holder.grid_rowconfigure(0, weight=1)
-        hist_holder.grid_columnconfigure(0, weight=1)
-        self._history_page = "list"
-        self._history_page_frames = {}
-        for key, _label in HISTORY_PAGES:
-            f = tk.Frame(hist_holder, bg=BG_BODY)
-            f.grid(row=0, column=0, sticky="nsew")
-            self._history_page_frames[key] = f
-        hist_list_pg = self._history_page_frames["list"]
-        hist_detail_pg = self._history_page_frames["detail"]
-
-        self._history_query = tk.StringVar()
-        hrow, self.history_count = search_row(hist_list_pg,
-                                              self._history_query)
-        self.btn_history_reload = tk.Button(
-            hrow, text="Refresh",
-            command=self._enqueue(self._reload_history),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=2, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_history_reload.pack(side="right", padx=(0, 4))
-        self.history_canvas, self.history_list = scroll_list(
-            hist_list_pg, HISTORY_LIST_H)
-        self._history_query.trace_add(
-            "write", lambda *_a: self._rebuild_history())
-
-        # -- one dataset, opened --
-        drow = tk.Frame(hist_detail_pg, bg=BG_BODY)
-        drow.pack(fill="x", pady=(0, 6))
-        self.btn_history_back = tk.Button(
-            drow, text="‹  Back to datasets",
-            command=self._enqueue(lambda: self._set_history_page("list")),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=2, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_history_back.pack(side="left")
-        self.btn_history_copy = tk.Button(
-            drow, text="Copy", command=self._enqueue(self._copy_history),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=2, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_history_copy.pack(side="right")
-        self.history_detail_title = tk.Label(
-            hist_detail_pg, text="", bg=BG_BODY, fg=FG_VALUE,
-            font=self.fonts_m["ui_b"], anchor="w", justify="left",
-            wraplength=WARN_WRAP)
-        self.history_detail_title.pack(fill="x")
-        self.history_detail_canvas, self.history_detail_list = scroll_list(
-            hist_detail_pg, HISTORY_LIST_H)
-
-        self.history_note = tk.Label(
-            self.history_body, text="", bg=BG_BODY, fg=FG_DIM,
-            font=self.fonts_m["ui_sm_b"], anchor="w", justify="left",
-            wraplength=WARN_WRAP)
-        self.history_note.pack(fill="x", pady=(6, 0))
-        self._history_note_job = None
-        self._set_history_page("list")
-        self._apply_history_visibility()
-
-        # ---- Windows: one row per window — visibility and size together ----
-        # The old menu split these across SCALING and SHOW / HIDE, which meant
-        # the same five windows were listed twice, a screen apart. A window is
-        # one thing; its row is one row.
-        self._scale_vars = {}
-        self.element_vars = {}
-
-        def winrow(label, show_key=None, scale_group=None, note=None):
-            row = field(winb, label)
-            # The middle column: what shows this window. A fixed width keeps
-            # the sliders in a straight line down the page.
-            if show_key is not None:
-                var = tk.StringVar(value=self._show.get(show_key, ELEMENT_SHOW))
-                self.element_vars[show_key] = var
-                opt = dropdown(row, var, ELEMENT_MODES,
-                               lambda v, k=show_key: self._on_element_pick(k, v),
-                               width=10)
-                opt.pack(side="left", padx=(8, 0))
-            else:
-                # Same footprint as the dropdown it stands in for, so the
-                # slider column stays a column.
-                tk.Label(row, text=note or "", bg=BG_BODY, fg=FG_DIM,
-                         font=self.fonts_m["ui_tiny_i"], anchor="w",
-                         width=12, padx=10).pack(side="left", padx=(8, 0))
-                note = None
-            if scale_group is not None:
-                var = tk.IntVar(
-                    value=int(round(self._scales[scale_group] * 100)))
-                self._scale_vars[scale_group] = var
-                lo, hi = ((MINIMAP_SCALE_MIN, MINIMAP_SCALE_MAX)
-                          if scale_group == "minimap"
-                          else (UI_SCALE_MIN, UI_SCALE_MAX))
-                # Released rather than live: repainting a whole window on each
-                # pixel of drag is visibly slow.
-                slider(row, var, lo, hi,
-                       lambda _e, g=scale_group: self._on_scale_pick(g),
-                       length=110).pack(side="right", expand=True, fill="x",
-                                        padx=(8, 0))
-            else:
-                tk.Label(row, text=note or "", bg=BG_BODY, fg=FG_DIM,
-                         font=self.fonts_m["ui_tiny_i"],
-                         anchor="e").pack(side="right", expand=True, fill="x",
-                                          padx=(8, 0))
-
-        section(winb, "EACH WINDOW: VISIBILITY · SIZE", first=True)
-        winrow("Damage meter", "meter", "meter")
-        winrow("Breakdown", "detail", "detail")
-        # The rift timer wears the meter's fonts, so it has no size of its own.
-        winrow("Rift timer", "rift", None, note="sizes with Meter")
-        winrow("Minimap", "minimap", "minimap")
-        winrow("Compass", "compass", "compass")
-        # ...and this panel is only ever on screen with the escape menu, so
-        # visibility isn't a choice it can offer about itself.
-        winrow("Settings", None, "menu", note="ESC only")
-
-        section(winb, "CONTENT")
-        # Columns inside the meter rather than a window, so it keeps its tick.
-        self.btn_heal = button(winb, self._enqueue(self._toggle_heal))
-        # Hides the same windows the dropdowns above do, just on a condition
-        # instead of a choice.
-        self.btn_hide_ooc = button(winb, self._enqueue(self._toggle_hide_ooc))
-
-        # ---- Map: the minimap and compass, in one place ----
-        section(mp, "MINIMAP", first=True)
-        row = field(mp, "Style")
-        self._map_mode_var = tk.StringVar(value=self._map_mode)
-        self.opt_map = dropdown(row, self._map_mode_var, MINIMAP_MODES,
-                                self._on_map_mode_pick)
-        self.opt_map.pack(side="right", expand=True, fill="x", padx=(8, 0))
-        row = field(mp, "Refresh")
-        self._map_rate_var = tk.StringVar(value=self._map_rate)
-        self.opt_rate = dropdown(row, self._map_rate_var, MINIMAP_RATE_NAMES,
-                                 self._on_map_rate_pick)
-        self.opt_rate.pack(side="right", expand=True, fill="x", padx=(8, 0))
-        # Released rather than live, like the other sliders: each step
-        # re-derives the range the whole draw pass is built on.
-        row = field(mp, "Zoom")
-        self._map_zoom_var = tk.IntVar(value=self._map_zoom)
-        slider(row, self._map_zoom_var, MINIMAP_ZOOM_MIN, MINIMAP_ZOOM_MAX,
-               lambda _e: self._on_map_zoom_pick()).pack(
-            side="right", expand=True, fill="x", padx=(8, 0))
-        # Scales every marker through ONE multiplier, so an obelisk stays
-        # larger than a chest and a foe dot stays smaller — the sizes are
-        # tuned against each other and this preserves that.
-        row = field(mp, "Icon scale")
-        self._map_icons_var = tk.IntVar(value=self._map_icons)
-        slider(row, self._map_icons_var, MINIMAP_ICONS_MIN, MINIMAP_ICONS_MAX,
-               lambda _e: self._on_map_icons_pick()).pack(
-            side="right", expand=True, fill="x", padx=(8, 0))
-        # The world-map backdrop. It only draws when a shipped asset matches
-        # the zone, so the tick is safe to leave on everywhere.
-        self.btn_map_bg = button(mp, self._enqueue(self._toggle_map_bg))
-        self.btn_map_filter = {}
-        for key, label, _cats in MINIMAP_FILTERS:
-            self.btn_map_filter[key] = button(
-                mp, self._enqueue(lambda k=key: self._toggle_map_filter(k)))
-        # Enemies cycle all -> missing-from-codex -> hidden; see MINIMAP_FOE_MODES.
-        self.btn_map_foes = button(mp, self._enqueue(self._cycle_foe_mode))
-        # Critters cycle all -> only-uncollected -> hidden, the same shape.
-        self.btn_map_critters = button(mp,
-                                       self._enqueue(self._cycle_critter_mode))
-
-        section(mp, "COMPASS")
-        self.btn_compass_filter = {}
-        for key, label, _cats in COMPASS_FILTERS:
-            self.btn_compass_filter[key] = button(
-                mp,
-                self._enqueue(lambda k=key: self._toggle_compass_filter(k)))
-
-        # ---- Buffs: which statuses each tray watches, and how it draws them ----
-        # The page is two halves with one selector over both: which tray you
-        # are editing changes everything below it. Four trays is a small enough
-        # number that a row of buttons beats a dropdown — you can see how many
-        # you have and which are on without opening anything.
-        section(buf, "TRAY", first=True)
-        # Whose trays these are. Without it, editing an alt's set looks exactly
-        # like editing your main's — and the moment they differ, that is a
-        # setting you will change on the wrong character.
-        self.lbl_tray_char = tk.Label(
-            buf, text="", bg=BG_BODY, fg=FG_DIM,
-            font=self.fonts_m["ui_tiny_i"], anchor="w", justify="left",
-            wraplength=WARN_WRAP)
-        self.lbl_tray_char.pack(fill="x", pady=(0, 4))
-        trayrow = tk.Frame(buf, bg=BG_BODY)
-        trayrow.pack(fill="x", pady=(0, 4))
-        self.btn_tray_pick = []
-        for i in range(BUFF_TRAY_MAX):
-            b = tk.Button(trayrow, text=f"{i + 1}",
-                          command=self._enqueue(
-                              lambda n=i: self._pick_tray(n)),
-                          font=self.fonts_m["ui_b"], relief="flat", bd=0,
-                          padx=12, pady=4, cursor="hand2",
-                          highlightthickness=1)
-            b.pack(side="left", padx=(0, 4))
-            self.btn_tray_pick.append(b)
-        self.btn_tray_on = tk.Button(
-            trayrow, text="", command=self._enqueue(self._toggle_tray_on),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=4, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_tray_on.pack(side="right")
-        # Next to the on/off switch rather than down among the LOOK ticks:
-        # both of these are about the tray as an object on your screen, not
-        # about what it draws.
-        self.btn_tray_lock = tk.Button(
-            trayrow, text="", command=self._enqueue(self._toggle_tray_lock),
-            font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-            activebackground=BG_BAR_TRACK, activeforeground=FG_VALUE,
-            relief="flat", bd=0, padx=10, pady=4, highlightthickness=1,
-            highlightbackground=BG_BAR_TRACK, cursor="hand2")
-        self.btn_tray_lock.pack(side="right", padx=(0, 6))
-
-        section(buf, "LOOK")
-        row = field(buf, "Icon size")
-        self._tray_size_var = tk.IntVar(value=BUFF_ICON_DEFAULT)
-        slider(row, self._tray_size_var, BUFF_ICON_MIN, BUFF_ICON_MAX,
-               lambda _e: self._on_tray_size()).pack(
-            side="right", expand=True, fill="x", padx=(8, 0))
-        row = field(buf, "Direction")
-        self._tray_layout_var = tk.StringVar(value=BUFF_LAYOUT_LABEL["row"])
-        self.opt_tray_layout = dropdown(
-            row, self._tray_layout_var,
-            tuple(BUFF_LAYOUT_LABEL[k] for k in BUFF_LAYOUTS),
-            lambda _v: self._on_tray_layout())
-        self.opt_tray_layout.pack(side="right", expand=True, fill="x",
-                                  padx=(8, 0))
-        row = field(buf, "When not up")
-        self._tray_inactive_var = tk.StringVar(value=BUFF_INACTIVE_DIM)
-        self.opt_tray_inactive = dropdown(
-            row, self._tray_inactive_var, BUFF_INACTIVE_MODES,
-            lambda _v: self._on_tray_inactive())
-        self.opt_tray_inactive.pack(side="right", expand=True, fill="x",
-                                    padx=(8, 0))
-        self.btn_tray_flag = {}
-        for flag, _label in BUFF_TRAY_FLAGS:
-            self.btn_tray_flag[flag] = button(
-                buf, self._enqueue(lambda f=flag: self._toggle_tray_flag(f)))
-
-        # Where the two numbers go on the icon, and how big. One pair of rows
-        # each, because they are independent — a big centred timer with a small
-        # corner stack count is a perfectly reasonable thing to want.
-        section(buf, "NUMBERS ON THE ICON")
-        self._tray_text_var = {}
-        for which, label in (("timer", "Time left"), ("stacks", "Stacks")):
-            row = field(buf, label)
-            pv = tk.StringVar(value=BUFF_TRAY_DEFAULTS[f"{which}_pos"])
-            self._tray_text_var[f"{which}_pos"] = pv
-            opt = dropdown(row, pv, BUFF_TEXT_POS_NAMES,
-                           lambda _v, w=which: self._on_tray_text_pos(w))
-            opt.pack(side="right", expand=True, fill="x", padx=(8, 0))
-            row = field(buf, f"{label} size")
-            sv = tk.IntVar(value=100)
-            self._tray_text_var[f"{which}_size"] = sv
-            slider(row, sv, BUFF_TEXT_SCALE_MIN, BUFF_TEXT_SCALE_MAX,
-                   lambda _e, w=which: self._on_tray_text_size(w)).pack(
-                side="right", expand=True, fill="x", padx=(8, 0))
-        # Only appears when the two are pointed at the same corner, which is
-        # allowed but is almost always a mistake — they draw on top of each
-        # other and the result reads as a rendering fault.
-        self.lbl_tray_text_clash = tk.Label(
-            buf, text="", bg=BG_BODY, fg=FG_WARN,
-            font=self.fonts_m["ui_tiny_i"], anchor="w", justify="left",
-            wraplength=WARN_WRAP)
-        self.lbl_tray_text_clash.pack(fill="x", pady=(0, 2))
-
-        # -- what this tray watches --
-        section(buf, "TRACKING")
-        self._tracked_wrap = tk.Frame(buf, bg=BG_BODY)
-        self._tracked_wrap.pack(fill="x")
-        self._tracked_widgets = []
-        self._tracked_sig = None
-
-        # -- the picker --
-        # Every status the game has, not merely the ones you have proc'd: the
-        # whole list comes out of data.cdb, so a buff can be set up before you
-        # have ever had it. The ones you HAVE had this session sort to the top
-        # and are marked, which is the "I just had that, what was it" case.
-        section(buf, "ADD A BUFF")
-        self._buff_query = tk.StringVar()
-        _brow, self.buff_count = search_row(buf, self._buff_query)
-        self._buff_query.trace_add("write", lambda *_a: self._render_buff_pick())
-        self.buff_canvas, self.buff_list = scroll_list(buf, BUFF_PICK_LIST_H)
-        self._buff_pick_widgets = []
-        self._buff_pick_sig = None
-
-        # ---- Actions: the things you came here to press ----
-        section(act, "PARSE", first=True)
-        self.btn_parse = button(act, self._enqueue(self._toggle_parse))
-        # Brings the end-of-rift card back after a reflex-close. Greyed until
-        # a rift has produced one — see _refresh_menu.
-        self.btn_rift_report = button(act, self._enqueue(self._reopen_report))
-        self.btn_parses = button(act, self._enqueue(self._open_parses))
-        self.btn_parses.config(text="Parses & Rift Reports")
-
-        # Both throw work away, so they want distance from the buttons above.
-        section(act, "RESET")
-        # Exactly what the hotkey fires, so the two can't diverge. Labelled with
-        # the keybind because the hotkey is the one that's useful mid-fight,
-        # when the escape menu (and so this button) isn't an option.
-        self.btn_reset_data = button(act, self._enqueue(self.session.reset))
-        self.btn_reset_data.config(
-            text=f"Reset encounter data   ({bind_label()})")
-        self.btn_reset_pos = button(act, self._enqueue(self._reset_pos))
-        self.btn_reset_pos.config(text="Reset window positions")
-
-        # Where the meter lives: the README, the releases, and the place to
-        # report a bug. A button rather than a clickable version label,
-        # because the header is a drag handle and a label that both drags and
-        # navigates does one of them by surprise.
-        section(act, "PROJECT")
-        self.btn_repo = button(act, self._enqueue(self._open_repo))
-        self.btn_repo.config(text="Farever+ on GitHub")
-
-        # ---- footer: on every tab, because it ends the session ----
-        # Here as well as on the tray icon because this is where the user
-        # already is — mid-game, escape menu open — and because a tray icon
-        # Windows 11 has filed into the overflow flyout is not somewhere you
-        # can count on them finding.
-        tk.Frame(body, bg=BG_BAR_TRACK, height=1).pack(fill="x", pady=(10, 6))
-        footer = tk.Frame(body, bg=BG_BODY)
-        footer.pack(fill="x")
-        self.btn_quit = button(footer, self._enqueue(self._quit_clicked))
-        self.btn_quit.config(text=QUIT_LABEL, fg=FG_WARN)
-        # button() packs itself full-width, which is what every other button on
-        # the panel wants. This one shares its row, so it is re-packed to take
-        # only the width it needs and leave the rest to the shard label.
-        self.btn_quit.pack_forget()
-        self.btn_quit.pack(side="left", pady=2)
-        # Which shard the character is on, at the far end of the row it shares.
-        # Split into a quiet caption and a loud value: the caption only has to
-        # say what the string is, while the string itself is the thing you read
-        # off the screen to somebody trying to land on the same shard as you.
-        #
-        # Monospaced and at full contrast for that reason. It is a generated
-        # id ("Spajoda5202_9541_na") with no words in it to recover from a
-        # misread glyph, and Consolas is what tells an l from a 1 and an O from
-        # a 0. Packed value-first so the id sits hard against the right edge
-        # and the caption falls in beside it.
-        self.lbl_shard = tk.Label(footer, text="", bg=BG_BODY, fg=FG_VALUE,
-                                  font=self.fonts_m["mono"], anchor="e")
-        self.lbl_shard.pack(side="right", padx=(0, 2))
-        self.lbl_shard_cap = tk.Label(footer, text="Shard", bg=BG_BODY,
-                                      fg=FG_DIM, font=self.fonts_m["ui_sm_b"],
-                                      anchor="e")
-        self.lbl_shard_cap.pack(side="right", padx=(8, 6))
-        self.menu.minsize(MIN_W["menu"], 0)
-        # One wheel binding for the whole application, installed after every
-        # scroll list has registered itself. bind_all rather than per-widget
-        # because the content of these lists is rebuilt constantly and a
-        # binding you have to remember to re-apply is a binding that will be
-        # forgotten — which is exactly how this broke. See _on_wheel.
-        self.root.bind_all("<MouseWheel>", self._on_wheel)
-        # The Buffs page is built from saved config, so its widgets have to be
-        # seeded once here — _set_menu_tab only does it on arrival, and the
-        # slider would otherwise sit at the default until you visited the tab.
-        self._sync_tray_controls()
-        # Whatever was restored, not a hardcoded page — see MENU_TAB_DEFAULT.
-        self._set_menu_tab(self._menu_tab)
 
     def _set_menu_tab(self, name):
         """Raise one settings page and paint its tab as the active one. The
@@ -8569,7 +4613,7 @@ class Overlay:
         if name not in MENU_TABS:
             return
         # Leaving a page with a search box means you're done typing.
-        if name not in ("Social", "History", "Buffs"):
+        if name != "History":
             self._stop_typing()
         # Leaving Help closes whatever article was open, so coming back lands
         # on the index. An article is somewhere you went to read one thing —
@@ -8582,41 +4626,12 @@ class Overlay:
         # Arriving at a tab is what re-reads its data, below. Everything the
         # panel draws is built from that data on the next push, so there is no
         # widget to raise and nothing to repaint here.
-        # Raising Social is one of its load moments — the pages don't poll,
-        # so arriving at the tab is what fetches the current picture.
-        if name == "Social":
-            self._reload_social()
-        # Same for History: the folder is re-read on arrival rather than
+        # History: the folder is re-read on arrival rather than
         # polled, so the list is current whenever you are looking at it and
         # costs nothing whenever you aren't.
         if name == "History" and self._history_on:
             self._reload_history()
-        # ...and Buffs, for the same reason: the picker's "you have had this
-        # one" marks come from the live session log, so what is worth showing
-        # changes while you play. Arriving is when that gets re-read.
-        if name == "Buffs":
-            self._sync_tray_controls()
-            self._render_tracked()
-            self._render_buff_pick()
-            # Every configured tray points at itself, so arriving at the page
-            # answers "which one is which, and where did I put them" without
-            # having to click through four of them.
-            self._reveal_tray(all_trays=True)
-        # A dropdown posted from the page on the way out would float over the
-        # one arriving.
-        self._unpost_menus()
 
-    @staticmethod
-    def _paint_tab_btn(b, active):
-        """Selected-tab styling, in one place. Both tab levels — the vertical
-        navbar and the Social sub-tabs — call this, so a restyle of one cannot
-        quietly leave the other looking like the old build."""
-        b.config(bg=BTN_ON_BG if active else BG_BODY_SOFT,
-                 fg=FG_HEADER if active else FG_TEXT,
-                 activebackground=BTN_ON_BG_ACTIVE if active else BG_BAR_TRACK,
-                 activeforeground=FG_HEADER if active else FG_VALUE,
-                 highlightbackground=BTN_ON_BG_ACTIVE if active
-                 else BG_BAR_TRACK)
 
     def _build_hint(self):
         """The one remaining keybind, as free-floating text over the game — no
@@ -8641,935 +4656,29 @@ class Overlay:
         c.create_text(pad, pad, text=text, font=f,
                       fill=BG_BODY, anchor="nw")
 
-    def _build_minimap(self):
-        """A square, north-up map of what's around you.
 
-        One canvas, redrawn wholesale each tick. That sounds wasteful and isn't:
-        at ~40 entities it's a few dozen canvas items, and tracking item
-        identity across ticks — entities appear, move and despawn constantly —
-        costs more in bookkeeping than it saves in redraws."""
-        self.map_border = tk.Frame(
-            self.mapwin, bg=_lerp_hex(THEME_DEFAULT["map_body"], "#000000", 0.45),
-            padx=2, pady=2)
-        self.map_border.pack(fill="both", expand=True)
-        # No title bar. A map that is already a labelled square doesn't need a
-        # strip saying "Nearby" over it, and the bar was the tallest piece of
-        # chrome on the smallest window. The hover box below takes over as the
-        # drag handle — see the note at the end of this method.
-        _mb = THEME_DEFAULT["map_body"]
-        self.map_canvas = tk.Canvas(self.map_border, bg=_mb,
-                                    highlightthickness=0, bd=0,
-                                    width=MINIMAP_SIZE, height=MINIMAP_SIZE)
-        self.map_canvas.pack()
-        # Hover readout: its own box under the map, always present rather than
-        # appearing on hover — otherwise the panel changes height under the
-        # cursor and shoves the map out from under you mid-read.
-        self.map_tipbox = tk.Frame(self.map_border,
-                                   bg=_lerp_hex(_mb, "#FFFFFF", 0.16),
-                                   padx=1, pady=1)
-        self.map_tipbox.pack(fill="x", pady=(3, 0))
-        # ...but only while there's a pointer to hover with — see _sync_map_tip.
-        self._map_tip_shown = True
-        self.map_tip = tk.Label(self.map_tipbox, text=MINIMAP_TIP_IDLE,
-                                bg=_lerp_hex(_mb, "#000000", 0.30),
-                                fg=_lerp_hex(_mb, "#FFFFFF", 0.55),
-                                font=self.fonts_map["ui"], anchor="w",
-                                justify="left", padx=8, pady=5)
-        self.map_tip.pack(fill="x")
-        # Hit targets from the last draw: (x, y, radius, label, dist, dz).
-        # Rebuilt every frame, which is also what keeps it honest — a stale
-        # entry would describe something that has already moved.
-        self._map_hits = []
-        # Where the pointer is over the canvas, or None. The hit test runs on
-        # every frame off this rather than only on mouse movement, so the ring
-        # and the readout follow an entity as it moves instead of describing
-        # where it used to be while the cursor sits still.
-        self._map_cursor = None
-        self.map_canvas.bind("<Motion>", self._on_map_hover)
-        self.map_canvas.bind("<Leave>",
-                             lambda _e: self._clear_map_tip(drop_cursor=True))
-        # With the header gone, the hover box is the handle. It's the only other
-        # part of the panel that isn't the map itself, it's always present
-        # rather than appearing on hover, and its idle text already says the map
-        # takes the mouse — so it reads as the part you grab.
-        self._bind_drag(self.mapwin, (self.map_tipbox, self.map_tip),
-                        unlocked=self._mouse_available)
-        # Dragging the map body would fight with the click-to-inspect idea if
-        # that ever lands, so the canvas stays out of it — same as the meter.
-        self._apply_map_zoom()
 
-    def _minimap_px(self, ex, ey, me, half, scale, rot):
-        """World -> canvas, relative to the player.
 
-        The game's +y is drawn as up, which means the canvas y is negated: Tk's
-        y grows downward and the world's does not.
 
-        `rot` is (cos r, sin r) in rotating mode and None in fixed mode. The
-        offset is turned so the direction the player faces lands at the top of
-        the map — which is what lets the arrow stay still.
 
-        Facing is (cos r, sin r), i.e. r is measured from +x. Turning that to
-        screen-up is a rotation by (pi/2 - r), which reduces to the form below;
-        substituting the facing vector gives (0, 1) as it should.
 
-        Fixed mode is NOT its own geometry: north-up is the rotating formula
-        evaluated at the north heading (270 deg — the game's +y is SOUTH, see
-        COMPASS_CARDINALS). Substituting ca=0, sa=-1 collapses mirror and
-        y-flip together into plain (+dx, +dy) — the mirror is still in there,
-        folded in, so don't "fix" its absence. This branch used to be
-        (-dx, -dy): a half-turn, which preserves handedness and so looked
-        perfectly self-consistent — arrows agreed with positions — while
-        putting north at the bottom against the sky."""
-        dx, dy = ex - me["x"], ey - me["y"]
-        if rot is not None:
-            ca, sa = rot
-            dx, dy = dx * sa - dy * ca, dx * ca + dy * sa
-            return half + MINIMAP_MIRROR_X * dx * scale, half - dy * scale
-        return half + dx * scale, half + dy * scale
 
-    def _draw_minimap(self):
-        if not self._shown.get("minimap"):
-            return
-        c = self.map_canvas
-        me, ents, _stamp = self.world.read()
-        c.delete("all")
-        size = int(MINIMAP_SIZE * self._scales["minimap"])
-        if int(c["width"]) != size:
-            c.config(width=size, height=size)
-        half = size / 2.0
-        scale = half / float(self._map_range)
 
-        c.configure(bg=self._theme.get("map_body", BG_BODY))
-        if not self.world.fresh():
-            # Say so rather than showing an empty box: a blank map and a map of
-            # an empty area look identical, and only one of them is a problem.
-            c.create_text(half, half, text="waiting for the game",
-                          fill=self._map_ink(0.45),
-                          font=self.fonts_map["ui_tiny_i"])
-            self._map_hits = []
-            return
 
-        theme = self._theme
-        body = theme.get("map_body", BG_BODY)
-        c.configure(bg=body)
-        mez = me.get("z", 0)
-        # Rotating mode turns the world under a fixed arrow; fixed mode leaves
-        # the world alone and turns the arrow instead.
-        # Camera first: the map should turn with what you're looking at, not
-        # with where the character happens to be pointing — they diverge
-        # constantly, since the character turns to face its target. `c` is None
-        # until the camera hook has seen a frame, and the character's own facing
-        # is the fallback rather than snapping the map to zero.
-        # Sticky. A missing camera reading means the hook is between cameras —
-        # a zone change retires the old object and the next frame re-latches —
-        # and it lasts a tick or two. Falling back to the character's facing
-        # there swung the map to an unrelated heading and back, which read as
-        # the orientation randomly breaking after a rift (the same event that
-        # recolours the panel). Holding the last known heading is both steadier
-        # and closer to true, since the camera hasn't actually moved.
-        cam = me.get("c")
-        if cam is not None:
-            self._last_cam = float(cam)
-        heading = float(self._last_cam if self._last_cam is not None
-                        else (me.get("r", 0.0) or 0.0))
-        rot = ((math.cos(heading), math.sin(heading))
-               if self._map_mode == "Rotating" else None)
-        # The marker shows where the CAMERA is pointing, nothing else. In
-        # rotating mode that is the top of the map by construction, so it's a
-        # constant rather than a rotation that has to agree with one.
-        me_dir = ((0.0, -1.0) if rot is not None
-                  else self._facing_screen(heading, heading, False))
 
-        # The map backdrop goes down before anything else — canvas stacking is
-        # creation order, so first drawn is bottom-most.
-        self._draw_map_backdrop(c, half, size, me,
-                                heading if rot is not None else None, body)
 
-        # The minimap always shows everyone nearby, regardless of the meter's
-        # party/all mode — a map that hid the player standing next to you would
-        # be misleading. Group members are marked with a ring instead.
-        local, roster = self.world.who()
 
-        self._draw_view_line(c, half, me_dir[0], me_dir[1], body)
 
-        hits = []
-        by_cat = {}
-        for e in ents:
-            by_cat.setdefault(e.get("c"), []).append(e)
-        for cat in MINIMAP_ORDER:
-            # Whole categories can be ticked off in the control menu. Skipped
-            # here rather than filtered out of the snapshot, because the compass
-            # reads the same snapshot and these ticks are the MAP's.
-            if not self._map_filters.get(MINIMAP_FILTER_OF.get(cat), True):
-                continue
-            # Enemies answer to their own three-state mode rather than a tick.
-            if cat == "foe" and self._foe_mode == "off":
-                continue
-            # Critters too, since the collection filter.
-            if cat == "critter" and self._critter_mode == "off":
-                continue
-            codex_only = (cat == "foe" and self._foe_mode == "codex"
-                          and self.ui_state.codex_ready())
-            # Same shape as codex_only: no mirror yet means show everything,
-            # because an empty collection and a missing message look the same.
-            uncollected_only = (cat == "critter"
-                                and self._critter_mode == "uncollected"
-                                and self.ui_state.pets_ready())
-            style = MINIMAP_STYLE_MAP[cat]
-            for e in by_cat.get(cat, ()):
-                # "Still missing" means the mob HAS a codex entry and this
-                # character hasn't finished it. Every unit threshold set has
-                # three tiers (measured), so a finished entry is rank 3
-                # whatever kind of mob it is — no bucket lookup needed here.
-                if codex_only:
-                    kind = e.get("k")
-                    if not kind or _codex_thresholds(kind) is None:
-                        continue        # no codex entry at all
-                    if self.ui_state.codex_rank(kind) >= CODEX_MAX_RANK:
-                        continue        # already mastered
-                # "Still uncollected" = its kind is not in the account's
-                # Collection.pets list. A critter with no kind is shown, not
-                # hidden — fail open, same as an unarrived mirror.
-                if uncollected_only:
-                    kind = e.get("k")
-                    if kind and self.ui_state.pet_collected(kind):
-                        continue        # already caught
-                x, y = self._minimap_px(e.get("x", 0), e.get("y", 0), me,
-                                        half, scale, rot)
-                if not (0 <= x <= size and 0 <= y <= size):
-                    continue        # outside the square; the hook's cull is round
-                r = style["r"] * self._icon_scale()
-                # Nodes swap in their material's colour (and the rare halo)
-                # while keeping the category's shape — rock stays rock.
-                nst = (_node_style(e.get("g"))
-                       if cat in ("ore", "herb") else None)
-                if nst and nst.get("rare"):
-                    r *= NODE_RARE_SCALE
-                # A sparkling unit — the game's own Spark flag, sent as `sp`.
-                # Bigger and haloed, so it is findable in a field of ordinary
-                # ones without having to hover anything.
-                sparkly = bool(e.get("sp"))
-                if sparkly:
-                    r *= SPARK_SCALE
-                # The local player is drawn last, as an arrow, not a dot.
-                if cat == "hero" and e.get("n") and e["n"] == local:
-                    continue
-                # Off-level. Everything gets the up/down caret for it, but only
-                # players and enemies are dimmed: those matter because they can
-                # reach you, so "not on your floor" changes what they mean. A
-                # chest or obelisk is a place to go either way, and fading it
-                # just makes the thing you're navigating to harder to see.
-                far = abs(e.get("z", mez) - mez) > MINIMAP_Z_FADE
-                fade = far and cat in ("hero", "foe")
-                fill = self._marker_fill((nst or style)["fill"])
-                if fade:
-                    fill = _lerp_hex(body, fill, MINIMAP_Z_DIM)
-                # Other players point where they're facing. In rotating mode
-                # that has to be taken relative to the camera, or everyone would
-                # keep their world heading while the map turned under them.
-                facing = None
-                if cat == "hero" and e.get("r") is not None:
-                    facing = self._facing_screen(float(e["r"]), heading,
-                                                 rot is not None)
-                # Outlined against the panel, not black: on the rift theme a
-                # hard black edge on a dark body reads as a hole.
-                edge = _lerp_hex(body, BG_BORDER, 0.35 if fade else 0.8)
-                if sparkly:
-                    # Drawn under the glyph rather than passed as `ring`: the
-                    # shapes that take a ring draw it as part of themselves
-                    # (the orb's glow), and a pawprint has no single circle to
-                    # hang one on. A ring around the whole marker works for
-                    # every shape, which matters because sparkling MOBS are
-                    # dots and sparkling critters are paws.
-                    rr = r + 2.2 * self._scales["minimap"]
-                    halo = self._marker_fill(SPARK_RING)
-                    if fade:
-                        halo = _lerp_hex(body, halo, MINIMAP_Z_DIM)
-                    c.create_oval(x - rr, y - rr, x + rr, y + rr,
-                                  outline=halo, fill="",
-                                  width=max(1, int(round(
-                                      self._scales["minimap"] * 2))))
-                self._map_glyph(c, x, y, r, style, fill, facing, edge,
-                                ring=self._marker_fill(
-                                    (nst or style).get("ring")))
-                if far:
-                    self._map_z_marker(c, x, y, r, e.get("z", mez) - mez,
-                                       _contrast_ink(body))
-                hits.append((x, y, r, cat, self._marker_label(cat, e, roster),
-                             math.hypot(e.get("x", 0) - me.get("x", 0),
-                                        e.get("y", 0) - me.get("y", 0)),
-                             e.get("z", mez) - mez))
-                if cat == "hero" and e.get("n") in roster:
-                    # Party members get a ring rather than a different colour:
-                    # colour already means category, and overloading it would
-                    # make a grouped player read as a different kind of thing.
-                    rr = r + 2.5 * self._scales["minimap"]
-                    party = self._marker_fill(MINIMAP_PARTY_RING)
-                    ring = (_lerp_hex(body, party, MINIMAP_Z_DIM)
-                            if fade else party)
-                    c.create_oval(x - rr, y - rr, x + rr, y + rr,
-                                  outline=ring, width=2)
 
-        self._draw_me_arrow(c, half, me_dir[0], me_dir[1])
-        self._map_hits = hits
-        # Last, so the ring sits over everything including the player marker.
-        hit = self._update_map_tip()
-        if hit is not None:
-            hx, hy, hr = hit[0], hit[1], hit[2]
-            rr = hr + 4.0 * self._scales["minimap"]
-            c.create_oval(hx - rr, hy - rr, hx + rr, hy + rr,
-                          outline=self._map_ink(0.95),
-                          width=max(1, int(round(self._scales["minimap"] * 2))))
 
-    def _draw_map_backdrop(self, c, half, size, me, heading, body):
-        """Paint the world map under the markers, if there is one to paint.
 
-        `heading` is None in fixed mode (the crop is already north-up, the
-        same +x-right/+y-down frame as _minimap_px's fixed branch) and the
-        camera azimuth in rotating mode. Every early-out below is the cheap
-        kind — the expensive path only runs when a real image is drawn."""
-        if not self._map_bg_on:
-            return
-        # Inside a rift the zone sig still names the world you left, but the
-        # rift is not that world — the flat panel is the honest background.
-        if self.ui_state.in_rift():
-            return
-        sig = self.ui_state.zone_sig()
-        if sig != self._map_bg_key:
-            # Resolve sig -> asset once per zone, not per tick: it globs disk.
-            self._map_bg_key = sig
-            self._map_bg_world = self._map_backdrop.available_world(sig)
-        if self._map_bg_world is None:
-            return
-        im = self._map_backdrop.crop(self._map_bg_world,
-                                     me.get("x", 0), me.get("y", 0),
-                                     float(self._map_range), size,
-                                     heading=heading)
-        if im is None:
-            return
-        try:
-            from PIL import Image, ImageTk
-        except ImportError:
-            return
-        # Pulled toward the panel colour so markers keep winning the contrast
-        # fight, and so every theme (parchment, dark, rift) tints its own map.
-        rgb = tuple(int(body.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
-        im = Image.blend(im, Image.new("RGB", im.size, rgb), MINIMAP_BG_TINT)
-        # One PhotoImage, pasted into — a fresh photo per tick is garbage the
-        # collector has to chase four times a second.
-        if self._map_photo is None or self._map_photo.width() != size:
-            self._map_photo = ImageTk.PhotoImage(im)
-        else:
-            self._map_photo.paste(im)
-        c.create_image(half, half, image=self._map_photo)
 
-    def _facing_screen(self, world_angle, heading, rotating):
-        """A world heading as a screen-space unit vector.
 
-        Facing is (cos a, sin a) in world terms. Fixed mode only has to flip y,
-        since screen y grows downward. Rotating mode also has to take the angle
-        relative to the camera, because the map itself has already turned by
-        that much — otherwise everything would keep its world heading while the
-        ground moved under it."""
-        # Mirrored on the same axis as the positions, or a marker would point
-        # somewhere the map disagrees with.
-        if rotating:
-            d = world_angle - heading
-            return (MINIMAP_MIRROR_X * -math.sin(d), -math.cos(d))
-        # Same collapse as _minimap_px's fixed branch: the rotating form at
-        # the north heading. World (cos a, sin a) maps to screen (cos a,
-        # sin a) because the map now draws world offsets as (+dx, +dy).
-        return (math.cos(world_angle), math.sin(world_angle))
 
-    def _draw_view_line(self, c, half, dx, dy, body):
-        """A line out of the player marker to the edge of the panel, showing
-        where you're looking. Drawn before the entities so it never hides one."""
-        accent = self._theme.get("accent", ACCENT)
-        # The centre line runs all the way out to the edge of the panel. The
-        # canvas is square, so the ray leaves through whichever side it reaches
-        # first — the smaller of the two axis crossings.
-        far = half
-        if abs(dx) > 1e-9:
-            far = min(far, half / abs(dx))
-        if abs(dy) > 1e-9:
-            far = min(far, half / abs(dy))
-        c.create_line(half, half, half + dx * far, half + dy * far,
-                      fill=_lerp_hex(body, accent, MINIMAP_VIEW_LINE),
-                      width=max(1, int(self._scales["minimap"])))
 
-    def _on_map_hover(self, event):
-        """Only reachable while the game's escape menu is open, because that's
-        the only time the overlay isn't click-through — which is also the only
-        time you have a cursor to hover with, so the two line up."""
-        self._map_cursor = (event.x, event.y)
-        self._update_map_tip()
 
-    def _map_hover_hit(self):
-        """The marker under the cursor, or None. Nearest wins, so a crowd
-        resolves to the one you're actually pointing at."""
-        if self._map_cursor is None:
-            return None
-        cx, cy = self._map_cursor
-        best, best_d2 = None, None
-        slack = MINIMAP_TIP_RADIUS * self._scales["minimap"]
-        for hit in self._map_hits:
-            hx, hy, r = hit[0], hit[1], hit[2]
-            reach = max(r, slack)
-            d2 = (cx - hx) ** 2 + (cy - hy) ** 2
-            if d2 <= reach * reach and (best_d2 is None or d2 < best_d2):
-                best, best_d2 = hit, d2
-        return best
 
-    def _update_map_tip(self):
-        """Name whatever is under the cursor and say how far away it is.
-        Returns the hit so the draw pass can ring it."""
-        hit = self._map_hover_hit()
-        if hit is None:
-            self._clear_map_tip()
-            return None
-        _hx, _hy, _r, cat, label, dist, dz = hit
-        # Ground distance and height are reported separately on purpose: a
-        # chest 8 units away and 40 below you is not 8 units away in any sense
-        # that helps, and one combined number would hide exactly that.
-        updown = "level" if abs(dz) < 1 else (f"{abs(dz):.0f} up" if dz > 0
-                                              else f"{abs(dz):.0f} down")
-        # Name on its own line, position under it: a long name would otherwise
-        # set the width of the whole panel and shove the map sideways on hover.
-        self.map_tip.config(text=f"{label}\n{dist:.0f}u away   ·   {updown}",
-                            fg=self._map_ink(0.95))
-        return hit
 
-    @staticmethod
-    def _elide(text, limit=MINIMAP_TIP_MAXLEN):
-        text = (text or "").strip()
-        return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
-
-    def _marker_label(self, cat, e, roster):
-        """What the hover line calls this marker.
-
-        Names alone aren't enough to read: player names are arbitrary and a
-        foe's is just a creature, so each carries what KIND of thing it is in
-        brackets. Party membership rides on the same line rather than being
-        left to the ring colour, since that's the thing you're hovering to
-        find out."""
-        name = e.get("n")
-        # Only the name is elided — the bracketed kind is the part that makes
-        # the line readable, so it must survive.
-        if cat == "hero":
-            if not name:
-                return "Player"
-            kind = "Party" if name in roster else "Player"
-            return f"{self._elide(name)} ({kind})"
-        if cat in ("foe", "critter"):
-            # The CDB display name once the agent has resolved it; until then
-            # the internal id, prettified, so a foe is never just "Enemy".
-            nm = (name or "").strip() or _pretty_id(e.get("k") or "")
-            tag = MINIMAP_LABELS[cat]
-            # The game already names them "Sparkling Grassflopper", so the
-            # marker would be saying it twice. Tag the ones whose display name
-            # doesn't already carry it — "Sparktail" is sparkling and doesn't
-            # say so anywhere in its name.
-            if e.get("sp") and "sparkl" not in nm.lower():
-                tag = f"{tag} · Sparkling"
-            return f"{self._elide(nm)} ({tag})" if nm else tag
-        if cat in ("ore", "herb"):
-            # "Copper Lode (Ore)", from the same CDB texts the game's own
-            # widget shows. The placement id fallback is prettified for the
-            # frame or two before the name resolves.
-            nm = (name or "").strip() or _pretty_id(e.get("k") or "")
-            tag = MINIMAP_LABELS[cat]
-            return f"{self._elide(nm)} ({tag})" if nm else tag
-        label = MINIMAP_LABELS.get(cat, cat.title())
-        state = (e.get("s") or "").strip()
-        if state and state not in MINIMAP_PLAIN_STATES:
-            # e.g. "Chest · Locked" — the bit you'd want to know before walking
-            # over to it.
-            label = f"{label} · {state}"
-        return label
-
-    def _clear_map_tip(self, drop_cursor=False):
-        if drop_cursor:
-            self._map_cursor = None
-        try:
-            self.map_tip.config(text=MINIMAP_TIP_IDLE, fg=self._map_ink(0.5))
-        except tk.TclError:
-            pass
-
-    def _map_ink(self, amount, bg=None):
-        """Text and lines for the map panel, lifted off its background by
-        `amount` — toward white on a dark panel, toward black on a light one.
-
-        Derived rather than named because the panel is a different colour on
-        every theme, and the meter's own FG_TEXT is a brown picked for
-        parchment, which is how the hover line once ended up dark-on-dark. The
-        direction has to be derived too, now that Farever's panel is light:
-        lifting toward white on parchment is how you'd get it back.
-
-        Everything on the panel that isn't a marker goes through here."""
-        bg = bg or self._theme.get("map_body", BG_BODY)
-        return _lerp_hex(bg, _contrast_ink(bg), amount)
-
-    def _map_is_light(self):
-        return _contrast_ink(self._theme.get("map_body", BG_BODY)) == \
-            MINIMAP_Z_MARK_DARK
-
-    def _marker_fill(self, fill):
-        """A marker colour, adjusted for the panel it lands on.
-
-        MINIMAP_STYLE is tuned for a dark panel — the markers are meant to be
-        the bright thing on it. On parchment those same colours wash out
-        (#FFD400 on #E8D5B8 is barely a marker at all), so they're darkened
-        toward the same hue rather than being listed twice per category: one
-        table of colours, and the light theme can't drift out of step with it."""
-        if not fill or not self._map_is_light():
-            return fill
-        return _lerp_hex(fill, "#000000", MINIMAP_LIGHT_DARKEN)
-
-    def _map_glyph(self, c, x, y, r, style, fill, facing=None, edge=None,
-                   ring=None):
-        """`fill` and `ring` arrive already adjusted for wherever this is being
-        drawn — both the map and the compass tone them for their panel — so
-        nothing in here consults the theme."""
-        shape = style["shape"]
-        # The rare-node halo: a ring around the whole glyph, drawn first so
-        # the shape sits on it. The dot keeps its own tighter ring below —
-        # that one is the orb's second colour, not a rarity mark.
-        if ring and shape in ("rock", "leaf"):
-            rr = r * 1.5
-            c.create_oval(x - rr, y - rr, x + rr, y + rr,
-                          outline=ring, fill="",
-                          width=max(1, int(round(self._scales["minimap"] * 1.5))))
-        if shape == "chevron" and facing is not None:
-            # Same arrow as the player marker, smaller. The outline is what
-            # keeps a stack of players readable: several chevrons on the same
-            # spot merge into one unreadable blob without it.
-            dx, dy = facing
-            px, py = -dy, dx
-            c.create_polygon(
-                x + dx * 1.3 * r, y + dy * 1.3 * r,
-                x - dx * r + px * 0.85 * r, y - dy * r + py * 0.85 * r,
-                x - dx * 0.35 * r, y - dy * 0.35 * r,
-                x - dx * r - px * 0.85 * r, y - dy * r - py * 0.85 * r,
-                fill=fill, outline=edge or "", width=1)
-            return
-        if shape == "monolith":
-            # A standing stone seen from above doesn't read as anything, so
-            # this is the stone seen from the side: a tall block with a single
-            # dark eye in its upper half. Distinct in silhouette from the
-            # squares and dots around it, which is what a glance is sorting by.
-            hw, hh = r * 0.62, r * 1.15
-            c.create_rectangle(x - hw, y - hh, x + hw, y + hh,
-                               fill=fill, outline=edge or "", width=1)
-            dr = max(1.0, r * 0.30)
-            dy = y - hh * 0.44
-            c.create_oval(x - dr, dy - dr, x + dr, dy + dr,
-                          fill="#000000", outline="")
-            return
-        if shape == "shard":
-            # The soulstone in the world is a cluster of angular crystals
-            # throwing off a magenta glow. At nine pixels that whole formation
-            # is one blob, so what's drawn is what survives the shrinking: a
-            # four-pointed shard with concave sides, a dim halo of the same
-            # colour standing in for the glow, and a lighter core for the lit
-            # middle. Nothing else on the map has points, which is what makes
-            # it findable at a glance.
-            def _star(rx, ry, waist):
-                # Taller than it is wide, and with a fat waist: a thin one came
-                # out as a pink plus sign next to the solid dots, which is the
-                # one thing a crystal shouldn't look like. The waist is what
-                # gives it a body to see; the points are what make it a shard.
-                pts = []
-                for i in range(8):
-                    a = math.pi / 2.0 * (i / 2.0)
-                    k = 1.0 if i % 2 == 0 else waist
-                    pts.extend((x + math.cos(a) * rx * k,
-                                y + math.sin(a) * ry * k))
-                return pts
-            # Halo first, under everything: the fill darkened rather than a
-            # colour of its own, so a faded marker on another floor fades its
-            # glow with it instead of keeping a bright ring around a dim shard.
-            c.create_polygon(*_star(r * 1.15, r * 1.62, 0.50),
-                             fill=_lerp_hex(fill, "#000000", 0.42), outline="")
-            c.create_polygon(*_star(r * 0.84, r * 1.22, 0.55),
-                             fill=fill, outline=edge or "", width=1)
-            c.create_polygon(*_star(r * 0.32, r * 0.48, 0.62),
-                             fill=_lerp_hex(fill, "#FFFFFF", 0.62), outline="")
-            return
-        if shape == "rock":
-            # The ore cluster, after the game's own icon: a tall central
-            # crystal flanked by lower chunks. At marker size the cluster is
-            # one blob, so what's drawn is what survives the shrinking — the
-            # jagged skyline — plus a single lit facet down the tall crystal's
-            # right side, which is what makes it read as stone rather than as
-            # a grey splat. Same reduction the soulstone shard went through.
-            def P(pts):
-                out = []
-                for px_, py_ in pts:
-                    out.extend((x + px_ * r, y + py_ * r))
-                return out
-            c.create_polygon(*P(((-1.05, 0.75), (-1.25, 0.05), (-0.5, -0.7),
-                                 (-0.15, -0.4), (0.3, -1.3), (0.9, -0.4),
-                                 (1.2, 0.2), (0.85, 0.75))),
-                             fill=fill, outline=edge or "", width=1)
-            c.create_polygon(*P(((0.3, -1.3), (0.9, -0.4), (0.45, 0.75),
-                                 (0.05, -0.25))),
-                             fill=_lerp_hex(fill, "#FFFFFF", 0.4), outline="")
-            return
-        if shape == "leaf":
-            # A pointed oval on the diagonal, with a vein and a stub of stem —
-            # the two details that say "leaf" once the outline is four pixels
-            # tall. Sides are quadratic beziers sampled into a plain polygon
-            # rather than tk's smoothed splines: sampled points draw the same
-            # on every renderer, and the tip and base stay sharp instead of
-            # being rounded off with the rest of the corners.
-            B, T = (-0.95, 0.95), (0.95, -0.95)
-            def side(p0, p1, cx_, cy_):
-                pts = []
-                for i in range(1, 8):
-                    t = i / 8.0
-                    mt = 1.0 - t
-                    pts.append((mt * mt * p0[0] + 2 * mt * t * cx_ + t * t * p1[0],
-                                mt * mt * p0[1] + 2 * mt * t * cy_ + t * t * p1[1]))
-                return pts
-            outline_pts = [B] + side(B, T, 0.92, 0.92) + [T] \
-                        + side(T, B, -0.92, -0.92)
-            flat = []
-            for px_, py_ in outline_pts:
-                flat.extend((x + px_ * r, y + py_ * r))
-            c.create_polygon(*flat, fill=fill, outline=edge or "", width=1)
-            vein = _lerp_hex(fill, "#000000", 0.45)
-            # Vein base-to-tip; the stem carries past the base on the same
-            # line, so the two read as one stroke through the leaf.
-            c.create_line(x + B[0] * 1.35 * r, y + B[1] * 1.35 * r,
-                          x + T[0] * 0.72 * r, y + T[1] * 0.72 * r,
-                          fill=vein, width=1)
-            return
-        if shape == "paw":
-            # A pawprint: one pad and four toes. At this size the toes are two
-            # or three pixels each, so they are placed by angle around the pad
-            # rather than drawn as a picture — that keeps the silhouette even
-            # at every scale instead of the outer toes drifting off as it
-            # shrinks. The pad is a wide oval rather than a circle because a
-            # round pad with round toes reads as a flower.
-            pad_w, pad_h = r * 0.72, r * 0.60
-            pad_y = y + r * 0.34
-            c.create_oval(x - pad_w, pad_y - pad_h, x + pad_w, pad_y + pad_h,
-                          fill=fill, outline=edge or "", width=1)
-            toe = r * 0.30
-            # Angles in degrees from straight up, the outer pair splayed
-            # further and set slightly lower — that asymmetry is most of what
-            # makes it read as a paw rather than as four dots in an arc.
-            for ang, dist, scale in ((-46, 0.92, 0.86), (-16, 1.00, 1.0),
-                                     (16, 1.00, 1.0), (46, 0.92, 0.86)):
-                a = math.radians(ang)
-                tx = x + math.sin(a) * r * dist
-                ty = y - math.cos(a) * r * dist * 0.78
-                tr = toe * scale
-                c.create_oval(tx - tr, ty - tr, tx + tr, ty + tr,
-                              fill=fill, outline=edge or "", width=1)
-            return
-        if shape in ("dot", "chevron"):
-            # `ring` is a second colour around the dot, for markers the game
-            # itself gives two — the orbs are a yellow core in a purple glow.
-            if ring:
-                rr = r + 1.6 * self._scales["minimap"]
-                c.create_oval(x - rr, y - rr, x + rr, y + rr,
-                              outline=ring, fill="",
-                              width=max(1, int(round(self._scales["minimap"] * 2))))
-            c.create_oval(x - r, y - r, x + r, y + r, fill=fill, outline="")
-        elif shape == "square":
-            c.create_rectangle(x - r, y - r, x + r, y + r, fill=fill, outline="")
-        else:   # diamond
-            c.create_polygon(x, y - r, x + r, y, x, y + r, x - r, y,
-                             fill=fill, outline="")
-
-    def _map_z_marker(self, c, x, y, r, dz, ink):
-        """A caret above or below a faded marker saying which way it is.
-
-        The fade alone only tells you something is on another floor; this says
-        whether you need to go up or down to reach it, which is the part you
-        act on."""
-        s = r * 0.8
-        gap = r + 2.0 * self._scales["minimap"]
-        if dz > 0:
-            pts = (x - s, y - gap, x + s, y - gap, x, y - gap - s)
-        else:
-            pts = (x - s, y + gap, x + s, y + gap, x, y + gap + s)
-        c.create_polygon(*pts, fill=ink, outline="")
-
-    def _draw_me_arrow(self, c, half, dx, dy):
-        """You, at the centre. `dx, dy` is the way you're pointing in SCREEN
-        space — already resolved by the caller, because the two modes disagree
-        about it: fixed mode turns the arrow, rotating mode turned the world
-        instead and leaves the arrow pointing at the top of the map."""
-        # Grows with the markers: an arrow left at its old size next to markers
-        # 20% larger reads as the map having shrunk around you.
-        s = 6.0 * self._icon_scale()
-        px, py = -dy, dx        # perpendicular, for the two back corners
-        tip = (half + dx * 1.4 * s, half + dy * 1.4 * s)
-        tail = (half - dx * 0.4 * s, half - dy * 0.4 * s)
-        left = (half - dx * s + px * 0.9 * s, half - dy * s + py * 0.9 * s)
-        right = (half - dx * s - px * 0.9 * s, half - dy * s - py * 0.9 * s)
-        c.create_polygon(*tip, *left, *tail, *right,
-                         fill=self._map_ink(MINIMAP_ME_LIFT),
-                         outline=BG_BORDER, width=1)
-
-    def _build_compass(self):
-        """A bearing strip on a pill-shaped panel, in the map's colours.
-
-        The canvas itself is transparent and _draw_compass paints the pill onto
-        it — two half-circle caps and the rectangle between them. It has to be
-        drawn rather than configured: Tk has no rounded rectangle, and DWM's
-        corner rounding gives a fixed small radius and a drop shadow with it.
-
-        It spent a version with no panel at all — markers and numbers straight
-        on the game — which reads beautifully over dark scenery and poorly over
-        anything bright, and left nothing to grab hold of but the markers.
-
-        With something behind it again, everything on it is coloured off that
-        something: `_map_ink` for the text and lines, `_marker_fill` for the
-        glyphs, exactly as on the minimap. Those two are what keep the strip
-        legible on the parchment theme, where a panel-blind colour scheme puts
-        cream text on a cream background.
-
-        The distance badges are the one part that isn't on this canvas. They
-        want to be translucent — a box that softens the scenery without
-        blacking it out — and a colorkey window can't blend: every pixel is
-        solid or a hole. So the boxes are drawn on `badgewin`, a second
-        colorkey window glued directly under this one at a lower whole-window
-        opacity (the one kind of blending Windows does provide), and the
-        numbers stay up here, crisp, on top of them. _glue_badgewin keeps the
-        two windows coincident; _sync_badgewin keeps their opacities and
-        mapped states married."""
-        self.compass_canvas = tk.Canvas(
-            self.compasswin, bg=TRANSPARENT_KEY,
-            highlightthickness=0, bd=0, width=COMPASS_W, height=COMPASS_H)
-        self.compass_canvas.pack()
-        self.badge_canvas = tk.Canvas(
-            self.badgewin, bg=TRANSPARENT_KEY,
-            highlightthickness=0, bd=0, width=COMPASS_W, height=COMPASS_H)
-        self.badge_canvas.pack()
-        # A badge box is part of the compass as far as the hand cares, so
-        # grabbing one drags the compass; the underlay follows via the glue.
-        self._bind_drag(self.compasswin,
-                        (self.compass_canvas, self.badge_canvas),
-                        unlocked=self._mouse_available)
-        self.compasswin.bind("<Configure>", self._glue_badgewin, add="+")
-
-    def _glue_badgewin(self, _event=None):
-        """Pin the badge underlay exactly under the compass window."""
-        self.badgewin.geometry(
-            f"+{self.compasswin.winfo_x()}+{self.compasswin.winfo_y()}")
-
-    def _sync_badgewin(self):
-        """Mirror the compass's opacity and mapped state onto the badge
-        underlay.
-
-        The underlay is deliberately NOT in _fade_win — it has no state of its
-        own. Its opacity is always the compass's times COMPASS_DIST_BOX_ALPHA,
-        which is what makes the boxes read as knocked-back while following
-        every fade, the transparency slider and the boss-bar auto-hide with no
-        handling of their own. Called from wherever the compass's alpha or
-        mapped state changes: _step_fade, _want_visible, _set_transparency and
-        once at startup."""
-        try:
-            self.badgewin.attributes(
-                "-alpha", self._alpha["compass"] * COMPASS_DIST_BOX_ALPHA)
-            if self.compasswin.state() == "normal":
-                self._glue_badgewin()
-                if self.badgewin.state() != "normal":
-                    self.badgewin.deiconify()
-                # Under the numbers, over the game — reasserted every sync,
-                # because deiconify and the compass's own -topmost re-assert
-                # both shuffle sibling order, and a badge that wins that race
-                # is a black box sitting ON the numbers it exists to sit under.
-                self.badgewin.lower(self.compasswin)
-            else:
-                self.badgewin.withdraw()
-        except tk.TclError:
-            pass
-
-    def _compass_x(self, dx, dy, rot, half_w, centre=None):
-        """Screen x for a world offset, or None if it's outside the arc.
-
-        Routed through the same rotation the map uses, mirror included, so a
-        marker can't sit left on the compass and right on the minimap.
-
-        `half_w` is how far the arc reaches from `centre`, which is not the same
-        as half the canvas: the strip is a pill, and the bearings are mapped
-        across its straight section so that nothing lands on a rounded end where
-        there'd be no panel under it."""
-        ca, sa = rot
-        mx = MINIMAP_MIRROR_X * (dx * sa - dy * ca)   # right of view, on screen
-        fy = dx * ca + dy * sa                        # ahead of view
-        rel = math.atan2(mx, fy)                      # 0 = straight ahead
-        span = math.radians(COMPASS_FOV) / 2.0
-        if abs(rel) > span:
-            return None
-        return (half_w if centre is None else centre) + (rel / span) * half_w
-
-    def _draw_compass(self):
-        if not self._shown.get("compass"):
-            return
-        c = self.compass_canvas
-        cb = self.badge_canvas
-        me, ents, _stamp = self.world.read()
-        c.delete("all")
-        cb.delete("all")
-        scale = self._scales["compass"]
-        w, h = int(COMPASS_W * scale), int(COMPASS_H * scale)
-        if int(c["width"]) != w or int(c["height"]) != h:
-            c.config(width=w, height=h)
-        if int(cb["width"]) != w or int(cb["height"]) != h:
-            cb.config(width=w, height=h)
-        theme = self._theme
-        body = theme.get("map_body", BG_BODY)
-        c.configure(bg=TRANSPARENT_KEY)
-        # The panel is a pill: two half-circle caps and the rectangle between
-        # them, painted onto a transparent canvas rather than being the canvas's
-        # own background. Tk has no rounded rectangle and DWM's corner rounding
-        # is both a fixed small radius and a request for the drop shadow, so
-        # this is the only way to get a fully round end.
-        centre = w / 2.0
-        ph = h * COMPASS_PILL_H          # the pill's own height; see the note
-        # Bearings map onto the STRAIGHT section only. Run them to the canvas
-        # edge instead and a marker at the far left sits on the tip of a cap,
-        # where the panel under it is a couple of pixels tall.
-        half_w = max(1.0, (w - ph) / 2.0)
-        c.create_oval(0, 0, ph, ph, fill=body, outline="")
-        c.create_oval(w - ph, 0, w, ph, fill=body, outline="")
-        c.create_rectangle(ph / 2.0, 0, w - ph / 2.0, ph, fill=body, outline="")
-
-        if not self.world.fresh():
-            return
-        heading = float(self._last_cam if self._last_cam is not None
-                        else (me.get("r", 0.0) or 0.0))
-        rot = (math.cos(heading), math.sin(heading))
-
-        # Cardinals first, so markers sit over them. They live in the top band,
-        # clear of the distances along the bottom, and are quieter than the
-        # numbers — a bearing letter is orientation, not information.
-        ink = self._map_ink(0.55)
-        for deg, letter in COMPASS_CARDINALS:
-            a = math.radians(deg)
-            x = self._compass_x(math.cos(a), math.sin(a), rot, half_w,
-                                centre)
-            if x is None:
-                continue
-            c.create_line(x, h * COMPASS_TICK_TOP, x, h * COMPASS_TICK_BOT,
-                          fill=ink)
-            # Bold and upright, unlike the distances under the markers: a
-            # cardinal is a landmark you find at a glance rather than something
-            # you read, and the italic 7pt it shared with the numbers was doing
-            # neither job well over a moving background.
-            c.create_text(x, h * COMPASS_CARD_Y, text=letter, fill=ink,
-                          font=self.fonts_compass["ui_sm_b"])
-        # Dead ahead. Brighter than the cardinals, because it's the one mark
-        # you read the whole strip against.
-        c.create_line(centre, 0, centre, h * COMPASS_TICK_BOT,
-                      fill=self._map_ink(0.85))
-
-        mez = me.get("z", 0)
-        local, roster = self.world.who()
-        rows = []
-        for e in ents:
-            cat = e.get("c")
-            if cat not in COMPASS_CATS:
-                continue
-            # Ticked off in the control menu. The compass keeps its own pair of
-            # these; hiding chests here doesn't hide them on the map.
-            if not self._compass_filters.get(COMPASS_FILTER_OF.get(cat), True):
-                continue
-            # Party only — a compass full of strangers tells you nothing about
-            # where your group went. And never yourself: you are dead ahead by
-            # construction, so the marker sat permanently over the centre tick
-            # saying nothing.
-            if cat == "hero" and (e.get("n") not in roster
-                                  or (local and e.get("n") == local)):
-                continue
-            dx = e.get("x", 0) - me.get("x", 0)
-            dy = e.get("y", 0) - me.get("y", 0)
-            dist = math.hypot(dx, dy)
-            # Only categories in COMPASS_LIMITS have a range at all; everything
-            # else is carried however far away it is.
-            limit = COMPASS_LIMITS.get(cat)
-            if limit is not None and dist > limit:
-                continue
-            x = self._compass_x(dx, dy, rot, half_w, centre)
-            if x is None:
-                continue        # behind you
-            rows.append((dist, cat, x, e))
-        # Farthest first, so the nearer marker wins an overlap.
-        rows.sort(key=lambda t: -t[0])
-        my = h * COMPASS_MARK_Y
-        for dist, cat, x, e in rows:
-            style = MINIMAP_STYLE_MAP[cat]
-            # Same material override as the map's, so a tungsten bearing looks
-            # like the tungsten marker you'd walk to.
-            nst = _node_style(e.get("g")) if cat in ("ore", "herb") else None
-            r = style["r"] * scale * (NODE_RARE_SCALE
-                                      if nst and nst.get("rare") else 1.0)
-            facing = None
-            if cat == "hero":
-                # Always up, never their heading. On the MAP a chevron pointing
-                # where someone is running tells you where the group is going;
-                # on a bearing strip there's no ground for it to point across,
-                # so it just spun in place and read as noise. The strip answers
-                # "which way is that", and an arrow is the shape that says it.
-                facing = (0.0, -1.0)
-            # Toned for the panel, like the map's — the strip has one again, and
-            # the yellow orb on parchment is exactly as unreadable here.
-            edge = _lerp_hex(body, BG_BORDER, 0.8)
-            self._map_glyph(c, x, my, r, style,
-                            self._marker_fill((nst or style)["fill"]),
-                            facing, edge,
-                            ring=self._marker_fill((nst or style).get("ring")))
-        self._draw_compass_dists(c, rows, h, scale, mez)
-
-    def _draw_compass_dists(self, c, rows, h, scale, mez):
-        """How far away each marker is, on the line under it.
-
-        A second pass rather than part of the glyph loop, because the two want
-        opposite orders. Glyphs draw farthest-first so the nearer one lands on
-        top; labels have to be placed NEAREST-first, since when two of them
-        collide the one worth keeping is the near one — and unlike overlapping
-        glyphs, overlapping text isn't a marker half-hidden, it's four digits
-        of neither number.
-
-        Elevation rides on this line as an arrow rather than as the map's
-        caret. The caret hangs below the glyph, which is where the number now
-        is, and a strip this short has no row of pixels to spare for both."""
-        # Brighter than the cardinals: the numbers are the part you actually
-        # read. They also hang off the pill's lower edge onto the game — the
-        # only text on the overlay that sits on scenery rather than on a
-        # panel, and the scenery is any colour it likes — so each one gets a
-        # box behind it. The box goes on the badge underlay window and the
-        # text stays on this canvas above it; see _build_compass for why the
-        # translucency needs a second window at all.
-        y = h * COMPASS_DIST_Y
-        font = self.fonts_compass["ui_tiny_i"]
-        line_h = font.metrics("linespace")
-        pad_x, pad_y = COMPASS_DIST_PAD_X * scale, COMPASS_DIST_PAD_Y * scale
-        placed = []
-        for dist, _cat, x, e in reversed(rows):
-            if any(abs(x - px) < COMPASS_DIST_GAP * scale for px in placed):
-                continue
-            placed.append(x)
-            dz = e.get("z", mez) - mez
-            arrow = ""
-            if abs(dz) > MINIMAP_Z_FADE:
-                arrow = " ↑" if dz > 0 else " ↓"
-            label = _short_dist(dist) + arrow
-            # Sized from the text rather than a fixed width: "8" and "2.7k ↑"
-            # are very different strings, and a badge wide enough for the
-            # second is a slab under the first.
-            half_tw = font.measure(label) / 2.0
-            self.badge_canvas.create_rectangle(
-                x - half_tw - pad_x, y - line_h / 2.0 - pad_y,
-                x + half_tw + pad_x, y + line_h / 2.0 + pad_y,
-                fill=COMPASS_DIST_BOX, outline="")
-            c.create_text(x, y, text=label, fill=COMPASS_DIST_BOX_INK,
-                          font=font)
 
     def _build_rift(self):
         """The next-rift countdown. Styled after the rifts themselves rather
@@ -9765,116 +4874,9 @@ class Overlay:
         answer_button("No", self._enqueue(lambda: self._answer_rift(False)), False)
         self.promptwin.minsize(MIN_W["prompt"], 0)
 
-    def _build_update_offer(self):
-        """The "a new version is out — install it?" popup.
 
-        Painted in the meter's own colours rather than the rift prompt's, and
-        that is the whole point of it being a separate window: the rift palette
-        means "the game did something", and this is the meter talking about
-        itself. Sharing promptwin would also mean the two questions could
-        collide, since a rift entry and an update check are unrelated events.
-        """
-        border = tk.Frame(self.updatewin, bg=BG_BORDER, padx=2, pady=2)
-        border.pack(fill="both", expand=True)
-        header = tk.Frame(border, bg=BG_HEADER_UNLOCKED)
-        header.pack(fill="x")
-        tk.Label(header, text="Farever+ update", bg=BG_HEADER_UNLOCKED,
-                 fg=FG_HEADER, font=self.fonts["ui_b"], anchor="w",
-                 padx=12, pady=6).pack(side="left")
 
-        body = tk.Frame(border, bg=BG_BODY, padx=18, pady=14)
-        body.pack(fill="both", expand=True)
-        self.update_title = tk.Label(body, text="", bg=BG_BODY, fg=FG_VALUE,
-                                     font=self.fonts["ui_lg_b"], anchor="w")
-        self.update_title.pack(fill="x")
-        self.update_body = tk.Label(body, text="", bg=BG_BODY, fg=FG_TEXT,
-                                    font=self.fonts["ui_10"], anchor="w",
-                                    justify="left", pady=8,
-                                    wraplength=UPDATE_OFFER_WRAP)
-        self.update_body.pack(fill="x")
 
-        btns = tk.Frame(body, bg=BG_BODY)
-        btns.pack(fill="x", pady=(10, 0))
-
-        def offer_button(text, on, primary):
-            b = tk.Button(btns, text=text, command=on,
-                          font=self.fonts["ui_b"],
-                          bg=BTN_ON_BG if primary else BG_BODY_SOFT,
-                          fg=FG_HEADER if primary else FG_TEXT,
-                          activebackground=BTN_ON_BG_ACTIVE if primary
-                          else BG_BAR_TRACK,
-                          activeforeground=FG_HEADER if primary else FG_VALUE,
-                          relief="flat", bd=0, padx=26, pady=8,
-                          highlightthickness=1, cursor="hand2",
-                          highlightbackground=BG_BAR_TRACK)
-            b.pack(side="left", expand=True, fill="x", padx=4)
-            return b
-
-        self.btn_update_yes = offer_button(
-            "", self._enqueue(lambda: self._answer_update_offer(True)), True)
-        offer_button("Later",
-                     self._enqueue(lambda: self._answer_update_offer(False)),
-                     False)
-        self.updatewin.minsize(MIN_W["update"], 0)
-
-    def _tick_update_offer(self):
-        """Offer an automatically-found update, once, when it can be answered.
-
-        The gate is the cursor, not a timer. The overlay is click-through while
-        the game owns the mouse, so a popup during play would be a box you
-        cannot press — and it would be covering a fight. Waiting for a free
-        cursor (the escape menu, or L-ALT) means the offer arrives exactly when
-        the player is already in UI mode, and never mid-pull.
-        """
-        if self._update_offer_done or self._update_offer_open:
-            return
-        # With the game gone the exit prompt is the only thing that should be
-        # on screen, and an update offer would be a second dialog competing
-        # with it — the same reasoning that keeps it away mid self-update.
-        if self._game_gone:
-            return
-        if not UPDATE["prompt"] or not UPDATE["latest"]:
-            return
-        if self._updating or self._prompt_open or not self._focused:
-            return
-        if not self._cursor_free:
-            return
-        self._open_update_offer()
-
-    def _open_update_offer(self):
-        self._update_offer_open = True
-        can = self._can_self_update()
-        self.update_title.config(text=f"Farever+ {UPDATE['latest']} is available")
-        self.update_body.config(
-            text=(f"You're running {VERSION}. The update takes a few seconds — "
-                  "the meter closes, installs and comes back on its own."
-                  if can else
-                  f"You're running {VERSION}. This release has no installer to "
-                  "run from here, so this opens the download page."))
-        self.btn_update_yes.config(text="Update now" if can else "Download")
-        self.updatewin.update_idletasks()
-        l, t, r, b = self._game_rect()
-        w = max(self.updatewin.winfo_reqwidth(), MIN_W["update"])
-        h = max(self.updatewin.winfo_reqheight(), 120)
-        self.updatewin.geometry(
-            f"+{l + ((r - l) - w) // 2}+{t + ((b - t) - h) // 2}")
-        self._apply_clickthrough()      # the offer has to be clickable
-        self._refresh_visibility()
-        print(f"[meter] offering update {UPDATE['latest']} "
-              f"({'self-update' if can else 'download'}).", file=sys.stderr)
-
-    def _answer_update_offer(self, yes):
-        """Either answer retires the offer for this session. "Later" is not
-        "never": the menu's notice line stays, and the header's Check updates
-        button still works — this only stops the popup asking again."""
-        self._update_offer_open = False
-        self._update_offer_done = True
-        UPDATE["prompt"] = False
-        self._refresh_visibility()
-        print(f"[meter] update offer: {'accepted' if yes else 'dismissed'}.",
-              file=sys.stderr)
-        if yes:
-            self._on_update_click()
 
     def _open_rift_prompt(self, kind):
         self._prompt_kind = kind
@@ -10304,7 +5306,6 @@ class Overlay:
         self._apply_history_setting()
         self._save_settings()
         self._refresh_menu()
-        self._apply_history_visibility()
         if self._history_on:
             self._reload_history()
 
@@ -10365,23 +5366,7 @@ class Overlay:
             print(f"[meter] couldn't open {self._history.dir}: {e}",
                   file=sys.stderr)
 
-    def _apply_history_visibility(self):
-        """Show the folder path and the browser only once recording is on."""
-        if self._history_on:
-            if not self.history_body.winfo_manager():
-                self.history_body.pack(fill="both", expand=True)
-        elif self.history_body.winfo_manager():
-            self.history_body.pack_forget()
 
-    def _set_history_page(self, key):
-        """Raise the list or the opened dataset. Same lift as the tabs."""
-        if key not in self._history_page_frames:
-            return
-        # The list page owns a search box, and it keeps Tk's focus through a
-        # raise — same trap as _set_menu_tab and _set_social_page.
-        self._stop_typing()
-        self._history_page = key
-        self._history_page_frames[key].tkraise()
 
     def _history_note(self, text, transient=False):
         """The line under the browser. Same two jobs as Social's: explain an
@@ -10412,63 +5397,7 @@ class Overlay:
         an encounter ends, and re-reading a folder four times a second to
         catch that would be the most expensive thing the menu does."""
         self._history_entries = self._history.entries()
-        self._history_sig = None
-        self._rebuild_history()
 
-    def _rebuild_history(self, *_a):
-        """Redraw the dataset rows, gated on an actual change like Social's."""
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        q = self._history_query.get().strip().lower()
-        rows = self._history_entries
-        sig = (q, tuple(r["path"] for r in rows))
-        if sig == self._history_sig:
-            return
-        self._history_sig = sig
-        # Name or zone, so "manfish" finds a dungeon's fights and "honey"
-        # finds a boss's.
-        shown = [r for r in rows
-                 if not q or q in r["name"].lower() or q in r["zone"].lower()]
-        page = shown[:HISTORY_PAGE]
-        # Rows are pooled, not rebuilt — see _HistoryRow for the measurement
-        # that made that necessary.
-        for i, r in enumerate(page):
-            while len(self._history_row_widgets) <= i:
-                self._history_row_widgets.append(_HistoryRow(self))
-            self._history_row_widgets[i].show(r)
-        for row in self._history_row_widgets[len(page):]:
-            row.hide()
-        total = len(rows)
-        if q:
-            text = f"{len(shown)} / {total}"
-        else:
-            text = f"{total} dataset{'' if total == 1 else 's'}"
-        # Said out loud rather than left as a short list: a browser that
-        # quietly stops at 200 looks like a browser that has seen everything.
-        if len(shown) > HISTORY_PAGE:
-            text += f"  ·  showing {HISTORY_PAGE}"
-        self.history_count.config(text=text)
-        if rows and not shown:
-            self._history_note("Nothing here matches that.")
-        else:
-            self._history_note(self._history_idle_note())
-        self._resize_scroll(self.history_canvas, self.history_list)
-
-    @staticmethod
-    def _when_text(at):
-        """A dataset's timestamp, with the date only when it isn't today.
-
-        Same rule as the rift report card's title, and for the same reason:
-        "17:30" on a dataset from last Tuesday reads as this evening."""
-        lt = time.localtime(at)
-        fmt = ("%H:%M" if time.strftime("%Y%m%d", lt) == time.strftime("%Y%m%d")
-               else "%b %d %H:%M")
-        return time.strftime(fmt, lt)
 
     def _open_history_entry(self, summary):
         """Open one dataset's breakdown — the page the card has no room for."""
@@ -10478,8 +5407,6 @@ class Overlay:
                                transient=True)
             return
         self._history_detail = entry
-        self._render_history_detail()
-        self._set_history_page("detail")
 
     def _open_history_report(self, summary):
         """A saved rift, back on screen AS a rift report.
@@ -10514,122 +5441,6 @@ class Overlay:
                      key=lambda t: -t[1])
         return out[:limit]
 
-    def _render_history_detail(self):
-        """Draw the opened dataset. Rift and ordinary encounters differ only
-        in that a rift has two phases; everything below the phase heading is
-        the same code, which is the point of storing them the same way."""
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        entry = self._history_detail
-        if entry is None:
-            return
-        for w in self.history_detail_list.winfo_children():
-            w.destroy()
-        data = entry.get("data") or {}
-        names = data.get("skill_names") or {}
-        lt = time.localtime(float(entry.get("at") or 0.0))
-        where = (entry.get("zone") or {}).get("label") or ""
-        self.history_detail_title.config(
-            text=f"{entry.get('name') or 'Encounter'}"
-                 f"   ·   {time.strftime('%b %d, %H:%M', lt)}"
-                 + (f"   ·   {where}" if where else ""))
-
-        parent = self.history_detail_list
-
-        def line(text, font="mono_sm", fg=FG_TEXT, pady=0, indent=0):
-            tk.Label(parent, text=(" " * indent) + text, bg=BG_BODY, fg=fg,
-                     font=self.fonts_m[font], anchor="w", justify="left",
-                     pady=pady).pack(fill="x")
-
-        def heading(text):
-            row = tk.Frame(parent, bg=BG_BODY)
-            row.pack(fill="x", pady=(8, 3))
-            tk.Label(row, text=text, bg=BG_BODY, fg=ACCENT,
-                     font=self.fonts_m["ui_sm_b"], anchor="w").pack(side="left")
-            tk.Frame(row, bg=BG_BAR_TRACK, height=1).pack(
-                side="left", fill="x", expand=True, padx=(8, 0))
-
-        def section_for(label, duration, players, total, heal, targets):
-            heading(label.upper())
-            line(f"{self._mmss(duration)}   ·   {int(total):,} dmg   ·   "
-                 f"{int(heal):,} heal", fg=FG_DIM)
-            if targets:
-                top = sorted(targets.items(), key=lambda kv: -kv[1])[:4]
-                line("hit: " + " · ".join(
-                    f"{_boss_label(k)} {int(v):,}" for k, v in top),
-                    fg=FG_DIM)
-            if not players:
-                line("nothing was recorded", fg=FG_DIM, pady=6)
-                return
-            for p in players:
-                dmg = float(p.get("total") or 0.0)
-                hits = int(p.get("hits") or 0)
-                pct = dmg / total * 100 if total else 0.0
-                crit = (int(p.get("crits") or 0) / hits * 100) if hits else 0.0
-                # Rate first, then the total it came from — the same order
-                # the rift card uses, through the same helper, so a phase too
-                # short to have a rate is silent about it in both places.
-                bits = [b for b in (_rate_text(dmg, duration, "dps"),
-                                    f"{int(dmg):,} dmg") if b]
-                bits += [f"{pct:.0f}%", f"{hits} hits", f"{crit:.0f}% crit"]
-                if (p.get("heal") or 0.0) > 0.5:
-                    bits.append(f"{int(p['heal']):,} heal"
-                                + _overheal_note(p, " ({:.0f}% over)"))
-                if p.get("kills"):
-                    bits.append(f"{p['kills']} kills")
-                tk.Label(parent, text=("* " if p.get("is_me") else "  ")
-                         + (p.get("name") or "?"),
-                         bg=BG_BODY, fg=FG_VALUE if p.get("is_me") else FG_TEXT,
-                         font=self.fonts_m["ui_b"], anchor="w").pack(
-                    fill="x", pady=(6, 0))
-                line(" · ".join(bits), fg=FG_DIM, indent=2)
-                for label_, tot, n, crits in self._merge_history_skills(
-                        p.get("skills"), names):
-                    share = tot / dmg * 100 if dmg else 0.0
-                    line(f"{label_[:26]:<26} {int(tot):>10,} "
-                         f"{share:>5.1f}%  {n:>5} hits", indent=4)
-                for label_, tot, n, _c in self._merge_history_skills(
-                        p.get("heals"), names):
-                    # HEAL_BAR, not the report card's REPORT_HEAL: that green
-                    # is picked to read on the card's near-black body and is
-                    # nearly invisible on the menu's parchment.
-                    line(f"{('+ ' + label_)[:26]:<26} {int(tot):>10,} "
-                         f"{'':>6}  {n:>5} casts", indent=4,
-                         fg=HEAL_BAR)
-
-        if isinstance(data.get("phases"), list):
-            for ph in data["phases"]:
-                section_for(ph.get("label") or "Phase",
-                            float(ph.get("duration") or 0.0),
-                            ph.get("players") or [],
-                            float(ph.get("total") or 0.0),
-                            float(ph.get("heal") or 0.0),
-                            ph.get("targets") or {})
-        else:
-            # The mode is not decoration here: it says who is missing. A
-            # party dataset's percentages are shares of the party, and
-            # reading them as shares of the fight would be wrong.
-            mode = entry.get("mode")
-            label = "Encounter" + ({"party": " — party only",
-                                    "all": " — all players"}.get(mode, ""))
-            section_for(label, float(data.get("duration") or 0.0),
-                        data.get("players") or [],
-                        float(data.get("total") or 0.0),
-                        float(data.get("heal") or 0.0),
-                        data.get("targets") or {})
-            if data.get("carried"):
-                line("")
-                line(f"the last {data.get('carried_secs', 0):.0f}s "
-                     f"({data['carried']} events) also open the dataset that "
-                     "follows this one — a boss pull moves them, it does not "
-                     "split them.", fg=FG_DIM, font="ui_tiny_i")
-        self._resize_scroll(self.history_detail_canvas,
-                            self.history_detail_list)
 
     def _history_text(self, entry):
         """The opened dataset as chat-pasteable lines."""
@@ -10981,1011 +5792,11 @@ class Overlay:
         self._kill_toast_job = None
         self.killwin.withdraw()
 
-    def _build_codex_toast(self):
-        """The codex line — same drop-shadowed floating text as the kill time,
-        on its own window because mastering an entry and killing a boss are
-        routinely the same event (a boss IS a one-kill codex entry)."""
-        self._codex_font = self.fonts["ui_parse_b"]
-        self._codex_canvas = tk.Canvas(self.codexwin, bg=TRANSPARENT_KEY,
-                                       highlightthickness=0, bd=0)
-        self._codex_canvas.pack()
-        self._codex_toast_job = None
 
-    def _show_codex_toast(self, text, gold):
-        """Put `text` on the codex strip. Gold and long for a mastered entry,
-        body-coloured and brief for ordinary progress — the same grammar the
-        kill toast uses for a record."""
-        f, c = self._codex_font, self._codex_canvas
-        pad, off = 8, 2
-        w = f.measure(text) + pad * 2 + off
-        h = f.metrics("linespace") + pad * 2 + off
-        c.config(width=w, height=h)
-        c.delete("all")
-        c.create_text(pad + off, pad + off, text=text, font=f, fill=BG_BORDER,
-                      anchor="nw")
-        c.create_text(pad, pad, text=text, font=f,
-                      fill=REPORT_MEDALS[0] if gold else BG_BODY, anchor="nw")
-        self.codexwin.update_idletasks()
-        l, t, r, _b = self._game_rect()
-        self.codexwin.geometry(f"+{l + ((r - l) - w) // 2}+{t + TOP_STRIP_CODEX}")
-        self.codexwin.deiconify()
-        self.codexwin.attributes("-topmost", True)
-        # A second kill inside the window restarts the clock rather than
-        # letting the first one's timer take the new text down early. During a
-        # grind that means the strip stays up continuously, which is correct:
-        # it is always showing the most recent count.
-        if self._codex_toast_job is not None:
-            try:
-                self.root.after_cancel(self._codex_toast_job)
-            except Exception:
-                pass
-        secs = CODEX_MASTER_TOAST_SECS if gold else CODEX_TOAST_SECS
-        self._codex_toast_job = self.root.after(int(secs * 1000),
-                                                self._hide_codex_toast)
 
-    def _hide_codex_toast(self):
-        self._codex_toast_job = None
-        self.codexwin.withdraw()
 
-    # ---- sparkly tracker ----------------------------------------------------
-    def _build_sparkly_tracker(self):
-        """A small panel that points at the nearest sparkling unit.
 
-        Not a toast: it stays up and keeps pointing while one is around, which
-        is the whole use — you read it while running toward the thing."""
-        self._sparkly_font = self.fonts["ui"]
-        self._sparkly_font_b = self.fonts["ui_parse_b"]
-        self._sparkly_canvas = tk.Canvas(self.sparklywin, bg=TRANSPARENT_KEY,
-                                         highlightthickness=0, bd=0)
-        self._sparkly_canvas.pack()
-        self._sparkly_last = None      # (name, x, y, z) of the last one seen
-        self._sparkly_seen_at = 0.0    # when, for SPARKLY_KEEP_SECS
-        self._sparkly_up = False
 
-    def _tick_sparkly(self):
-        """Find the nearest sparkling CRITTER and point at it.
-
-        Critters only — see SPARKLY_TRACK_CATS for why a sparkling bee is not
-        something this should announce, and SPARKLY_TRACK_SKIP for the
-        fixed-respawn ones it stays quiet about.
-
-        Reads the same snapshot the map does but stands apart from it: the
-        tracker has to keep working with the minimap hidden, and it deliberately
-        ignores the map's category ticks — hiding critters on the map is about
-        clutter, and has nothing to do with wanting to be told about a rare one.
-        """
-        if not self._sparkly_on:
-            if self._sparkly_up:
-                self._sparkly_up = False
-                self.sparklywin.withdraw()
-            return
-        me, ents, _stamp = self.world.read()
-        now = time.monotonic()
-        best, best_d = None, None
-        if self.world.fresh():
-            for e in ents:
-                if not e.get("sp") or e.get("c") not in SPARKLY_TRACK_CATS:
-                    continue
-                if e.get("k") in SPARKLY_TRACK_SKIP:
-                    continue
-                dx = e.get("x", 0) - me.get("x", 0)
-                dy = e.get("y", 0) - me.get("y", 0)
-                d = math.hypot(dx, dy)
-                if best_d is None or d < best_d:
-                    best_d, best = d, e
-        if best is not None:
-            nm = (best.get("n") or "").strip() or _pretty_id(best.get("k") or "")
-            self._sparkly_last = (nm, best.get("x", 0), best.get("y", 0),
-                                  best.get("z", 0))
-            self._sparkly_seen_at = now
-        elif (self._sparkly_last is None
-                or now - self._sparkly_seen_at > SPARKLY_KEEP_SECS):
-            # Nothing around, and the grace period is over.
-            self._sparkly_last = None
-            if self._sparkly_up:
-                self._sparkly_up = False
-                self.sparklywin.withdraw()
-            return
-        # Held or live, the geometry is recomputed from OUR current position —
-        # so while it lingers the arrow still swings correctly as you move.
-        name, sx, sy, sz = self._sparkly_last
-        self._draw_sparkly(name, sx - me.get("x", 0), sy - me.get("y", 0),
-                           sz - me.get("z", 0), me,
-                           stale=best is None)
-
-    def _draw_sparkly(self, name, dx, dy, dz, me, stale):
-        c = self._sparkly_canvas
-        s = self._scales["meter"]
-        pad = int(SPARKLY_PAD * s)
-        arrow_r = SPARKLY_ARROW_R * s
-        # The same projection the minimap uses, so the arrow and the marker
-        # can never disagree about which way the thing is. Evaluated at
-        # half=0/scale=1 it returns a plain screen-space direction vector.
-        cam = me.get("c")
-        if cam is not None:
-            self._last_cam = float(cam)
-        heading = float(self._last_cam if self._last_cam is not None
-                        else (me.get("r", 0.0) or 0.0))
-        rot = (math.cos(heading), math.sin(heading))
-        px, py = self._minimap_px(me.get("x", 0) + dx, me.get("y", 0) + dy,
-                                  me, 0.0, 1.0, rot)
-        ang = math.atan2(px, -py) if (px or py) else 0.0
-
-        dist = math.hypot(dx, dy)
-        flat = f"{dist:.0f}u" if dist < 1000 else f"{dist / 1000.0:.1f}ku"
-        # Up/down is worth its own reading rather than being folded into the
-        # distance: a sparkly 20 units away and 40 below is not 45 units of
-        # walking, it is a different floor.
-        vert = ("level" if abs(dz) < 3
-                else f"{abs(dz):.0f}u {'up' if dz > 0 else 'down'}")
-        label = name.upper()
-        sub = f"{flat}  ·  {vert}"
-
-        fb, fs = self._sparkly_font_b, self._sparkly_font
-        tw = max(fb.measure(label), fs.measure(sub))
-        gap = int(10 * s)
-        w = pad * 2 + int(arrow_r * 2) + gap + tw
-        h = pad * 2 + fb.metrics("linespace") + fs.metrics("linespace")
-        h = max(h, pad * 2 + int(arrow_r * 2))
-        c.config(width=w, height=h)
-        c.delete("all")
-
-        ink = SPARK_RING if not stale else _lerp_hex(BG_BODY, SPARK_RING, 0.55)
-        cx, cy = pad + arrow_r, h / 2.0
-        # A filled triangle with a notched tail — a plain triangle at this size
-        # reads as a generic marker, the notch makes it a pointer.
-        pts = []
-        for a_off, rad in ((0.0, 1.0), (2.4, 0.95), (math.pi, 0.42),
-                           (-2.4, 0.95)):
-            a = ang + a_off
-            pts.extend((cx + math.sin(a) * arrow_r * rad,
-                        cy - math.cos(a) * arrow_r * rad))
-        c.create_polygon(*pts, fill=ink, outline=BG_BORDER, width=1)
-
-        tx = pad + arrow_r * 2 + gap
-        ty = (h - fb.metrics("linespace") - fs.metrics("linespace")) / 2.0
-        for off, fill in ((2, BG_BORDER), (0, ink)):
-            c.create_text(tx + off, ty + off, text=label, font=fb,
-                          fill=fill, anchor="nw")
-        for off, fill in ((2, BG_BORDER), (0, BG_BODY)):
-            c.create_text(tx + off, ty + fb.metrics("linespace") + off,
-                          text=sub, font=fs, fill=fill, anchor="nw")
-
-        self.sparklywin.update_idletasks()
-        l, t, r, _b = self._game_rect()
-        self.sparklywin.geometry(
-            f"+{l + ((r - l) - w) // 2}+{t + TOP_STRIP_SPARKLY}")
-        if not self._sparkly_up:
-            self._sparkly_up = True
-            self.sparklywin.deiconify()
-            self.sparklywin.attributes("-topmost", True)
-
-    # ---- the Buffs tab -------------------------------------------------
-    def _pick_tray(self, i):
-        """Edit a different tray. Everything on the page below the selector
-        re-reads from the newly selected one."""
-        self._tray_edit = max(0, min(BUFF_TRAY_MAX - 1, int(i)))
-        self._sync_tray_controls()
-        self._render_tracked()
-        self._render_buff_pick()
-        self._refresh_menu()
-        # Just this one, so selecting a tray tells you which of the four on
-        # screen you are now editing.
-        self._reveal_tray(self._tray_edit)
-
-    def _sync_tray_controls(self):
-        """Push the selected tray's settings into the widgets.
-
-        Called on selection and after a load, never on every menu refresh: the
-        size slider is a live widget and writing to its variable while it is
-        being dragged fights the user for the handle."""
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        t = self._tray(self._tray_edit)
-        self._tray_size_var.set(int(t.get("size", BUFF_ICON_DEFAULT)))
-        self._tray_layout_var.set(
-            BUFF_LAYOUT_LABEL.get(t.get("layout", "row"), "Across"))
-        self._tray_inactive_var.set(t.get("inactive", BUFF_INACTIVE_DIM))
-        for which in ("timer", "stacks"):
-            self._tray_text_var[f"{which}_pos"].set(
-                t.get(f"{which}_pos", BUFF_TRAY_DEFAULTS[f"{which}_pos"]))
-            self._tray_text_var[f"{which}_size"].set(
-                int(t.get(f"{which}_size", 100)))
-
-    def _toggle_tray_on(self):
-        t = self._tray(self._tray_edit)
-        t["on"] = not t.get("on")
-        self._save_settings()
-        self._refresh_menu()
-        self._refresh_visibility()
-
-    def _toggle_tray_lock(self):
-        t = self._tray(self._tray_edit)
-        t["lock"] = not t.get("lock")
-        self._save_settings()
-        self._refresh_menu()
-        # Point at the tray that just got pinned or freed — the padlock in the
-        # reveal marker is the confirmation, and it is on the tray itself
-        # rather than only on the button you clicked.
-        self._reveal_tray(self._tray_edit)
-
-    def _toggle_tray_flag(self, flag):
-        t = self._tray(self._tray_edit)
-        t[flag] = not t.get(flag)
-        self._save_settings()
-        self._refresh_menu()
-
-    def _on_tray_size(self):
-        t = self._tray(self._tray_edit)
-        t["size"] = int(self._tray_size_var.get())
-        self._save_settings()
-
-    def _on_tray_layout(self):
-        t = self._tray(self._tray_edit)
-        t["layout"] = BUFF_LAYOUT_BY_LABEL.get(
-            self._tray_layout_var.get(), "row")
-        self._save_settings()
-
-    def _on_tray_inactive(self):
-        t = self._tray(self._tray_edit)
-        t["inactive"] = self._tray_inactive_var.get()
-        self._save_settings()
-
-    def _on_tray_text_pos(self, which):
-        t = self._tray(self._tray_edit)
-        t[f"{which}_pos"] = self._tray_text_var[f"{which}_pos"].get()
-        self._save_settings()
-        self._refresh_menu()
-
-    def _on_tray_text_size(self, which):
-        t = self._tray(self._tray_edit)
-        t[f"{which}_size"] = int(self._tray_text_var[f"{which}_size"].get())
-        self._save_settings()
-
-    def _track_buff(self, key):
-        """Add a status to the tray being edited.
-
-        Silently ignores a duplicate rather than refusing loudly: the picker
-        marks what is already tracked, so a second click is a misclick and the
-        useful response is nothing happening."""
-        t = self._tray(self._tray_edit)
-        keys = list(t.get("keys") or ())
-        if key in keys:
-            return
-        keys.append(key)
-        t["keys"] = keys
-        # A buff you just added to a tray you never turned on should appear.
-        # Turning it on for you is what you meant; leaving it dark and silent
-        # looks like the click did nothing.
-        t["on"] = True
-        self._save_settings()
-        self._render_tracked()
-        self._render_buff_pick()
-        self._refresh_menu()
-        self._refresh_visibility()
-
-    def _untrack_buff(self, key):
-        t = self._tray(self._tray_edit)
-        t["keys"] = [k for k in (t.get("keys") or ()) if k != key]
-        self._save_settings()
-        self._render_tracked()
-        self._render_buff_pick()
-        self._refresh_visibility()
-
-    def _move_tracked(self, key, delta):
-        """Shuffle a buff up or down the tray's order.
-
-        The order is the whole point of arranging a tray, so it is editable
-        directly rather than being "whatever order you added them in"."""
-        t = self._tray(self._tray_edit)
-        keys = list(t.get("keys") or ())
-        if key not in keys:
-            return
-        i = keys.index(key)
-        j = max(0, min(len(keys) - 1, i + delta))
-        if i == j:
-            return
-        keys.insert(j, keys.pop(i))
-        t["keys"] = keys
-        self._save_settings()
-        self._render_tracked()
-
-    def _render_tracked(self):
-        """The selected tray's watchlist, in order, each row removable.
-
-        Rebuilt wholesale on change, like the Social rows: at this size
-        diffing would be more code than it saves."""
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        t = self._tray(self._tray_edit)
-        keys = list(t.get("keys") or ())
-        sig = (self._tray_edit, tuple(keys))
-        if sig == self._tracked_sig:
-            return
-        self._tracked_sig = sig
-        for w in self._tracked_widgets:
-            w.destroy()
-        self._tracked_widgets = []
-        if not keys:
-            lbl = tk.Label(self._tracked_wrap,
-                           text="Nothing tracked yet — pick a buff below.",
-                           bg=BG_BODY, fg=FG_DIM,
-                           font=self.fonts_m["ui_tiny_i"], anchor="w")
-            lbl.pack(fill="x", pady=2)
-            self._tracked_widgets.append(lbl)
-            return
-        for idx, key in enumerate(keys):
-            row = tk.Frame(self._tracked_wrap, bg=BG_BODY)
-            row.pack(fill="x", pady=1)
-            self._tracked_widgets.append(row)
-            tk.Label(row, text=f"{idx + 1}.", bg=BG_BODY, fg=FG_DIM,
-                     font=self.fonts_m["ui_tiny_i"], width=3,
-                     anchor="w").pack(side="left")
-            tk.Label(row, text=self._buff_label(key), bg=BG_BODY, fg=FG_TEXT,
-                     font=self.fonts_m["ui"], anchor="w").pack(
-                side="left", fill="x", expand=True)
-            for txt, delta in (("↑", -1), ("↓", 1)):
-                tk.Button(row, text=txt,
-                          command=self._enqueue(
-                              lambda k=key, d=delta: self._move_tracked(k, d)),
-                          font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_TEXT,
-                          activebackground=BG_BAR_TRACK,
-                          activeforeground=FG_VALUE, relief="flat", bd=0,
-                          padx=6, pady=0, highlightthickness=1,
-                          highlightbackground=BG_BAR_TRACK,
-                          cursor="hand2").pack(side="left", padx=(4, 0))
-            tk.Button(row, text="Remove",
-                      command=self._enqueue(
-                          lambda k=key: self._untrack_buff(k)),
-                      font=self.fonts_m["ui"], bg=BG_BODY_SOFT, fg=FG_DIM,
-                      activebackground=BG_BAR_TRACK,
-                      activeforeground=FG_VALUE, relief="flat", bd=0,
-                      padx=8, pady=0, highlightthickness=1,
-                      highlightbackground=BG_BAR_TRACK,
-                      cursor="hand2").pack(side="left", padx=(6, 0))
-
-    def _buff_pick_rows(self):
-        """Every status worth offering, best candidates first.
-
-        Three things decide the order, and only the first is about the game:
-
-          * Statuses you have actually had on you this session come first and
-            are marked. That is the "what was that buff" case, and it is the
-            reason the session log in StatusSnapshot exists at all.
-          * Then everything else the cdb names, alphabetically.
-          * Unnamed statuses are omitted entirely. The cdb not naming one is
-            precisely what marks it as the game's internal plumbing — the dash
-            state, the swim state, the block window — and offering "Dash" as a
-            trackable buff would bury the real ones. No hand-kept blocklist:
-            the test is the data's own.
-        """
-        meta = _status_meta()
-        seen = {r["key"]: r for r in self.statuses.seen_keys()}
-        groups, _primary = status_groups()
-        rows = []
-        for key in groups:
-            row = meta["status"].get(key) or {}
-            members = groups[key]
-            rows.append({"key": key, "name": status_name(key),
-                         "desc": clean_desc(row.get("desc")),
-                         "seen": any(k in seen for k in members)})
-        # Every item that grants a status, from the cdb's own item sheet — NOT
-        # only the ones you have happened to consume. This listed seen-items
-        # only at first, on the mistaken grounds that item statuses cannot be
-        # enumerated (they all report the one kind "ItemStatus" at runtime, so
-        # there is no per-status row for them). The ITEM sheet enumerates them
-        # perfectly well, which is how "Plainswalker Feast" can be set up
-        # before you next eat one.
-        for item_id, name in meta["items"].items():
-            key = f"item:{item_id}"
-            rows.append({"key": key, "name": name,
-                         "desc": "Granted by an item you consume.",
-                         "seen": key in seen})
-        rows.sort(key=lambda r: (not r["seen"], r["name"].lower()))
-        return rows
-
-    def _render_buff_pick(self):
-        """Draw the picker, filtered by the search box."""
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        q = (self._buff_query.get() or "").strip().lower()
-        tracked = set(self._tray(self._tray_edit).get("keys") or ())
-        rows = self._buff_pick_rows()
-        if q:
-            # Name, id and description all searchable. The description matters
-            # because half these buffs are named for flavour and looked for by
-            # effect — "armor" should find Fortified.
-            rows = [r for r in rows
-                    if q in r["name"].lower() or q in r["key"].lower()
-                    or q in r["desc"].lower()]
-        shown = rows[:BUFF_PICK_MAX_ROWS]
-        sig = (self._tray_edit, q, tuple(r["key"] for r in shown),
-               tuple(sorted(tracked)), len(rows))
-        if sig == self._buff_pick_sig:
-            return
-        self._buff_pick_sig = sig
-        # The count is not decoration: the list is capped, so without it a
-        # search matching sixty things looks like it matched forty.
-        self.buff_count.config(
-            text=(f"{len(rows)} found, showing {len(shown)}"
-                  if len(rows) > len(shown) else f"{len(rows)} found"))
-        icon_px = int(BUFF_PICK_ICON * self._scales["menu"])
-        for i, r in enumerate(shown):
-            self._buff_pick_row(i).show(r, r["key"] in tracked, icon_px)
-        # Surplus rows are hidden, not destroyed — see _buff_pick_row.
-        for row in self._buff_pick_widgets[len(shown):]:
-            row.hide()
-
-    def _buff_pick_row(self, i):
-        """Picker row `i`, built once and reused.
-
-        Measured 2026-08-08: destroying and rebuilding the rows cost **297ms**
-        for 25 of them, against 1.4ms to work out what they should contain —
-        so essentially all of it was Tk creating ~175 widgets, on EVERY
-        KEYSTROKE in the search box. Typing was unusable.
-
-        Widgets are therefore made once and reconfigured. A pool row that is
-        surplus to the current search is `pack_forget()`-ed rather than
-        destroyed, so the next keystroke that needs it pays nothing.
-        """
-        while len(self._buff_pick_widgets) <= i:
-            self._buff_pick_widgets.append(_BuffPickRow(self))
-        return self._buff_pick_widgets[i]
-
-    # ---- buff trays ----------------------------------------------------
-    def _tray(self, i):
-        """One tray's config, clamped to a real index.
-
-        Total by design: every caller is either a loop over the fixed window
-        list or a tab whose selector cannot go out of range, and returning a
-        default for a bad index beats raising inside a draw pass."""
-        if 0 <= i < len(self._trays):
-            return self._trays[i]
-        return self._trays[0]
-
-    def _capture_tray_positions(self):
-        """Read each tray window's position back into its config.
-
-        Tray positions belong to the CHARACTER, not to the machine, so they
-        live in the tray record rather than in the shared position cache — a
-        healer alt can keep its trays somewhere a warrior's would be in the
-        way. Called before anything saves or switches character."""
-        for i in range(len(self.buffwins)):
-            self._capture_tray_position(i)
-
-    def _capture_tray_position(self, i):
-        """One tray's position, back into its config.
-
-        Stored as the ANCHOR, not the window's top-left: the corner moves as
-        icons come and go, and saving that would walk the tray across the
-        screen a little on every drag. Called per step while dragging as well
-        as on save — see _bind_drag's on_move.
-        """
-        try:
-            win = self.buffwins[i]
-            dx, dy = self._tray_offset(self._tray(i), win.winfo_width(),
-                                       win.winfo_height())
-            self._trays[i]["x"] = win.winfo_x() + dx
-            self._trays[i]["y"] = win.winfo_y() + dy
-        except (tk.TclError, IndexError):
-            pass
-
-    def _apply_tray_positions(self, pos=None):
-        """Move each tray window to where its config says it goes.
-
-        Falls back, in order: the tray's own saved x/y, then the shared
-        position cache (which is where 3.8.0 put them, so an upgrade keeps the
-        trays where the player left them), then the default stack."""
-        pos = pos or {}
-        for i, win in enumerate(self.buffwins):
-            t = self._tray(i)
-            xy = None
-            if isinstance(t.get("x"), int) and isinstance(t.get("y"), int):
-                xy = (t["x"], t["y"])
-            elif pos.get(f"buffs{i}"):
-                xy = pos[f"buffs{i}"]
-            if xy and self._pos_visible(*xy):
-                win.geometry(f"+{xy[0]}+{xy[1]}")
-            else:
-                self._default_buff_pos(i)
-
-    def set_character(self, name):
-        """Point the trays at `name`'s own set, saving whoever's they were.
-
-        Runs on the Tk thread (queued from the hook's `hero` message). A
-        character with no saved trays gets a blank set rather than inheriting
-        the last one — an alt should not come up cluttered with placeholders
-        for buffs its class cannot cast.
-        """
-        if not name or name == self._tray_char:
-            return
-        # Whatever is on screen belongs to whoever we were until now — which
-        # is nobody on the first identification, and in that case the set that
-        # was loaded from `buff_trays` is exactly what should seed this
-        # character IF they have nothing saved. See below.
-        self._capture_tray_positions()
-        previous = self._tray_char
-        if previous:
-            self._trays_by_char[previous] = self._trays
-        saved = self._trays_by_char.get(name)
-        if saved is None:
-            # The MIGRATION case, and only that: no character has ever been
-            # recorded, so the trays currently up were built under 3.8.0 when
-            # there was one shared set. Whoever is identified first inherits
-            # them, because blanking work someone already did is not an
-            # acceptable way to gain a feature.
-            #
-            # Deliberately NOT "any character we haven't seen before" — that
-            # was the first version of this line, and it would hand your main's
-            # trays to every alt on its first login, which is the opposite of
-            # what per-character trays are for.
-            if previous is None and not self._trays_by_char:
-                saved = self._trays
-            else:
-                saved = _blank_trays()
-        self._tray_char = name
-        self._trays = saved
-        self._trays_by_char[name] = saved
-        self._tray_edit = 0
-        self._apply_tray_positions()
-        self._save_settings()
-        self._sync_tray_controls()
-        self._render_tracked()
-        self._render_buff_pick()
-        self._refresh_menu()
-        self._refresh_visibility()
-        print(f"[meter] buff trays: now using {name}'s set "
-              f"({sum(len(t.get('keys') or ()) for t in saved)} buffs across "
-              f"{sum(1 for t in saved if t.get('on'))} tray(s))",
-              file=sys.stderr)
-
-    def _tray_revealing(self, i):
-        """True while tray `i` is announcing its position."""
-        until = self._tray_reveal.get(i)
-        if until is None:
-            return False
-        if time.monotonic() >= until:
-            self._tray_reveal.pop(i, None)
-            return False
-        return True
-
-    def _reveal_tray(self, i=None, all_trays=False):
-        """Make a tray say where it is.
-
-        Called when the Buffs tab is opened (every configured tray at once, so
-        the whole arrangement is visible in one glance) and when a tray is
-        selected (just that one). For the duration it ignores every hiding
-        rule — off, empty, Hide, out-of-combat, boss bar — because a tray you
-        can already see is not one you needed to find.
-        """
-        until = time.monotonic() + BUFF_REVEAL_SECS
-        for n in range(BUFF_TRAY_MAX):
-            if all_trays:
-                # Every tray that is set up at all. A tray with no buffs and
-                # switched off has no position worth pointing at yet.
-                if not self._tray(n).get("keys") and not self._tray(n).get("on"):
-                    continue
-            elif n != i:
-                continue
-            self._tray_reveal[n] = until
-        self._refresh_visibility()
-
-    def _buff_drag_gate(self, i):
-        """Whether tray `i` may be dragged right now.
-
-        Two gates, both of which must be open. The cursor rule is the
-        overlay-wide one — you can only move anything while the game has
-        released the mouse. The padlock is the tray's own, and it exists
-        because a tray you have positioned exactly is otherwise one stray
-        click away from moving while you are working in the menu right next
-        to it.
-
-        A named method rather than a lambda inside the builder so the rule can
-        be tested without a mouse.
-        """
-        def gate():
-            return self._mouse_available() and not self._tray(i).get("lock")
-        return gate
-
-    def _build_buff_trays(self):
-        self._buff_canvas = []
-        for i, win in enumerate(self.buffwins):
-            c = tk.Canvas(win, bg=TRANSPARENT_KEY, highlightthickness=0, bd=0,
-                          width=BUFF_ICON_DEFAULT, height=BUFF_ICON_DEFAULT)
-            c.pack()
-            self._buff_canvas.append(c)
-            # Draggable from anywhere on the tray, like every other overlay
-            # window — there is no titlebar to grab, and the icons ARE the
-            # window.
-            self._bind_drag(win, (c,), unlocked=self._buff_drag_gate(i),
-                            on_move=(lambda n=i: self._capture_tray_position(n)))
-
-    def _buff_rows(self, tray, live_by_key, now):
-        """What one tray should draw, in the order the player arranged it.
-
-        Order comes from the tray's key list and NOT from what is currently up:
-        a tray whose icons move around as buffs come and go cannot be read
-        without looking straight at it, which defeats the point. An untracked
-        buff that happens to be on you is not shown at all — the tray is a
-        watchlist, not a dump of your status bar.
-        """
-        rows = []
-        for key in tray.get("keys") or ():
-            up = self._live_for(key, live_by_key)
-            if up is None and tray.get("inactive") == BUFF_INACTIVE_HIDE:
-                continue
-            rows.append((key, up))
-        return rows
-
-    @staticmethod
-    def _tray_offset(tray, w, h):
-        """How far the window's top-left sits from the tray's anchor.
-
-        Only the axis the tray grows along moves; the other one is pinned
-        either way, so a row anchored right still keeps its top edge.
-        """
-        align = tray.get("align", BUFF_ALIGN_START)
-        span = w if tray.get("layout", "row") == "row" else h
-        if align == BUFF_ALIGN_CENTER:
-            off = span // 2
-        elif align == BUFF_ALIGN_END:
-            off = span
-        else:
-            off = 0
-        return (off, 0) if tray.get("layout", "row") == "row" else (0, off)
-
-    def _place_tray(self, i, tray, w, h):
-        """Move tray `i`'s window so its anchor stays put at this size."""
-        ax, ay = tray.get("x"), tray.get("y")
-        if not isinstance(ax, int) or not isinstance(ay, int):
-            return          # never positioned yet; the default stack has it
-        dx, dy = self._tray_offset(tray, w, h)
-        try:
-            self.buffwins[i].geometry(f"+{ax - dx}+{ay - dy}")
-        except tk.TclError:
-            pass
-
-    def _tray_has_live(self, tray):
-        """Is any of this tray's watchlist actually up right now?
-
-        Only asked of trays set to hide their inactive slots, to decide whether
-        the window has anything to be. Reads the same live set and the same
-        alias groups the draw pass does, so the window's existence and its
-        contents cannot disagree.
-        """
-        # Cached for a beat. This is asked once per hide-mode tray from
-        # _refresh_visibility, which runs on the 30Hz input pump — rebuilding
-        # the live set four times a tick to answer a yes/no question would cost
-        # more than the drawing does. A buff landing shows the tray a fraction
-        # of a second later than it could, which nobody can see.
-        now = time.monotonic()
-        if now - self._tray_live_at > TRAY_LIVE_CACHE_SECS:
-            self._tray_live_at = now
-            self._tray_live = {r["key"]: r for r in self.statuses.live()}
-        return any(self._live_for(k, self._tray_live) is not None
-                   for k in (tray.get("keys") or ()))
-
-    @staticmethod
-    def _live_for(key, live_by_key):
-        """Whichever member of `key`'s alias group is currently up, if any.
-
-        A tracked key can stand for several status ids that the cdb gives the
-        same name, icon and description — see status_groups(). One slot, and
-        whichever of them the game raised fills it."""
-        hit = live_by_key.get(key)
-        if hit is not None:
-            return hit
-        groups, _primary = status_groups()
-        for member in groups.get(key, ()):
-            hit = live_by_key.get(member)
-            if hit is not None:
-                return hit
-        return None
-
-    def _buff_label(self, key):
-        """What a tracked key is called, whether or not it is currently up.
-
-        The tray needs this for placeholders, where there is no live row to
-        take a name from. Item statuses carry their item in the key."""
-        if key.startswith("item:"):
-            item = key.split(":", 1)[1]
-            return _status_meta()["items"].get(item) or _pretty_id(item)
-        return status_name(key)
-
-    def _buff_flash_phase(self, key, up, now):
-        """0.0-1.0 brightness boost for the two flashes, or 0.0 for neither.
-
-        Two separate reasons a buff blinks, and they must not both run at once
-        or a short buff strobes from the moment it lands: the appear-flash owns
-        the first BUFF_FLASH_SECS, and the expiry warning only starts once that
-        is done.
-        """
-        if up is None:
-            self._buff_first_seen.pop(key, None)
-            return 0.0
-        first = self._buff_first_seen.get(key)
-        if first is None:
-            self._buff_first_seen[key] = first = now
-        tray_flash = now - first
-        if tray_flash < BUFF_FLASH_SECS:
-            # A decaying blink: strongest on arrival, gone by the end, so it
-            # reads as "this just landed" rather than as a fault light.
-            decay = 1.0 - (tray_flash / BUFF_FLASH_SECS)
-            return decay * (0.5 + 0.5 * math.sin(
-                tray_flash * BUFF_FLASH_HZ * 2 * math.pi))
-        left = up.get("left")
-        if left is not None and 0 < left <= BUFF_EXPIRY_WARN_SECS:
-            # Ramps UP as it runs out, so the pulse gets more insistent rather
-            # than merely continuing.
-            urgency = 1.0 - (left / BUFF_EXPIRY_WARN_SECS)
-            return urgency * (0.5 + 0.5 * math.sin(
-                now * BUFF_EXPIRY_WARN_HZ * 2 * math.pi))
-        return 0.0
-
-    def _draw_buff_trays(self):
-        """Redraw every visible tray.
-
-        Runs on the minimap's fast timer rather than the 250ms refresh for the
-        same reason the map does: the sweep is an animation, and at 4fps it
-        steps. Everything it needs is local — the deadline was latched when the
-        hook last spoke — so this costs no traffic at all.
-        """
-        live = {r["key"]: r for r in self.statuses.live()}
-        now = time.monotonic()
-        # A reveal ends on a CLOCK, not on anything the user does, so nothing
-        # else would ever notice it lapsing and put the window back. Compared
-        # before the draw loop rather than inside it: a lapsed tray takes the
-        # `continue` below and would never reach a check placed in there —
-        # which left revealed trays stuck on screen for good.
-        revealing = {i for i in range(BUFF_TRAY_MAX) if self._tray_revealing(i)}
-        if revealing != self._tray_revealed_last:
-            self._tray_revealed_last = revealing
-            self._refresh_visibility()
-        for i, tray in enumerate(self._trays):
-            shown_now = i in revealing
-            if not shown_now and (not tray.get("on") or not tray.get("keys")):
-                continue
-            # Same guard the minimap uses: a withdrawn window still has a
-            # canvas that will happily accept a full redraw nobody can see.
-            if not self._shown.get(f"{BUFF_TRAY_KEY}#{i}"):
-                continue
-            try:
-                self._draw_one_tray(i, tray, live, now, shown_now)
-            except tk.TclError:
-                return              # window went away mid-teardown
-
-    def _draw_one_tray(self, i, tray, live_by_key, now, revealing=False):
-        c = self._buff_canvas[i]
-        s = self._scales["meter"]
-        size = max(8, int(tray.get("size", BUFF_ICON_DEFAULT) * s))
-        gap = max(2, int(size * BUFF_GAP_RATIO))
-        if revealing:
-            # Show every tracked slot, whatever the Hide setting says: during
-            # a reveal the tray's SHAPE is the information, and half of it
-            # missing because those buffs happen to be down would misreport
-            # where it sits and how big it is.
-            rows = [(key, self._live_for(key, live_by_key))
-                    for key in (tray.get("keys") or ())]
-        else:
-            rows = self._buff_rows(tray, live_by_key, now)
-        n = len(rows)
-        if not n and not revealing:
-            # Nothing to draw, but the window is still mapped (the tray is on
-            # and has keys — they are simply all hidden right now). Collapse it
-            # to a pixel rather than leaving the last frame's icons up.
-            c.config(width=1, height=1)
-            c.delete("all")
-            return
-        across = tray.get("layout", "row") == "row"
-        if n:
-            w = (size * n + gap * (n - 1)) if across else size
-            h = size if across else (size * n + gap * (n - 1))
-        else:
-            # A tray with nothing tracked at all still has a position, and
-            # this is the one moment it needs to show it. One cell, so there
-            # is something to see and something to grab hold of.
-            w = h = max(size, int(BUFF_REVEAL_EMPTY_CELL * s))
-        c.config(width=w, height=h)
-        # Now that the size is known, put the window where the anchor says —
-        # growth runs away from the edge the player pinned, rather than always
-        # rightwards from a fixed left edge.
-        self._place_tray(i, tray, w, h)
-        c.delete("all")
-        for idx, (key, up) in enumerate(rows):
-            x = idx * (size + gap) if across else 0
-            y = 0 if across else idx * (size + gap)
-            self._draw_buff_icon(c, key, up, x, y, size, tray, now)
-        if revealing:
-            self._draw_tray_reveal(c, i, tray, w, h, now)
-
-    def _draw_tray_reveal(self, c, i, tray, w, h, now):
-        """The "I am over here" pulse: a breathing outline and the tray's
-        number, over whatever the tray is otherwise showing."""
-        # Breathing rather than blinking. A hard on/off at this size reads as a
-        # rendering fault; a swell reads as something pointing at itself.
-        phase = 0.5 + 0.5 * math.sin(now * BUFF_REVEAL_HZ * 2 * math.pi)
-        ink = _lerp_hex(ACCENT, "#ffffff", phase)
-        width = max(2, int(3 * self._scales["meter"]))
-        off = width / 2.0
-        c.create_rectangle(off, off, w - off, h - off,
-                           outline=ink, width=width)
-        # Which tray this is, so four of them announcing at once are telling
-        # you four different things rather than the same thing four times.
-        #
-        # On a solid badge, not straight onto the icons: the label sits over
-        # whatever artwork the tray happens to be showing, and drawn as bare
-        # text it landed on a bright icon and read as part of it.
-        label = str(i + 1)
-        if tray.get("lock"):
-            label += " \U0001F512"          # padlock: it is here, and pinned
-        fx, fy = w / 2.0, h / 2.0
-        # Sized to the tray, not fixed: on a single-icon tray the large font's
-        # badge covered the whole cell, so the thing being pointed at was
-        # hidden by the pointer.
-        font = (self.fonts["ui_lg_b"] if min(w, h) >= 60
-                else self.fonts["ui_sm_b"])
-        tw = font.measure(label)
-        th = font.metrics("linespace")
-        bw, bh = tw / 2.0 + 8, th / 2.0 + 3
-        c.create_rectangle(fx - bw, fy - bh, fx + bw, fy + bh,
-                           fill=BG_BORDER, outline=ink, width=2)
-        c.create_text(fx, fy, text=label, font=font, fill=FG_HEADER)
-
-    def _draw_buff_icon(self, c, key, up, x, y, size, tray, now):
-        """One buff: its icon, its cooldown sweep, its stacks and its timer."""
-        active = up is not None
-        meta = _status_meta()["status"].get(key) or {}
-        tint = meta.get("color") or ACCENT
-
-        # The cooldown fraction, decided here so the icon can be baked with it.
-        # The denominator is the buff's NOMINAL length, never the live
-        # `duration`: duration grows on every refresh (measured), so a Zealot
-        # refreshed five times would show a nearly-full clock at one second
-        # remaining. `full` carries refreshDuration for exactly this.
-        spent = None
-        if active and tray.get("sweep"):
-            left, full = up.get("left"), up.get("full")
-            if left is not None and full:
-                spent = 1.0 - max(0.0, min(1.0, left / full))
-
-        img = self.status_icons.get(key, size, dim=not active, spent=spent)
-
-        if img is not None:
-            # Kept alive on the canvas item AND in the icon cache; a
-            # PhotoImage with no live reference renders as a blank square.
-            c.create_image(x, y, image=img, anchor="nw")
-        else:
-            # No icon in the cdb for this one (60-odd of them). A tile in the
-            # status category's own colour, with enough of the name to tell
-            # two apart.
-            fill = tint if active else _lerp_hex(BG_BODY, tint, 0.35)
-            c.create_rectangle(x, y, x + size, y + size, fill=fill,
-                               outline=BG_BORDER)
-            label = self._buff_label(key)
-            c.create_text(x + size / 2, y + size / 2,
-                          text=(label[:3] or "?").upper(),
-                          font=self.fonts["ui_sm_b"],
-                          fill=_contrast_ink(fill), width=size)
-            # The sweep, for the tile fallback only. A solid wedge is exactly
-            # right here — the tile is one flat colour, so "darker over there"
-            # loses nothing — where over real artwork it would be a black slab,
-            # which is what the composited version above exists to avoid.
-            if spent and spent > 0.002:
-                c.create_arc(x, y, x + size, y + size,
-                             start=90, extent=-spent * 360.0,
-                             fill=_lerp_hex(fill, BUFF_SHADE, 0.55),
-                             outline="")
-
-        # The two flashes, as a bright inset ring. A ring rather than a wash:
-        # it reads at the edge of vision without hiding the art underneath,
-        # which is the whole job.
-        if active and (tray.get("flash") or tray.get("warn")):
-            phase = self._buff_flash_phase(key, up, now)
-            # Honour the two switches separately — `phase` does not say which
-            # flash it is, so ask the same question it did.
-            first = self._buff_first_seen.get(key)
-            appearing = first is not None and (now - first) < BUFF_FLASH_SECS
-            allowed = tray.get("flash") if appearing else tray.get("warn")
-            if allowed and phase > 0.02:
-                # The two flashes say opposite things and must not look alike.
-                # Arriving borrows the status category's own colour, so a buff
-                # landing reads as more of itself; running out goes to the
-                # warning colour, because "about to lose this" is not a fact
-                # about which category the buff is in.
-                base = tint if appearing else BUFF_WARN_INK
-                ring = _lerp_hex(base, "#ffffff", min(1.0, phase))
-                width = max(2, int(size * 0.09))
-                off = width / 2.0
-                c.create_rectangle(x + off, y + off,
-                                   x + size - off, y + size - off,
-                                   outline=ring, width=width)
-        elif not active:
-            self._buff_first_seen.pop(key, None)
-
-        # Stacks. Only ever the raw count — the cdb's maxStacks is a base that
-        # gear raises (measured: a buff capped at 3 in the data ran at 5), so
-        # "5/3" is a lie this deliberately cannot tell.
-        if active and tray.get("stacks") and (up.get("stacks") or 1) > 1:
-            self._buff_overlay_text(
-                c, str(up["stacks"]), x, y, size,
-                tray.get("stacks_pos", "Bottom right"),
-                tray.get("stacks_size", 100))
-
-        # The countdown.
-        if active and tray.get("timer"):
-            left = up.get("left")
-            if left is not None:
-                txt = (f"{left:.1f}" if left < BUFF_TIMER_PRECISE_UNDER
-                       else _short_secs(left))
-                self._buff_overlay_text(
-                    c, txt, x, y, size,
-                    tray.get("timer_pos", "Top left"),
-                    tray.get("timer_size", 100))
-
-    def _buff_text_font(self, size, scale_pct):
-        """A bold font sized to the icon, cached by pixel height.
-
-        Sized in PIXELS (a negative Tk size) rather than points, because it has
-        to land in a known fraction of an icon whose edge is itself a slider —
-        points would drift against the icon with the display's DPI.
-        """
-        px = max(7, int(round(size * BUFF_TEXT_BASE_RATIO
-                              * (scale_pct / 100.0))))
-        # Keyed by face as well as size: a theme may swap the UI face, and a
-        # cache keyed on size alone would keep handing back the old one.
-        face = getattr(self, "_theme_font", UI_FONT_DEFAULT)
-        font = self._buff_fonts.get((face, px))
-        if font is None:
-            font = tkfont.Font(root=self.root, family=face,
-                               size=-px, weight="bold")
-            self._buff_fonts[(face, px)] = font
-        return font
-
-    def _buff_overlay_text(self, c, text, x, y, size, pos, scale_pct):
-        """A number on top of an icon, where the tray asked for it.
-
-        Drawn with a hard shadow under it, which is not decoration: these sit
-        on artwork whose brightness is whatever the game's icon happens to be,
-        and a plain light glyph disappears entirely on the pale ones.
-
-        Always white — never FG_VALUE. These sit on the game's own art rather
-        than on one of our panels, so the theme's "text on our background"
-        colour is the wrong question; on the parchment themes it is near-black
-        and vanished into every dark icon.
-        """
-        anchor, xf, yf = BUFF_TEXT_POSITIONS.get(
-            pos, BUFF_TEXT_POSITIONS["Top left"])
-        inset = max(1.0, size * BUFF_TEXT_INSET)
-        tx, ty = x + size * xf, y + size * yf
-        # Inward from whichever edges the anchor actually touches, so a corner
-        # label clears the rounded edge while a centred one stays centred.
-        if "w" in anchor and anchor != "center":
-            tx += inset
-        if "e" in anchor and anchor != "center":
-            tx -= inset
-        if "n" in anchor:
-            ty += inset
-        if "s" in anchor:
-            ty -= inset
-        font = self._buff_text_font(size, scale_pct)
-        for dx, dy, col in ((1, 1, BG_BORDER), (0, 0, FG_HEADER)):
-            c.create_text(tx + dx, ty + dy, text=text, font=font,
-                          fill=col, anchor=anchor)
 
     def _toggle_parse(self):
         if self._parse_state is None:
@@ -12308,14 +6119,14 @@ class Overlay:
     def _round_win_corners(self, win):
         """Round one window, on the wrapper hwnd click-through also targets.
         DWM keeps the shape as the window resizes, so this only needs redoing
-        when the hwnd itself is replaced — see _on_map_round."""
+        when the hwnd itself is replaced — see _on_win_map."""
         if sys.platform != "win32":
             return
         hwnd = win.winfo_id()
         parent = ctypes.windll.user32.GetParent(hwnd)
         _set_rounded_corners(parent or hwnd)
 
-    def _on_map_round(self, event):
+    def _on_win_map(self, event):
         # <Map> fires for the initial show, for every deiconify, and after Tk
         # swaps a toplevel's wrapper — i.e. exactly when the rounding needs
         # reasserting. Child widgets bubble their own <Map> here, so only act
@@ -12327,46 +6138,20 @@ class Overlay:
         # much smaller panel, so DWM's rounding has nothing to round — it just
         # leaves a faint border floating out where the ripple ends. The panel
         # draws its own edges.
-        # Not the compass either, for the same reason and one more: it is
-        # transparent all the way to its edges, and rounding a window is also
-        # what asks DWM for the drop shadow that goes with it. Its badge
-        # underlay is the same shape of window, so it sits this out too.
-        if win in (self.riftwin, self.compasswin, self.badgewin):
+        if win is self.riftwin:
             return
         self._round_win_corners(win)
 
+
     def _apply_clickthrough(self):
         locked = self._is_locked()
-        # The minimap belongs in here: left out, it stays a solid, clickable,
-        # always-on-top window over the game, so Windows draws a cursor over it
-        # even while the game has the pointer captured, and a click that lands
-        # on it goes to Tk instead of the game.
         for win in (self.detail, self.riftwin):
             self._set_win_clickthrough(win, locked)
-        # These two answer to the cursor rather than to the escape menu, so they
-        # can be pointed at whenever the game has released the mouse: the meter
-        # to click a player's row, the minimap to hover a marker.
+        # The meter answers to the cursor rather than to the escape menu, so it
+        # can be pointed at whenever the game has released the mouse, to click
+        # a player's row.
         pointable = not self._mouse_available()
         self._set_win_clickthrough(self.root, pointable)
-        self._set_win_clickthrough(self.mapwin, pointable)
-        # The compass joins them now that it has no background. Its transparent
-        # pixels already pass clicks through on their own, but the markers and
-        # numbers are real pixels sitting over the middle of the screen, and a
-        # click landing on one of those was a click the game never saw.
-        self._set_win_clickthrough(self.compasswin, pointable)
-        # The badge underlay carries the boxes' pixels, and a box is part of
-        # the compass as far as the cursor cares — same signal, same answer.
-        self._set_win_clickthrough(self.badgewin, pointable)
-        # Buff trays sit over the middle of the screen and are solid pixels
-        # where the icons are. Same rule as the compass: pointable only while
-        # the game has released the mouse, so they can be dragged into place
-        # from the escape menu and are invisible to the cursor in play.
-        for win in self.buffwins:
-            self._set_win_clickthrough(win, pointable)
-        # The hover box comes and goes with the same signal: it is only ever
-        # useful when there's a cursor, and this is the one place both halves of
-        # that answer (the escape menu and the freed mouse) are already known.
-        self._sync_map_tip()
         # The control menu is always interactive (it is only ever shown while
         # the cursor is free); the floating hint and parse banner are text over
         # the game and must never take a click.
@@ -12382,8 +6167,6 @@ class Overlay:
         self._set_win_clickthrough(self.hintwin, True)
         self._set_win_clickthrough(self.parsewin, True)
         self._set_win_clickthrough(self.killwin, True)
-        self._set_win_clickthrough(self.codexwin, True)
-        self._set_win_clickthrough(self.sparklywin, True)
         # The prompt must take clicks whenever it's up, regardless of lock
         # state — it's the one overlay window that has to be answered.
         self._set_win_clickthrough(self.promptwin, False)
@@ -12391,30 +6174,6 @@ class Overlay:
         # only ever appears the moment the fight (and the danger) is over.
         self._set_win_clickthrough(self.reportwin, False)
 
-    def _sync_map_tip(self):
-        """Show the hover box only while the mouse is free.
-
-        It can't tell you anything without a pointer, and the map spends most of
-        its life being glanced at rather than pointed at — so for most of that
-        life it was two lines of grey text under the map saying how to get a
-        cursor. The panel shrinks to just the map when it goes, which is the
-        decluttering; the map itself doesn't move, since the window is anchored
-        by its top-left corner.
-
-        It's also the drag handle, and that costs nothing: dragging was already
-        gated on the same condition, so the handle is present exactly when it
-        would have worked anyway."""
-        want = self._mouse_available()
-        if want == self._map_tip_shown:
-            return
-        self._map_tip_shown = want
-        try:
-            if want:
-                self.map_tipbox.pack(fill="x", pady=(3, 0))
-            else:
-                self.map_tipbox.pack_forget()
-        except tk.TclError:
-            pass
 
     def _sync_game_ui(self):
         """Follow the game's UI: while a cursor-freeing window (escape menu) is
@@ -12428,11 +6187,8 @@ class Overlay:
         # to ride the 250 ms loop, which was invisible while the menu also
         # appeared on that loop — now that it opens promptly, a stale label
         # would be on screen for a moment and then change under the eye.
-        # For the Social pages this is also one of only three load moments —
-        # they don't poll; see _reload_social.
         if want:
             self._refresh_menu()
-            self._reload_social()
         self._refresh_visibility()   # owns every window's target, menu included
         if want and not self._prompt_open:
             self._place_hint()       # after the map: it measures the window
@@ -12462,110 +6218,11 @@ class Overlay:
                 self._action_q.append(fn)
         return handler
 
-    def _apply_update_notice(self):
-        """Turn the control menu's top line into an update notice, once.
 
-        Polled from the refresh tick rather than pushed by the checker, because
-        the check runs on its own thread and Tk is not thread-safe. It replaces
-        the shutdown hint — that line has done its job by the time someone has
-        the menu open, and a new version is the more useful thing to say."""
-        if self._update_shown or not UPDATE["latest"]:
-            return
-        self._update_shown = True
-        # With an installer asset the notice does the whole job in place; a
-        # tags-only release (or a from-source run, which has no installed
-        # copy to replace) keeps the old open-the-browser behaviour.
-        tail = ("Click here to update now." if self._can_self_update()
-                else "Click here to download it.")
-        self.warn_lbl.config(
-            text=f"Farever+ {UPDATE['latest']} is available — you're running "
-                 f"{VERSION}.  {tail}",
-            fg=FG_WARN, cursor="hand2")
-        self.warn_lbl.bind("<Button-1>", lambda _e: self._on_update_click())
-        # The header button stops being a question at the same moment, however
-        # the version was found — the automatic check never touched it before,
-        # so it sat reading "Check updates" beside a notice line announcing the
-        # answer. Skipped while a flash or a check owns the label.
-        if self._upd_btn_after is None and not self._upd_checking:
-            self.m_update.config(text=self._update_btn_label())
 
-    def _check_updates_clicked(self):
-        """The header's manual check. The result lands on the button itself,
-        because "up to date" has nowhere else to appear — the notice line
-        only exists for the other answer, and still takes over the moment a
-        newer version is found, exactly as if the automatic check had won."""
-        if self._upd_checking:
-            return
-        if os.environ.get("FAREVER_NO_UPDATE_CHECK"):
-            # The env var means "never phone home"; a click doesn't outrank
-            # it, but silence would read as a broken button.
-            self._flash_update_btn("Checks disabled")
-            return
-        if UPDATE["latest"]:
-            # Already found, so there is nothing left to ask GitHub — and the
-            # button has stopped being a question. It now reads "Update to
-            # X.Y.Z", so a click on it is the answer to that, not a request to
-            # re-run a check whose result is already on the button.
-            self._on_update_click()
-            return
-        self._upd_checking = True
-        self._flash_update_btn("Checking ...", reset=False)
 
-        def work():
-            found = _latest_version()
 
-            def finish():
-                # On the Tk thread via the action queue, so UPDATE and the
-                # button are only ever touched where the tick reads them.
-                self._upd_checking = False
-                if _record_newer(found):
-                    self._flash_update_btn(f"{UPDATE['latest']} available")
-                elif found:
-                    print(f"[update] up to date (running {VERSION}).",
-                          file=sys.stderr)
-                    self._flash_update_btn("Up to date")
-                else:
-                    self._flash_update_btn("Check failed")
 
-            self._enqueue(finish)()
-
-        threading.Thread(target=work, daemon=True,
-                         name="update-check-manual").start()
-
-    def _flash_update_btn(self, msg, reset=True):
-        """Show `msg` on the check button, returning to the resting label
-        after a few seconds so the button stays a button."""
-        self.m_update.config(text=msg)
-        if self._upd_btn_after is not None:
-            self.menu.after_cancel(self._upd_btn_after)
-            self._upd_btn_after = None
-        if reset:
-            self._upd_btn_after = self.menu.after(
-                UPDATE_BTN_FLASH_MS, self._reset_update_btn)
-
-    def _reset_update_btn(self):
-        """Back to the resting label — which is not always "Check updates".
-
-        Once a version has been found the button stops being a question and
-        becomes the action, so it says so. Leaving it reading "Check updates"
-        meant the one control that already knew the answer still looked like
-        the way to ask, and clicking it did nothing but repeat itself."""
-        self._upd_btn_after = None
-        if self._upd_checking:
-            return
-        self.m_update.config(text=self._update_btn_label())
-
-    def _update_btn_label(self):
-        if not UPDATE["latest"]:
-            return "Check updates"
-        # "Get" rather than "Update to" when we can't install it ourselves —
-        # the click opens the download page, and the label should not promise
-        # an update that is going to be a browser tab.
-        verb = "Update to" if self._can_self_update() else "Get"
-        return f"{verb} {UPDATE['latest']}"
-
-    def _can_self_update(self):
-        return IS_FROZEN and bool(UPDATE["asset"])
 
     def _open_url(self, url):
         """Open a link in the player's browser.
@@ -12602,265 +6259,13 @@ class Overlay:
     def _open_repo(self):
         self._open_url(REPO_URL)
 
-    def _open_update(self):
-        self._open_url(UPDATE["url"])
 
-    def _on_update_click(self):
-        if self._updating or self._upd_resolving:
-            return
-        # A version found from the TAG list carries no installer, and that says
-        # nothing about whether one exists: /releases/latest 404s while a
-        # release is being published, and fails outright on GitHub's
-        # unauthenticated rate limit (~60/hour, and loading screens spend it).
-        # Both land on the tag fallback. Sending an installed build to a
-        # browser on that evidence is the wrong answer to "update me", so ask
-        # once more before believing it.
-        if IS_FROZEN and UPDATE["latest"] and not UPDATE["asset"]:
-            self._resolve_asset_then_update()
-            return
-        if not self._can_self_update():
-            self._open_update()
-            return
-        # One click, deliberately — unlike Quit, which still wants two.
-        # Both end the meter, but they are not the same risk: Quit taken by
-        # accident costs you the parse you were in the middle of, while this
-        # comes back as the same meter a few seconds later. `_updating` is
-        # what stops a double-click starting two downloads.
-        self._start_self_update()
 
-    def _resolve_asset_then_update(self):
-        """Look the release up BY TAG, then update — or fall back honestly.
 
-        Off the Tk thread: a click must not stall the overlay for the length of
-        a network timeout. The button says what it is doing, because the gap
-        between the click and the download starting is otherwise a click that
-        appeared to do nothing.
-        """
-        self._upd_resolving = True
-        self._flash_update_btn("Checking ...", reset=False)
-        tag = UPDATE["latest"]
 
-        def work():
-            asset_url, size = None, 0
-            try:
-                rel = _fetch_json(UPDATE_API_RELEASE_TAG + str(tag))
-                asset_url, size = _release_installer_asset(rel)
-            except Exception as e:
-                print(f"[update] no installer resolved for {tag}: {e}",
-                      file=sys.stderr)
 
-            def finish():
-                self._upd_resolving = False
-                if asset_url:
-                    UPDATE["asset"], UPDATE["asset_size"] = asset_url, size
-                    print(f"[update] installer found for {tag} on retry.",
-                          file=sys.stderr)
-                    self._start_self_update()
-                    return
-                # Genuinely nothing to install — this release has no Setup.exe
-                # attached, or GitHub is still unreachable. The browser is the
-                # only remaining answer.
-                self._reset_update_btn()
-                self._open_update()
 
-            self._enqueue(finish)()
 
-        threading.Thread(target=work, daemon=True,
-                         name="update-asset-retry").start()
-
-    def _start_self_update(self):
-        """Download the new installer behind a small progress window, then ask
-        whether to run it.
-
-        The meter's own part deliberately ends at "downloaded and opened": a
-        running exe can't be overwritten, so the install itself happens after
-        this process is gone. Nothing waits around for that on our behalf —
-        the installer is opened normally, we close, and Inno does the rest
-        (including offering to start the meter again). See open_installer."""
-        print(f"[update] self-update to {UPDATE['latest']} started.",
-              file=sys.stderr)
-        self._updating = True
-        self._refresh_visibility()          # the whole overlay steps aside
-        self._build_update_window()
-        dest = UPDATE_DIR / f"FareverMeter-{UPDATE['latest']}-Setup.exe"
-        self._dl = dl = {"done": 0, "total": int(UPDATE["asset_size"] or 0),
-                         "err": None, "path": dest, "complete": False}
-        url = UPDATE["asset"]
-
-        def work():
-            import urllib.request
-            tmp = dest.with_suffix(".part")
-            try:
-                UPDATE_DIR.mkdir(parents=True, exist_ok=True)
-                req = urllib.request.Request(url, headers={
-                    "User-Agent": f"FareverMeter/{VERSION}"})
-                with urllib.request.urlopen(req, timeout=30.0) as r:
-                    total = int(r.headers.get("Content-Length") or 0)
-                    if total:
-                        dl["total"] = total
-                    with open(tmp, "wb") as f:
-                        while True:
-                            chunk = r.read(256 * 1024)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                            dl["done"] += len(chunk)
-                # A short download would hand the helper a broken installer;
-                # better to find out here, where the browser fallback exists.
-                expect = int(UPDATE["asset_size"] or 0)
-                if expect and dl["done"] != expect:
-                    raise OSError(f"download truncated ({dl['done']} of "
-                                  f"{expect} bytes)")
-                os.replace(tmp, dest)
-                dl["complete"] = True
-            except Exception as e:
-                dl["err"] = str(e)
-                try:
-                    tmp.unlink()
-                except OSError:
-                    pass
-
-        threading.Thread(target=work, daemon=True,
-                         name="update-download").start()
-        self._update_dl_tick()
-
-    def _build_update_window(self):
-        """A small centred panel of its own — every overlay window is hidden
-        while the update runs, so this one belongs to none of their rules."""
-        win = tk.Toplevel(self.root)
-        win.overrideredirect(True)
-        win.attributes("-topmost", True)
-        outer = tk.Frame(win, bg=BG_BORDER, padx=2, pady=2)
-        outer.pack(fill="both", expand=True)
-        body = tk.Frame(outer, bg=BG_BODY, padx=18, pady=14)
-        body.pack(fill="both", expand=True)
-        tk.Label(body, text=f"Updating Farever+ to {UPDATE['latest']}",
-                 bg=BG_BODY, fg=FG_VALUE,
-                 font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        self._upd_lbl = tk.Label(body, text="Starting download ...",
-                                 bg=BG_BODY, fg=FG_TEXT, justify="left",
-                                 font=("Segoe UI", 9))
-        self._upd_lbl.pack(anchor="w", pady=(6, 8))
-        self._upd_bar = tk.Canvas(body, width=320, height=10,
-                                  bg=BG_BAR_TRACK, highlightthickness=0)
-        self._upd_bar.pack(fill="x")
-        self._upd_fill = self._upd_bar.create_rectangle(
-            0, 0, 0, 12, fill=BG_HEADER, width=0)
-        # Kept so the download can turn this panel into the "ready to install?"
-        # question without building a second window on top of it.
-        self._upd_body = body
-        self._upd_btns = None
-        win.update_idletasks()
-        win.geometry(f"+{(win.winfo_screenwidth() - win.winfo_width()) // 2}"
-                     f"+{(win.winfo_screenheight() - win.winfo_height()) // 3}")
-        self._updwin = win
-
-    def _update_dl_tick(self):
-        dl = self._dl
-        if dl is None or self._updwin is None:
-            return
-        if dl["err"] is not None:
-            self._update_failed(dl["err"])
-            return
-        if dl["complete"]:
-            self._offer_installer(dl["path"])
-            return
-        done, total = dl["done"], dl["total"]
-        if total:
-            w = int(self._upd_bar.winfo_width() * min(1.0, done / total))
-            self._upd_bar.coords(self._upd_fill, 0, 0, w, 12)
-            self._upd_lbl.config(text=f"Downloading ... {done / 1048576:.1f} "
-                                      f"of {total / 1048576:.1f} MB")
-        else:
-            self._upd_lbl.config(text=f"Downloading ... "
-                                      f"{done / 1048576:.1f} MB")
-        self.root.after(100, self._update_dl_tick)
-
-    def _offer_installer(self, installer):
-        """The download is done — ask before running it.
-
-        The old flow went straight from "downloaded" to a silent install with
-        nothing shown and nothing to agree to. Downloading is reversible;
-        executing an installer that replaces the program you are running is
-        not, so that is where the question belongs. Saying no keeps the file.
-        """
-        if self._upd_btns is not None:
-            return                      # already asked
-        self._upd_lbl.config(
-            text=f"Farever+ {UPDATE['latest']} is downloaded.\n"
-                 "The installer will open and the meter will close, so it can "
-                 "let go of Farever cleanly first.")
-        self._upd_bar.pack_forget()
-        row = self._upd_btns = tk.Frame(self._upd_body, bg=BG_BODY)
-        row.pack(fill="x", pady=(10, 0))
-
-        def go():
-            # Breadcrumb for the build that replaces this one: it has no other
-            # way to know it arrived via the update button rather than a normal
-            # launch, and only the former earns a "what's new" window. Written
-            # before the handoff, because after it this process is on its way
-            # out — but only once the user has actually said yes, or it would
-            # greet the wrong version after a decline.
-            try:
-                UPDATED_MARKER.write_text(
-                    json.dumps({"version": UPDATE["latest"],
-                                "from": VERSION}), encoding="utf-8")
-            except OSError as e:
-                print(f"[update] couldn't leave the what's-new marker: {e}",
-                      file=sys.stderr)
-            try:
-                open_installer(installer)
-            except Exception as e:
-                self._update_failed(f"couldn't open the installer: {e}")
-                return
-            # Quit AFTER launching: a process on its way out cannot reliably
-            # start another one. The installer sits on its first wizard page
-            # while we shut down, and if the user is quicker than we are, the
-            # installer's own check asks them to stop the meter.
-            print("[update] installer opened — closing the meter so it can "
-                  "install.", file=sys.stderr)
-            self._quit()
-
-        def later():
-            print(f"[update] install declined; installer kept at {installer}",
-                  file=sys.stderr)
-            if self._updwin is not None:
-                self._updwin.destroy()
-                self._updwin = None
-            self._dl = None
-            self._updating = False
-            self._refresh_visibility()
-            self.warn_lbl.config(
-                text=f"Farever+ {UPDATE['latest']} is downloaded and waiting "
-                     f"at {installer} — run it whenever you like.",
-                fg=FG_WARN)
-
-        tk.Button(row, text="Open the installer", command=go,
-                  bg=BTN_ON_BG, fg=FG_HEADER, activebackground=BTN_ON_BG_ACTIVE,
-                  activeforeground=FG_HEADER, relief="flat", bd=0,
-                  padx=14, pady=6, cursor="hand2",
-                  font=("Segoe UI", 9, "bold")).pack(side="left")
-        tk.Button(row, text="Not now", command=later,
-                  bg=BG_BODY_SOFT, fg=FG_TEXT, activebackground=BG_BAR_TRACK,
-                  activeforeground=FG_VALUE, relief="flat", bd=0,
-                  padx=14, pady=6, cursor="hand2",
-                  font=("Segoe UI", 9)).pack(side="left", padx=(8, 0))
-
-    def _update_failed(self, why):
-        """Put the overlay back and point the notice at the manual path. The
-        browser is NOT opened here — the common failure is being offline,
-        where a browser tab helps nobody."""
-        print(f"[update] self-update failed: {why}", file=sys.stderr)
-        if self._updwin is not None:
-            self._updwin.destroy()
-            self._updwin = None
-        self._dl = None
-        self._updating = False
-        self._refresh_visibility()
-        self.warn_lbl.config(
-            text=f"The automatic update didn't work ({why}) — click here to "
-                 "get it from the releases page instead.")
-        self.warn_lbl.bind("<Button-1>", lambda _e: self._open_update())
 
     def on_game_exit(self, reason=""):
         """The game process went away. Safe from any thread — the frida
@@ -12892,10 +6297,6 @@ class Overlay:
 
     def _show_game_exit_prompt(self, reason=""):
         if self._game_exit_win is not None:
-            return
-        if self._updating:
-            # Mid self-update the meter is about to exit and restart anyway;
-            # a second dialog about the game would only compete with it.
             return
         win = tk.Toplevel(self.root)
         win.title("Farever+ Meter")
@@ -12941,100 +6342,7 @@ class Overlay:
                      f"+{(win.winfo_screenheight() - win.winfo_height()) // 3}")
         self._game_exit_win = win
 
-    def check_whats_new(self):
-        """If this build arrived through the update button, show its notes once.
 
-        The marker is consumed no matter what happens next: one that outlived
-        its update would greet every launch from here on, and a window nobody
-        asked for is worse than no window."""
-        try:
-            marker = json.loads(UPDATED_MARKER.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            return                      # a normal launch, which is most of them
-        except Exception as e:
-            print(f"[update] unreadable what's-new marker ({e}); ignoring.",
-                  file=sys.stderr)
-            marker = {}
-        try:
-            UPDATED_MARKER.unlink()
-        except OSError:
-            pass
-        if marker.get("version") != VERSION:
-            # The update didn't land, or something else replaced the build.
-            # Either way these notes would describe the wrong version.
-            return
-        print(f"[update] updated from {marker.get('from')} to {VERSION} — "
-              "fetching the release notes.", file=sys.stderr)
-
-        def work():
-            body = _fetch_release_notes(VERSION)
-            if body:
-                self._enqueue(lambda: self._show_whats_new(body))()
-            else:
-                print("[update] no release notes to show.", file=sys.stderr)
-
-        threading.Thread(target=work, daemon=True, name="whats-new").start()
-
-    def _show_whats_new(self, body):
-        """A dismissable panel of its own, like the game-exit prompt — it has
-        to be readable with the game in any state, so it follows none of the
-        overlay's visibility rules."""
-        if self._whats_new_win is not None:
-            return
-        win = tk.Toplevel(self.root)
-        win.overrideredirect(True)
-        win.attributes("-topmost", True)
-        outer = tk.Frame(win, bg=BG_BORDER, padx=2, pady=2)
-        outer.pack(fill="both", expand=True)
-
-        header = tk.Frame(outer, bg=BG_HEADER_UNLOCKED)
-        header.pack(fill="x")
-        title = tk.Label(header, text=f"Farever+ is now {VERSION}",
-                         bg=BG_HEADER_UNLOCKED, fg=FG_HEADER,
-                         font=self.fonts_m["ui_b"], anchor="w", padx=10, pady=5)
-        title.pack(side="left")
-        self._bind_drag(win, (header, title))
-
-        body_fr = tk.Frame(outer, bg=BG_BODY, padx=14, pady=12)
-        body_fr.pack(fill="both", expand=True)
-
-        text_fr = tk.Frame(body_fr, bg=BG_BODY)
-        text_fr.pack(fill="both", expand=True)
-        scroll = tk.Scrollbar(text_fr, orient="vertical")
-        scroll.pack(side="right", fill="y")
-        txt = tk.Text(text_fr, wrap="word", width=64, height=22,
-                      bg=BG_BODY, fg=FG_TEXT, relief="flat", bd=0,
-                      padx=4, pady=2, font=("Segoe UI", 9),
-                      yscrollcommand=scroll.set, cursor="arrow")
-        txt.pack(side="left", fill="both", expand=True)
-        scroll.config(command=txt.yview)
-        txt.insert("1.0", _markdown_to_text(body))
-        # Read-only, but still selectable and scrollable — `state="disabled"`
-        # is the usual trick and it kills the mouse wheel too.
-        txt.bind("<Key>", lambda _e: "break")
-
-        row = tk.Frame(body_fr, bg=BG_BODY)
-        row.pack(fill="x", pady=(10, 0))
-
-        def close():
-            self._whats_new_win = None
-            try:
-                win.destroy()
-            except tk.TclError:
-                pass
-
-        tk.Button(row, text="Got it", command=close,
-                  bg=BG_HEADER_UNLOCKED, fg=FG_HEADER,
-                  activebackground=BG_HEADER_UNLOCKED,
-                  activeforeground=FG_HEADER, relief="flat", bd=0,
-                  padx=14, pady=6, cursor="hand2",
-                  font=("Segoe UI", 9, "bold")).pack(side="right")
-        win.protocol("WM_DELETE_WINDOW", close)
-        win.bind("<Escape>", lambda _e: close())
-        win.update_idletasks()
-        win.geometry(f"+{(win.winfo_screenwidth() - win.winfo_width()) // 2}"
-                     f"+{(win.winfo_screenheight() - win.winfo_height()) // 4}")
-        self._whats_new_win = win
 
     def request_quit(self):
         """Stop the meter, safely callable from any thread — the tray icon runs
@@ -13059,8 +6367,8 @@ class Overlay:
         # Its process is ended later, in the caller's cleanup; hiding is
         # instant and that is what the user actually sees.
         self.menubridge.hide()
-        extra = ("parsewin", "killwin", "codexwin", "sparklywin", "badgewin",
-                 "promptwin", "updatewin", "reportwin", "riftwin")
+        extra = ("parsewin", "killwin", "badgewin",
+                 "promptwin", "reportwin", "riftwin")
         wins = list(self._fade_win.values())
         wins += [w for w in (getattr(self, n, None) for n in extra) if w]
         for win in wins:
@@ -13143,9 +6451,6 @@ class Overlay:
             self.sort_btn.pack_forget()
         self._save_settings()
 
-    def _on_scale_pick(self, group):
-        self._enqueue(lambda: self._set_group_scale(
-            group, self._scale_vars[group].get() / 100))()
 
     def _set_group_scale(self, group, factor):
         """Resize one window group's fonts, which resizes the windows that pack
@@ -13153,20 +6458,6 @@ class Overlay:
         so they're re-drawn rather than left at the old size."""
         if abs(factor - self._scales.get(group, 1.0)) < 0.001:
             return
-        # The compass is anchored by its CENTRE, so growing it opens out to
-        # both sides instead of only to the right. It is a strip you line up
-        # with the middle of the screen (and with the game's own compass), and
-        # a left-anchored one had to be dragged back into place after every
-        # nudge of the slider. Captured before the fonts change, restored once
-        # the relayout has settled — see the tail of this method.
-        centre = None
-        if group == "compass":
-            try:
-                centre = (self.compasswin.winfo_x()
-                          + max(self.compasswin.winfo_width(),
-                                self.compasswin.winfo_reqwidth()) // 2)
-            except tk.TclError:
-                centre = None
         self._scales[group] = factor
         for key, (_family, size, *_style) in FONT_SPECS.items():
             self._font_sets[group][key].configure(
@@ -13190,132 +6481,10 @@ class Overlay:
                                    # fonts, so it scales with the meter.
                                    (self.promptwin, "prompt", "meter")):
             win.minsize(int(MIN_W[key] * self._scales[group_of]), 0)
-        self.warn_lbl.config(
-            wraplength=int(WARN_WRAP * self._scales["menu"]))
-        # The tab strip and the Social viewport are fixed pixel sizes with
-        # propagation off, so nothing else would ever resize them — at 150% the
-        # navbar would keep clipping its own labels.
-        self.menu_nav.config(width=int(MENU_NAV_W * self._scales["menu"]))
-        for c in (self.social_canvas, self.session_canvas):
-            c.config(height=int(SOCIAL_LIST_H * self._scales["menu"]))
-        for c in (self.history_canvas, self.history_detail_canvas):
-            c.config(height=int(HISTORY_LIST_H * self._scales["menu"]))
-        self.social_note.config(
-            wraplength=int(WARN_WRAP * self._scales["menu"]))
         self.root.update_idletasks()
-        # ...and put the compass back around the centre it had. After
-        # update_idletasks, so the new width is the real one rather than the
-        # size it was before the fonts changed.
-        if centre is not None:
-            try:
-                w = max(self.compasswin.winfo_width(),
-                        self.compasswin.winfo_reqwidth())
-                self.compasswin.geometry(
-                    f"+{centre - w // 2}+{self.compasswin.winfo_y()}")
-                # The badge underlay is glued to the compass, so it has to be
-                # re-glued or it stays behind at the old position.
-                self._sync_badgewin()
-            except tk.TclError:
-                pass
         print(f"[meter] {group} scale {factor:.2f}x", file=sys.stderr)
 
-    def _on_theme_pick(self, value):
-        # Queued like every other menu action: it mutates state the refresh
-        # loop reads, and Tk isn't thread-safe.
-        self._enqueue(lambda: self._set_theme_mode(value))()
 
-    def _on_map_mode_pick(self, value):
-        # Queued for the same reason as the theme pick: the draw pass reads it.
-        self._enqueue(lambda: self._set_map_mode(value))()
-
-    def _set_map_mode(self, value):
-        self._map_mode = value
-        self._save_settings()
-
-    def _on_map_rate_pick(self, value):
-        self._enqueue(lambda: self._set_map_rate(value))()
-
-    def _set_map_rate(self, value):
-        """Change how often the hook sweeps the world.
-
-        The redraw timer picks the new rate up on its next tick by reading
-        _map_rate, so only the agent side needs telling."""
-        if value not in MINIMAP_RATE_MS:
-            return
-        self._map_rate = value
-        self._save_settings()
-        ms = MINIMAP_RATE_MS[value]
-        print(f"[meter] minimap refresh {value} ({ms}ms)", file=sys.stderr)
-        try:
-            self._configure(worldTick=ms)
-        except Exception as e:
-            print(f"[meter] couldn't push the refresh rate: {e}",
-                  file=sys.stderr)
-
-    def _toggle_compass_filter(self, key):
-        """One compass category group on or off. Same shape as the map's, and
-        deliberately a separate setting — see COMPASS_FILTERS."""
-        self._compass_filters[key] = not self._compass_filters.get(key, True)
-        self._save_settings()
-
-    def _toggle_map_bg(self):
-        self._map_bg_on = not self._map_bg_on
-        self._save_settings()
-
-    def _toggle_codex_alerts(self):
-        """Both codex popups on or off. The map's codex filter is untouched —
-        wanting the map to show what you still need without a toast on every
-        kill is an ordinary thing to want."""
-        self._codex_alerts = not self._codex_alerts
-        if not self._codex_alerts:
-            # Take down anything currently up, rather than leaving the last
-            # toast stranded on screen until its timer runs out.
-            self._hide_codex_toast()
-        self._save_settings()
-
-    def _toggle_sparkly(self):
-        """The sparkly tracker on or off. Taking it down immediately rather
-        than on the next tick, so the switch and the screen agree."""
-        self._sparkly_on = not self._sparkly_on
-        if not self._sparkly_on:
-            self._sparkly_up = False
-            self._sparkly_last = None
-            try:
-                self.sparklywin.withdraw()
-            except tk.TclError:
-                pass
-        self._save_settings()
-
-    def _cycle_foe_mode(self):
-        """all -> only missing from codex -> hidden -> all.
-
-        A cycle rather than a tick because enemies have three states worth
-        having; see MINIMAP_FOE_MODES. Nothing redraws by hand — the map
-        repaints on its own tick and reads the mode there."""
-        try:
-            i = MINIMAP_FOE_MODE_KEYS.index(self._foe_mode)
-        except ValueError:
-            i = -1        # an unknown mode from a hand-edited settings file
-        self._foe_mode = MINIMAP_FOE_MODE_KEYS[(i + 1) % len(MINIMAP_FOE_MODE_KEYS)]
-        self._save_settings()
-
-    def _cycle_critter_mode(self):
-        """all -> only uncollected -> hidden -> all; the enemies cycle's twin.
-        Same contract too: nothing redraws by hand, the map reads the mode on
-        its own tick."""
-        try:
-            i = MINIMAP_CRITTER_MODE_KEYS.index(self._critter_mode)
-        except ValueError:
-            i = -1        # an unknown mode from a hand-edited settings file
-        self._critter_mode = MINIMAP_CRITTER_MODE_KEYS[
-            (i + 1) % len(MINIMAP_CRITTER_MODE_KEYS)]
-        self._save_settings()
-
-    def _toggle_map_filter(self, key):
-        """One category group on or off. Nothing to redraw by hand — the map is
-        repainted wholesale on the next tick and reads the ticks as it goes."""
-        self._map_filters[key] = not self._map_filters.get(key, True)
-        self._save_settings()
 
     def _toggle_hide_ooc(self):
         self._hide_ooc = not self._hide_ooc
@@ -13326,14 +6495,7 @@ class Overlay:
         """Read by the hook thread, so it stays a plain attribute read."""
         return bool(self._auto_reset_boss)
 
-    def on_boss_pull(self):
-        """A boss (not an elite) raised its healthbar and the meter was reset.
-        Called from the hook thread — everything real happens on the Tk one."""
-        self._enqueue(lambda: self.sounds.play("pull"))()
 
-    def on_boss_kill(self):
-        """A boss died: its bar went down with its last health reading at 0."""
-        self._enqueue(lambda: self.sounds.play("victory"))()
 
     def on_boss_giveup(self):
         """The fight ended without a kill — the boss reset, or the group
@@ -13392,28 +6554,8 @@ class Overlay:
             best = False
         print(f"[meter] boss kill timed: {key} {secs:.1f}s"
               + (f" (best {self._best_times[key]:.1f}s)"), file=sys.stderr)
-        tally = self._boss_tally_line(kinds)
-        if tally:
-            text = f"{text}\n{tally}"
         self._show_kill_toast(text, best)
 
-    def _boss_tally_line(self, kinds):
-        """"Boss slain 12 times" — the lifetime count from the codex store.
-
-        Only for a single-kind pull. A council is several units killed
-        together, and there is no honest single number for "how many times have
-        you killed them" when the members have been killed different numbers of
-        times; the alternatives are all a lie or an essay, so it says nothing.
-
-        Silent too when the mirror hasn't arrived, which is why codex_kills
-        returns None rather than 0 — a real first kill reads 1 here, and 0
-        would only ever mean "we don't know"."""
-        if len(kinds) != 1:
-            return None
-        n = self.ui_state.codex_kills(kinds[0])
-        if not isinstance(n, int) or n < 1:
-            return None
-        return f"Boss slain {n:,} time{'' if n == 1 else 's'}"
 
     @staticmethod
     def _load_best_times():
@@ -13433,128 +6575,11 @@ class Overlay:
         except OSError as e:
             print(f"[meter] couldn't save best times: {e}", file=sys.stderr)
 
-    def on_legendary_pickup(self):
-        """A legendary weapon appeared in the loadout that wasn't there before.
-        Called from the hook thread — the cue belongs to the Tk one."""
-        self._enqueue(lambda: self.sounds.play("legendary"))()
-
-    def on_codex_kill(self, kind, kills, rank):
-        """Every kill, from the hook thread. Shows the running codex count.
-
-        The numbers are already the post-kill ones: the codex events fire
-        BEFORE notifyUnitKilled (measured), so the hook read them after the
-        game incremented. Mobs with no codex entry say nothing at all — a
-        toast reading "Dummy 0/0" on every training-dummy hit is noise."""
-        if not self._codex_alerts or not kind or not isinstance(kills, int):
-            return
-        prog = _codex_progress(kind, kills, rank)
-        if prog is None:
-            return                      # NoCodex — nothing to report
-        shown, target, final = prog
-        name = _unit_names().get(kind) or _pretty_id(kind)
-        # Past the last threshold the codex has nothing more to say, but
-        # killCount keeps climbing — it is a LIFETIME total per mob type, not a
-        # counter that stops at the threshold (measured: an entry mastered on
-        # kill one still read 12 after twelve kills). So the toast switches
-        # from progress to a tally.
-        if isinstance(rank, int) and rank >= CODEX_MAX_RANK and shown > target:
-            self._enqueue(lambda: self._show_codex_toast(
-                f"{_ordinal(shown)} {name} masterfully slain", gold=False))()
-            return
-        # "Codex Mastery" only on the stretch that will finish the entry, so
-        # the wording itself says how much is left to care about.
-        word = "Codex Mastery" if final else "Codex"
-        self._enqueue(lambda: self._show_codex_toast(
-            f"{name}  —  {word} {shown}/{target}", gold=False))()
-
-    def on_codex_notify(self, what, kind):
-        """The game's own codex notification, from the hook thread.
-
-        The names are NOT what they look like (measured): CodexDiscovered is
-        rank 1, CodexCompleted is an INTERMEDIATE rank-up, and only
-        CodexMastered means the entry is finished. Hanging the fanfare on
-        CodexCompleted would set it off at 8 kills of 20."""
-        if not self._codex_alerts or not kind or what != CODEX_MASTERED:
-            return
-        name = _unit_names().get(kind) or _pretty_id(kind)
-        def fire():
-            self._show_codex_toast(f"CODEX COMPLETE  —  {name.upper()}",
-                                   gold=True)
-            # No switch of its own: it rides the master Sounds setting, which
-            # SoundPlayer.play() already gates on.
-            self.sounds.play("codex")
-        self._enqueue(fire)()
-
-    def _toggle_sounds(self):
-        self._sounds_on = not self._sounds_on
-        self.sounds.set_enabled(self._sounds_on)
-        self._save_settings()
-        # Play the pull cue as confirmation when switching them ON, so the
-        # checkbox proves the audio path works instead of leaving you to pull a
-        # boss to find out. Nothing on the way off, for obvious reasons.
-        if self._sounds_on:
-            self.sounds.play("pull")
 
     def _toggle_auto_reset_boss(self):
         self._auto_reset_boss = not self._auto_reset_boss
         self._save_settings()
 
-    def _apply_map_zoom(self):
-        """Turn the zoom percentage into the range the draw pass reads.
-
-        Zooming IN means seeing less ground, so range is inversely proportional
-        to zoom. Clamped to the documented floor/ceiling rather than trusted:
-        the value comes from a saved settings file that a user can edit.
-        """
-        self._map_range = max(MINIMAP_RANGE_MIN,
-                              min(MINIMAP_RANGE_MAX,
-                                  MINIMAP_RANGE * 100.0 / max(1, self._map_zoom)))
-
-    def _icon_scale(self):
-        """The multiplier every marker radius is drawn through.
-
-        MINIMAP_ICON_SCALE is the shipped baseline, the user's percentage rides
-        on top of it, and the minimap's own window scale is the last term. One
-        product used everywhere means the style table's RATIOS survive all
-        three — which is the point: markers are tuned against each other, not
-        against the panel.
-        """
-        return (MINIMAP_ICON_SCALE * (self._map_icons / 100.0)
-                * self._scales["minimap"])
-
-    def _on_map_zoom_pick(self):
-        self._enqueue(lambda: self._set_map_zoom(self._map_zoom_var.get()))()
-
-    def _set_map_zoom(self, pct):
-        pct = max(MINIMAP_ZOOM_MIN, min(MINIMAP_ZOOM_MAX, int(pct)))
-        if pct == self._map_zoom:
-            return
-        self._map_zoom = pct
-        self._apply_map_zoom()
-        # Nothing to redraw by hand: the map is repainted wholesale on the next
-        # tick and reads _map_range as it goes.
-        self._save_settings()
-
-    def _on_map_icons_pick(self):
-        self._enqueue(lambda: self._set_map_icons(self._map_icons_var.get()))()
-
-    def _set_map_icons(self, pct):
-        pct = max(MINIMAP_ICONS_MIN, min(MINIMAP_ICONS_MAX, int(pct)))
-        if pct == self._map_icons:
-            return
-        self._map_icons = pct
-        self._save_settings()
-
-    def _on_volume_pick(self):
-        self._enqueue(lambda: self._set_volume(self._volume_var.get()))()
-
-    def _set_volume(self, pct):
-        pct = max(0, min(SOUND_VOLUME_MAX, int(pct)))
-        if pct == self._sound_volume:
-            return
-        self._sound_volume = pct
-        self.sounds.set_volume(pct)
-        self._save_settings()
 
     def _refresh_visibility(self):
         """Fade each element in/out from its own show/hide setting plus the two
@@ -13622,10 +6647,7 @@ class Overlay:
         # your browser — and worse, one you can't click past while the cursor
         # is free. The tray icon stays, which is how you'd stop the meter from
         # out here anyway.
-        # ...and while the self-update runs, everything yields to its progress
-        # window — the overlay is about to be replaced, not consulted.
-        blanket = (menu_hidden or self._prompt_open or not self._focused
-                   or self._updating)
+        blanket = menu_hidden or self._prompt_open or not self._focused
         changed = False
         for key in self._element_win:
             show_key = _element_show_key(key)
@@ -13654,48 +6676,6 @@ class Overlay:
             # it regardless, so the Show/hide tick can be seen to do something.
             if key == "detail" and self._detail_idle and not self._menu_unlock:
                 want = False
-            # The game puts its boss/elite healthbar across the top of the
-            # screen, which is exactly where the compass sits. Unconditional,
-            # like the rift rule above: the two are fighting for the same
-            # pixels, and during a boss pull the game's bar is the one you
-            # want. The escape menu still brings it back, so neither is ever
-            # unreachable while a long fight is running.
-            #
-            # The minimap goes with it. Not because it collides with anything —
-            # it sits in a corner — but because a boss pull is the one time you
-            # are looking at the fight and not at where to go next, and the two
-            # navigation panels leaving together reads as one deliberate "get
-            # out of the way" rather than half the overlay flickering off.
-            if show_key in BOSS_HIDDEN and self.ui_state.boss_bar_up() \
-                    and not self._menu_unlock:
-                want = False
-            # A tray that is switched off, or that tracks nothing, is not a
-            # window — it is an empty rectangle that eats a corner of the
-            # screen. The escape menu does NOT bring these back: unlike the
-            # rift timer or the breakdown there is nothing to come back to,
-            # and a row of blank trays appearing whenever you open the menu
-            # would be the opposite of helpful.
-            if show_key == BUFF_TRAY_KEY:
-                idx = int(key.split("#", 1)[1])
-                tray = self._tray(idx)
-                if not tray.get("on") or not tray.get("keys"):
-                    want = False
-                # ...and a tray set to HIDE its inactive slots, with none of
-                # its buffs currently up, has nothing to draw either. The draw
-                # pass used to collapse the canvas to 1x1 for this, which is
-                # not the same as being gone: the window stayed mapped, so a
-                # bordered one-pixel box sat on the game where the icons would
-                # appear. Reported as "little boxes".
-                elif (tray.get("inactive") == BUFF_INACTIVE_HIDE
-                        and not self._tray_has_live(tray)):
-                    want = False
-                # ...unless it is announcing itself. LAST, so it overrides
-                # every rule above including the blanket ones: the question
-                # "where is this tray" is only ever asked about a tray you
-                # cannot currently see, so a reveal that respected the hiding
-                # rules would be silent in exactly the case it exists for.
-                if self._tray_revealing(idx):
-                    want = True
             changed |= self._want_visible(key, want)
         # ...and the control menu goes with everything else when you alt-tab.
         # The game's escape menu stays open behind you, so _menu_unlock stays
@@ -13707,13 +6687,11 @@ class Overlay:
         # the meter's own settings panel, or the one window left on screen is
         # the one you were trying to get out of the way.
         menu_visible = (self._menu_unlock and not self._prompt_open
-                        and self._focused and not menu_hidden
-                        and not self._updating)
+                        and self._focused and not menu_hidden)
         # Whatever route the menu leaves by — Esc, alt-tab, the game opening
-        # something over it — its dropdowns leave with it, and so does the
-        # keyboard if a search box was holding it.
+        # something over it — the keyboard leaves with it if a search box was
+        # holding it.
         if not menu_visible:
-            self._unpost_menus()
             self._stop_typing()
         # The WebView2 settings panel follows exactly the same rule, and is
         # started the first time it is wanted rather than at launch — a player
@@ -13729,14 +6707,7 @@ class Overlay:
         changed |= self._want_visible("menu", False)
         changed |= self._want_visible("hint", menu_visible)
         changed |= self._want_visible("prompt", self._prompt_open)
-        # The offer lives and dies with the free cursor that makes it
-        # answerable: press Escape again and it steps aside with everything
-        # else, then comes back with the cursor. It is still "open" throughout
-        # — only answering it retires it.
-        changed |= self._want_visible(
-            "update",
-            self._update_offer_open and self._cursor_free and self._focused
-            and not self._updating and not self._prompt_open)
+
         # The report follows the blanket rules (alt-tab, the game's own
         # screens, the modal prompt) but not the out-of-combat one — the boss
         # just died, so out-of-combat is precisely when it exists. It stays up
@@ -13843,25 +6814,6 @@ class Overlay:
             row.set_theme(t)
         for col in (self.dmg_col, self.heal_col):
             col.set_theme(t)
-        # The minimap follows too. Its canvas contents are redrawn from scratch
-        # on the next tick and read self._theme directly, so only the chrome
-        # needs repainting here.
-        mb = t.get("map_body", BG_BODY)
-        # The hover well is always DARKER than the panel, on both kinds of
-        # panel — a sunk box that got lighter than its surroundings would read
-        # as raised. Its text is then lifted off the well rather than off the
-        # panel, since that's what it actually sits on.
-        sunk = _lerp_hex(mb, "#000000", 0.30 if not self._map_is_light() else 0.12)
-        self.map_tipbox.config(bg=self._map_ink(0.16))
-        self.map_tip.config(bg=sunk, fg=self._map_ink(0.75, bg=sunk))
-        self.map_canvas.config(bg=mb)
-        # Derived from the map colour rather than the meter's palette: the
-        # brown edge goes muddy against navy. Darkening works on either kind of
-        # panel, which is why the edge doesn't need the contrast treatment the
-        # text does. With the header gone this and the hover box are all the
-        # theme has left to show on the minimap.
-        self.map_border.config(bg=_lerp_hex(mb, "#000000", 0.45))
-        # The compass has no chrome to repaint — see _build_compass.
         # Force the header tint to be re-pushed: its guard compares against the
         # last colour applied, which belongs to the theme we just left.
         self._header_bg = None
@@ -13888,15 +6840,11 @@ class Overlay:
                 win.attributes("-topmost", True)
             else:
                 win.withdraw()
-            if key == "compass":
-                self._sync_badgewin()
             return True
         if visible:
             win.attributes("-alpha", self._alpha[key])
             win.deiconify()
             win.attributes("-topmost", True)   # re-assert over the game's UI
-        if key == "compass":
-            self._sync_badgewin()
         return True
 
     def _start_fade(self):
@@ -13954,8 +6902,6 @@ class Overlay:
             # binding Mouse 4 on its own is the normal thing to do.
             if (not (shift or ctrl or alt) and not (0x70 <= vk <= 0x87)
                     and vk not in VK_MOUSE):
-                self.btn_bind.config(
-                    text="needs Ctrl, Shift or Alt  (or an F-key)")
                 break                       # keep listening; they'll try again
             self._set_reset_bind({"vk": vk, "shift": shift, "ctrl": ctrl,
                                   "alt": alt})
@@ -13976,36 +6922,11 @@ class Overlay:
         # label reaches the panel with the next state push.
         self.menubridge.invalidate()
 
-    def _on_bind_key(self, event):
-        """Tk's `keycode` IS the Windows virtual-key code, which is exactly
-        what the hook compares against — so nothing has to be translated."""
-        vk = int(event.keycode)
-        if vk == 0x1B or vk in VK_UNBINDABLE:      # Esc, or a bare modifier
-            if vk == 0x1B:
-                self._end_bind_capture()
-            return "break"                          # modifiers: keep listening
-        # Tk's state bitmask: 0x1 Shift, 0x4 Control, 0x20000 Alt on Windows.
-        shift, ctrl = bool(event.state & 0x1), bool(event.state & 0x4)
-        alt = bool(event.state & 0x20000)
-        # A bare letter would be swallowed while you play — the hook eats the
-        # key it fires on, so binding "W" costs you walking forwards. Function
-        # keys are exempt: nothing in the game is bound to them by default and
-        # they're the obvious thing to want here.
-        if (not (shift or ctrl or alt) and not (0x70 <= vk <= 0x87)
-                and vk not in VK_MOUSE):
-            self.btn_bind.config(text="needs Ctrl, Shift or Alt  (or an F-key)")
-            return "break"
-        self._set_reset_bind({"vk": vk, "shift": shift, "ctrl": ctrl,
-                              "alt": alt})
-        self._end_bind_capture()
-        return "break"
 
     def _set_reset_bind(self, bind):
         RESET_BIND.update(bind)
         self._save_settings()
         self._draw_hint()          # the floating hint carries the same label
-        self.btn_reset_data.config(
-            text=f"Reset encounter data   ({bind_label()})")
         # Only the RegisterHotKey fallback needs telling; the low-level hook
         # reads RESET_BIND on every keypress and has already picked it up.
         if RESET_BIND.get("vk") in VK_MOUSE and REBIND_TO[0]:
@@ -14020,59 +6941,7 @@ class Overlay:
                       file=sys.stderr)
         print(f"[meter] reset bind is now {bind_label()}", file=sys.stderr)
 
-    @staticmethod
-    def _cfg(widget, **kw):
-        """widget.config(**kw), skipping options already set to that value.
 
-        Tk does NOT short-circuit a no-op configure. Measured 2026-08-08:
-        setting 40 labels to the text they already held cost 1.26ms — exactly
-        the same as changing all 40 — while reading them back first cost
-        0.023ms, so guarding is a 43x saving on the common case. That matters
-        here because _refresh_menu relabels several dozen widgets on every
-        250ms tick and almost none of them have changed.
-
-        Values are compared as strings because that is what Tk gives back:
-        cget returns the string form of colours, states and image names, so a
-        `str()` on both sides is what makes the comparison meaningful rather
-        than always-unequal.
-        """
-        changed = {}
-        for k, v in kw.items():
-            try:
-                if str(widget.cget(k)) != str(v):
-                    changed[k] = v
-            except tk.TclError:
-                changed[k] = v          # unknown option: let config complain
-        if changed:
-            widget.config(**changed)
-
-    def _unpost_menus(self):
-        """Take down any dropdown that's currently posted.
-
-        Tk posts an OptionMenu's list as a separate toplevel with a grab on the
-        pointer. Withdrawing the panel underneath doesn't touch it, so closing
-        the escape menu — or alt-tabbing — while a dropdown was open left the
-        choices floating over the game with nothing behind them. `unpost` on a
-        menu that isn't posted is harmless, so this needs no bookkeeping about
-        which one was open."""
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        for opt in getattr(self, "_option_menus", ()):
-            try:
-                opt["menu"].unpost()
-            except tk.TclError:
-                pass
-        # The grab goes with it: Tk holds one while a menu is posted, and a
-        # stray grab is how the game stops seeing the mouse at all.
-        try:
-            self.menu.grab_release()
-        except tk.TclError:
-            pass
 
     def _alpha_for(self, key):
         """What this window's opacity should settle at when it's on screen.
@@ -14101,14 +6970,9 @@ class Overlay:
                 win.attributes("-alpha", self._alpha[key])
             except tk.TclError:
                 pass
-        self._sync_badgewin()
         self._save_settings()
         print(f"[meter] transparency {percent}%", file=sys.stderr)
 
-    def _on_transparency_pick(self):
-        # Queued like every other menu action: it touches window state the
-        # refresh loop also reads, and Tk isn't thread-safe.
-        self._enqueue(lambda: self._set_transparency(self._transp_var.get()))()
 
     def _step_fade(self):
         """Walk every faded window one step towards its target opacity, and
@@ -14137,8 +7001,6 @@ class Overlay:
                 win.withdraw()
             else:
                 fading = True
-            if key == "compass":
-                self._sync_badgewin()
         if fading:
             self._fade_job = self.root.after(FADE_STEP_MS, self._step_fade)
 
@@ -14206,377 +7068,20 @@ class Overlay:
             self.col_sep.pack_forget()
             self.heal_col.f.pack_forget()
 
-    # ---- Social tab ----------------------------------------------------
-    def _reload_social(self):
-        """Load both Social pages, now, once.
 
-        This used to ride the refresh tick, gated on the menu being mapped,
-        with the signature checks as the churn guard. The guard was the wrong
-        one: on a busy shard the roster genuinely changes every few seconds
-        and the session page's "seen" column ticks over on its own, so the
-        signatures kept missing and the menu spent its time destroying and
-        rebuilding row widgets — reported as the whole window going slow
-        whenever the Social tab was open. The roster is a page you READ, not
-        a feed. It now loads at the three moments a page should: the menu
-        opening, the Social tab being raised, and the Refresh button. The
-        world data underneath accumulates regardless — a reload is a read of
-        what's already there, not a query.
 
-        Both pages, not just the visible one: the session log grows whether
-        or not you are looking at it, and reloading only on page switch would
-        show a stale count the moment you arrived. Both stay signature-gated,
-        so a reload that changes nothing redraws nothing.
-        """
-        self._rebuild_social()
-        self._rebuild_session()
 
-    def _refresh_social_clicked(self):
-        """The Refresh button. The reload is silent when nothing changed —
-        which after a click reads as a dead button — so the note answers
-        every press, whether or not the list moved."""
-        self._reload_social()
-        self._social_note("Refreshed.", transient=True)
 
-    def _set_social_page(self, key):
-        """Raise one of the Social sub-pages and paint its tab."""
-        if key not in self._social_page_frames:
-            return
-        # Each page has its own search box, and the one being left keeps Tk's
-        # focus through the raise — same trap as _set_menu_tab.
-        self._stop_typing()
-        self._social_page = key
-        self._social_page_frames[key].tkraise()
-        for k, b in self._social_page_btns.items():
-            self._paint_tab_btn(b, k == key)
-        # The note is shared, so it has to re-answer for the page now on top.
-        self._social_note(self._social_idle_note())
 
-    def _sorted_roster(self):
-        """The roster in the order the Social tab should show it.
 
-        Name is a directory: you go to the top, then everyone alphabetically.
-        Level is a ranking, highest first, and pins nobody — putting yourself
-        above a level 25 because you happen to be you would make the column
-        say something untrue. Name is the tie-break in both, so equal levels
-        keep a stable order instead of shuffling on every rebuild.
-        """
-        rows = self.world.roster()
-        if self._social_sort == "level":
-            # Missing level (a player on the layer whose entity has not been
-            # built yet) sorts last rather than as level 0 — it is unknown, not
-            # low, and floating them to the bottom keeps the ranking readable.
-            rows.sort(key=lambda r: (r.get("lvl") is None,
-                                     -(r.get("lvl") or 0),
-                                     (r.get("n") or "").lower()))
-        else:
-            rows.sort(key=lambda r: (not r.get("me"),
-                                     (r.get("n") or "").lower()))
-        return rows
 
-    def _toggle_social_sort(self):
-        i = SOCIAL_SORTS.index(self._social_sort)
-        self._social_sort = SOCIAL_SORTS[(i + 1) % len(SOCIAL_SORTS)]
-        self.btn_social_sort.config(
-            text=SOCIAL_SORT_LABEL[self._social_sort])
-        self._save_settings()
-        self._rebuild_social()
 
-    def _toggle_session_sort(self):
-        i = SESSION_SORTS.index(self._session_sort)
-        self._session_sort = SESSION_SORTS[(i + 1) % len(SESSION_SORTS)]
-        self.btn_session_sort.config(
-            text=SESSION_SORT_LABEL[self._session_sort])
-        self._save_settings()
-        self._rebuild_session()
 
-    def _social_note(self, text, transient=False):
-        """The line under the list: empty-state explanation, or a confirmation.
 
-        A copy is silent by nature — nothing on screen changes when the
-        clipboard does — so the confirmation is the only feedback that the
-        click did anything."""
-        # A confirmation holds the line for its full two and a half seconds.
-        # Without this a roster change — which happens every time anyone zones,
-        # and rebuilds both pages — would call back in here with the idle text
-        # and blank the "Copied ..." the user is still reading.
-        if self._social_note_transient and not transient:
-            return
-        if self._social_note_job is not None:
-            try:
-                self.root.after_cancel(self._social_note_job)
-            except Exception:
-                pass
-            self._social_note_job = None
-        self._social_note_transient = transient
-        # A string on the overlay rather than a label's text: the panel that
-        # draws it is in another process and reads this on the next push.
-        self._social_note_text = text
-        if transient:
-            def restore():
-                self._social_note_transient = False
-                self._social_note(self._social_idle_note())
-            self._social_note_job = self.root.after(2500, restore)
 
-    def _social_idle_note(self):
-        if self._social_page == "session":
-            if not self.world.seen_players():
-                return ("Nobody logged yet — players are added here as they "
-                        "appear on your shard, and the list lasts until the "
-                        "meter is closed.")
-            return ""
-        if not self.world.roster():
-            return ("Waiting for the roster — it arrives a second or two after "
-                    "the hook attaches and you are loaded into a zone.")
-        return ""
 
-    def _rebuild_social(self, *_a):
-        """Redraw the roster rows, but only when something actually changed.
 
-        Rows are destroyed and rebuilt wholesale rather than diffed. At shard
-        size (tens, not thousands) that is far simpler than reconciling a list
-        whose members appear and vanish as people zone, and it runs only on a
-        genuine change — so the cost is paid when someone joins, not per tick.
-        """
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        rows = self._sorted_roster()
-        q = self._social_query.get().strip().lower()
-        sig = (q, self._social_sort,
-               tuple((r.get("n"), r.get("k"), r.get("lvl"), r.get("uid"),
-                      r.get("me")) for r in rows))
-        if sig == self._social_sig:
-            return
-        self._social_sig = sig
 
-        for w in self._social_row_widgets:
-            w.destroy()
-        self._social_row_widgets = []
-
-        # Search matches name OR class, so "mage" filters to a class and "bru"
-        # to a person without needing two boxes.
-        shown = [r for r in rows
-                 if not q
-                 or q in (r.get("n") or "").lower()
-                 or q in (r.get("k") or "").lower()]
-        for r in shown:
-            self._social_row_widgets.append(
-                self._build_social_row(self.social_list, r, detail=True))
-
-        total = len(rows)
-        self.social_count.config(
-            text=(f"{len(shown)} / {total}" if q
-                  else f"{total} player{'' if total == 1 else 's'}"))
-        if rows and not shown and self._social_page == "shard":
-            self._social_note("Nobody here matches that.")
-        else:
-            self._social_note(self._social_idle_note())
-        self._resize_scroll(self.social_canvas, self.social_list)
-
-    def _rebuild_session(self, *_a):
-        """Redraw the session log. Same signature-gating as the shard page.
-
-        No class or level column: those come off a live ent.Hero, and a player
-        who has left your shard no longer has one — so the honest thing to show
-        is a name and an id, not a snapshot of what they were an hour ago.
-        """
-        # Retired with the Tk control menu: the settings panel builds
-        # this from data on each push, so drawing hidden widgets here
-        # is pure churn — and widget churn is the expensive thing in
-        # this UI, measured at 297ms for 27 rows. Left in place, and
-        # callable, because its call sites still mark real state
-        # changes; see _refresh_menu.
-        return
-        rows = self.world.seen_players()
-        now = time.monotonic()
-        # Resolved once, here, so the sort and the column can never disagree
-        # about how long ago something was.
-        for r in rows:
-            r["ago"] = _seen_ago(max(0.0, now - r.get("last", now)))
-        if self._session_sort == "name":
-            rows.sort(key=lambda r: (r.get("n") or "").lower())
-        else:
-            # Most recent first. Name breaks ties, and everyone still on the
-            # shard shares one timestamp, so the present block is alphabetical
-            # and holds still instead of churning every sweep.
-            rows.sort(key=lambda r: (-r.get("last", 0.0),
-                                     (r.get("n") or "").lower()))
-        q = self._session_query.get().strip().lower()
-        # `ago` is in the signature: when a row ticks from "now" to "1m" the
-        # list has genuinely changed and must be redrawn.
-        sig = (q, self._session_sort,
-               tuple((r.get("n"), r.get("uid"), r["ago"]) for r in rows))
-        if sig == self._session_sig:
-            return
-        self._session_sig = sig
-
-        for w in self._session_row_widgets:
-            w.destroy()
-        self._session_row_widgets = []
-
-        shown = [r for r in rows if not q or q in (r.get("n") or "").lower()]
-        for r in shown:
-            self._session_row_widgets.append(
-                self._build_social_row(self.session_list, r, detail=False,
-                                       seen_text=r["ago"]))
-
-        total = len(rows)
-        self.session_count.config(
-            text=(f"{len(shown)} / {total}" if q
-                  else f"{total} seen"))
-        if rows and not shown and self._social_page == "session":
-            self._social_note("Nobody here matches that.")
-        else:
-            self._social_note(self._social_idle_note())
-        self._resize_scroll(self.session_canvas, self.session_list)
-
-    def _on_wheel(self, e):
-        """Scroll whichever list the cursor is over, wherever inside it.
-
-        Tk delivers <MouseWheel> to ONE widget, and it does not bubble to that
-        widget's parents. A canvas-and-inner-frame scroll list is entirely
-        covered by its own content, so binding the wheel to the canvas means
-        binding it to the one surface the cursor is never actually over — every
-        label and every button on top of it swallows the event instead.
-
-        Binding each child individually is what this replaces, and it failed
-        three ways: buttons were deliberately skipped (so the wheel died over
-        the Details/Report column of every row), the breakdown page built its
-        labels in a different function and bound none of them, and any content
-        rebuilt later came back unbound.
-
-        So there is one binding for the whole application, and it resolves the
-        target by geometry: find the widget under the pointer, then walk up its
-        widget PATH — a descendant's path is always its ancestor's path plus a
-        dot — until it lands in a registered scroll area. Nothing to keep in
-        sync, and content that appears later works without being told to.
-        """
-        try:
-            w = self.root.winfo_containing(e.x_root, e.y_root)
-        except (tk.TclError, KeyError):
-            return
-        if w is None:
-            return
-        path = str(w)
-        canvas, best = None, -1
-        for base, cv in self._scroll_areas.items():
-            if path == base or path.startswith(base + "."):
-                # The most deeply nested match wins, so a scroll list inside
-                # another one would still resolve to the inner list.
-                if len(base) > best:
-                    canvas, best = cv, len(base)
-        if canvas is None:
-            return
-        try:
-            # Only scroll when there is somewhere to scroll to, or tk clamps
-            # and the list twitches under the cursor on a short one.
-            first, last = canvas.yview()
-            if first <= 0.0 and last >= 1.0:
-                return
-            canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
-        except tk.TclError:
-            pass        # the list was destroyed between the event and here
-        return "break"
-
-    @staticmethod
-    def _resize_scroll(canvas, inner):
-        """A rebuild changes the stack's height; without this the scrollregion
-        keeps the old one and the last rows are unreachable."""
-        inner.update_idletasks()
-        canvas.configure(scrollregion=canvas.bbox("all"))
-
-    def _build_social_row(self, parent, r, detail=True, seen_text=None):
-        """One roster line.
-
-        `detail` adds the class and level columns, which only the live shard
-        page has honest values for. `seen_text` adds the session log's
-        last-seen column in their place."""
-        name = r.get("n") or "?"
-        cls = r.get("k")
-        lvl = r.get("lvl")
-        me = bool(r.get("me"))
-        steam64 = steam64_from_uid(r.get("uid"))
-
-        row = tk.Frame(parent, bg=BG_BODY)
-        row.pack(fill="x", pady=1)
-        # Your own row is marked the way the meter marks it, for the same
-        # reason: it is the row you use to check the list is about who you think.
-        tk.Label(row, text="*" if me else " ", bg=BG_BODY,
-                 fg=ACCENT, font=self.fonts_m["mono"], width=1).pack(side="left")
-        tk.Label(row, text=name[:SOCIAL_NAME_CELLS],
-                 bg=BG_BODY, fg=FG_VALUE if me else FG_TEXT,
-                 font=self.fonts_m["mono"], width=SOCIAL_NAME_CELLS,
-                 anchor="w").pack(side="left")
-        if detail:
-            tk.Label(row, text=(cls or "-"), bg=BG_BODY,
-                     fg=CLASS_COLORS.get(cls, FG_TEXT),
-                     font=self.fonts_m["mono"], width=SOCIAL_CLASS_CELLS,
-                     anchor="w").pack(side="left")
-            tk.Label(row, text=("" if lvl is None else f"lv{lvl}"), bg=BG_BODY,
-                     fg=FG_DIM, font=self.fonts_m["mono"], width=5,
-                     anchor="w").pack(side="left")
-        elif seen_text is not None:
-            # Still here reads as present, not as a stale timestamp — so it
-            # gets the body colour while everything older stays dimmed.
-            tk.Label(row, text=seen_text, bg=BG_BODY,
-                     fg=FG_TEXT if seen_text == "now" else FG_DIM,
-                     font=self.fonts_m["mono"], width=SOCIAL_SEEN_CELLS,
-                     anchor="w").pack(side="left")
-
-        def mini(text, cmd, enabled):
-            b = tk.Button(row, text=text, command=cmd,
-                          font=self.fonts_m["ui"], bg=BG_BODY_SOFT,
-                          fg=FG_TEXT if enabled else FG_DIM,
-                          activebackground=BG_BAR_TRACK,
-                          activeforeground=FG_VALUE, relief="flat", bd=0,
-                          padx=8, pady=1, highlightthickness=1,
-                          highlightbackground=BG_BAR_TRACK,
-                          cursor="hand2" if enabled else "arrow")
-            if not enabled:
-                b.config(state="disabled", disabledforeground=FG_DIM)
-            b.pack(side="right", padx=(4, 0))
-            return b
-
-        # Packed right-to-left, so Copy ends up left of Profile.
-        ok = steam64 is not None
-        mini("Profile", self._enqueue(
-            lambda s=steam64: self._open_url(STEAM_PROFILE_URL.format(s))), ok)
-        mini("Copy ID", self._enqueue(
-            lambda s=steam64, n=name: self._copy_steamid(n, s)), ok)
-        return row
-
-    def _open_profile(self, uid):
-        """That player's Steam profile in the browser.
-
-        The uid off the wire is little-endian hex, so it has to go through
-        steam64_from_uid rather than into the URL as-is — read the raw value
-        and you get a real-looking id belonging to nobody.
-        """
-        steam64 = steam64_from_uid(uid)
-        if steam64 is None:
-            self._social_note("No Steam id for that player yet.",
-                              transient=True)
-            return
-        self._open_url(STEAM_PROFILE_URL.format(steam64))
-
-    def _copy_steamid(self, name, steam64):
-        if steam64 is None:
-            return
-        try:
-            self.root.clipboard_clear()
-            self.root.clipboard_append(str(steam64))
-            # Windows serves the clipboard from the owning app, so the value
-            # has to be on the wire before focus goes back to the game.
-            self.root.update_idletasks()
-        except Exception as e:
-            print(f"[meter] clipboard failed: {e}", file=sys.stderr)
-            self._social_note("Couldn't reach the clipboard.", transient=True)
-            return
-        self._social_note(f"Copied {name}'s SteamID.", transient=True)
 
     def _refresh_menu(self):
         """Retired, and deliberately not deleted.
@@ -14594,137 +7099,6 @@ class Overlay:
         """
         self.menubridge.invalidate()
 
-    def _refresh_menu_legacy(self):
-        self._cfg(self.btn_heal, 
-            text=("☑  Healing columns" if self._show_heal
-                  else "☐  Healing columns"))
-        for key, label, _cats in MINIMAP_FILTERS:
-            on = self._map_filters.get(key, True)
-            self._cfg(self.btn_map_filter[key], 
-                text=("☑  " if on else "☐  ") + label)
-        # Three states, so the marker says which one rather than ticked/not.
-        # A hollow circle for "hidden" keeps it visually a filter row.
-        foe_glyph = {"all": "☑", "codex": "◪", "off": "☐"}.get(self._foe_mode, "☑")
-        self._cfg(self.btn_map_foes, 
-            text=f"{foe_glyph}  "
-                 + MINIMAP_FOE_LABEL.get(self._foe_mode, "Enemies: all"))
-        critter_glyph = {"all": "☑", "uncollected": "◪",
-                         "off": "☐"}.get(self._critter_mode, "☑")
-        self._cfg(self.btn_map_critters, 
-            text=f"{critter_glyph}  "
-                 + MINIMAP_CRITTER_LABEL.get(self._critter_mode,
-                                             "Critters: all"))
-        self._cfg(self.btn_map_bg, 
-            text=("☑  World map background" if self._map_bg_on
-                  else "☐  World map background"))
-        # Buff trays. The selector buttons carry their own state — how many
-        # buffs each holds — so you can see which tray is which without
-        # clicking through all four.
-        for i, b in enumerate(self.btn_tray_pick):
-            t = self._tray(i)
-            n = len(t.get("keys") or ())
-            self._cfg(b, text=f"{i + 1}" + (f" ({n})" if n else ""))
-            self._paint_tab_btn(b, i == self._tray_edit)
-        others = len([n for n in self._trays_by_char if n != self._tray_char])
-        self._cfg(self.lbl_tray_char, 
-            text=(f"Trays for {self._tray_char}."
-                  + (f" {others} other character"
-                     f"{'' if others == 1 else 's'} saved." if others else "")
-                  if self._tray_char else
-                  "Waiting for the game to say which character you are — "
-                  "these are the trays this install last used."))
-        cur = self._tray(self._tray_edit)
-        self._cfg(self.btn_tray_on, 
-            text=("☑  Tray on" if cur.get("on") else "☐  Tray off"))
-        # States, not actions: "Locked" means it IS locked, matching the
-        # convention the rest of the menu's standing settings use.
-        self._cfg(self.btn_tray_lock, 
-            text=("\U0001F512  Locked" if cur.get("lock")
-                  else "\U0001F513  Unlocked"))
-        for flag, label in BUFF_TRAY_FLAGS:
-            self._cfg(self.btn_tray_flag[flag], 
-                text=("☑  " if cur.get(flag) else "☐  ") + label)
-        # Both numbers in the same corner is legal and occasionally deliberate
-        # (one of them switched off), so this warns rather than forbids — and
-        # only when both are actually being drawn.
-        clash = (cur.get("timer") and cur.get("stacks")
-                 and cur.get("timer_pos") == cur.get("stacks_pos"))
-        self._cfg(self.lbl_tray_text_clash, 
-            text=("Time left and Stacks are both in the "
-                  f"{str(cur.get('timer_pos', '')).lower()} corner — they will "
-                  "draw on top of each other." if clash else ""))
-        if not self._binding_now:
-            self._cfg(self.btn_bind, text=bind_label())
-        for key, label, _cats in COMPASS_FILTERS:
-            on = self._compass_filters.get(key, True)
-            self._cfg(self.btn_compass_filter[key], 
-                text=("☑  " if on else "☐  ") + label)
-        # A standing setting, so this one shows its state rather than its action.
-        self._cfg(self.btn_hide_ooc, 
-            text=("☑  Hide out of combat" if self._hide_ooc
-                  else "☐  Hide out of combat"))
-        self._cfg(self.btn_sounds, 
-            text=("☑  Enable sounds" if self._sounds_on
-                  else "☐  Enable sounds"))
-        self._cfg(self.btn_history, 
-            text=("☑  Keep a history of finished encounters"
-                  if self._history_on
-                  else "☐  Keep a history of finished encounters"))
-        self._cfg(self.btn_auto_reset, 
-            text=("☑  Auto reset on boss pull" if self._auto_reset_boss
-                  else "☐  Auto reset on boss pull"))
-        self._cfg(self.btn_codex_alerts, 
-            text=("☑  Codex alerts" if self._codex_alerts
-                  else "☐  Codex alerts"))
-        self._cfg(self.btn_sparkly, 
-            text=("☑  Sparkly Tracker" if self._sparkly_on
-                  else "☐  Sparkly Tracker"))
-        # Reads state, not action — and it's the same setting the rift prompt's
-        # "Do this every time" ticks, so a player who opted in from the prompt
-        # finds it already on here.
-        self._cfg(self.btn_rift_auto_view, 
-            text=("☑  Auto 'View All Players' in rifts" if self._rift_auto_view
-                  else "☐  Auto 'View All Players' in rifts"))
-        # Labelled with the action, but tinted by the *state*: green while
-        # all-players is the live mode, so it's obvious at a glance that the
-        # meter is showing more than the group. Switching either way calls
-        # session.reset(), so the label warns about that up front rather than
-        # silently binning the encounter mid-fight.
-        # Tinted while a parse is live for the same reason the mode button is:
-        # it's a state you can forget you're in, and the meter looks normal.
-        # Greyed rather than hidden before the first rift: a button that
-        # appears out of nowhere mid-session is a button nobody knew to look
-        # for. The label says why it does nothing yet.
-        have_report = self._report_data is not None
-        self._cfg(self.btn_rift_report, 
-            text=("Last Rift Report" if have_report
-                  else "Last Rift Report   (no rift yet)"),
-            fg=FG_TEXT if have_report else FG_DIM)
-        parsing = self._parse_state is not None
-        self._cfg(self.btn_parse, 
-            text=(f"Stop {PARSE_LENGTH_SECS}s Parse" if parsing
-                  else f"{PARSE_LENGTH_SECS}s Parse Mode"),
-            bg=BTN_ON_BG if parsing else BG_BODY_SOFT,
-            fg=FG_HEADER if parsing else FG_TEXT,
-            activebackground=BTN_ON_BG_ACTIVE if parsing else BG_BAR_TRACK,
-            activeforeground=FG_HEADER if parsing else FG_VALUE,
-            highlightbackground=BTN_ON_BG_ACTIVE if parsing else BG_BAR_TRACK)
-
-        # Which shard, beside the button that ends the session. "…" rather than
-        # blank before the hook has reported one: an empty slot reads as a
-        # feature that isn't working, where the ellipsis reads as waiting.
-        shard = self.ui_state.server()
-        self._cfg(self.lbl_shard, text=shard or "…")
-
-        all_players = self.mode == "all"
-        self._cfg(self.btn_mode, 
-            text=("Show party only" if all_players else "Show all players")
-                 + "   (resets data)",
-            bg=BTN_ON_BG if all_players else BG_BODY_SOFT,
-            fg=FG_HEADER if all_players else FG_TEXT,
-            activebackground=BTN_ON_BG_ACTIVE if all_players else BG_BAR_TRACK,
-            activeforeground=FG_HEADER if all_players else FG_VALUE,
-            highlightbackground=BTN_ON_BG_ACTIVE if all_players else BG_BAR_TRACK)
 
     def _pump_input(self):
         """Everything that answers to the player rather than to the fight.
@@ -14747,8 +7121,6 @@ class Overlay:
         if free != self._cursor_free:
             self._cursor_free = free
             self._apply_clickthrough()
-            if not free:
-                self._clear_map_tip(drop_cursor=True)
         focused = self._game_has_focus()
         if focused != self._focused:
             self._focused = focused
@@ -14801,11 +7173,7 @@ class Overlay:
         return self._held_rows, self._held_duration, True
 
     def _refresh(self):
-        self._apply_update_notice()
-        # Polled here rather than pushed by the checker: the check runs on its
-        # own thread and Tk is not thread-safe, the same reason the notice line
-        # is polled. Cheap — it returns on its first line once answered.
-        self._tick_update_offer()
+
         # Before the epoch check below: starting a parse resets the session
         # itself, and syncs _last_epoch so that isn't mistaken for the player
         # resetting back out of parse mode.
@@ -14956,32 +7324,7 @@ class Overlay:
         return me or (rows[0].name if rows else None)
 
     def run(self):
-        # The minimap gets its own timer rather than riding the 250ms refresh:
-        # the hook feeds positions at ~6.7/sec, and redrawing at 4/sec throws
-        # away a third of them and makes dots step instead of glide. It's a
-        # canvas redraw of a few dozen items, so the extra ticks are cheap —
-        # and it deliberately does NOT touch the aggregation the main loop owns.
-        def map_loop():
-            try:
-                self._draw_minimap()
-                self._draw_compass()
-                # Reads the same snapshot but is NOT part of either panel: the
-                # tracker has to keep pointing whether or not the map is shown,
-                # which is most of the point of it.
-                self._tick_sparkly()
-                # On this timer rather than the 250ms refresh because the
-                # sweep and the flashes are animation: at 4fps a clock wedge
-                # steps visibly and a 6Hz flash aliases into a stutter. It
-                # reads a deadline latched when the hook last spoke, so
-                # redrawing faster costs no extra traffic at all.
-                self._draw_buff_trays()
-            except tk.TclError:
-                return              # window went away; stop rescheduling
-            self.root.after(max(25, MINIMAP_RATE_MS[self._map_rate] // 2),
-                            map_loop)
-        map_loop()
-
-        # The input pump. Its own timer, like the minimap's, because what makes
+        # The input pump. Its own timer, because what makes
         # the overlay feel responsive and what makes the numbers correct run at
         # completely different speeds — and the slower of the two was setting
         # the pace for both.
@@ -15005,10 +7348,6 @@ class Overlay:
             self._refresh()
             self.root.after(REFRESH_MS, loop)
         loop()
-        # Deferred rather than called here: it wants a live Tk loop to schedule
-        # the window onto, and the fetch behind it is a network round trip that
-        # has no business delaying the overlay coming up.
-        self.root.after(1200, self.check_whats_new)
         self.root.mainloop()
 
 
@@ -15057,328 +7396,6 @@ def _heal_specs():
     return _HEAL_SPECS
 
 
-_CODEX_DATA = None
-# Fallback used only when codex_units.json is missing. The thresholds are the
-# game's own constants, so an out-of-date file still gives sane arithmetic for
-# ordinary mobs — but with no `elite`/`big`/`noCodex` lists every mob is
-# treated as an ordinary foe, which is why its absence is logged.
-_CODEX_FALLBACK = {"thresholds": {"foe": [1, 8, 20], "big": [1, 4, 10],
-                                  "elite": [1, 1, 1], "item": [1, 5, 25, 50]},
-                   "noCodex": [], "elite": [], "big": []}
-
-
-def _codex_data():
-    """The codex reference table from analysis_out/codex_units.json.
-
-    Three id lists plus the rank thresholds, extracted from the game's own
-    data.cdb by emit_offsets.py on the same self-heal cycle as the offsets:
-
-      noCodex - mobs with no codex entry at all (the game's NoCodex flag)
-      elite   - elite/boss, one kill masters the entry
-      big     - inherits a *_Big base, so 1/4/10 rather than 1/8/20
-
-    Anything not listed is an ordinary foe."""
-    global _CODEX_DATA
-    if _CODEX_DATA is None:
-        try:
-            d = json.loads(
-                (ANALYSIS / "codex_units.json").read_text(encoding="utf-8"))
-            _CODEX_DATA = {"thresholds": d["thresholds"],
-                           "noCodex": set(d.get("noCodex") or ()),
-                           "elite": set(d.get("elite") or ()),
-                           "big": set(d.get("big") or ())}
-        except Exception as e:
-            print(f"[meter] codex_units.json unavailable ({e}) — every mob "
-                  "will be treated as an ordinary foe and none as excluded",
-                  file=sys.stderr)
-            _CODEX_DATA = {"thresholds": _CODEX_FALLBACK["thresholds"],
-                           "noCodex": set(), "elite": set(), "big": set()}
-    return _CODEX_DATA
-
-
-_STATUS_META = None
-
-
-def _status_meta():
-    """The buff reference table from analysis_out/status_meta.json — every
-    status the game defines, not merely the ones you have happened to proc.
-
-    Extracted from data.cdb by emit_offsets.py on the same self-heal cycle as
-    the offsets, so a patch that renames a buff or adds one is picked up
-    without anyone touching this build. 293 statuses, 217 of them named.
-
-    Per id: name, desc, max (ADVISORY — see below), dur, types, colour, and the
-    dot/hot/cc rollups the picker filters on. Plus a `types` table naming and
-    colouring each category.
-
-    Two things this deliberately does NOT provide:
-
-      * A stack CEILING. The cdb's maxStacks is a base value that gear and
-        talents raise — measured 2026-08-08, GA_Demon_Combo_Status is 3 in the
-        cdb and was observed live at 5 — so it is kept for the picker's
-        description and never used as a denominator.
-      * Icons. Those live in assets/status/, built once from res.pak by
-        hltools/build_status_icons.py, because extracting them means reading an
-        857MB pak.
-
-    An unnamed status is the game's internal plumbing (Dash_Status, the block
-    and swim states), and "the cdb never named it" is exactly the test that
-    keeps those out of the picker — no hand-maintained blocklist.
-    """
-    global _STATUS_META
-    if _STATUS_META is None:
-        try:
-            d = json.loads(
-                (ANALYSIS / "status_meta.json").read_text(encoding="utf-8"))
-            _STATUS_META = {"status": d.get("status") or {},
-                            "types": d.get("types") or {},
-                            "items": d.get("items") or {},
-                            "classKinds": set(d.get("classKinds") or ())}
-        except Exception as e:
-            print(f"[meter] status_meta.json unavailable ({e}) — buffs will be "
-                  "listed by their raw ids", file=sys.stderr)
-            _STATUS_META = {"status": {}, "types": {}, "items": {},
-                            "classKinds": set()}
-    return _STATUS_META
-
-
-def status_name(kind, item=None):
-    """What to call a status on screen.
-
-    `item` is the originItem kind, and it is not optional decoration: every
-    st.skill.ItemStatus reports the literal kind "ItemStatus" (measured), so a
-    potion and a meal are the same string until the item separates them.
-
-    Falls back to a prettified id so a status the cdb has not named still reads
-    as something rather than as blank.
-    """
-    meta = _status_meta()
-    if kind in meta["classKinds"] and item:
-        return meta["items"].get(item) or _pretty_id(item)
-    row = meta["status"].get(kind) or {}
-    nm = row.get("name")
-    if nm:
-        # The cdb wraps a few names in the token brackets its own tooltips
-        # substitute — "[PhysicalBlock]" is a real row. Showing the brackets
-        # would be showing our workings.
-        return nm.strip("[]") or _pretty_id(kind)
-    return _pretty_id(kind)
-
-
-# The cdb writes descriptions with its own tooltip markup: ::dmg::, ::val1::
-# and ::duration:: are substituted at runtime from the caster's stats, and
-# [CritChanceRating] is a keyword the game renders as a styled term. Neither
-# survives being shown raw.
-_DESC_TOKEN = re.compile(r"::[^:]*::")
-_DESC_TAG = re.compile(r"\[([A-Za-z0-9_ ]+)\]")
-_DESC_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
-
-
-def clean_desc(text):
-    """A status's cdb description, made readable.
-
-    The substituted numbers become an ellipsis rather than being guessed: they
-    depend on the caster's stats and the skill's rank, and this list is for
-    telling two buffs apart, not for quoting damage. "[CritChanceRating]"
-    becomes "Crit Chance Rating" — the brackets are the game's styling markup,
-    and the run-together name is only readable once it is split.
-    """
-    if not text:
-        return ""
-    s = _DESC_TOKEN.sub("…", text)
-    s = _DESC_TAG.sub(lambda mo: _DESC_CAMEL.sub(" ", mo.group(1)), s)
-    s = re.sub(r"\s+", " ", s).strip()
-    # "increased by ….'" — the sentence's own full stop after a substituted
-    # number reads as a typo once the number is an ellipsis.
-    s = re.sub(r"…\s*\.", "…", s)
-    s = re.sub(r"(…\s*){2,}", "… ", s)
-    return s
-
-
-_STATUS_GROUPS = None
-
-
-def status_groups():
-    """(primary id -> [every id in the group], any id -> its primary).
-
-    Why this exists: 217 named statuses share only 184 names, so the picker
-    listed the same name several times over with no way to tell the rows
-    apart. Most of those repeats are real — three different weapons each grant
-    a "Light Burn", with different icons and different text — and merging them
-    would quietly make one untrackable.
-
-    So the test for "actually the same buff" is the NAME plus the DESCRIPTION.
-    That is what separates `Hive's Sunder`'s two ids — one reads "Magic Armor
-    reduced" and the other "Magic Armor increased", the enemy's half and yours
-    — while correctly merging the three `Light Burn`s that different weapons
-    grant with identical text and two different pictures.
-
-    The icon only enters the key when there is NO description, because then
-    "same text" means "both blank", which is no evidence at all. Measured on
-    this build: 21 names carry genuinely different text and stay separate,
-    10 groups merge, and the three that stay split on icon alone (Poisoned,
-    Slow, Static Drag) are ones the picker shows different art for — so no two
-    rows in the list are indistinguishable, which is the actual requirement.
-
-    Members are sorted and the first is the primary, so the key a tray saves is
-    stable across runs and across rebuilds of the metadata.
-    """
-    global _STATUS_GROUPS
-    if _STATUS_GROUPS is None:
-        meta = _status_meta()["status"]
-        icons = _status_icon_index()
-        buckets = {}
-        for key, row in meta.items():
-            name = row.get("name")
-            if not name:
-                continue
-            # The CLEANED description, which is what the picker shows. Grouping
-            # on the raw text left "Ignore Pain" as two rows whose markup
-            # differed (::val1:: against ::val2::) but which both render as
-            # "… increased by …" — two rows a player cannot tell apart, which
-            # is exactly what this function exists to prevent.
-            desc = clean_desc(row.get("desc"))
-            sig = (name, desc) if desc else (name, "", icons.get(key))
-            buckets.setdefault(sig, []).append(key)
-        groups, primary = {}, {}
-        for members in buckets.values():
-            members.sort()
-            groups[members[0]] = members
-            for k in members:
-                primary[k] = members[0]
-        _STATUS_GROUPS = (groups, primary)
-    return _STATUS_GROUPS
-
-
-_STATUS_ICON_INDEX = None
-
-
-def _status_icon_index():
-    """status id -> icon cell, read straight off the shipped sheet's index.
-
-    Loaded separately from StatusIcons because the grouping above needs it
-    before any window exists, and it is a small json either way."""
-    global _STATUS_ICON_INDEX
-    if _STATUS_ICON_INDEX is None:
-        try:
-            d = json.loads((STATUS_DIR / "icons.json").read_text(encoding="utf-8"))
-            _STATUS_ICON_INDEX = d.get("ids") or {}
-        except Exception:
-            # No sheet: every status groups on (name, None, desc), which is
-            # still a sane rule — it just cannot tell two same-named buffs
-            # apart by their art.
-            _STATUS_ICON_INDEX = {}
-    return _STATUS_ICON_INDEX
-
-
-def status_key(kind, item=None):
-    """The identity a tray tracks a status by.
-
-    Item statuses share one kind, so they are keyed by their item instead —
-    otherwise ticking "Cook_11" in the picker would light up for every potion
-    you ever drink."""
-    meta = _status_meta()
-    if kind in meta["classKinds"] and item:
-        return f"item:{item}"
-    return kind
-
-
-# Every UNIT threshold set has three tiers (measured), so a finished entry is
-# rank 3 whichever set applies — which is what lets the map filter work without
-# knowing a mob's bucket at all.
-CODEX_MAX_RANK = 3
-
-
-def _codex_thresholds(kind):
-    """The kill counts at which `kind` gains each codex rank, or None if the
-    mob has no codex entry."""
-    d = _codex_data()
-    if kind in d["noCodex"]:
-        return None
-    t = d["thresholds"]
-    if kind in d["elite"]:
-        return t["elite"]
-    if kind in d["big"]:
-        return t["big"]
-    return t["foe"]
-
-
-def _ordinal(n):
-    """1st, 2nd, 3rd, 4th — and 11th/12th/13th, which are the ones a naive
-    last-digit rule gets wrong."""
-    n = int(n)
-    if 11 <= (abs(n) % 100) <= 13:
-        return f"{n}th"
-    return f"{n}" + {1: "st", 2: "nd", 3: "rd"}.get(abs(n) % 10, "th")
-
-
-def _rank_under(thr, kills):
-    """What rank `kills` earns against a threshold set."""
-    return sum(1 for t in thr if kills >= t)
-
-
-def _codex_set(kind, kills=None, rank=None):
-    """The threshold set to use for `kind`, or None if it has no codex entry.
-
-    The cdb-derived bucket is only a PRIOR. `rank` comes from the game's own
-    replicated store and is exact, so when the two disagree the game wins:
-    whichever set explains the observed (kills, rank) is the right one.
-
-    That matters because the static rule — Elite|Boss flags mean a one-kill
-    entry — is demonstrably incomplete. 62 units carry `Unique` without either
-    flag (Crimson Captain Agamemnon, Sparkling Crab, Sparkling Boar) and they
-    are the "named mobs that clear in one" that the bucket misses, which showed
-    up in play as "Codex Mastery 12/20" on an entry that finished on kill one.
-    Rather than widen the flag test on a guess and risk being wrong the other
-    way, the observation decides — and this self-corrects for any mob whose
-    bucket is wrong, including ones nobody has noticed yet.
-
-    Ambiguity is normal and harmless: every set starts at 1, so before the
-    first kill they all agree, and the prior simply stands."""
-    d = _codex_data()
-    if kind in d["noCodex"]:
-        return None
-    t = d["thresholds"]
-    prior = (t["elite"] if kind in d["elite"]
-             else t["big"] if kind in d["big"] else t["foe"])
-    if not isinstance(kills, int) or not isinstance(rank, int):
-        return prior
-    if _rank_under(prior, kills) == rank:
-        return prior                    # the prior explains it; keep it
-    for name in ("elite", "big", "foe"):
-        if _rank_under(t[name], kills) == rank:
-            return t[name]
-    return prior                        # nothing fits (a patch?); say so below
-
-
-def _codex_thresholds(kind):
-    """The static bucket alone — used where there is no observation to go on,
-    and as the "does this mob have a codex entry at all" test."""
-    return _codex_set(kind)
-
-
-def _codex_progress(kind, kills, rank=None):
-    """(kills_so_far, target_for_this_tier, is_the_final_tier) or None.
-
-    At full rank the target is the FINAL threshold rather than None, so
-    "20/20" reads as finished instead of the caller having to special-case it.
-
-    The third value is what lets the toast say "Codex Mastery 12/20" on the
-    stretch that will finish the entry and plain "Codex 3/8" before it.
-
-    It tests the target VALUE against the last threshold rather than the tier's
-    index, and that is not a stylistic choice: an elite's thresholds are
-    [1,1,1], so the first tier it offers you is also the last one, and indexing
-    would call a one-kill mastery "not final" and word it wrong."""
-    thr = _codex_set(kind, kills, rank)
-    if not thr:
-        return None
-    for t in thr:
-        if kills < t:
-            return (kills, t, t >= thr[-1])
-    return (kills, thr[-1], True)
-
-
 def _boss_label(kind):
     """The boss's real display name, falling back to the prettified kind for
     anything the unit sheet doesn't carry."""
@@ -15396,12 +7413,6 @@ def _summon_label(kind):
     reduces to a plausible "Imp" — but it is a guess that happens to read well,
     and it degenerates to a raw id on every summon not named that way."""
     return _unit_names().get(kind) or _pretty_id(kind)
-
-
-def _hex_rgb(s):
-    """"#rrggbb" -> (r, g, b), for the Pillow calls that want a tuple."""
-    s = s.lstrip("#")
-    return (int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16))
 
 
 def _lerp_hex(a, b, t):
@@ -15648,19 +7659,6 @@ class SkillColumn:
 def build_script_source():
     data = json.loads((ANALYSIS / "resolver_data.json").read_text(encoding="utf-8"))
     off = (ANALYSIS / "meter_offsets.json").read_text(encoding="utf-8")
-    # Which unit kinds are critters, and which carry the cdb's Spark flag. It
-    # rides inside DATA rather than as a third global so the agent keeps one
-    # place to look; folded in here rather than by build_targets.py because it
-    # comes out of data.cdb (emit_offsets' half) and not out of hlboot.dat.
-    # Absent, the agent simply classifies no critters — the map keeps drawing
-    # them as foes, which is what it did before this existed.
-    try:
-        data["unit_traits"] = json.loads(
-            (ANALYSIS / "unit_traits.json").read_text(encoding="utf-8"))
-    except Exception as e:
-        print(f"[meter] unit_traits.json unavailable ({e}) — critters will "
-              "draw as ordinary enemies and the sparkly tracker will not fire",
-              file=sys.stderr)
     js = (FRIDA_DIR / "meter_hook.js").read_text(encoding="utf-8")
     return (f"const DATA = {json.dumps(data)};\nconst OFF = {off};\n" + js)
 
@@ -15842,34 +7840,6 @@ def _data_is_current():
     if not (ANALYSIS / "heal_specs.json").exists():
         print("[meter] heal_specs.json absent — regenerating so healing can "
               "be counted on full-health targets.", file=sys.stderr)
-        return False
-    # codex_units.json arrived with the codex feature (3.6). Its absence is the
-    # quietest failure of the three: _codex_data() falls back to treating every
-    # mob as an ordinary foe and NONE as excluded, so the toast quotes 1/8/20
-    # at an elite that masters in one kill and the map filter offers you
-    # training dummies. Both look like features working badly rather than like
-    # a stale data directory.
-    if not (ANALYSIS / "codex_units.json").exists():
-        print("[meter] codex_units.json absent — regenerating for the codex "
-              "thresholds and exclusions.", file=sys.stderr)
-        return False
-    # unit_traits.json arrived with the critter markers and the sparkly tracker
-    # (3.7). Absent, the agent classifies no critters at all — they draw as
-    # ordinary red enemies and no sparkling unit is ever reported, which looks
-    # like the features simply not existing rather than like stale data.
-    if not (ANALYSIS / "unit_traits.json").exists():
-        print("[meter] unit_traits.json absent — regenerating for the critter "
-              "markers and the sparkly tracker.", file=sys.stderr)
-        return False
-    # status_meta.json arrived with the buff tracker (3.8). Absent, every buff
-    # in the picker and every tray is labelled with its raw id —
-    # "Mace_Benediction_Passive_Status" instead of "Blessing" — and the
-    # internal plumbing (Dash_Status and friends), which is hidden precisely
-    # because the cdb never named it, becomes indistinguishable from a real
-    # buff and floods the list.
-    if not (ANALYSIS / "status_meta.json").exists():
-        print("[meter] status_meta.json absent — regenerating so buffs have "
-              "names.", file=sys.stderr)
         return False
     return True
 
@@ -16728,9 +8698,6 @@ def main():
     print(f"[meter] dpi awareness: {declare_dpi_awareness()} "
           f"(display at {display_scale():.2f}x)", file=sys.stderr)
     seed_analysis()
-    # background; the notice lands when it lands. Re-checked on loading screens
-    # too — see the zone handler.
-    check_for_update(announce=True)
     claim_single_instance()
     # Only after claiming: before it, the flag on disk may still be the one
     # aimed at the instance we just displaced.
@@ -16738,7 +8705,6 @@ def main():
     session = PartySession()
     ui_state = GameUIState()
     world = WorldSnapshot()
-    statuses = StatusSnapshot()
     rift_rec = RiftRecorder()
     # Outlives every encounter on purpose: a skill's heal size is a property of
     # the build, not of the pull, and resetting it each fight would throw away
@@ -16754,8 +8720,7 @@ def main():
     tray = TrayIcon(request_stop)
     tray.start()
     try:
-        return _run(tray, session, ui_state, world, statuses, rift_rec,
-                    heal_sizer)
+        return _run(tray, session, ui_state, world, rift_rec, heal_sizer)
     finally:
         tray.stop()
         # Here as well as on the paths inside _run, which miss the early
@@ -16764,7 +8729,7 @@ def main():
         release_instance_lock()
 
 
-def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
+def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     device = frida.get_local_device()
     proc = find_game_process(device)
     if proc is None:
@@ -16810,8 +8775,6 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
     ready_evt = threading.Event()
     liveness = {"t": time.monotonic(), "printed": 0.0}
     hero_id = {"name": None}           # last local hero, to keep the log quiet
-    shard_seen = {"n": False}          # the roster is announced once, not per sweep
-    pets_seen = {"n": None}            # ...and so is the collected-critter mirror
     nullified: dict = {}               # mitigated-hit shapes seen, see below
     nullified_at = [0.0]               # last time they were reported
     boss_fight_on = [False]            # a boss fight is under way, see below
@@ -16835,15 +8798,6 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
     # world zone reports its bestiary once and then goes quiet.
     target_seen: set = set()
     TARGET_LOG_MAX = 40
-    # (status kind, origin item) pairs already named in the log. Same purpose
-    # as target_seen: a status resolving to its raw id instead of a display
-    # name is otherwise invisible — the tray just shows an ugly label and
-    # nothing says the metadata is stale. Declared HERE, in _run, because
-    # on_message is nested in _run: a name defined in main() compiles fine and
-    # raises NameError on the first message that touches it (shipped once,
-    # 2026-08-03, `heal_sizer`).
-    status_seen: set = set()
-    STATUS_LOG_MAX = 60
 
     heal_log_at = [0.0]
 
@@ -16919,38 +8873,11 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
                     print(line, file=sys.stderr)
         elif k == "combat":
             session.set_combat(p.get("state") or {})
-        elif k == "world":
-            world.update(p)
         elif k == "rift":
             state = bool(p.get("state"))
             ui_state.set_rift(state)
             rift_rec.set_rift(state)
             print(f"[meter] rift: {state}", file=sys.stderr)
-        elif k == "status":
-            # Your live buffs and debuffs. Sent on change only, so this is
-            # quiet by design — the countdown itself is computed in the
-            # snapshot from a latched deadline, not from these messages.
-            statuses.update(p)
-            # Named ONCE per distinct buff, not per message: this is the only
-            # place that says out loud that a status resolved to a real name
-            # rather than to its raw id, and a stale status_meta.json shows up
-            # here as a run of ids and nowhere else. Capped so a long session
-            # in busy content reports its bestiary and then goes quiet.
-            for row in (p.get("list") or []):
-                kd = row.get("k")
-                if not kd:
-                    continue
-                sig = (kd, row.get("i") or "")
-                if sig in status_seen or len(status_seen) >= STATUS_LOG_MAX:
-                    continue
-                status_seen.add(sig)
-                nm = status_name(kd, row.get("i"))
-                print(f"[meter] status seen: {kd!r}"
-                      f"{' <' + row['i'] + '>' if row.get('i') else ''}"
-                      f" -> {nm!r}", file=sys.stderr)
-                if len(status_seen) == STATUS_LOG_MAX:
-                    print(f"[meter] ({STATUS_LOG_MAX} distinct statuses named; "
-                          "no longer listing them)", file=sys.stderr)
         elif k == "window":
             name, is_open = p.get("name"), bool(p.get("open"))
             ui_state.set_window(name, is_open)
@@ -17006,9 +8933,6 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
                           f"(kept {kept} event{'' if kept == 1 else 's'} from "
                           f"the last {BOSS_PULL_BACKLAG_SECS:.0f}s)",
                           file=sys.stderr)
-                    # Queued rather than called: this is the hook's thread, and
-                    # both the reset banner and the cue belong to the Tk thread.
-                    ov.on_boss_pull()
             for b in (p.get("down") or []):
                 # `killed` is decided in the hook from the last health seen
                 # while the bar was up — a bar that drops because the player
@@ -17059,8 +8983,6 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
                             print("[meter] rift complete — showing the "
                                   "end-of-rift report", file=sys.stderr)
                             ov.show_rift_report(report)
-                    if ov is not None:
-                        ov.on_boss_kill()
         elif k == "bossgone":
             # Every boss bar has been down for ~5 seconds. The hook reports
             # the observation and this decides what it meant: a kill has
@@ -17086,71 +9008,6 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
                 if ov is not None and ov.auto_reset_boss():
                     session.reset()
                     ov.on_boss_giveup()
-        elif k == "pickup":
-            # The hook counts items by `kind` across inventory AND equipment,
-            # so this only fires when the hero genuinely gained one — moving a
-            # weapon between the two (which mints a new hxbit uid every time)
-            # leaves the count alone. Anything can be reported; only legendary
-            # WEAPONS make a noise, because rarity is a field that exists only
-            # on st.item.Weapon.
-            rarity = p.get("rarity")
-            print(f"[meter] picked up: {p.get('item')} "
-                  f"({p.get('cls')}{', ' + rarity if rarity else ''})"
-                  + (f" x{p.get('count')}" if (p.get("count") or 1) > 1 else ""),
-                  file=sys.stderr)
-            if rarity == LEGENDARY_RARITY:
-                # No switch of its own: it rides the master Sounds setting,
-                # which SoundPlayer.play() already gates on.
-                ov = _OVERLAY["ref"]
-                if ov is not None:
-                    ov.on_legendary_pickup()
-        elif k == "codex":
-            # The whole kind->rank mirror, resent every 20s. Wholesale rather
-            # than a delta: it is a few hundred small entries and the map
-            # filter wants it complete, not eventually-consistent.
-            ranks = p.get("ranks")
-            if isinstance(ranks, dict):
-                ui_state.set_codex_ranks(ranks)
-        elif k == "pets":
-            # The account's collected companions, wholesale, sent when the
-            # list changes (plus once at attach). Unit kinds — the same
-            # string critters carry as `k` — which is what the map's
-            # "only uncollected" filter compares.
-            kinds = p.get("kinds")
-            if isinstance(kinds, list):
-                ui_state.set_pets(kinds)
-                # Announced once (then only on growth — a capture mid-session
-                # is worth a line). The mirror going missing is a silent
-                # failure everywhere else, so its arrival is the diagnostic.
-                if pets_seen["n"] is None:
-                    pets_seen["n"] = len(kinds)
-                    print(f"[meter] collected critters: {len(kinds)} kinds "
-                          "on the account", file=sys.stderr)
-                elif len(kinds) > pets_seen["n"]:
-                    pets_seen["n"] = len(kinds)
-                    print(f"[meter] critter collection grew to {len(kinds)} "
-                          "kinds", file=sys.stderr)
-        elif k == "codexrank":
-            # A single entry moved. Kept in step between full refreshes so a
-            # mob you just mastered stops drawing on the map immediately.
-            ui_state.set_codex_rank(p.get("u"), p.get("r"))
-        elif k == "codexkill":
-            # Every kill of anything. `c`/`r` are read AFTER the game has
-            # incremented, because the codex events fire before this one
-            # (measured) — so the numbers here are already the new ones.
-            # Mirrored as well as shown: the boss kill toast wants the lifetime
-            # count and must not wait up to 20s for the next full refresh.
-            ui_state.set_codex_rank(p.get("u"), p.get("r"), p.get("c"))
-            ov = _OVERLAY["ref"]
-            if ov is not None:
-                ov.on_codex_kill(p.get("u"), p.get("c"), p.get("r"))
-        elif k == "codexnotify":
-            # CodexDiscovered = rank 1, CodexCompleted = an INTERMEDIATE
-            # rank-up, CodexMastered = the entry is finished. The names do not
-            # mean what they look like.
-            ov = _OVERLAY["ref"]
-            if ov is not None:
-                ov.on_codex_notify(p.get("n"), p.get("u"))
         elif k == "zone":
             # The first report after attach says where we already are — it
             # keys the map background but is not a loading screen, so nothing
@@ -17187,12 +9044,8 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
             print(f"[meter] zone change ({p.get('sig')!r}"
                   + (f"; {extra}" if extra else "") + ") — meter reset",
                   file=sys.stderr)
-            # A loading screen is the one moment the player is demonstrably
-            # not mid-fight, which makes it the right time to notice a new
-            # release. Throttled and self-silencing inside — this costs
-            # nothing on the zone changes it declines to act on.
-            check_for_update()
         elif k == "server":
+
             # Which shard. Sent on its own rather than folded into `zone`
             # because the two move independently — a relog can land you on a
             # different shard in the same zone, which is exactly how this was
@@ -17218,25 +9071,10 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
                 hero_id["name"] = name
                 print("[meter] local hero "
                       + ("identified." if first else "changed."), file=sys.stderr)
-                # Buff trays are per character. Queued rather than called —
-                # this is the hook's thread, and swapping the trays touches
-                # every tray window and the whole Buffs page.
-                ov = _OVERLAY["ref"]
-                if ov is not None:
-                    ov._enqueue(lambda n=name: ov.set_character(n))()
         elif k == "shard":
-            # The hook only sends this when the roster actually changed, so
-            # there is no throttle here — an arriving message IS the change.
-            rows = p.get("list") or []
-            world.set_shard(rows)
-            # Once, like the local-hero line. An empty Social tab has two very
-            # different causes — the sweep never ran, or it ran and the layer
-            # is genuinely just you — and without this they look identical.
-            if rows and not shard_seen["n"]:
-                shard_seen["n"] = True
-                named = sum(1 for r in rows if r.get("k"))
-                print(f"[meter] shard roster: {len(rows)} players "
-                      f"({named} with a class).", file=sys.stderr)
+            # Every player on the layer, with their class — which is where the
+            # meter's class tags come from. Sent only when the roster changed.
+            world.set_shard(p.get("list") or [])
         elif k == "log":
             print("[hook]", p.get("msg"), file=sys.stderr)
         elif k == "progress":
@@ -17349,10 +9187,8 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
             return
         script.post(dict(kw, type="config"))
 
-    overlay = Overlay(session, pid, ui_state, world, statuses,
+    overlay = Overlay(session, pid, ui_state, world,
                       configure=configure_hook)
-    # Push the starting rate, since the agent boots on its own default.
-    overlay._set_map_rate(overlay._map_rate)
     # From here the overlay owns shutdown: it's the only thing that can return
     # from the mainloop and let the finally below unload the hook and detach.
     _OVERLAY["ref"] = overlay
@@ -17364,10 +9200,6 @@ def _run(tray, session, ui_state, world, statuses, rift_rec, heal_sizer):
         overlay.run()
     finally:
         _OVERLAY["ref"] = None
-        try:
-            overlay.sounds.close()      # release the MCI devices we opened
-        except Exception:
-            pass
         try:
             # End the settings panel's process. It is already off the screen —
             # _quit hides it along with every Tk window before the mainloop

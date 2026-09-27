@@ -25,18 +25,6 @@ datas = [
     # nothing, and healing silently means "health actually restored" again —
     # the bug the OVER column exists to fix.
     (str(ROOT / "analysis_out" / "heal_specs.json"), "res/analysis_out"),
-    # The codex rank thresholds and the excluded/elite/big unit lists. Without
-    # it every mob is treated as an ordinary foe and none as excluded, so the
-    # toast quotes 1/8/20 at an elite that masters in one kill.
-    (str(ROOT / "analysis_out" / "codex_units.json"), "res/analysis_out"),
-    # Which unit kinds are critters and which carry the Spark flag. Without it
-    # critters draw as ordinary red enemies and the sparkly tracker never fires.
-    (str(ROOT / "analysis_out" / "unit_traits.json"), "res/analysis_out"),
-    # Every status the game defines, named and categorised. Without it the buff
-    # picker lists raw ids and — worse — cannot tell a real buff from the
-    # game's internal plumbing, since "the cdb never named it" is exactly the
-    # test that hides Dash_Status and friends.
-    (str(ROOT / "analysis_out" / "status_meta.json"), "res/analysis_out"),
     (str(ROOT / "assets" / "farevermeter.ico"), "res/assets"),
     # The settings panel's markup. Three files rather than one string constant
     # in menu_host.py, which reads and inlines them into a single document at
@@ -66,60 +54,6 @@ else:
     print("[i] assets/gofundme.png not found — the Help tab's support button "
           "will use its text fallback.")
 
-datas += [
-    # Fixed cues, played through Windows' own MCI so they add files rather than
-    # an audio dependency. Listed one by one rather than by glob, so a new cue
-    # added to SOUND_FILES and forgotten here fails loudly at build review
-    # instead of working from source and being silently mute when shipped.
-    (str(ROOT / "assets" / "boss_pulled.wav"), "res/assets"),
-    (str(ROOT / "assets" / "legendary_pickup.mp3"), "res/assets"),
-]
-
-# The minimap's world-map backdrops (hltools/build_map_assets.py outputs) —
-# globbed as a set, unlike the cues above: image and transform ship in pairs,
-# and a world absent from the folder is simply a world without a backdrop.
-for f in sorted((ROOT / "assets" / "maps").glob("*")):
-    if f.suffix in (".webp", ".json"):
-        datas.append((str(f), "res/assets/maps"))
-
-# The buff trays' icon sheet (hltools/build_status_icons.py output). Sheet and
-# index ship as a pair like the map backdrops, and for the same reason: the
-# index addresses cells in that exact sheet, so shipping one without the other
-# is worse than shipping neither. Required, not optional — without it every
-# tracked buff falls back to a three-letter coloured tile, which is a feature
-# that technically works and nobody would want.
-_status_dir = ROOT / "assets" / "status"
-_status_files = [_status_dir / "icons.webp", _status_dir / "icons.json"]
-_missing = [f.name for f in _status_files if not f.is_file()]
-if _missing:
-    raise SystemExit(
-        f"[!] assets/status is missing {', '.join(_missing)} — the buff trays "
-        "would ship with no icons. Run: python hltools/build_status_icons.py")
-for f in _status_files:
-    datas.append((str(f), "res/assets/status"))
-
-# The POOLED cues (SOUND_POOLS): one folder per cue, every playable file in it.
-# Globbed on purpose, and for the opposite reason the fixed cues are listed by
-# hand — a pool exists to be added to, so "whatever is in the folder at build
-# time" is exactly the intent.
-#
-# This ships the DEFAULTS only. A user's own additions go in
-# %LOCALAPPDATA%\FareverMeter\sounds\<cue>, which the meter also reads and
-# which survives an update — putting them here would mean losing them on the
-# next install.
-for pool in ("victory", "codex"):
-    d = ROOT / "assets" / pool
-    if not d.is_dir():
-        raise SystemExit(f"[!] sound pool assets/{pool} is missing — the "
-                         f"{pool} cue would ship mute")
-    found = [f for f in sorted(d.glob("*"))
-             if f.suffix.lower() in (".mp3", ".wav", ".wma", ".m4a", ".aac")]
-    if not found:
-        raise SystemExit(f"[!] sound pool assets/{pool} is empty — the "
-                         f"{pool} cue would ship mute")
-    for f in found:
-        datas.append((str(f), f"res/assets/{pool}"))
-
 # The self-heal path re-runs these against the running game's hlboot.dat after a
 # Farever patch, so they have to ship — without them an installed meter couldn't
 # recover from a patch without a new release.
@@ -134,8 +68,6 @@ for tool in ("build_targets.py", "emit_offsets.py", "hlbc_parser.py",
 # screenshots a guaranteed part of the build rather than a lucky one — users
 # should never see "pip install pillow" either.
 hiddenimports = ["PIL.Image", "PIL.ImageDraw", "PIL.ImageFont",
-                 # The map backdrop paints through Tk; ImageTk is its bridge.
-                 "PIL.ImageTk",
                  # The settings panel's process. FareverMeter.exe re-enters
                  # itself with --menu-host and imports this, so nothing in the
                  # import graph points at it and PyInstaller cannot find it on
