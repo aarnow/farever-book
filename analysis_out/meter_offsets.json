@@ -1,0 +1,234 @@
+{
+  "String": {
+    "bytes": 8,
+    "length": 16
+  },
+  "DamageResult": {
+    "_amount": 88,
+    "affinity": 56,
+    "_critical": 113,
+    "_kill": 112,
+    "_hitCount": 96,
+    "_block": 104,
+    "blocker": 72,
+    "effect": 64,
+    "target": 48,
+    "serverSource": 32,
+    "ctx": 128,
+    "baseSkill": 8
+  },
+  "BaseSkill": {
+    "kind": 184,
+    "inf": 176,
+    "owner": 328,
+    "ownerPlayer": 16,
+    "dynVal1": 216,
+    "dynVal2": 224,
+    "dynVal3": 232
+  },
+  "HitData": {
+    "baseSkill": 8,
+    "step": 160
+  },
+  "SkillStep": {
+    "index": 8
+  },
+  "UnitAttributes": {
+    "unit": 8,
+    "health": 240,
+    "faith": 72,
+    "intellect": 80,
+    "strength": 56,
+    "dexterity": 64
+  },
+  "Hero": {
+    "name": 1280,
+    "player": 1216,
+    "isInCombat": 688,
+    "layer": 112,
+    "loadout": 1232,
+    "weaponInHand": 1344,
+    "kind": 600,
+    "level": 992
+  },
+  "Loadout": {
+    "inventory": 144,
+    "equipment": 128
+  },
+  "Inventory": {
+    "content": 128
+  },
+  "Item": {
+    "kind": 120,
+    "uid": 32
+  },
+  "Weapon": {
+    "rarity": 168,
+    "level": 152
+  },
+  "GameLayer": {
+    "isRift": 248,
+    "serverName": 184,
+    "mainActivity": 240,
+    "worldEvents": 288,
+    "time": 200,
+    "world": 216,
+    "units": 336,
+    "interactibles": 328,
+    "entities": 312,
+    "players": 224
+  },
+  "World": {
+    "level": 184,
+    "name": 152,
+    "branchName": 200,
+    "_isWorldMap": 352
+  },
+  "Entity": {
+    "posx": 176,
+    "posy": 184,
+    "posz": 192,
+    "rotationZ": 200,
+    "radius": 288
+  },
+  "State": {
+    "removed": 8
+  },
+  "Interactible": {
+    "enabled": 600,
+    "isOffScreen": 616
+  },
+  "Activity": {
+    "kind": 472
+  },
+  "Element": {
+    "kind": 624,
+    "stateId": 664,
+    "currentVisualState": 680
+  },
+  "Gatherable": {
+    "hitPoints": 760,
+    "gatherInf": 736
+  },
+  "Camera": {
+    "direction": 208,
+    "curDirection": 256,
+    "distance": 192
+  },
+  "Unit": {
+    "kind": 600,
+    "inf": 640,
+    "attr": 984,
+    "statuses": 496
+  },
+  "Status": {
+    "kind": 184,
+    "stacks": 456,
+    "startTime": 192,
+    "duration": 336,
+    "refreshDuration": 448,
+    "originItem": 256,
+    "removed": 8
+  },
+  "Foe": {
+    "summonOwner": 1232,
+    "persistantSummon": 1248
+  },
+  "ArrayObj": {
+    "length": 8,
+    "array": 16,
+    "data": 24
+  },
+  "TimeState": {
+    "serverNow": 184,
+    "serverStart": 192
+  },
+  "WorldEvents": {
+    "currentEvents": 176
+  },
+  "WorldEvent": {
+    "kind": 176,
+    "creationTime": 192,
+    "startTime": 200,
+    "stopTime": 208
+  },
+  "Player": {
+    "name": 192,
+    "group": 256,
+    "isMe": 312,
+    "lobbyId": 264,
+    "uid": 184,
+    "hero": 304,
+    "progress": 240,
+    "accountProgress": 224
+  },
+  "AccountProgress": {
+    "collection": 184
+  },
+  "Collection": {
+    "pets": 168
+  },
+  "ArrayProxyData": {
+    "array": 40
+  },
+  "ArrayDyn": {
+    "array": 8
+  },
+  "Group": {
+    "groupId": 176,
+    "players": 184
+  },
+  "Progress": {
+    "unitsProgress": 168,
+    "itemProgress": 176
+  },
+  "MapData": {
+    "map": 40,
+    "value": 8
+  },
+  "StringMap": {
+    "h": 8
+  },
+  "CodexProxy": {
+    "count": 20,
+    "rank": 24
+  },
+  "BossesInfo": {
+    "bossInfos": 1096
+  },
+  "BossInfo": {
+    "active": 1096,
+    "unit": 1120
+  },
+  "foeClasses": [
+    "ent.Foe",
+    "ent.boss.Cleodora",
+    "ent.boss.Crabgantua",
+    "ent.boss.Mokshi",
+    "ent.boss.MunsterChuck",
+    "ent.boss.Phrixes",
+    "ent.boss.Ratsar"
+  ],
+  "unitClasses": [
+    "ent.Unit",
+    "ent.Hero",
+    "ent.Foe",
+    "ent.vehicle.Vehicle",
+    "ent.vehicle.CannonPlant",
+    "ent.boss.Cleodora",
+    "ent.boss.Crabgantua",
+    "ent.boss.Mokshi",
+    "ent.boss.MunsterChuck",
+    "ent.boss.Phrixes",
+    "ent.boss.Ratsar",
+    "ent.vehicle.Cannon"
+  ],
+  "SkillRow": {
+    "id_vidx": 7,
+    "texts_vidx": 16
+  },
+  "Texts": {
+    "name_vidx": 1,
+    "desc_vidx": 0
+  }
+}
