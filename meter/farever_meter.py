@@ -104,8 +104,6 @@ DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
 # Each character's kill counts per monster (the game's codex), last read.
 CODEX_FILE = _WRITABLE / ".meter_codex.json"
-# Profiles built in the Character tab (player -> equipment, talents...).
-PROFILES_FILE = _WRITABLE / ".meter_profiles.json"
 # Each character's world elements (chests, orbs, obelisks...) -> state.
 ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 LOG_FILE = DATA_HOME / "meter.log"
@@ -2872,7 +2870,7 @@ class App:
         self._elements_logged = False
         self._roster = []                   # players around, from the hook
         self._roster_at = 0.0
-        self._profiles = None               # .meter_profiles.json, loaded
+        self._profiles = None               # profiles analysed this session
         self._char_sel = None               # the profile being read
         self._char_wait = None              # (name, since) of an analysis
         self._elements_data = None          # .meter_elements.json, loaded
@@ -3658,24 +3656,15 @@ class App:
             name = prof.get("n")
             if not name:
                 return
-            profs = self._profiles_data()
-            profs[name] = prof
-            try:
-                PROFILES_FILE.write_text(json.dumps(profs, ensure_ascii=False),
-                                         encoding="utf-8")
-            except OSError as e:
-                print(f"[meter] couldn't save the profile: {e}",
-                      file=sys.stderr)
+            # kept for this session only: profiles are never written to disk
+            self._profiles_data()[name] = prof
             self._char_sel = name
         self._enqueue(done)()
 
     def _profiles_data(self):
+        """The profiles analysed this session (in memory only)."""
         if self._profiles is None:
-            try:
-                self._profiles = json.loads(
-                    PROFILES_FILE.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                self._profiles = {}
+            self._profiles = {}
         return self._profiles
 
     def _analyze(self, name):
@@ -3690,13 +3679,7 @@ class App:
             self._toast_msg(f"Analyse impossible : {e}")
 
     def _forget_profile(self, name):
-        profs = self._profiles_data()
-        if profs.pop(name, None) is not None:
-            try:
-                PROFILES_FILE.write_text(json.dumps(profs, ensure_ascii=False),
-                                         encoding="utf-8")
-            except OSError:
-                pass
+        self._profiles_data().pop(name, None)
         if self._char_sel == name:
             self._char_sel = None
 
@@ -5056,8 +5039,119 @@ CLASS_FR = {"Warrior": "Guerrier", "Mage": "Mage", "Priest": "Prêtre",
             "Rogue": "Voleur"}
 
 
+_AUGMENTS = None
+
+# augment type -> the style of its line on the profile
+AUGMENT_KIND = {"AugmentDemon": "gift", "AugmentDemonSigil": "sigil",
+                "AugmentJeweller": "gem"}
+
+
+def _augment_view(aid):
+    """One augment set into a gear: its name and what it does — the attribute
+    bonuses and maluses, or the skill it grants (a formula's enchantment, a
+    sigil's talent). Corrupted gifts all share one name, so the effect is
+    what tells them apart."""
+    global _AUGMENTS
+    if _AUGMENTS is None:
+        try:
+            _AUGMENTS = json.loads(
+                (ANALYSIS / "augments.json").read_text(encoding="utf-8"))
+        except Exception:
+            _AUGMENTS = {}
+    a = _AUGMENTS.get(aid) or {}
+    t = a.get("t") or ""
+    fx = []
+    for atb, val in a.get("a") or ():
+        name = _fr_names("attribute").get(atb) or _pretty_id(atb)
+        sign = "+" if val > 0 else "\u2212"
+        fx.append(f"{name} {sign}{abs(val):g}")
+    name = item_label(aid)
+    # a formula is already named after its enchantment ("Formule magique :
+    # Dévot" gives "Dévot"): no need to say it twice
+    fx += [sk for sk in (_skill_label(s) for s in a.get("s") or ())
+           if sk not in name]
+    return {"k": AUGMENT_KIND.get(t, "enchant" if "Enchant" in t else "aug"),
+            "name": name, "fx": " · ".join(fx)}
+
+
 def _skill_label(sid):
     return _fr_names("skill").get(sid) or _pretty_id(sid)
+
+
+_TALENTS = None
+
+
+def talent_data():
+    """{"trees": {class: {root, talents: [{s, tier, branch, max}]}},
+    "runes": {rune: skill}} from analysis_out/talents.json
+    (hltools/skills_data.py)."""
+    global _TALENTS
+    if _TALENTS is None:
+        try:
+            _TALENTS = json.loads(
+                (ANALYSIS / "talents.json").read_text(encoding="utf-8"))
+        except Exception:
+            _TALENTS = {}
+    return _TALENTS
+
+
+def _talent_tree(cls, ranks, granted=()):
+    """A class's talent tree laid out as the game draws it: the root, then
+    per tier (1-4) the three branches, each talent with its points. A talent
+    the hero has without having put points in it is one its gear gives."""
+    tree = (talent_data().get("trees") or {}).get(cls)
+    if not tree:
+        return None
+    granted = set(granted)
+    def cell(t):
+        pts = int(ranks.get(t["s"]) or 0)
+        gift = not pts and t["s"] in granted
+        return {"id": t["s"], "name": _skill_label(t["s"])
+                + (" (offert par l'équipement)" if gift else ""),
+                "pts": t["max"] if gift else pts, "max": t["max"],
+                "gift": gift}
+    root = next((t for t in tree["talents"] if t["tier"] == 0), None)
+    tiers = []
+    for tier in (1, 2, 3, 4):
+        tiers.append([[cell(t) for t in tree["talents"]
+                       if t["tier"] == tier and t["branch"] == b]
+                      for b in ("Left", "Center", "Right")])
+    spent = sum(int(v or 0) for v in ranks.values())
+    # the tree's own talents only; the root's point counts like any other
+    return {"root": cell(root) if root else None, "tiers": tiers,
+            "cost": ["", "1", "3", "7"], "spent": spent}
+
+
+def _spell_bar(prof):
+    """The action bar as the game shows it: the four weapon skill slots
+    (1-4), the next prayer, then the four class skills (A E R G)."""
+    if not prof.get("weaponSkills") and not prof.get("slots"):
+        return []
+    def sk(sid, key):
+        return {"id": sid, "name": _skill_label(sid) if sid else "",
+                "key": key, "empty": not sid}
+    weap = list(prof.get("weaponSkills") or [])[:4]
+    weap += [None] * (4 - len(weap))
+    out = [sk(s, str(i + 1)) for i, s in enumerate(weap)]
+    prayers = prof.get("prayers") or []
+    if prayers:
+        out.append(dict(sk(prayers[0], "Prière"), sep=True,
+                        seq=[_skill_label(p) for p in prayers]))
+    for s, key in zip(list(prof.get("slots") or [])[:4],
+                      ("A", "E", "R", "G")):
+        out.append(dict(sk(s, key), sep=key == "A" and not prayers))
+    return out
+
+
+def _runes_view(runes):
+    """The runes, each under the skill it sits on (rune ids carry it)."""
+    owner = talent_data().get("runes") or {}
+    by_skill = {}
+    for r in runes or ():
+        sid = owner.get(r) or r.rsplit("_M", 1)[0]
+        by_skill.setdefault(sid, []).append({"id": r, "name": _skill_label(r)})
+    return [{"id": sid, "name": _skill_label(sid), "runes": rs}
+            for sid, rs in by_skill.items()]
 
 
 def character_view(roster, profiles, sel, waiting, live):
@@ -5082,17 +5176,27 @@ def character_view(roster, profiles, sel, waiting, live):
     prof = profiles.get(sel) if sel else None
     if prof:
         gear, other = [], []
+        skills = set(prof.get("skills") or ())
         for slot in prof.get("equip") or ():
             if not slot:
                 continue
-            kind, rar, lvl = (list(slot) + [None, None, None])[:3]
+            kind, rar, lvl, upg, gslots, effects = (
+                list(slot) + [None, None, None, None, [], []])[:6]
             rar = rar or item_rarity(kind) or ""
             t = item_type(kind)
+            extras = [_augment_view(g) for g in gslots or ()
+                      if g and not str(g).startswith("[")]
+            for e in effects or ():
+                if e and not str(e).startswith("["):
+                    extras.append({"k": "enchant", "name": "Enchantement",
+                                   "fx": _skill_label(e)})
             entry = {"id": kind, "name": item_label(kind),
                      "img": item_icon(kind), "rk": rar.lower(),
                      "rar": rarity_label(rar) if rar else "",
                      "type": item_type_label(t) if t else "",
-                     "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None}
+                     "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None,
+                     "up": upg if isinstance(upg, int) and upg > 0 else 0,
+                     "extras": extras}
             (other if t in NOT_GEAR else gear).append(entry)
         view["open"] = {
             "n": prof.get("n"), "lvl": prof.get("lvl"),
@@ -5100,9 +5204,22 @@ def character_view(roster, profiles, sel, waiting, live):
             "ck": class_key(prof.get("k")), "me": bool(prof.get("me")),
             "when": date_fr(time.localtime(prof.get("at") or 0)),
             "gear": gear, "other": other,
-            "talents": [_skill_label(t) for t in prof.get("talents") or ()],
-            "slots": [_skill_label(t) for t in prof.get("slots") or ()],
-            "masteries": [_skill_label(t) for t in prof.get("masteries") or ()]}
+            "tree": _talent_tree(
+                prof.get("k"),
+                prof["talents"] if isinstance(prof.get("talents"), dict)
+                else {t: 1 for t in prof.get("talents") or ()},
+                prof.get("skills") or ()),
+            "ranked": isinstance(prof.get("talents"), dict),
+            "slots": [{"id": t, "name": _skill_label(t)}
+                      for t in prof.get("slots") or ()],
+            "runes": _runes_view(prof.get("masteries")),
+            "bar": _spell_bar(prof),
+            "passives": [{"id": t, "name": _skill_label(t)}
+                         for t in dict.fromkeys(prof.get("skills") or ())
+                         if t and (t.endswith("_Passive")
+                                   or t.endswith("_P"))],
+            "raw": {k: prof.get(k) for k in ("arsenals", "prayers",
+                                              "secondary")}}
     return view
 
 
@@ -5575,6 +5692,14 @@ def _data_is_current():
             return False
     except (OSError, ValueError):
         pass
+    if not (ANALYSIS / "augments.json").exists():
+        print("[meter] augments.json absent — regenerating for the gear "
+              "augments.", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "talents.json").exists():
+        print("[meter] talents.json absent — regenerating for the talent "
+              "trees.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "item_types.json").exists():
         print("[meter] item_types.json absent — regenerating for the "
               "Character tab.", file=sys.stderr)

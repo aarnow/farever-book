@@ -52,6 +52,7 @@ fenêtre Windows séparée.
 | **Collection** | Montures, planeurs et compagnons : ta collection est lue en jeu et gardée hors jeu. Compteurs par catégorie, recherche, filtres (tous, manquants, obtenus) et, pour chaque élément, comment l'obtenir d'après les données du jeu (butin et chances, marchands, coffres, succès, zones de capture et taux d'apparition). |
 | **Chasse** | Tableau de chasse : le nombre de kills de ton personnage pour chaque monstre, lu dans le Codex du jeu (il inclut donc tout ce que tu as tué avant Farever+), avec le rang du Codex. Filtres par région, recherche, tri. |
 | **Carte** | La carte de Siagarta (les tuiles de la minimap du jeu), déplaçable et zoomable, avec les points de complétion : coffres du monde, de chambre forte et de recette, orbes rouges, obélisques et points de réapparition. Filtres par catégorie et par région, compteurs, détail au clic. |
+| **Personnage** | Les joueurs autour de toi et, sur demande, le profil d'un joueur : classe, niveau, équipement (améliorations, cadeaux, formules, sceaux et gemmes posés, avec leurs effets), barre de sorts, arbre de talents et runes. Les profils ne sont gardés que pendant la session. |
 | **Réglages** | Colonnes de soins, réinitialisation au pull d'un boss, « Tous les joueurs » automatique en faille, raccourci clavier, taille de l'interface, dossiers. |
 | **Aide** | Utilisation, lancement avec Steam. |
 

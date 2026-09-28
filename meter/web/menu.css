@@ -901,3 +901,63 @@ select, input[type=text] {
 .chips .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
                padding: 3px 10px; font-size: 12px; }
 .chips .none { color: var(--faint); font-size: 12px; }
+
+/* ---- Character: skills, talents, runes ---------------------------------------- */
+.skill { display: inline-grid; place-items: center; width: 40px; height: 40px;
+         border-radius: 6px; background: #121318; border: 1px solid var(--line);
+         overflow: hidden; flex: none; }
+.skill.big { width: 48px; height: 48px; }
+.skill.small { width: 26px; height: 26px; }
+.skill.empty { opacity: .35; }
+.skill img { width: 100%; height: 100%; }
+.skbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.charmain .sub3 { margin: 10px 0 6px; color: var(--dim); font-size: 11px;
+                  text-transform: uppercase; letter-spacing: .5px; }
+.ttree { display: grid; gap: 10px; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 10px; padding: 14px; }
+.trow { display: grid; grid-template-columns: 40px repeat(3, minmax(0, 1fr));
+        align-items: center; gap: 8px; }
+.trow.troot { grid-template-columns: 40px 1fr; }
+.trow.troot .tcell { justify-content: center; }
+.tcost { color: var(--dim); font-size: 12px; font-weight: 700; text-align: center; }
+.tcell { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+         background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+         padding: 8px 4px; }
+.troot .tcell { background: none; border: 0; }
+.tnode { position: relative; display: inline-block; }
+.tnode .skill { width: 44px; height: 44px; border-radius: 50%; border-width: 2px; }
+.tnode:not(.on) .skill img { filter: grayscale(1) brightness(.55); }
+.tnode.on .skill { border-color: var(--accent); }
+.tnode b { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+           font-size: 10px; background: var(--bg); border: 1px solid var(--line);
+           border-radius: 8px; padding: 0 5px; white-space: nowrap; }
+.tnode.on b { color: var(--accent); }
+.runelist { display: grid; gap: 6px; }
+.runerow { display: flex; align-items: center; gap: 10px; background: var(--bg);
+           border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.runerow > b { min-width: 140px; }
+.runerow .rl { display: flex; flex-wrap: wrap; gap: 8px; }
+.runerow .rune { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+                 background: var(--panel-2); border-radius: 14px; padding: 2px 10px 2px 2px; }
+.runerow .rune .skill { border-radius: 50%; }
+
+.actionbar { align-items: flex-start; gap: 8px; background: var(--bg);
+             border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.barcell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.barcell .bk { font-size: 10px; color: var(--dim); font-weight: 700; }
+.barcell.prayer .skill { border-color: var(--accent); }
+.barsep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+.tnode.gift .skill { border-color: #D65DB1; box-shadow: 0 0 0 2px rgba(214, 93, 177, .35); }
+.tnode.gift b { color: #D65DB1; }
+.gear .stars { color: #B89CFF; font-size: 10px; letter-spacing: 2px; }
+.gear .gx { font-size: 11px; }
+.gear .gx.gift { color: #D65DB1; }
+.gear .gx.enchant { color: #5B8DEF; }
+.gearlist { align-items: start; }
+.gear .gx { color: var(--dim); }
+.gear .gx b { font-weight: 600; }
+.gear .gx.gift b { color: #D65DB1; }
+.gear .gx.sigil b { color: #F29A4A; }
+.gear .gx.enchant b { color: #5B8DEF; }
+.gear .gx.gem b { color: #7BD88F; }
+.gear .gt { gap: 1px; }

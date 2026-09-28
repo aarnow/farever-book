@@ -101,6 +101,8 @@ def main():
     kproxy = offs("hxbit.ObjProxy_OkillCount_Int_rank_Int")
     eproxy = offs("hxbit.ObjProxy_Ocompleted_Float")
     spec = offs("st.player.HeroSpecialization")
+    gear = offs("st.item.Gear")
+    weapon_ = offs("st.item.Weapon")
     skill = offs("st.skill.Skill")
     # Dungeons. GameLayer.mainActivity is the running activity; for a dungeon
     # it is an st.activity.Dungeon, whose globalCtx is the DungeonContext that
@@ -397,11 +399,24 @@ def main():
         "ElementProxy": {"completed": eproxy["completed"][0]},
         # Any player's profile (the Character tab), measured 2026-09-28:
         # the client holds every hero's equipment, talents and skills.
-        "HeroDetail": {"skills": hero["skills"][0],
-                       "specialization": hero["specialization"][0]},
+        "HeroDetail": {k: hero[k][0] for k in
+                       ("skills", "specialization", "skillSlots",
+                        "weaponSkills", "secondarySkill")},
         "Specialization": {k: spec[k][0] for k in
-                           ("talents", "skillSlots", "skillMasteries")},
+                           ("talents", "skillSlots", "skillMasteries",
+                            "arsenals", "prayerSequence")},
+        # the talent map's values ({rank}) and the arsenal map's ({skills})
+        "RankProxy": {"rank": offs("hxbit.ObjProxy_Orank_Int")["rank"][0]},
+        "SkillsProxy": {"skills": offs(
+            "hxbit.ObjProxy_Oskills_Arr_Data_SkillKind")["skills"][0]},
         "Skill": {"kind": skill["kind"][0]},
+        # A gear's upgrades and what is set on it (a profile's equipment):
+        # upgradeLevel (the stars), slots (augments: the "corrupted gifts"),
+        # and a weapon's effects (its enchantment formula).
+        "Gear": {"level": gear["level"][0],
+                 "upgradeLevel": gear["upgradeLevel"][0],
+                 "slots": gear["slots"][0],
+                 "effects": weapon_["effects"][0]},
         "StringMap": {"h": smap["h"][0]},
         "CodexProxy": {"count": kproxy["killCount"][0],
                        "rank": kproxy["rank"][0]},
@@ -481,6 +496,16 @@ def main():
         except Exception as e:
             print(f"[!] collection catalogue skipped ({e})")
         try:
+            import skills_data
+            tal = skills_data.build(Path(hlboot).parent,
+                                    _OUT_DIR / "skill_img")
+            (_OUT_DIR / "talents.json").write_text(json.dumps(tal, indent=0),
+                                                   encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'talents.json'} "
+                  f"({len(tal['trees'])} trees, {len(tal['runes'])} runes)")
+        except Exception as e:
+            print(f"[!] talent trees skipped ({e})")
+        try:
             import bestiary_data
             best = bestiary_data.build(Path(hlboot).parent, codex,
                                        _OUT_DIR / "bestiary_img")
@@ -509,6 +534,10 @@ def main():
             print(f"[written] {_OUT_DIR / 'boss_portraits'} ({n} portraits)")
         except Exception as e:
             print(f"[!] boss portraits skipped ({e})")
+        aug = extract_augments(Path(hlboot).parent)
+        (_OUT_DIR / "augments.json").write_text(json.dumps(aug, indent=0),
+                                                encoding="utf-8")
+        print(f"[written] {_OUT_DIR / 'augments.json'} ({len(aug)} augments)")
         types = extract_item_types(Path(hlboot).parent)
         (_OUT_DIR / "item_types.json").write_text(json.dumps(types, indent=0),
                                                   encoding="utf-8")
@@ -634,8 +663,8 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("ach", "activity", "item", "itemType", "rarity", "skill",
-             "unit", "unitType", "zone")
+FR_SHEETS = ("ach", "activity", "attribute", "item", "itemType", "rarity",
+             "skill", "unit", "unitType", "zone")
 # Sheets whose French descriptions the app shows (the collection's details).
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc")}
 
@@ -694,6 +723,30 @@ def extract_item_types(game_dir):
     sheet = next(s for s in cdb["sheets"] if s["name"] == "item")
     return {ln["id"]: ln["type"] for ln in sheet["lines"]
             if isinstance(ln.get("id"), str) and ln.get("type")}
+
+
+def extract_augments(game_dir):
+    """What each augment does — the items set into a gear's slots: corrupted
+    gifts, formulas, sigils, gems, plates, embroideries. {id: {t: type,
+    a: [[attribute, value]], s: [skill]}}, from data.cdb."""
+    import pak_extract
+    cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
+                                            "data.cdb"))
+    sheet = next(s for s in cdb["sheets"] if s["name"] == "item")
+    out = {}
+    for ln in sheet["lines"]:
+        t = ln.get("type") or ""
+        if not isinstance(ln.get("id"), str) or not t.startswith("Augment"):
+            continue
+        out[ln["id"]] = {
+            "t": t,
+            "a": [[(a.get("target") or {}).get("attribute"), a.get("val")]
+                  for a in ln.get("affixes") or ()
+                  if (a.get("target") or {}).get("attribute")
+                  and a.get("val") is not None],
+            "s": [s.get("skill") for s in ln.get("skills") or ()
+                  if s.get("skill")]}
+    return out
 
 
 def extract_item_rarity(game_dir):

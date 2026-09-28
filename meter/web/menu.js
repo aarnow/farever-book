@@ -725,10 +725,16 @@ let COLL_NODE = null;
 window.__COLL__ = window.__COLL__ || {};
 window.__BEST__ = window.__BEST__ || {};
 window.__MAP__ = window.__MAP__ || {};
+window.__SKILL__ = window.__SKILL__ || {};
 window.addImages = function (ns, json) {
-  const into = ns === 'best' ? window.__BEST__ : ns === 'map' ? window.__MAP__ : window.__COLL__;
+  const into = ns === 'best' ? window.__BEST__ : ns === 'map' ? window.__MAP__
+    : ns === 'skill' ? window.__SKILL__ : window.__COLL__;
   Object.assign(into, JSON.parse(json));
   if (ns === 'map') { mapTiles(); return; }
+  if (ns === 'skill') { document.querySelectorAll('img.skic[data-id]').forEach((im) => {
+    const src = window.__SKILL__[im.dataset.id];
+    if (src && !im.src) im.src = src;
+  }); return; }
   rerenderHunt();
   rerenderCollection();
 };
@@ -1534,7 +1540,7 @@ function buildCharacter(n) {
     near.appendChild(row);
   });
   side.appendChild(near);
-  side.appendChild(el('div', 'section', 'Profils enregistrés'));
+  side.appendChild(el('div', 'section', 'Analysés pendant la session'));
   if (!(n.saved || []).length) side.appendChild(el('p', 'note', 'Aucun pour l’instant : analyse un joueur.'));
   const saved = el('div', 'charlist');
   (n.saved || []).forEach((p) => {
@@ -1568,7 +1574,7 @@ function buildCharacter(n) {
     t.appendChild(el('b', null, o.n));
     t.appendChild(el('span', null, o.cls + ' · analysé le ' + o.when));
     head.appendChild(t);
-    const x = el('button', 'rowbtn', 'Oublier ce profil');
+    const x = el('button', 'rowbtn', 'Retirer de la liste');
     x.type = 'button';
     x.addEventListener('click', () => notify('char_forget', { name: o.n }));
     head.appendChild(x);
@@ -1589,31 +1595,114 @@ function buildCharacter(n) {
       const gt = el('div', 'gt');
       gt.appendChild(el('b', 'nm', g.name));
       gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : ''].filter(Boolean).join(' · ')));
+      if (g.up) gt.appendChild(el('span', 'stars', '◆'.repeat(g.up)));
+      (g.extras || []).forEach((x2) => {
+        const line = el('span', 'gx ' + x2.k);
+        line.appendChild(el('b', null, x2.name));
+        if (x2.fx) line.appendChild(document.createTextNode(' : ' + x2.fx));
+        gt.appendChild(line);
+      });
       r.appendChild(gt);
       gear.appendChild(r);
     });
     if (!(o.gear || []).length) gear.appendChild(el('div', 'empty', 'Aucun équipement lu.'));
     main.appendChild(gear);
 
-    const chips = (title, list) => {
-      main.appendChild(el('div', 'sub2', title + ' (' + list.length + ')'));
-      const c = el('div', 'chips');
-      list.forEach((x2) => c.appendChild(el('span', 'chip', x2)));
-      if (!list.length) c.appendChild(el('span', 'none', 'aucun'));
-      main.appendChild(c);
-    };
-    chips('Compétences placées', o.slots || []);
-    chips('Talents', o.talents || []);
-    chips('Maîtrises', o.masteries || []);
-    if ((o.other || []).length) {
-      main.appendChild(el('div', 'sub2', 'Aussi équipé'));
-      const c = el('div', 'chips');
-      o.other.forEach((g) => c.appendChild(el('span', 'chip', g.name)));
-      main.appendChild(c);
+    // the action bar, as the game shows it: 1-4, the prayer, A E R G
+    if ((o.bar || []).length) {
+      main.appendChild(el('div', 'sub2', 'Barre de sorts'));
+      const bar = el('div', 'skbar actionbar');
+      o.bar.forEach((sk) => {
+        if (sk.sep) bar.appendChild(el('span', 'barsep'));
+        const cell = el('div', 'barcell' + (sk.key === 'Prière' ? ' prayer' : ''));
+        const ic = skillIcon(sk.empty ? null : sk, 'big');
+        if (sk.seq) ic.title = 'Prochaine prière : ' + sk.name + ' — séquence : ' + sk.seq.join(' → ');
+        cell.appendChild(ic);
+        cell.appendChild(el('span', 'bk', sk.key));
+        bar.appendChild(cell);
+      });
+      main.appendChild(bar);
+      if ((o.passives || []).length) {
+        main.appendChild(el('div', 'sub3', 'Passifs'));
+        const pb = el('div', 'skbar');
+        o.passives.forEach((sk) => pb.appendChild(skillIcon(sk, 'big')));
+        main.appendChild(pb);
+      }
+    } else if ((o.slots || []).length) {
+      main.appendChild(el('div', 'sub2', 'Compétences placées'));
+      const bar = el('div', 'skbar');
+      o.slots.forEach((sk) => bar.appendChild(skillIcon(sk, 'big')));
+      main.appendChild(bar);
     }
-    main.appendChild(el('p', 'note', 'Les attributs (Vitalité, Foi, critiques…) ne sont pas '
-      + 'transmis au client : le jeu les calcule à la demande.'));
+
+    if (o.tree) {
+      main.appendChild(el('div', 'sub2', 'Talents (' + o.tree.spent + ' points)'));
+      main.appendChild(talentTree(o.tree, o.ranked));
+    }
+
+    main.appendChild(el('div', 'sub2', 'Runes (' + (o.runes || []).reduce((a2, r) => a2 + r.runes.length, 0) + ')'));
+    const runes = el('div', 'runelist');
+    (o.runes || []).forEach((r) => {
+      const row = el('div', 'runerow');
+      row.appendChild(skillIcon({ id: r.id, name: r.name }));
+      row.appendChild(el('b', null, r.name));
+      const rl = el('div', 'rl');
+      r.runes.forEach((x2) => {
+        const c = el('span', 'rune');
+        c.appendChild(skillIcon(x2, 'small'));
+        c.appendChild(el('span', null, x2.name));
+        rl.appendChild(c);
+      });
+      row.appendChild(rl);
+      runes.appendChild(row);
+    });
+    if (!(o.runes || []).length) runes.appendChild(el('span', 'none', 'aucune'));
+    main.appendChild(runes);
   }
   box.appendChild(main);
+  return box;
+}
+
+function skillIcon(sk, size) {
+  const box = el('span', 'skill' + (size ? ' ' + size : '') + (sk ? '' : ' empty'));
+  if (!sk) return box;
+  box.title = sk.name || sk.id;
+  const im = document.createElement('img');
+  im.className = 'skic';
+  im.dataset.id = sk.id;
+  im.alt = '';
+  const src = (window.__SKILL__ || {})[sk.id];
+  if (src) im.src = src;
+  box.appendChild(im);
+  return box;
+}
+
+/* The talent tree as the game draws it: the root, then tiers 1-4 in three
+   branches, each talent with its points (greyed when none). */
+function talentTree(t, ranked) {
+  const box = el('div', 'ttree');
+  const node = (c) => {
+    const n = el('span', 'tnode' + (c.pts ? ' on' : '') + (c.gift ? ' gift' : ''));
+    n.title = c.name;
+    n.appendChild(skillIcon({ id: c.id, name: c.name }));
+    if (ranked || !c.pts) n.appendChild(el('b', null, c.pts + '/' + c.max));
+    return n;
+  };
+  const top = el('div', 'trow troot');
+  top.appendChild(el('span', 'tcost'));
+  const rc = el('div', 'tcell');
+  if (t.root) rc.appendChild(node(t.root));
+  top.appendChild(rc);
+  box.appendChild(top);
+  (t.tiers || []).forEach((tier, i) => {
+    const row = el('div', 'trow');
+    row.appendChild(el('span', 'tcost', t.cost[i] ? t.cost[i] + ' ✦' : ''));
+    tier.forEach((cells) => {
+      const c = el('div', 'tcell');
+      cells.forEach((x) => c.appendChild(node(x)));
+      row.appendChild(c);
+    });
+    box.appendChild(row);
+  });
   return box;
 }

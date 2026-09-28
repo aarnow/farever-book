@@ -259,14 +259,31 @@
   },
   "HeroDetail": {
     "skills": 488,
-    "specialization": 1224
+    "specialization": 1224,
+    "skillSlots": 1432,
+    "weaponSkills": 1416,
+    "secondarySkill": 1400
   },
   "Specialization": {
     "talents": 136,
     "skillSlots": 152,
-    "skillMasteries": 144
+    "skillMasteries": 144,
+    "arsenals": 176,
+    "prayerSequence": 160
   },
   "Skill": {
     "kind": 184
+  },
+  "RankProxy": {
+    "rank": 20
+  },
+  "SkillsProxy": {
+    "skills": 24
+  },
+  "Gear": {
+    "level": 152,
+    "upgradeLevel": 156,
+    "slots": 160,
+    "effects": 176
   }
 }

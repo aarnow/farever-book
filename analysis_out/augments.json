@@ -1,0 +1,1129 @@
+{
+"FormulaHandsMinorVitality": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Vitality",
+3
+]
+],
+"s": []
+},
+"FormulaHandsMinorDexterity": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Dexterity",
+2
+]
+],
+"s": []
+},
+"FormulaHandsMinorStrength": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Strength",
+2
+]
+],
+"s": []
+},
+"FormulaHandsMinorFaith": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"FormulaHandsMinorIntelligence": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Intellect",
+2
+]
+],
+"s": []
+},
+"FormulaFeetMinorCritical": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"CritChanceRating",
+8
+]
+],
+"s": []
+},
+"FormulaFeetMinorFervor": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"FervorRating",
+8
+]
+],
+"s": []
+},
+"FormulaFeetMinorArmorPen": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"ArmorPenetrationRating",
+8
+]
+],
+"s": []
+},
+"FormulaFeetMinorMagicPen": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"SpellPenetrationRating",
+8
+]
+],
+"s": []
+},
+"FormulaFeetMinorArmor": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"Armor",
+100
+]
+],
+"s": []
+},
+"FormulaWeaponFlamingWeapon": {
+"t": "AugmentEnchantWeapon",
+"a": [],
+"s": [
+"Enchant_FlamingWeapon"
+]
+},
+"FormulaWeaponSparkHarvesting": {
+"t": "AugmentEnchantWeapon",
+"a": [],
+"s": [
+"Enchant_SparkHarvesting"
+]
+},
+"FormulaHandsVitality_Z2": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Vitality",
+6
+]
+],
+"s": []
+},
+"FormulaHandsDexterity_Z2": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Dexterity",
+4
+]
+],
+"s": []
+},
+"FormulaHandsStrength_Z2": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Strength",
+4
+]
+],
+"s": []
+},
+"FormulaHandsFaith_Z2": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Faith",
+4
+]
+],
+"s": []
+},
+"FormulaHandsIntelligence_Z2": {
+"t": "AugmentEnchantHands",
+"a": [
+[
+"Intellect",
+4
+]
+],
+"s": []
+},
+"FormulaFeetCritical_Z2": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"CritChanceRating",
+15
+]
+],
+"s": []
+},
+"FormulaFeetFervor_Z2": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"FervorRating",
+15
+]
+],
+"s": []
+},
+"FormulaFeetArmorPen_Z2": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"ArmorPenetrationRating",
+15
+]
+],
+"s": []
+},
+"FormulaFeetMagicPen_Z2": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"SpellPenetrationRating",
+15
+]
+],
+"s": []
+},
+"FormulaFeetArmor_Z2": {
+"t": "AugmentEnchantFeet",
+"a": [
+[
+"Armor",
+200
+]
+],
+"s": []
+},
+"FormulaWeaponZealot": {
+"t": "AugmentEnchantWeapon",
+"a": [],
+"s": [
+"Enchant_Zealot"
+]
+},
+"FormulaWeaponDevote": {
+"t": "AugmentEnchantWeapon",
+"a": [],
+"s": [
+"Enchant_Devote"
+]
+},
+"FormulaWeaponLifestealing": {
+"t": "AugmentEnchantWeapon",
+"a": [],
+"s": [
+"Enchant_Lifestealing"
+]
+},
+"DemonGearUpgradeRare_FervToCrit": {
+"t": "AugmentDemon",
+"a": [
+[
+"FervorRating",
+-20
+],
+[
+"CritChanceRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_FervToAp": {
+"t": "AugmentDemon",
+"a": [
+[
+"FervorRating",
+-20
+],
+[
+"ArmorPenetrationRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_FervToMP": {
+"t": "AugmentDemon",
+"a": [
+[
+"FervorRating",
+-20
+],
+[
+"SpellPenetrationRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_CritToFerv": {
+"t": "AugmentDemon",
+"a": [
+[
+"CritChanceRating",
+-20
+],
+[
+"FervorRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_CritToAP": {
+"t": "AugmentDemon",
+"a": [
+[
+"CritChanceRating",
+-20
+],
+[
+"ArmorPenetrationRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_CritToMP": {
+"t": "AugmentDemon",
+"a": [
+[
+"CritChanceRating",
+-20
+],
+[
+"SpellPenetrationRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_APToCrit": {
+"t": "AugmentDemon",
+"a": [
+[
+"ArmorPenetrationRating",
+-20
+],
+[
+"CritChanceRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_APToFerv": {
+"t": "AugmentDemon",
+"a": [
+[
+"ArmorPenetrationRating",
+-20
+],
+[
+"FervorRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_APToMP": {
+"t": "AugmentDemon",
+"a": [
+[
+"ArmorPenetrationRating",
+-20
+],
+[
+"SpellPenetrationRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_MPToCrit": {
+"t": "AugmentDemon",
+"a": [
+[
+"SpellPenetrationRating",
+-20
+],
+[
+"CritChanceRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_MPToFerv": {
+"t": "AugmentDemon",
+"a": [
+[
+"SpellPenetrationRating",
+-20
+],
+[
+"FervorRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgradeRare_MPToAP": {
+"t": "AugmentDemon",
+"a": [
+[
+"SpellPenetrationRating",
+-20
+],
+[
+"ArmorPenetrationRating",
+20
+]
+],
+"s": []
+},
+"DemonGearUpgrade_FervToCrit": {
+"t": "AugmentDemon",
+"a": [
+[
+"FervorRating",
+-40
+],
+[
+"CritChanceRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_FervToAp": {
+"t": "AugmentDemon",
+"a": [
+[
+"FervorRating",
+-40
+],
+[
+"ArmorPenetrationRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_FervToMP": {
+"t": "AugmentDemon",
+"a": [
+[
+"FervorRating",
+-40
+],
+[
+"SpellPenetrationRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_CritToFerv": {
+"t": "AugmentDemon",
+"a": [
+[
+"CritChanceRating",
+-40
+],
+[
+"FervorRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_CritToAP": {
+"t": "AugmentDemon",
+"a": [
+[
+"CritChanceRating",
+-40
+],
+[
+"ArmorPenetrationRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_CritToMP": {
+"t": "AugmentDemon",
+"a": [
+[
+"CritChanceRating",
+-40
+],
+[
+"SpellPenetrationRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_APToCrit": {
+"t": "AugmentDemon",
+"a": [
+[
+"ArmorPenetrationRating",
+-40
+],
+[
+"CritChanceRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_APToFerv": {
+"t": "AugmentDemon",
+"a": [
+[
+"ArmorPenetrationRating",
+-40
+],
+[
+"FervorRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_APToMP": {
+"t": "AugmentDemon",
+"a": [
+[
+"ArmorPenetrationRating",
+-40
+],
+[
+"SpellPenetrationRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_MPToCrit": {
+"t": "AugmentDemon",
+"a": [
+[
+"SpellPenetrationRating",
+-40
+],
+[
+"CritChanceRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_MPToFerv": {
+"t": "AugmentDemon",
+"a": [
+[
+"SpellPenetrationRating",
+-40
+],
+[
+"FervorRating",
+40
+]
+],
+"s": []
+},
+"DemonGearUpgrade_MPToAP": {
+"t": "AugmentDemon",
+"a": [
+[
+"SpellPenetrationRating",
+-40
+],
+[
+"ArmorPenetrationRating",
+40
+]
+],
+"s": []
+},
+"ReinforcedCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Armor",
+100
+],
+[
+"Vitality",
+4
+]
+],
+"s": []
+},
+"HonedCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Strength",
+2
+],
+[
+"Dexterity",
+2
+]
+],
+"s": []
+},
+"RunedCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Strength",
+2
+],
+[
+"Intellect",
+2
+]
+],
+"s": []
+},
+"SanctifiedCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Strength",
+2
+],
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"MysticCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Dexterity",
+2
+],
+[
+"Intellect",
+2
+]
+],
+"s": []
+},
+"GracefulCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Dexterity",
+2
+],
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"DivinedCopperPlate": {
+"t": "AugmentBlacksmith",
+"a": [
+[
+"Intellect",
+2
+],
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"ReinforcedEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Armor",
+100
+],
+[
+"Vitality",
+4
+]
+],
+"s": []
+},
+"HonedEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Strength",
+2
+],
+[
+"Dexterity",
+2
+]
+],
+"s": []
+},
+"RunedEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Strength",
+2
+],
+[
+"Intellect",
+2
+]
+],
+"s": []
+},
+"SanctifiedEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Strength",
+2
+],
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"MysticEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Dexterity",
+2
+],
+[
+"Intellect",
+2
+]
+],
+"s": []
+},
+"GracefulEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Dexterity",
+2
+],
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"DivinedEmbroidery": {
+"t": "AugmentOutfitter",
+"a": [
+[
+"Intellect",
+2
+],
+[
+"Faith",
+2
+]
+],
+"s": []
+},
+"StrongCutAmber": {
+"t": "AugmentJeweller",
+"a": [
+[
+"Vitality",
+2
+]
+],
+"s": []
+},
+"ResonantCutAmber": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+4
+],
+[
+"FervorRating",
+4
+]
+],
+"s": []
+},
+"SunderedCutAmber": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+4
+],
+[
+"ArmorPenetrationRating",
+4
+]
+],
+"s": []
+},
+"SurgingCutAmber": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+4
+],
+[
+"SpellPenetrationRating",
+4
+]
+],
+"s": []
+},
+"TemperedCutBeryl": {
+"t": "AugmentJeweller",
+"a": [
+[
+"FervorRating",
+4
+],
+[
+"ArmorPenetrationRating",
+4
+]
+],
+"s": []
+},
+"AttunedCutBeryl": {
+"t": "AugmentJeweller",
+"a": [
+[
+"FervorRating",
+4
+],
+[
+"SpellPenetrationRating",
+4
+]
+],
+"s": []
+},
+"GildedCutBeryl": {
+"t": "AugmentJeweller",
+"a": [
+[
+"ArmorPenetrationRating",
+4
+],
+[
+"SpellPenetrationRating",
+4
+]
+],
+"s": []
+},
+"StrongCutAgate": {
+"t": "AugmentJeweller",
+"a": [
+[
+"Vitality",
+4
+]
+],
+"s": []
+},
+"ResonantCutAgate": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+7
+],
+[
+"FervorRating",
+7
+]
+],
+"s": []
+},
+"SunderedCutAgate": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+7
+],
+[
+"ArmorPenetrationRating",
+7
+]
+],
+"s": []
+},
+"SurgingCutAgate": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+7
+],
+[
+"SpellPenetrationRating",
+7
+]
+],
+"s": []
+},
+"TemperedCutRuby": {
+"t": "AugmentJeweller",
+"a": [
+[
+"FervorRating",
+7
+],
+[
+"ArmorPenetrationRating",
+7
+]
+],
+"s": []
+},
+"AttunedCutRuby": {
+"t": "AugmentJeweller",
+"a": [
+[
+"FervorRating",
+7
+],
+[
+"SpellPenetrationRating",
+7
+]
+],
+"s": []
+},
+"GildedCutRuby": {
+"t": "AugmentJeweller",
+"a": [
+[
+"ArmorPenetrationRating",
+7
+],
+[
+"SpellPenetrationRating",
+7
+]
+],
+"s": []
+},
+"DominationCursedCutEye": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+9
+],
+[
+"ArmorPenetrationRating",
+9
+],
+[
+"SpellPenetrationRating",
+9
+],
+[
+"FervorRating",
+-9
+]
+],
+"s": []
+},
+"BrutalityCursedCutEye": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+9
+],
+[
+"FervorRating",
+9
+],
+[
+"ArmorPenetrationRating",
+9
+],
+[
+"SpellPenetrationRating",
+-9
+]
+],
+"s": []
+},
+"ViceCursedCutEye": {
+"t": "AugmentJeweller",
+"a": [
+[
+"CritChanceRating",
+9
+],
+[
+"FervorRating",
+9
+],
+[
+"SpellPenetrationRating",
+9
+],
+[
+"ArmorPenetrationRating",
+-9
+]
+],
+"s": []
+},
+"FanatismCursedCutEye": {
+"t": "AugmentJeweller",
+"a": [
+[
+"FervorRating",
+9
+],
+[
+"ArmorPenetrationRating",
+9
+],
+[
+"SpellPenetrationRating",
+9
+],
+[
+"CritChanceRating",
+-9
+]
+],
+"s": []
+},
+"DemonSigil_War_SurgeOfViolence": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Warrior_Talent_SurgeOfViolence"
+]
+},
+"DemonSigil_War_InfusedWounds": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Warrior_Talent_InfusedWound"
+]
+},
+"DemonSigil_War_SecondWind": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Warrior_SecondWind"
+]
+},
+"DemonSigil_Priest_LuminousBastion": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Priest_Talent_LuminousBastion"
+]
+},
+"DemonSigil_Priest_SolarDevotion": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Priest_Talent_SolarDevotion"
+]
+},
+"DemonSigil_Priest_SunHalo": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Priest_Talent_SunHalo"
+]
+},
+"DemonSigil_Mage_SparkExplosion": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Mage_Talent_ConduitSparkExplosion"
+]
+},
+"DemonSigil_Mage_HighVoltage": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Mage_Talent_HighVoltage"
+]
+},
+"DemonSigil_Mage_Lifebolt": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Mage_Talent_ConduitLifebolt"
+]
+},
+"DemonSigil_Rogue_VenomousFinisher": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Rogue_Talent_VenomousFinisher"
+]
+},
+"DemonSigil_Rogue_VirulentMagic": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Rogue_Talent_VirulentMagic"
+]
+},
+"DemonSigil_Rogue_CheatDeath": {
+"t": "AugmentDemonSigil",
+"a": [],
+"s": [
+"Rogue_Talent_CheatDeath"
+]
+}
+}

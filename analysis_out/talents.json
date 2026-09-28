@@ -1,0 +1,638 @@
+{
+"trees": {
+"Warrior": {
+"root": "Warrior_Hemorrhage",
+"talents": [
+{
+"s": "Warrior_Hemorrhage",
+"tier": 0,
+"branch": "Root",
+"max": 1
+},
+{
+"s": "Warrior_Talent_SeasonedSoldier",
+"tier": 1,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Warrior_Talent_Bloodletting",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Warrior_Talent_Exsanguination",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Warrior_Talent_MasterAtArms",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Warrior_Talent_Bruise",
+"tier": 3,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Warrior_Talent_FightingSpirit",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Warrior_Talent_SurgeOfViolence",
+"tier": 4,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Warrior_Talent_Sever",
+"tier": 1,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Warrior_RedTempo",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Warrior_RashSoul",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Warrior_ExposedEssence",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Warrior_Talent_CrackingBlood",
+"tier": 3,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Warrior_Talent_MagicConduction",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Warrior_Talent_InfusedWound",
+"tier": 4,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Warrior_Talent_RageShield",
+"tier": 1,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Warrior_Talent_Bloodfeast",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Warrior_Talent_CrippingBloodloss",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Warrior_Talent_HoldTheLine",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Warrior_Talent_ShatteredRage",
+"tier": 3,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Warrior_Talent_ZealousWarrior",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Warrior_SecondWind",
+"tier": 4,
+"branch": "Right",
+"max": 1
+}
+]
+},
+"Mage": {
+"root": "Mage_Talent_Chaincast",
+"talents": [
+{
+"s": "Mage_Talent_Chaincast",
+"tier": 0,
+"branch": "Root",
+"max": 1
+},
+{
+"s": "Mage_Talent_Reverberate",
+"tier": 1,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Mage_Talent_ConcentratedPower",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Mage_Talent_TemporalCompression",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Mage_Talent_InfiniteResources",
+"tier": 3,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Mage_Talent_ProdigiousMind",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Mage_Talent_ExpandedSpirit",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Mage_Talent_ConduitSparkExplosion",
+"tier": 4,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Mage_Talent_Discipline",
+"tier": 1,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Mage_Talent_ChainStrike",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Mage_Talent_NimbleFingers",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Mage_Talent_KineticSurge",
+"tier": 3,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Mage_Talent_PowerCircuit",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Mage_Talent_Amplification",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Mage_Talent_HighVoltage",
+"tier": 4,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Mage_Talent_ConduitResidues",
+"tier": 1,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Mage_Talent_FerventWizard",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Mage_Talent_LifeCurrent",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Mage_Talent_EchoingLife",
+"tier": 3,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Mage_Talent_SparkFlask",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Mage_Talent_FlowingVitality",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Mage_Talent_ConduitLifebolt",
+"tier": 4,
+"branch": "Right",
+"max": 1
+}
+]
+},
+"Rogue": {
+"root": "Rogue_Talent_LethalPoison",
+"talents": [
+{
+"s": "Rogue_Talent_LethalPoison",
+"tier": 0,
+"branch": "Root",
+"max": 1
+},
+{
+"s": "Rogue_Talent_Envenom",
+"tier": 1,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Rogue_Talent_LethalDose",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Rogue_Talent_FinishTheJob",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Rogue_Talent_OpportunityStrike",
+"tier": 3,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Rogue_Talent_ImprovedMixture",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Rogue_Talent_DeadlyPoison",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Rogue_Talent_VenomousFinisher",
+"tier": 4,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Rogue_Talent_AcidicSplatter",
+"tier": 1,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Rogue_Talent_VenomInfusion",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Rogue_Talent_UpTheAnte",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Rogue_Talent_IntentToKill",
+"tier": 3,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Rogue_Talent_NoxiousStrategem",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Rogue_Talent_BullyingTheWeak",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Rogue_Talent_VirulentMagic",
+"tier": 4,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Rogue_Talent_Adrenaline",
+"tier": 1,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Rogue_Talent_Footwork",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Rogue_Talent_LeechingPoison",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Rogue_Talent_CripplingPoison",
+"tier": 3,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Rogue_Talent_AtrophicPoison",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Rogue_Talent_RegeneratingMiasmas",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Rogue_Talent_CheatDeath",
+"tier": 4,
+"branch": "Right",
+"max": 1
+}
+]
+},
+"Priest": {
+"root": "Priest_Talent_Sunlight",
+"talents": [
+{
+"s": "Priest_Talent_Sunlight",
+"tier": 0,
+"branch": "Root",
+"max": 1
+},
+{
+"s": "Priest_Talent_SoothingRays",
+"tier": 1,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Priest_Talent_FerventDefender",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Priest_Talent_CrusadersResolve",
+"tier": 2,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Priest_Talent_MeltingFaith",
+"tier": 3,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Priest_Talent_Radiance",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Priest_Talent_Authority",
+"tier": 3,
+"branch": "Left",
+"max": 2
+},
+{
+"s": "Priest_Talent_LuminousBastion",
+"tier": 4,
+"branch": "Left",
+"max": 1
+},
+{
+"s": "Priest_Talent_PurgingStrikes",
+"tier": 1,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Priest_Talent_ZealousFighter",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Priest_Talent_MightyExecutioner",
+"tier": 2,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Priest_Talent_PotentFortitude",
+"tier": 3,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Priest_Talent_Prosecutor",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Priest_Talent_PiousAdept",
+"tier": 3,
+"branch": "Center",
+"max": 2
+},
+{
+"s": "Priest_Talent_SolarDevotion",
+"tier": 4,
+"branch": "Center",
+"max": 1
+},
+{
+"s": "Priest_Talent_SwiftJustice",
+"tier": 1,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Priest_Talent_PiercingLight",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Priest_Talent_OppressiveRays",
+"tier": 2,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Priest_Talent_BurningRays",
+"tier": 3,
+"branch": "Right",
+"max": 1
+},
+{
+"s": "Priest_Talent_SharpMind",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Priest_Talent_BlessedSpirituality",
+"tier": 3,
+"branch": "Right",
+"max": 2
+},
+{
+"s": "Priest_Talent_SunHalo",
+"tier": 4,
+"branch": "Right",
+"max": 1
+}
+]
+}
+},
+"runes": {
+"Warrior_RageStrike_M1": "Warrior_Rage_Strike",
+"Warrior_RageStrike_M2": "Warrior_Rage_Strike",
+"Warrior_RageStrike_M3": "Warrior_Rage_Strike",
+"Warrior_Charge_M1": "Warrior_Charge",
+"Warrior_Charge_M2": "Warrior_Charge",
+"Warrior_Charge_M3": "Warrior_Charge",
+"Warrior_IgnorePain_M1": "Warrior_IgnorePain",
+"Warrior_IgnorePain_M2": "Warrior_IgnorePain",
+"Warrior_IgnorePain_M3": "Warrior_IgnorePain",
+"Warrior_BattleShout_M1": "Warrior_BattleShout",
+"Warrior_BattleShout_M2": "Warrior_BattleShout",
+"Warrior_BattleShout_M3": "Warrior_BattleShout",
+"Warrior_SurgingForce_M1": "Warrior_SurgingForce",
+"Warrior_SurgingForce_M2": "Warrior_SurgingForce",
+"Warrior_SurgingForce_M3": "Warrior_SurgingForce",
+"Warrior_Berserk_M1": "Warrior_Berserk",
+"Warrior_Berserk_M2": "Warrior_Berserk",
+"Warrior_Berserk_M3": "Warrior_Berserk",
+"Warrior_BurstOfAnger_M1": "Warrior_BurstOfAnger",
+"Warrior_BurstOfAnger_M2": "Warrior_BurstOfAnger",
+"Warrior_BurstOfAnger_M3": "Warrior_BurstOfAnger",
+"Rogue_Finisher_M1": "Rogue_Sig_Finisher",
+"Rogue_Finisher_M2": "Rogue_Sig_Finisher",
+"Rogue_Finisher_M3": "Rogue_Sig_Finisher",
+"MasterOfShadows": "Rogue_Shadowstep",
+"ComboStep": "Rogue_Shadowstep",
+"Momentum": "Rogue_Shadowstep",
+"Rogue_SmokeBomb_M1": "Rogue_SmokeBomb",
+"Rogue_SmokeBomb_M2": "Rogue_SmokeBomb",
+"Rogue_SmokeBomb_M3": "Rogue_SmokeBomb",
+"Rogue_DeathMark_M1": "Rogue_DeathMark",
+"Rogue_DeathMark_M2": "Rogue_DeathMark",
+"Rogue_DeathMark_M3": "Rogue_DeathMark",
+"Rogue_KnivesTempest_M1": "Rogue_KnivesTempest",
+"Rogue_KnivesTempest_M2": "Rogue_KnivesTempest",
+"Rogue_KnivesTempest_M3": "Rogue_KnivesTempest",
+"Rogue_Darkness_M1": "Rogue_Darkness",
+"Rogue_Darkness_M2": "Rogue_Darkness",
+"Rogue_Darkness_M3": "Rogue_Darkness",
+"Rogue_UrgeToKill_M1": "Rogue_UrgeToKill",
+"Rogue_UrgeToKill_M2": "Rogue_UrgeToKill",
+"Rogue_UrgeToKill_M3": "Rogue_UrgeToKill",
+"Priest_Judgment_M1": "Priest_Sig_DivineIntervention",
+"Priest_Judgment_M2": "Priest_Sig_DivineIntervention",
+"Priest_Judgment_M3": "Priest_Sig_DivineIntervention",
+"Priest_FaithfulWinds_M1": "Priest_FaithfulWinds",
+"Priest_FaithfulWinds_M2": "Priest_FaithfulWinds",
+"Priest_FaithfulWinds_M3": "Priest_FaithfulWinds",
+"Priest_RadiantVerdict_M1": "Priest_RadiantVerdict",
+"Priest_RadiantVerdict_M2": "Priest_RadiantVerdict",
+"Priest_RadiantVerdict_M3": "Priest_RadiantVerdict",
+"Priest_BlessingOfFervor_M1": "Priest_BlessingOfFervor",
+"Priest_BlessingOfFervor_M2": "Priest_BlessingOfFervor",
+"Priest_BlessingOfFervor_M3": "Priest_BlessingOfFervor",
+"Priest_Crusader_M1": "Priest_Crusader",
+"Priest_Crusader_M2": "Priest_Crusader",
+"Priest_Crusader_M3": "Priest_Crusader",
+"Priest_BeaconOfHope_M1": "Priest_BeaconOfHope",
+"Priest_BeaconOfHope_M2": "Priest_BeaconOfHope",
+"Priest_BeaconOfHope_M3": "Priest_BeaconOfHope",
+"Priest_Miracle_M1": "Priest_Miracle",
+"Priest_Miracle_M2": "Priest_Miracle",
+"Priest_Miracle_M3": "Priest_Miracle",
+"Mage_RayOfSpark_M1": "Mage_RayOfSpark",
+"Mage_RayOfSpark_M2": "Mage_RayOfSpark",
+"Mage_RayOfSpark_M3": "Mage_RayOfSpark",
+"Mage_Blink_M1": "Mage_Blink",
+"Mage_Blink_M2": "Mage_Blink",
+"Mage_Blink_M3": "Mage_Blink",
+"Mage_ShieldOfSpark_M1": "Mage_ShieldOfSpark",
+"Mage_ShieldOfSpark_M2": "Mage_ShieldOfSpark",
+"Mage_ShieldOfSpark_M3": "Mage_ShieldOfSpark",
+"Mage_MysticEmpowerment_M1": "Mage_MysticEmpowerment",
+"Mage_MysticEmpowerment_M2": "Mage_MysticEmpowerment",
+"Mage_MysticEmpowerment_M3": "Mage_MysticEmpowerment",
+"Mage_StaticNova_M1": "Mage_StaticNova",
+"Mage_StaticNova_M2": "Mage_StaticNova",
+"Mage_StaticNova_M3": "Mage_StaticNova",
+"Mage_ChronoReset_M1": "Mage_ChronoReset",
+"Mage_ChronoReset_M2": "Mage_ChronoReset",
+"Mage_ChronoReset_M3": "Mage_ChronoReset",
+"Mage_Overload_M1": "Mage_Overload",
+"Mage_Overload_M2": "Mage_Overload",
+"Mage_Overload_M3": "Mage_Overload"
+}
+}

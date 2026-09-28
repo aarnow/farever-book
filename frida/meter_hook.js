@@ -1036,6 +1036,59 @@ function mapKeys(h, max) {
     return out;
 }
 
+// A StringMap's entries: [[key, value pointer], ...].
+function mapEntries(h, max) {
+    const out = [];
+    if (!h || h.isNull() || !hbKeys || !hbGet) return out;
+    const keys = hbKeys(h);
+    if (!keys || keys.isNull()) return out;
+    const n = keys.add(16).readS32();
+    for (let i = 0; i < n && i < max; i++) {
+        const kb = keys.add(24 + i * 8).readPointer();
+        if (!kb || kb.isNull()) continue;
+        out.push([kb.readUtf16String(), hbGet(h, kb)]);
+    }
+    return out;
+}
+
+// An ArrayObj of skills (or nulls), as their kinds.
+function skillKinds(arr, max) {
+    const out = [];
+    if (!arr || arr.isNull()) return out;
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    for (let i = 0; i < n && i < max; i++) {
+        const s = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        out.push((s && !s.isNull()) ? hlStr(s.add(OFF.Skill.kind).readPointer()) : null);
+    }
+    return out;
+}
+
+// An hxbit ArrayProxyData's elements as ids: a String's text, an item's
+// kind, a skill's kind — or, for anything else, its class name in brackets.
+function proxyThings(proxy, max) {
+    const out = [];
+    if (!proxy || proxy.isNull()) return out;
+    const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+    if (!dyn || dyn.isNull()) return out;
+    const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+    if (!arr || arr.isNull()) return out;
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    for (let i = 0; i < n && i < max; i++) {
+        const q = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        if (!q || q.isNull()) { out.push(null); continue; }
+        const t = typeName(q);
+        if (t === "String") out.push(hlStr(q));
+        else if (t && (t.lastIndexOf("st.Item", 0) === 0 || t.lastIndexOf("st.item.", 0) === 0))
+            out.push(hlStr(q.add(OFF.Item.kind).readPointer()));
+        else if (t === "st.skill.Skill" || t === "st.skill.Status")
+            out.push(hlStr(q.add(OFF.Skill.kind).readPointer()));
+        else out.push("[" + t + "]");
+    }
+    return out;
+}
+
 function proxyStrings(proxy, max) {
     const out = [];
     if (!proxy || proxy.isNull()) return out;
@@ -1065,7 +1118,20 @@ function equipSlots(loadout) {
         const raw = data.add(OFF.ArrayObj.data + i * 8).readPointer();
         const slot = (raw && !raw.isNull()) ? slotItem(raw) : null;
         const inf = slot ? itemInfo(slot.item) : null;
-        out.push(inf ? [inf.kind, inf.rarity, inf.level] : null);
+        if (!inf) { out.push(null); continue; }
+        // [kind, rarity, level, upgradeLevel, slots, effects]
+        const row = [inf.kind, inf.rarity, inf.level, null, [], []];
+        const G = OFF.Gear;
+        if (G && inf.cls !== "st.Item") {
+            const it = slot.item;
+            try { row[2] = it.add(G.level).readS32(); } catch (e) {}
+            try { row[3] = it.add(G.upgradeLevel).readS32(); } catch (e) {}
+            try { row[4] = proxyThings(it.add(G.slots).readPointer(), 8); } catch (e) {}
+            if (inf.cls === "st.item.Weapon") {
+                try { row[5] = proxyThings(it.add(G.effects).readPointer(), 8); } catch (e) {}
+            }
+        }
+        out.push(row);
     }
     return out;
 }
@@ -1082,10 +1148,54 @@ function profileOf(h) {
     try {
         const sp = h.add(D.specialization).readPointer();
         if (sp && !sp.isNull()) {
-            r.talents = mapKeys(mapHandle(sp.add(S.talents).readPointer()), 80);
+            // talent -> rank points (value: hxbit.ObjProxy_Orank_Int)
+            r.talents = {};
+            mapEntries(mapHandle(sp.add(S.talents).readPointer()), 80)
+                .forEach(function (kv) {
+                    let rank = 1;
+                    try {
+                        const v = kv[1];
+                        if (v && !v.isNull()) {
+                            const kind = v.readPointer().readU32();
+                            const tn = kind === 11 ? typeName(v) : null;
+                            if (tn === "hxbit.ObjProxy_Orank_Int")
+                                rank = v.add(OFF.RankProxy.rank).readS32();
+                            else if (kind === 3)       // a boxed Int
+                                rank = v.add(8).readS32();
+                            if (r.talentVal === undefined)
+                                r.talentVal = [kind, tn, v.add(8).readS32(), v.add(20).readS32()];
+                        }
+                    } catch (e) {}
+                    r.talents[kv[0]] = rank;
+                });
             r.slots = proxyStrings(sp.add(S.skillSlots).readPointer(), 20);
             r.masteries = proxyStrings(sp.add(S.skillMasteries).readPointer(), 60);
+            // weapon -> its chosen skills (value: ObjProxy_Oskills_...)
+            r.arsenals = {};
+            if (S.arsenals != null) {
+                mapEntries(mapHandle(sp.add(S.arsenals).readPointer()), 20)
+                    .forEach(function (kv) {
+                        let list = [];
+                        try {
+                            if (kv[1] && !kv[1].isNull())
+                                list = proxyStrings(
+                                    kv[1].add(OFF.SkillsProxy.skills).readPointer(), 10);
+                        } catch (e) {}
+                        r.arsenals[kv[0]] = list;
+                    });
+            }
+            if (S.prayerSequence != null)
+                r.prayers = proxyStrings(sp.add(S.prayerSequence).readPointer(), 10);
         }
+    } catch (e) {}
+    // The hero's own skill arrays: the action bar as the game holds it.
+    try {
+        if (D.weaponSkills != null) r.weaponSkills = skillKinds(h.add(D.weaponSkills).readPointer(), 20);
+        if (D.secondarySkill != null) {
+            const s2 = h.add(D.secondarySkill).readPointer();
+            r.secondary = (s2 && !s2.isNull()) ? hlStr(s2.add(OFF.Skill.kind).readPointer()) : null;
+        }
+        r.skills = skillKinds(h.add(D.skills).readPointer(), 80);
     } catch (e) {}
     return r;
 }
