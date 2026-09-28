@@ -2718,6 +2718,7 @@ def _wants_params(fn):
 # back; the labels are what it shows.
 APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Settings",
             "Help")
+APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
                   "Hunt": "Chasse",
@@ -3251,7 +3252,9 @@ class App:
             "rift": self._rift_clock(),
             "toast": self._toast,
             "tab": self._menu_tab,
-            "tabs": [{"v": t, "t": APP_TAB_LABELS[t]} for t in APP_TABS],
+            # The app's own tabs, after the game's, behind a divider.
+            "tabs": [{"v": t, "t": APP_TAB_LABELS[t],
+                      "sep": t == APP_TABS_APP_FIRST} for t in APP_TABS],
             "page": self._page(self._menu_tab),
         }
 

@@ -567,6 +567,7 @@ function renderTabs(tabs, active) {
   tabs.forEach((tab) => {
     const t = typeof tab === 'string' ? tab : tab.v;
     const label = typeof tab === 'string' ? tab : tab.t;
+    if (tab.sep) nav.appendChild(el('div', 'navsep'));
     const b = el('button', t === active ? 'active' : '', label);
     b.addEventListener('click', () => notify('set_tab', { value: t }));
     nav.appendChild(b);

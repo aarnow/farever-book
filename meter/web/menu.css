@@ -109,6 +109,8 @@ html, body {
 #nav button:hover { background: var(--panel-2); color: var(--text); }
 #nav button.active { background: var(--panel-2); color: var(--text);
                      box-shadow: inset 3px 0 0 var(--accent); }
+/* the game's tabs above, the app's own (Réglages, Aide) below */
+#nav .navsep { border-top: 1px solid var(--line); margin: 8px 4px; }
 
 #foot {
   grid-area: foot;
