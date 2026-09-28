@@ -404,6 +404,7 @@ function buildReport(n) {
     cols.appendChild(c);
   });
   p.appendChild(cols);
+  if (n.loot) p.appendChild(buildLoot(n.loot));
   return p;
 }
 
@@ -588,3 +589,26 @@ function boot() {
 
 window.addEventListener('pywebviewready', boot);
 if (window.pywebview) boot();
+
+/* A dungeon run's loot: one block per phase, the reward chest first. */
+function buildLoot(groups) {
+  const box = el('div', 'loot');
+  box.appendChild(el('h4', null, 'Butin'));
+  if (!groups.length) {
+    box.appendChild(el('div', 'empty', "aucun objet ramassé pendant ce run"));
+    return box;
+  }
+  groups.forEach((g) => {
+    box.appendChild(el('div', 'sub', g.t));
+    const tbl = el('div', 'tbl lootlist');
+    g.items.forEach((it) => {
+      const r = el('div', 'lootrow' + (it.rk ? ' r-' + it.rk : ''));
+      r.appendChild(el('span', 'nm', it.name));
+      r.appendChild(el('span', 'rar', [it.rarity, it.level].filter(Boolean).join(' · ')));
+      r.appendChild(el('span', 'num', '×' + it.qty));
+      tbl.appendChild(r);
+    });
+    box.appendChild(tbl);
+  });
+  return box;
+}

@@ -222,6 +222,7 @@ let lastServer = null;
 // it changes, and every few seconds while in a dungeon so the clock is seen.
 let dungeonSig = null;
 let dungeonBeat = 0;
+let sweepBeat = 0;
 
 function readLobbies(hero) {
     const out = [];
@@ -376,6 +377,11 @@ function checkRift() {
                     } catch (e2) {}
                     if (!initial) {
                         resetBossBars();
+                        // Whatever was picked up just before the loading
+                        // screen, then a new baseline: the loadout is
+                        // re-replicated and must not read as loot.
+                        sweepInventory();
+                        invReady = false;
                     }
                     send(out);
                 }
@@ -599,6 +605,154 @@ function hookBossBar(base) {
     }
 }
 
+// ---- loot (the inventory sweep) ----
+// Restored from the original's legendary-pickup cue, now feeding the dungeon
+// loot list. Plain pointer reads only.
+//
+// st.Inventory.content is an ArrayObj whose entries are NOT items: each is a
+// standalone hl vvirtual (kind 15) carrying inline fields {count:Int,
+// item:st.Item}. Its fields are found by NAME in the virtual's own field
+// table:
+//
+//   hl_type         { kind@0, union@8, vobj_proto@16 }
+//   hl_type_virtual { fields@0, nfields@8, dataSize@12, indexes@16 }
+//   hl_obj_field    { name@0, type@8, hashed@16 }   — 24 bytes each
+//
+// and for a standalone virtual the pointer array at v+24 holds each field's
+// storage ADDRESS, so a field value is a double deref.
+const HVIRTUAL = 15;
+const virtFieldIdx = {};        // virtual type ptr -> { field name -> index }
+
+function virtualFieldIndex(t, want) {
+    const key = t.toString();
+    let map = virtFieldIdx[key];
+    if (map === undefined) {
+        map = {};
+        try {
+            const vt = t.add(8).readPointer();
+            const fields = vt.readPointer();
+            const n = vt.add(8).readS32();
+            for (let i = 0; i < n && i < 64; i++) {
+                let nm = null;
+                try { nm = fields.add(i * 24).readPointer().readUtf16String(); }
+                catch (e) {}
+                if (nm) map[nm] = i;
+            }
+        } catch (e) {}
+        virtFieldIdx[key] = map;
+    }
+    const idx = map[want];
+    return idx === undefined ? -1 : idx;
+}
+
+// { item, count } out of one container slot, or null.
+function slotItem(p) {
+    try {
+        if (!p || p.isNull()) return null;
+        const t = p.readPointer();
+        if (t.readU32() !== HVIRTUAL) return null;
+        const ii = virtualFieldIndex(t, "item");
+        if (ii < 0) return null;
+        const st = p.add(24 + ii * 8).readPointer();
+        if (!st || st.isNull()) return null;
+        const it = st.readPointer();
+        if (!it || it.isNull() || it.compare(ptr("0x10000")) <= 0) return null;
+        let count = 1;
+        const ci = virtualFieldIndex(t, "count");
+        if (ci >= 0) {
+            try {
+                const cs = p.add(24 + ci * 8).readPointer();
+                const c = (cs && !cs.isNull()) ? cs.readS32() : 1;
+                if (c > 0 && c < 1000000) count = c;
+            } catch (e) {}
+        }
+        return { item: it, count: count };
+    } catch (e) { return null; }
+}
+
+// uid churns on every container move, so it is never an identity: items are
+// counted by kind (+ rarity, a property of the copy that doesn't churn).
+function itemInfo(it) {
+    const cls = typeName(it);
+    if (!cls || (cls.lastIndexOf("st.Item", 0) !== 0
+                 && cls.lastIndexOf("st.item.", 0) !== 0)) return null;
+    const out = { cls: cls, kind: null, rarity: null, level: null };
+    try { out.kind = hlStr(it.add(OFF.Item.kind).readPointer()); } catch (e) {}
+    // rarity is declared only on st.item.Weapon; at any other class the
+    // offset is past the end of the object.
+    if (cls === "st.item.Weapon" && OFF.Weapon) {
+        try { out.rarity = hlStr(it.add(OFF.Weapon.rarity).readPointer()); } catch (e) {}
+        try { out.level = it.add(OFF.Weapon.level).readS32(); } catch (e) {}
+    }
+    return out;
+}
+
+const invKey = function (inf) { return inf.kind + "|" + (inf.rarity || ""); };
+
+let invSeen = null;             // kind|rarity -> count, inventory + equipment
+let invReady = false;           // first sweep only baselines, never fires
+
+// False if the container could not be read: a failed read looks exactly like
+// an empty bag, and taking one for the other would report the whole bag as
+// loot on the next good sweep.
+function readContainerKinds(invPtr, into, byKey) {
+    if (!invPtr || invPtr.isNull()) return false;
+    let arr;
+    try { arr = invPtr.add(OFF.Inventory.content).readPointer(); }
+    catch (e) { return false; }
+    if (!arr || arr.isNull()) return false;
+    const A = OFF.ArrayObj;
+    let n, data;
+    try {
+        n = arr.add(A.length).readS32();
+        data = arr.add(A.array).readPointer();
+    } catch (e) { return false; }
+    if (n < 0 || n > 4096 || data.isNull()) return false;
+    for (let i = 0; i < n; i++) {
+        let raw;
+        try { raw = data.add(A.data + i * 8).readPointer(); } catch (e) { continue; }
+        if (!raw || raw.isNull() || raw.compare(ptr("0x10000")) <= 0) continue;
+        const slot = slotItem(raw);
+        if (!slot) continue;
+        const inf = itemInfo(slot.item);
+        if (!inf || !inf.kind) continue;
+        const key = invKey(inf);
+        into[key] = (into[key] || 0) + slot.count;
+        if (!(key in byKey)) byKey[key] = inf;
+    }
+    return true;
+}
+
+// Counting by kind across BOTH containers survives equipping and unequipping
+// (the item moves, the count doesn't): only a real gain moves a count up.
+function sweepInventory() {
+    try {
+        if (!localHero || localHero.isNull()
+            || !OFF.Loadout || !OFF.Inventory || !OFF.Item || !OFF.ArrayObj)
+            return;
+        const loadout = localHero.add(OFF.Hero.loadout).readPointer();
+        if (!loadout || loadout.isNull()) return;
+        const now = {}, info = {};
+        const okInv = readContainerKinds(
+            loadout.add(OFF.Loadout.inventory).readPointer(), now, info);
+        const okEq = readContainerKinds(
+            loadout.add(OFF.Loadout.equipment).readPointer(), now, info);
+        if (!okInv || !okEq) return;
+        if (!invReady) {
+            invSeen = now; invReady = true; return;
+        }
+        for (const key in now) {
+            const gained = now[key] - (invSeen[key] || 0);
+            if (gained <= 0) continue;
+            const inf = info[key];
+            if (!inf) continue;
+            send({ kind: "pickup", item: inf.kind, cls: inf.cls,
+                   rarity: inf.rarity, level: inf.level, count: gained });
+        }
+        invSeen = now;
+    } catch (e) {}
+}
+
 function resetBossBars() {
     // A loading screen tears the HUD down: a bar that was up on the way out
     // must not stay "up" in the new zone. No up/down events — the pull isn't
@@ -765,6 +919,9 @@ function refreshLocalHero() {
         try {
             const h = new NativeFunction(f.addr, "pointer", [])();
             if (h && !h.isNull() && typeName(h) === "ent.Hero") {
+                // Another hero object is another bag: re-baseline rather
+                // than report all of it as loot.
+                if (!localHero || !localHero.equals(h)) invReady = false;
                 localHero = h;
                 partyNames = readParty(h);
                 const nm = hlStr(h.add(OFF.Hero.name).readPointer());
@@ -818,6 +975,7 @@ function main() {
         send({ kind: "combat", state: state });
         checkRift();
         checkDungeon();
+        if (++sweepBeat % 3 === 0) sweepInventory();
     }, 400);
 
     // The shard roster, on its own slow clock. A hub list of 30 people is not

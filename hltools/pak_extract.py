@@ -84,6 +84,21 @@ def read_tree(buf: bytes, pak_name: str):
     return entries, header_size
 
 
+def read_entry(pak_path: Path, name: str):
+    """One file out of a pak, reading only the directory and that file —
+    res.pak is close to a gigabyte. None when the pak has no such file."""
+    with open(pak_path, "rb") as f:
+        head = f.read(12)
+        header_size = struct.unpack_from("<i", head, 4)[0]
+        f.seek(0)
+        entries, data_off = read_tree(f.read(header_size), pak_path.name)
+        hit = next((e for e in entries if e.path == name), None)
+        if hit is None:
+            return None
+        f.seek(data_off + hit.pos)
+        return f.read(hit.size)
+
+
 def load(pak_path: Path):
     data = pak_path.read_bytes()
     entries, data_off = read_tree(data, pak_path.name)

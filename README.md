@@ -27,7 +27,7 @@ fenêtre Windows séparée.
 |---|---|
 | **En direct** | Tableau dégâts/soins du groupe (ou de tous les joueurs), détail du joueur sélectionné (sorts, critiques, types de dégâts), durée du combat, mode parse 60 s, fil d'événements (kills de boss, records, fins de faille) |
 | **Failles** | Toutes les failles terminées. Chaque rapport compare la phase de faille et la phase du boss : durée, DPS, HPS, MVP, classement complet des dégâts et des soins, dégâts par type. Copiable en image (au visuel de l'interface) ou en texte. |
-| **Donjons** | Chaque donjon est enregistré automatiquement : difficulté (lue dans le lobby), résultat (victoire, échec, abandon), temps du run (l'horloge du jeu), morts, groupe, et un rapport en deux phases (exploration puis boss) comme pour les failles. Records par donjon et par difficulté. |
+| **Donjons** | Chaque donjon est enregistré automatiquement : difficulté (lue dans le lobby), résultat (victoire, échec, abandon), temps du run (l'horloge du jeu), morts, groupe, un rapport en deux phases (exploration puis boss) comme pour les failles, et le butin ramassé (dont le coffre de fin). Noms des donjons, objets et boss en français, tirés du jeu. Records par donjon et par difficulté. |
 | **Réglages** | Colonnes de soins, réinitialisation au pull d'un boss, « Tous les joueurs » automatique en faille, raccourci clavier, taille de l'interface, dossiers. |
 | **Aide** | Utilisation, lancement avec Steam. |
 

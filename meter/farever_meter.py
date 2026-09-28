@@ -1447,7 +1447,12 @@ DUNGEON_MIN_SECS = 30
 
 
 def dungeon_name(kind):
-    """"R1_POI_Dungeon_Manfish_Ruins" -> "Manfish Ruins"."""
+    """The dungeon's French name, as the game shows it
+    ("R1_POI_CleodorasNest" -> "Tronc-ruche d'Élizabeille"); the prettified
+    id when the game's translation doesn't have it."""
+    fr = _fr_names("activity").get(str(kind or ""))
+    if fr:
+        return fr
     s = re.sub(r"^R\d+_POI_(Dungeon_)?", "", str(kind or ""))
     s = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", s.replace("_", " "))
     return " ".join(s.split()) or "Donjon"
@@ -1493,7 +1498,7 @@ class DungeonTracker:
             self.run = {"kind": kind, "boss": d.get("bossId") or "",
                         "difficulty": diff, "state": None, "wipes": 0,
                         "deaths": 0, "clock": 0.0, "done": False,
-                        "boss_seen": False}
+                        "boss_seen": False, "loot": [], "file": None}
             self.rec.set_rift(True)
             print(f"[dungeon] entered {kind} (difficulty "
                   f"{DUNGEON_DIFFICULTIES.get(diff, '?')})", file=sys.stderr)
@@ -1523,6 +1528,26 @@ class DungeonTracker:
                          end if isinstance(end, (int, float)) and end > 0
                          else run["clock"])
 
+    def pickup(self, p):
+        """An item that entered the local player's bags (the hook's inventory
+        sweep). Kept on the run, tagged with the phase it came in: after the
+        boss's death it is the reward chest's."""
+        run = self.run
+        if run is None or not p.get("item"):
+            return
+        phase = ("coffre" if run["done"] else
+                 "boss" if run["boss_seen"] else "exploration")
+        run["loot"].append({"item": p["item"], "rarity": p.get("rarity"),
+                            "level": p.get("level"),
+                            "count": int(p.get("count") or 1),
+                            "phase": phase})
+        print(f"[dungeon] loot ({phase}): {p.get('count')}x {p['item']} "
+              f"{p.get('rarity') or ''}", file=sys.stderr)
+        # A finished run is already saved: rewrite it with the chest's loot.
+        ov = _OVERLAY["ref"]
+        if run["done"] and run["file"] and ov is not None:
+            ov.on_dungeon_loot(run["file"], list(run["loot"]))
+
     def _leave(self):
         run, self.run = self.run, None
         if run["done"]:
@@ -1546,7 +1571,9 @@ class DungeonTracker:
         if report is None:
             return
         _stamp_report_classes(report, self.world)
+        run["file"] = f"run-{time.strftime('%Y%m%d-%H%M%S')}.json"
         report.update({
+            "file": run["file"], "loot": list(run["loot"]),
             "type": "dungeon", "kind": run["kind"],
             "name": dungeon_name(run["kind"]), "boss": run["boss"],
             "difficulty": run["difficulty"], "result": result,
@@ -3466,8 +3493,27 @@ class App:
                                     "p": {"file": name}} if name else None)
         self._enqueue(done)()
 
+    def on_dungeon_loot(self, name, loot):
+        """Loot that arrived after the run was saved (the reward chest):
+        rewrite the saved run with it. Hook thread."""
+        def done():
+            path = DUNGEONS_DIR / Path(name).name
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                data["loot"] = loot
+                path.write_text(json.dumps(data), encoding="utf-8")
+            except (OSError, ValueError) as e:
+                print(f"[meter] couldn't add the loot to {name}: {e}",
+                      file=sys.stderr)
+                return
+            view = self._dungeon_view
+            if view is not None and view.get("file") == name:
+                self._dungeon_view = data
+        self._enqueue(done)()
+
     def _save_dungeon_run(self, report):
-        name = f"run-{time.strftime('%Y%m%d-%H%M%S')}.json"
+        name = (report.get("file")
+                or f"run-{time.strftime('%Y%m%d-%H%M%S')}.json")
         try:
             DUNGEONS_DIR.mkdir(parents=True, exist_ok=True)
             (DUNGEONS_DIR / name).write_text(json.dumps(report),
@@ -3537,11 +3583,11 @@ class App:
         runs = self._dungeon_runs()
         if self._dungeon_view is not None:
             d = self._dungeon_view
-            node = report_view(dict(d, title=d.get("name") or "Donjon"))
+            node = report_view(dict(d, title=dungeon_name(d.get("kind"))))
             node["sub"] = self._dungeon_sub(d)
             return [{"k": "toolbar", "id": "dungeon_tools", "btns": [
                         {"id": "close_dungeon_run",
-                         "t": "‹  Runs de " + (d.get("name") or "ce donjon")},
+                         "t": "‹  Runs de " + dungeon_name(d.get("kind"))},
                         {"id": "copy_rift_image", "t": "Copier l'image"},
                         {"id": "copy_rift_text", "t": "Copier le texte"}]},
                     node]
@@ -4334,6 +4380,36 @@ def _unit_names():
     return _UNIT_NAMES
 
 
+_FR_NAMES = None
+
+
+def _fr_names(sheet):
+    """id -> French display name for one of the game's sheets (activity,
+    item, rarity, unit), from analysis_out/names_fr.json — the game's own
+    translation, extracted by emit_offsets.py. {} when absent."""
+    global _FR_NAMES
+    if _FR_NAMES is None:
+        try:
+            _FR_NAMES = json.loads(
+                (ANALYSIS / "names_fr.json").read_text(encoding="utf-8"))
+        except Exception:
+            _FR_NAMES = {}
+    return _FR_NAMES.get(sheet) or {}
+
+
+def item_label(kind):
+    """An item's French name, else its prettified id."""
+    return _fr_names("item").get(kind) or _pretty_id(kind)
+
+
+RARITY_FR = {"Common": "Ordinaire", "Uncommon": "Peu ordinaire",
+             "Rare": "Rare", "Epic": "Épique", "Legendary": "Légendaire"}
+
+
+def rarity_label(r):
+    return _fr_names("rarity").get(r) or RARITY_FR.get(r) or (r or "")
+
+
 _HEAL_SPECS = None
 
 
@@ -4360,7 +4436,8 @@ def _heal_specs():
 def _boss_label(kind):
     """The boss's real display name, falling back to the prettified kind for
     anything the unit sheet doesn't carry."""
-    return _unit_names().get(kind) or _pretty_id(kind)
+    return (_fr_names("unit").get(kind) or _unit_names().get(kind)
+            or _pretty_id(kind))
 
 
 def _summon_label(kind):
@@ -4563,6 +4640,10 @@ def _data_is_current():
     # heal_specs.json arrived when healing started counting overheal — without
     # it a heal that restores nothing cannot be sized, which is the whole
     # feature. Same upgrade trap as the two above.
+    if not (ANALYSIS / "names_fr.json").exists():
+        print("[meter] names_fr.json absent — regenerating for the French "
+              "names (dungeons, items, bosses).", file=sys.stderr)
+        return False
     if not (ANALYSIS / "heal_specs.json").exists():
         print("[meter] heal_specs.json absent — regenerating so healing can "
               "be counted on full-health targets.", file=sys.stderr)
@@ -4882,10 +4963,39 @@ def report_view(data):
                       for el, amt in (ph.get("elements") or [])[:8]],
         })
     when = date_fr(time.localtime(data.get("at") or 0))
-    return {"k": "report", "id": "report",
-            "title": data.get("title") or "Rapport de faille",
-            "sub": data.get("sub") or "",
-            "when": when, "phases": phases}
+    out = {"k": "report", "id": "report",
+           "title": data.get("title") or "Rapport de faille",
+           "sub": data.get("sub") or "",
+           "when": when, "phases": phases}
+    if isinstance(data.get("loot"), list):
+        out["loot"] = loot_view(data["loot"])
+    return out
+
+
+LOOT_PHASES = (("coffre", "Coffre de fin"), ("boss", "Phase du boss"),
+               ("exploration", "Exploration"))
+
+
+def loot_view(loot):
+    """A dungeon run's loot, grouped by phase (the chest first), identical
+    items merged."""
+    groups = []
+    for key, label in LOOT_PHASES:
+        merged = {}
+        for it in loot:
+            if it.get("phase") != key:
+                continue
+            k = (it.get("item"), it.get("rarity"), it.get("level"))
+            merged[k] = merged.get(k, 0) + int(it.get("count") or 1)
+        if merged:
+            groups.append({"t": label, "items": [
+                {"name": item_label(item), "qty": qty,
+                 "rarity": rarity_label(rar) if rar else "",
+                 "rk": (rar or "").lower(),
+                 "level": f"niv. {lvl}" if isinstance(lvl, int) and lvl > 0
+                 else ""}
+                for (item, rar, lvl), qty in merged.items()]})
+    return groups
 
 
 # The rift report as an image. Drawn from the same display data as the Failles
@@ -5825,6 +5935,8 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                 hero_id["name"] = name
                 print("[meter] local hero "
                       + ("identified." if first else "changed."), file=sys.stderr)
+        elif k == "pickup":
+            dungeon.pickup(p)
         elif k == "dungeon":
             # The running activity and, in a dungeon, its state — see
             # DungeonTracker for what each field was measured to mean.

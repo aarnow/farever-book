@@ -28,7 +28,8 @@ seul à la prochaine session.
 * **Failles** — toutes les failles terminées, avec leur classement complet.
 * **Donjons** — chaque donjon, avec l'historique de tes runs : difficulté,
   résultat (victoire, échec, abandon), temps, morts, groupe, et le rapport
-  complet de chaque run (exploration puis boss). Les records par difficulté sont
+  complet de chaque run (exploration puis boss), avec le butin ramassé et le
+  contenu du coffre de fin. Les records par difficulté sont
   marqués d'une étoile.
 
 Le minuteur de faille est toujours visible en bas du menu : il compte jusqu'à

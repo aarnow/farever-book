@@ -456,3 +456,25 @@ select, input[type=text] {
 
 /* a dungeon run's difficulty / result / time, beside its title */
 .report .rtitle .rsub { color: var(--text); font-weight: 600; }
+
+/* ---- dungeon loot --------------------------------------------------------- */
+.loot { margin-top: 20px; background: var(--bg); border: 1px solid var(--line);
+        border-radius: 10px; padding: 16px 18px 18px; }
+.loot h4 { margin: 0; font-size: 15px; color: #F3C9E5;
+           text-transform: uppercase; letter-spacing: .5px; }
+.loot .sub { margin: 14px 0 6px; color: var(--rift); font-size: 11px;
+             font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
+.loot .empty { margin-top: 10px; color: var(--faint); }
+.lootlist { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.lootrow { display: grid; grid-template-columns: minmax(0, 1fr) auto 56px;
+           gap: 12px; padding: 6px 12px; align-items: baseline; }
+.lootrow + .lootrow { border-top: 1px solid var(--line); }
+.lootrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+               font-weight: 600; }
+.lootrow .rar { color: var(--dim); font-size: 12px; }
+.lootrow .num { text-align: right; font-variant-numeric: tabular-nums; }
+.lootrow.r-common .nm { color: #C8C4BA; }
+.lootrow.r-uncommon .nm { color: #7BD88F; }
+.lootrow.r-rare .nm { color: #5B8DEF; }
+.lootrow.r-epic .nm { color: #B57BEF; }
+.lootrow.r-legendary .nm { color: #F29A4A; }

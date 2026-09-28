@@ -443,6 +443,12 @@ def main():
         out_traits.write_text(json.dumps(traits, indent=0), encoding="utf-8")
         print(f"[written] {out_traits} ({len(traits['critter'])} critters, "
               f"{len(traits['spark'])} sparkling)")
+        fr = extract_fr_names(Path(hlboot).parent)
+        out_fr = _OUT_DIR / "names_fr.json"
+        out_fr.write_text(json.dumps(fr, ensure_ascii=False, indent=0),
+                          encoding="utf-8")
+        print(f"[written] {out_fr} ("
+              + ", ".join(f"{len(v)} {k}" for k, v in fr.items()) + ")")
         smeta = extract_status_meta(Path(hlboot).parent)
         out_status = _OUT_DIR / "status_meta.json"
         out_status.write_text(json.dumps(smeta, ensure_ascii=False, indent=0),
@@ -549,6 +555,39 @@ def extract_display_names(game_dir):
         return out
 
     return sheet_names("unit")
+
+
+# The sheets whose French names the app shows: dungeons (activity), loot
+# (item, rarity) and bosses (unit).
+FR_SHEETS = ("activity", "item", "rarity", "unit")
+
+
+def extract_fr_names(game_dir):
+    """sheet -> id -> French display name, from the game's own translation
+    (res.pak lang/export_fr.xml: <sheet name=...><Id><texts.name>...). The
+    same text the game shows when it runs in French — e.g. the activity
+    R1_POI_CleodorasNest is "Tronc-ruche d'Élizabeille"."""
+    import xml.etree.ElementTree as ET
+    import pak_extract
+    raw = pak_extract.read_entry(Path(game_dir) / "res.pak",
+                                 "lang/export_fr.xml")
+    if raw is None:
+        raise RuntimeError("lang/export_fr.xml not in res.pak")
+    root = ET.fromstring(raw)
+    out = {}
+    for sheet in root.findall("sheet"):
+        name = sheet.get("name")
+        if name not in FR_SHEETS:
+            continue
+        rows = out.setdefault(name, {})
+        for row in sheet:
+            node = row.find("texts.name")
+            if node is None:
+                node = row.find("name")
+            txt = "".join(node.itertext()).strip() if node is not None else ""
+            if txt:
+                rows[row.tag] = txt
+    return out
 
 
 # Which rank-threshold set a unit's codex entry uses. Measured 2026-08-05 on a
