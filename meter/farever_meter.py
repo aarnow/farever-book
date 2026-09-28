@@ -424,7 +424,6 @@ FG_HEADER_DIM = "#DCE9EA"   # captions in a header bar — readable on all tints
 FG_TEXT = "#3D2817"
 FG_VALUE = "#1F1208"
 FG_DIM = "#7B5A3A"
-FG_WARN = "#A32B1C"         # red that still reads on the cream body
 
 # ---- rift palette (matches the rifts themselves: hot magenta rim, near-black
 # maroon interior) — deliberately nothing like the rest of the overlay, so the
@@ -988,38 +987,6 @@ def _hidden_tk():
     r.withdraw()
     r.attributes("-topmost", True)
     return r
-
-
-def ask_choice(title, prompt, labels):
-    """Pick one of `labels`, returning its index (or 0 if the user just closes
-    the dialog — the same default the console prompt uses for a bare Enter)."""
-    root = _hidden_tk()
-    picked = {"i": 0}
-    win = tk.Toplevel(root)
-    win.title(title)
-    win.configure(bg=BG_BODY, padx=14, pady=12)
-    win.attributes("-topmost", True)
-    win.resizable(False, False)
-    tk.Label(win, text=prompt, bg=BG_BODY, fg=FG_TEXT, justify="left",
-             anchor="w", font=("Segoe UI", 10)).pack(fill="x", pady=(0, 10))
-
-    def choose(i):
-        picked["i"] = i
-        win.destroy()
-
-    for i, label in enumerate(labels):
-        tk.Button(win, text=label, command=lambda i=i: choose(i), anchor="w",
-                  bg=BG_BODY_SOFT, fg=FG_TEXT, relief="flat", bd=0,
-                  padx=10, pady=6, cursor="hand2",
-                  font=("Segoe UI", 9)).pack(fill="x", pady=2)
-    win.protocol("WM_DELETE_WINDOW", lambda: choose(0))
-    win.update_idletasks()
-    win.geometry(f"+{(win.winfo_screenwidth() - win.winfo_width()) // 2}"
-                 f"+{(win.winfo_screenheight() - win.winfo_height()) // 3}")
-    win.grab_set()
-    root.wait_window(win)
-    root.destroy()
-    return picked["i"]
 
 
 def ask_directory(title):
@@ -2637,9 +2604,13 @@ SHUTDOWN_HINT = ("Arrête le compteur avec le bouton en bas, ou depuis "
 
 def start_hotkeys(callbacks: dict, target_pid):
     """Run the keyboard hook that owns Shift+\\, on its own thread with its own
-    message pump."""
+    message pump. `target_pid` may be a callable: the game can start, close
+    and start again while the meter runs."""
     if sys.platform != "win32":
         return
+
+    def _game_pid():
+        return target_pid() if callable(target_pid) else target_pid
 
     def pump():
         from ctypes import wintypes
@@ -2693,7 +2664,7 @@ def start_hotkeys(callbacks: dict, target_pid):
             # RESET_BIND is read fresh every time rather than captured: that's
             # what makes rebinding take effect immediately instead of at the
             # next launch.
-            if vk != RESET_BIND.get("vk") or fg_pid() != target_pid:
+            if vk != RESET_BIND.get("vk") or fg_pid() != _game_pid():
                 return u.CallNextHookEx(None, nCode, wParam, lParam)
             # Every modifier has to match exactly — a binding of Shift+\ must
             # not fire on Ctrl+Shift+\, which is somebody else's shortcut.
@@ -2734,7 +2705,7 @@ def start_hotkeys(callbacks: dict, target_pid):
                 # Which side button is in the HIGH word of mouseData: 1 or 2.
                 ms = ctypes.cast(lParam, ctypes.POINTER(MSLL))[0]
                 vk = 0x04 + ((ms.mouseData >> 16) & 0xFFFF)     # -> 0x05, 0x06
-            if vk != RESET_BIND.get("vk") or fg_pid() != target_pid:
+            if vk != RESET_BIND.get("vk") or fg_pid() != _game_pid():
                 return u.CallNextHookEx(None, nCode, wParam, lParam)
             if (pressed(VK_SHIFT) != bool(RESET_BIND.get("shift"))
                     or pressed(VK_CONTROL) != bool(RESET_BIND.get("ctrl"))
@@ -3399,9 +3370,14 @@ def _wants_params(fn):
 # ---------------------------------------------------------------------------
 class Overlay:
     def __init__(self, session: PartySession, target_pid, ui_state=None,
-                 world=None, configure=None):
+                 world=None, configure=None, link=None):
         self.session = session
         self.target_pid = target_pid
+        # The background connection to the game (None when the overlay runs
+        # on its own, as in tests — it then counts as connected when it was
+        # given a pid).
+        self.link = link
+        self._link_shown = None        # last status the light was painted with
         self.ui_state = ui_state if ui_state is not None else GameUIState()
         self.world = world if world is not None else WorldSnapshot()
         # Pushes settings to the running hook (currently just the sweep rate).
@@ -3478,8 +3454,6 @@ class Overlay:
         self._action_q = []
         self._q_lock = threading.Lock()
         self._quit_armed = False       # the Quit button's second-click window
-        self._game_exit_win = None     # the "Farever has stopped" prompt
-        self._game_gone = False        # the game process died; hide everything
 
         self._transparency = 0              # percent, on top of OVERLAY_ALPHA
         self._auto_reset_boss = False
@@ -4013,6 +3987,13 @@ class Overlay:
                                   font=self.fonts["ui_b"], anchor="w",
                                   padx=8, pady=4)
         self.title_lbl.pack(side="left")
+        # The game connection light. Packed first so it is the rightmost
+        # thing in the header; clicking it looks for the game again now.
+        self.link_lbl = tk.Label(self.header, text="", bg=BG_HEADER,
+                                 fg=FG_HEADER, font=self.fonts["ui_sm_b"],
+                                 padx=6, cursor="hand2")
+        self.link_lbl.pack(side="right")
+        self.link_lbl.bind("<Button-1>", lambda _e: self._link_clicked())
         self.timer_lbl = tk.Label(self.header, text="", bg=BG_HEADER, fg=FG_HEADER,
                                   font=self.fonts["mono"], padx=8)
         self.timer_lbl.pack(side="right")
@@ -4224,7 +4205,11 @@ class Overlay:
         }
 
     def _menu_banner(self):
-        """The panel's top line: how to stop the meter."""
+        """The panel's top line: the game connection when it is not there,
+        otherwise how to stop the meter."""
+        _light, _colour, sentence = self._link_status_text()
+        if sentence:
+            return {"t": sentence, "update": False}
         return {"t": SHUTDOWN_HINT, "update": False}
 
     # -- Help -------------------------------------------------------------
@@ -4413,8 +4398,12 @@ class Overlay:
                                "l'overlay trois fois plus grand."},
             {"k": "gap"},
             {"k": "button", "id": "toggle_parse", "on": parsing,
+             "tone": (None if parsing or self.game_connected()
+                      else "disabled"),
              "t": (f"Arrêter le parse de {PARSE_LENGTH_SECS} s" if parsing
-                   else f"Mode parse {PARSE_LENGTH_SECS} s")},
+                   else f"Mode parse {PARSE_LENGTH_SECS} s"
+                   + ("" if self.game_connected()
+                      else "   (nécessite le jeu)"))},
         ]
 
     # -- Windows ----------------------------------------------------------
@@ -6007,6 +5996,8 @@ class Overlay:
 
 
     def _toggle_parse(self):
+        if self._parse_state is None and not self.game_connected():
+            return                  # nothing to measure without the game
         if self._parse_state is None:
             self._parse_state = "countdown"
             self._parse_until = time.time() + PARSE_PREROLL_SECS
@@ -6485,82 +6476,72 @@ class Overlay:
 
 
 
-    def on_game_exit(self, reason=""):
-        """The game process went away. Safe from any thread — the frida
-        detached signal arrives on frida's own.
+    # ---- the game connection ----
+    def game_connected(self):
+        if self.link is None:
+            return bool(self.target_pid)
+        return self.link.status()[0] == GameLink.CONNECTED
 
-        This used to assume the overlay would have vanished by itself, on the
-        grounds that a dead game can't hold the foreground. It doesn't: the
-        focus rule treats our own windows as the game's, so raising the prompt
-        below put the overlay straight back on screen, over the prompt. The
-        overlay is now stood down explicitly, before the prompt exists.
-        """
-        self._enqueue(lambda: self._on_game_exit(reason))()
+    def on_link_changed(self):
+        """GameLink's state moved. Safe from any thread."""
+        self._enqueue(self._on_link_changed)()
 
-    def _on_game_exit(self, reason=""):
-        self._game_gone = True
+    def _on_link_changed(self):
+        if self.link is not None:
+            state, _detail, pid = self.link.status()
+            if state == GameLink.CONNECTED and pid:
+                self.target_pid = pid
+                self._game_hwnd = None
+        self._paint_link()
+        self._refresh_visibility()
+        self.menubridge.invalidate()
+
+    def on_game_disconnected(self):
+        """The game closed (or the meter is leaving it). Safe from any
+        thread."""
+        self._enqueue(self._on_game_disconnected)()
+
+    def _on_game_disconnected(self):
+        self.target_pid = None
+        self._game_hwnd = None
         # The hook died with the game, so the close events for whatever was
         # open are never coming — ui_state would keep reporting the escape
         # menu as open, and with it the control menu as unlocked, forever.
         self.ui_state.clear()
         self._menu_unlock = False
-        # A parse whose data source just died is not a sample of anything, and
-        # its banner maps itself directly rather than through the fade system —
-        # so it would climb back over the prompt on the next tick. Ending it is
-        # both the honest answer and the one that gets it off the screen.
+        # A parse whose data source just died is not a sample of anything.
         if self._parse_state is not None:
             self._stop_parse()
-        self._refresh_visibility()      # stand everything down FIRST
-        self._show_game_exit_prompt(reason)
+        self._refresh_visibility()
 
-    def _show_game_exit_prompt(self, reason=""):
-        if self._game_exit_win is not None:
-            return
-        win = tk.Toplevel(self.root)
-        win.title("Farever+")
-        win.attributes("-topmost", True)
-        win.resizable(False, False)
-        body = tk.Frame(win, bg=BG_BODY, padx=16, pady=14)
-        body.pack(fill="both", expand=True)
-        tk.Label(body, text="Farever s'est arrêté.",
-                 bg=BG_BODY, fg=FG_VALUE,
-                 font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        tk.Label(body,
-                 text="Le jeu est fermé : le compteur n'a plus rien à "
-                      "lire.\nVeux-tu quitter le compteur ?",
-                 bg=BG_BODY, fg=FG_TEXT, justify="left",
-                 font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 12))
-        row = tk.Frame(body, bg=BG_BODY)
-        row.pack(fill="x")
+    def _link_status_text(self):
+        """(light text, colour, sentence for the settings panel)."""
+        if self.link is None:
+            return "", FG_HEADER, ""
+        state, detail, _pid = self.link.status()
+        if state == GameLink.CONNECTED:
+            return "● En jeu", "#7BD88F", ""
+        if state == GameLink.CONNECTING:
+            return ("● Connexion…", "#F2C14E",
+                    "Connexion à Farever en cours…")
+        if state == GameLink.FAILED:
+            return ("● Échec — réessayer", "#F2665E",
+                    f"Connexion à Farever impossible : {detail}. Clique sur "
+                    "le voyant du compteur pour réessayer.")
+        return ("● Hors jeu", "#B8B0A2",
+                "Farever n'est pas lancé. L'historique et les rapports "
+                "restent consultables ; les données en direct reviennent dès "
+                "que tu lances le jeu.")
 
-        def close(quit_now):
-            self._game_exit_win = None
-            try:
-                win.destroy()
-            except tk.TclError:
-                pass
-            if quit_now:
-                self._quit()
+    def _paint_link(self):
+        text, colour, _ = self._link_status_text()
+        if (text, colour) != self._link_shown:
+            self._link_shown = (text, colour)
+            self.link_lbl.config(text=text, fg=colour)
 
-        # No second-click arming here, unlike the Quit button: with the game
-        # gone there is no encounter left for a misclick to destroy.
-        tk.Button(row, text="Quitter le compteur", command=lambda: close(True),
-                  bg=FG_WARN, fg=FG_HEADER, activebackground=FG_WARN,
-                  activeforeground=FG_HEADER, relief="flat", bd=0,
-                  padx=12, pady=6, cursor="hand2",
-                  font=("Segoe UI", 9, "bold")).pack(side="left")
-        tk.Button(row, text="Le laisser tourner", command=lambda: close(False),
-                  bg=BG_BODY_SOFT, fg=FG_TEXT, activebackground=BG_BAR_TRACK,
-                  activeforeground=FG_VALUE, relief="flat", bd=0,
-                  padx=12, pady=6, cursor="hand2",
-                  font=("Segoe UI", 9)).pack(side="left", padx=(8, 0))
-        win.protocol("WM_DELETE_WINDOW", lambda: close(False))
-        win.update_idletasks()
-        win.geometry(f"+{(win.winfo_screenwidth() - win.winfo_width()) // 2}"
-                     f"+{(win.winfo_screenheight() - win.winfo_height()) // 3}")
-        self._game_exit_win = win
-
-
+    def _link_clicked(self):
+        if self.link is not None and not self.game_connected():
+            self.link.retry()
 
     def request_quit(self):
         """Stop the meter, safely callable from any thread — the tray icon runs
@@ -6620,7 +6601,7 @@ class Overlay:
 
     def _install_hotkeys(self):
         start_hotkeys({HK_RESET: self._enqueue(self._manual_reset)},
-                      self.target_pid)
+                      lambda: self.target_pid)
 
     def _drain(self):
         with self._q_lock:
@@ -6832,19 +6813,9 @@ class Overlay:
         #     stays "open" forever, holding the control menu unlocked.
         #
         # Both were reported as the menu rendering over the exit prompt.
-        if self._game_gone:
-            self._stop_typing()
-            changed = False
-            for key in self._fade_win:
-                changed |= self._want_visible(key, False)
-            if changed:
-                self._start_fade()
-            # Not a faded window, so it has to be told separately.
-            try:
-                self.parsewin.withdraw()
-            except tk.TclError:
-                pass
-            return
+        # No game, nothing to lay over it: every overlay window stands down.
+        # (Second-screen windows are not overlays and stay — see s2 below.)
+        offline = not self.game_connected()
         ooc_hidden = (self._hide_ooc and not self._menu_unlock and
                       (time.time() - self._combat_seen_at) >= HIDE_OOC_LINGER_SECS)
         # Any game window that isn't the escape menu (inventory, map, ...) owns
@@ -6865,7 +6836,8 @@ class Overlay:
         # your browser — and worse, one you can't click past while the cursor
         # is free. The tray icon stays, which is how you'd stop the meter from
         # out here anyway.
-        blanket = menu_hidden or self._prompt_open or not self._focused
+        blanket = (offline or menu_hidden or self._prompt_open
+                   or not self._focused)
         changed = False
         for key in self._element_win:
             show_key = _element_show_key(key)
@@ -7535,6 +7507,7 @@ class Overlay:
         return self._held_rows, self._held_duration, True
 
     def _refresh(self):
+        self._paint_link()
 
         # Before the epoch check below: starting a parse resets the session
         # itself, and syncs _last_epoch so that isn't mistaken for the player
@@ -7605,7 +7578,8 @@ class Overlay:
                      for k in ("meter", "detail"))
         if want != self._header_bg:
             meter_bg, detail_bg = want
-            for w in (self.header, self.title_lbl, self.timer_lbl):
+            for w in (self.header, self.title_lbl, self.timer_lbl,
+                      self.link_lbl):
                 w.config(bg=meter_bg)
             self.sort_btn.config(bg=meter_bg, activebackground=meter_bg)
             for w in (self.d_header, self.d_title, self.d_tip):
@@ -7624,7 +7598,8 @@ class Overlay:
 
         self.overview_title.config(
             text=("GROUPE" if self.mode == "party" else "TOUS LES JOUEURS")
-            + f"   ({len(rows)})" + ("   · DERNIER" if holding else ""))
+            + f"   ({len(rows)})" + ("   · DERNIER" if holding else "")
+            + ("" if self.game_connected() else "   · HORS JEU"))
 
         focus = self._resolve_focus(rows)
         # Bars scale against the biggest number of their own kind on screen.
@@ -7651,6 +7626,9 @@ class Overlay:
         if fp is None:
             self.d_title.config(text="Détail")
             self._detail_idle = True
+            self.side_idle.config(
+                text="en attente\nd'un combat…" if self.game_connected()
+                else "lance Farever\npour les données\nen direct")
             self._set_side_stats([])
             self.dmg_col.show([], 0)
             self.heal_col.show([], 0)
@@ -8315,58 +8293,6 @@ def _exe_path_of_pid(pid):
     return None
 
 
-def find_game_process(device):
-    """Locate the running Farever process by enumeration (not by name-attach).
-    Waits for the game to launch if it isn't up yet; if several instances are
-    running, asks which one to meter."""
-    def matches():
-        return [p for p in device.enumerate_processes()
-                if p.name.lower() == TARGET_PROCESS.lower()]
-
-    procs = matches()
-    if not procs:
-        print(f"[*] {TARGET_PROCESS} isn't running — waiting for it to start "
-              "(launch the game) ...", file=sys.stderr)
-        while not procs:
-            # This can be a long wait, and with no console it's an invisible
-            # one — so it has to be abandonable from the tray icon rather than
-            # only by Ctrl+C.
-            if STOP.wait(timeout=1.5):
-                print("[meter] stopped while waiting for the game.",
-                      file=sys.stderr)
-                return None
-            procs = matches()
-        print(f"[*] {TARGET_PROCESS} is up.", file=sys.stderr)
-    if len(procs) == 1:
-        return procs[0]
-    infos = [(p, _exe_path_of_pid(p.pid)) for p in procs]
-    print(f"[*] {len(infos)} {TARGET_PROCESS} processes found:", file=sys.stderr)
-    for i, (p, path) in enumerate(infos, 1):
-        print(f"      {i}. pid {p.pid:>6}  {path or '(path unavailable)'}",
-              file=sys.stderr)
-    if not HAS_CONSOLE:
-        # No stdin to answer on, so the question becomes a dialog. Rare enough
-        # that it doesn't need to be pretty — but it does need to be asked,
-        # since guessing wrong means metering the wrong client.
-        i = ask_choice(
-            "Farever+",
-            f"{len(infos)} instances de Farever sont lancées.\n"
-            "À laquelle le compteur doit-il se connecter ?",
-            [f"pid {p.pid} — {path or '(chemin indisponible)'}"
-             for p, path in infos])
-        return infos[i][0]
-    while True:
-        try:
-            ans = input(f"    Which one is your game? [1-{len(infos)}] "
-                        "(Enter = 1): ").strip()
-        except (EOFError, RuntimeError):
-            return infos[0][0]
-        if not ans:
-            return infos[0][0]
-        if ans.isdigit() and 1 <= int(ans) <= len(infos):
-            return infos[int(ans) - 1][0]
-
-
 # ---------------------------------------------------------------------------
 # Parse image
 # ---------------------------------------------------------------------------
@@ -9024,7 +8950,7 @@ def locate_hlboot(pid):
         return Path(find_hlboot(argv_index=99))
     except (SystemExit, Exception):
         pass
-    if not HAS_CONSOLE:
+    if not HAS_CONSOLE and threading.current_thread() is threading.main_thread():
         # Asked at most once per install in practice: the file normally sits
         # next to the running exe, and that's checked first.
         p = ask_directory("Farever+ — où Farever est-il installé ? "
@@ -9092,11 +9018,12 @@ def main():
         release_instance_lock()
 
 
-def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
-    device = frida.get_local_device()
-    proc = find_game_process(device)
-    if proc is None:
-        return                      # stopped from the tray before we attached
+def _game_session(link, device, proc, session, ui_state, world, rift_rec,
+                  heal_sizer):
+    """One connection to one running Farever: check the data files, attach,
+    bring the hook up, then feed its messages to the meter until the game
+    closes or the meter stops. Runs on GameLink's thread; the overlay already
+    exists and is told about each step through GameLink's state."""
     pid = proc.pid
 
     # Match the data files to the build that is ACTUALLY RUNNING before
@@ -9115,23 +9042,36 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     try:
         fsession = device.attach(pid)
     except frida.ProcessNotFoundError:
-        sys.exit(f"[!] {TARGET_PROCESS} (pid {pid}) s'est fermé avant la "
-                 "connexion. Relance le jeu, puis le compteur.")
+        print(f"[meter] {TARGET_PROCESS} (pid {pid}) closed before attach.",
+              file=sys.stderr)
+        return                      # back to waiting for the game
     except frida.PermissionDeniedError:
-        sys.exit("[!] connexion refusée — si Farever tourne en "
-                 "administrateur, lance aussi le compteur en administrateur.")
+        link.set_state(GameLink.FAILED,
+                       "connexion refusée — si Farever tourne en "
+                       "administrateur, lance aussi le compteur en "
+                       "administrateur")
+        return
+    except Exception as e:
+        # A game that is shutting down is still listed for a few seconds, and
+        # Windows refuses to start a thread in it: RtlCreateUserThread returns
+        # STATUS_PROCESS_IS_TERMINATING (0xc000010a). That is the game closing,
+        # not a failure — go back to waiting for it.
+        if "c000010a" in str(e).lower() or not link.game_alive(device, pid):
+            print(f"[meter] {TARGET_PROCESS} (pid {pid}) is closing — not "
+                  "attaching.", file=sys.stderr)
+            return
+        link.set_state(GameLink.FAILED, f"connexion impossible : {e}")
+        return
+
+    # Set when the frida session dies — in practice, the game closed or
+    # crashed. Fires on frida's own thread; the loop at the end waits on it.
+    detached = threading.Event()
 
     def on_detached(*args):
-        """The frida session died — in practice, the game closed or crashed.
-        Fires on frida's own thread. On a normal quit this fires too (we're
-        the ones detaching), but by then the finally below has already cleared
-        _OVERLAY, which is what keeps the prompt out of that path."""
         reason = str(args[0]) if args else ""
         print(f"[meter] game session detached ({reason or 'unknown'}).",
               file=sys.stderr)
-        ov = _OVERLAY["ref"]
-        if ov is not None:
-            ov.on_game_exit(reason)
+        detached.set()
     fsession.on("detached", on_detached)
 
     ready = {"ok": None}
@@ -9467,8 +9407,8 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
         while True:
             if ready_evt.wait(timeout=0.5):
                 return True
-            if STOP.is_set():
-                return False        # asked to quit mid-scan
+            if STOP.is_set() or detached.is_set():
+                return False        # asked to quit, or the game went, mid-scan
             now = time.monotonic()
             if now - start > max_total:
                 print("[meter] hook scan exceeded the time cap.", file=sys.stderr)
@@ -9484,7 +9424,7 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     # the game when people force-kill and relaunch repeatedly).
     script = None
     for attempt in range(1, 4):
-        if STOP.is_set():
+        if STOP.is_set() or detached.is_set():
             break
         ready["ok"] = None
         ready_evt.clear()
@@ -9508,57 +9448,206 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
             regenerate_data(hlboot, force=True)   # => refresh data and retry
         time.sleep(1.0)
 
-    if STOP.is_set():
-        # Stopped from the tray during startup. Same teardown the overlay's
-        # finally does — the hook may be half-loaded, and leaving it attached is
-        # what destabilises the game.
-        print("[meter] stopped during startup.", file=sys.stderr)
+    if STOP.is_set() or detached.is_set():
+        # Stopped from the tray during startup, or the game closed under us.
+        # The hook may be half-loaded, and leaving it attached is what
+        # destabilises the game.
+        print("[meter] connection abandoned during startup.", file=sys.stderr)
         try:
             if script is not None:
                 script.unload()
             fsession.detach()
         except Exception:
             pass
-        release_instance_lock()
         return
 
     if script is None or ready["ok"] is not True:
         print("[meter] could not initialise the hook after 3 attempts.\n"
-              "        Fully close Farever and reopen it, then relaunch the meter.\n"
-              "        If it keeps happening, send the full log above to whoever\n"
-              "        gave you the meter — the [hook] lines say where it stopped.\n"
+              "        Fully close Farever and reopen it; the meter reconnects "
+              "on its own.\n"
               "        (Avoid repeatedly relaunching against a stuck session — "
               "that can crash the game.)", file=sys.stderr)
-        # The overlay still comes up, so without this the windowed build would
-        # put two empty windows on screen and never say why they stay empty.
-        if not HAS_CONSOLE:
-            message_box(
-                "Le compteur n'a pas pu se connecter à Farever : il "
-                "n'affichera aucun chiffre.\n\nFerme complètement Farever, "
-                "relance-le, puis relance le compteur.\n\nLe détail est "
-                f"dans :\n{LOG_FILE}",
-                "Farever+ — connexion impossible", 0x30)   # MB_ICONWARNING
+        try:
+            fsession.detach()
+        except Exception:
+            pass
+        link.set_state(GameLink.FAILED,
+                       "le compteur n'a pas pu se brancher sur le jeu — ferme "
+                       "complètement Farever et relance-le")
+        return
 
-    print("[*] overlay starting. Open the game's escape menu for the control "
-          "menu (and to drag the windows / click a row to inspect). Only "
-          "hotkey: Shift+\\ resets the encounter.", file=sys.stderr)
+    # Connected. From here the hook feeds on_message until the game closes.
+    link.script = script
+    link.set_state(GameLink.CONNECTED, pid=pid)
+    print("[*] connected. Open the game's escape menu for the control menu "
+          "(and to drag the windows / click a row to inspect). Only hotkey: "
+          "Shift+\\ resets the encounter.", file=sys.stderr)
+    try:
+        while not STOP.is_set() and not detached.wait(0.5):
+            pass
+    finally:
+        link.script = None
+        if not detached.is_set():
+            # We are the ones leaving (the meter is stopping): unload the hook
+            # and detach properly — never leave a half-attached agent behind.
+            try:
+                script.unload()
+                fsession.detach()
+            except Exception:
+                pass
+        # The overlay forgets what the hook was telling it (open game windows,
+        # rift, combat state) — none of it is true any more.
+        ov = _OVERLAY["ref"]
+        if ov is not None:
+            ov.on_game_disconnected()
+        # A rift that was running when the game closed is over.
+        ui_state.set_rift(False)
+        rift_rec.set_rift(False)
+        session.set_combat({})
 
-    def configure_hook(**kw):
-        """Push a setting to the running agent. Wrapped so the overlay doesn't
-        have to know about frida, and so a dead script is a logged failure
-        rather than an exception in a menu callback."""
-        if script is None:
+
+class GameLink:
+    """The meter's connection to Farever, kept alive in the background.
+
+    The interface no longer waits for the game: it opens straight away, and
+    this thread watches for Farever to start, connects to it, and goes back to
+    watching once it closes — so the meter can stay open across game sessions,
+    and everything it saved is readable without the game.
+
+    State is read by the overlay (the status light) and changed only here."""
+
+    CLOSED, CONNECTING, CONNECTED, FAILED = (
+        "closed", "connecting", "connected", "failed")
+    POLL_SECS = 2.0          # how often a closed game is looked for
+
+    def __init__(self, session, ui_state, world, rift_rec, heal_sizer):
+        self._args = (session, ui_state, world, rift_rec, heal_sizer)
+        self._lock = threading.Lock()
+        self._state, self._detail, self._pid = self.CLOSED, "", None
+        self._retry = threading.Event()
+        self._thread = None
+        self.script = None
+        # The game we were last connected to. Once it closes it stays in the
+        # process list for a few seconds while it shuts down; it must not be
+        # mistaken for the game starting again.
+        self._gone_pid = None
+
+    # -- read by the overlay ---------------------------------------------
+    def status(self):
+        with self._lock:
+            return self._state, self._detail, self._pid
+
+    def retry(self):
+        """Look for the game / reconnect now, rather than at the next poll."""
+        self._retry.set()
+
+    def configure(self, **kw):
+        """Push a setting to the running hook, if there is one."""
+        sc = self.script
+        if sc is None:
             return
-        script.post(dict(kw, type="config"))
+        try:
+            sc.post(dict(kw, type="config"))
+        except Exception as e:
+            print(f"[meter] couldn't configure the hook: {e}", file=sys.stderr)
 
-    overlay = Overlay(session, pid, ui_state, world,
-                      configure=configure_hook)
+    # -- lifecycle --------------------------------------------------------
+    def set_state(self, state, detail="", pid=None):
+        with self._lock:
+            self._state, self._detail = state, detail
+            self._pid = pid if state == self.CONNECTED else None
+        print(f"[meter] game link: {state}"
+              + (f" ({detail})" if detail else ""), file=sys.stderr)
+        ov = _OVERLAY["ref"]
+        if ov is not None:
+            ov.on_link_changed()
+
+    def start(self):
+        self._thread = threading.Thread(target=self._loop, daemon=True,
+                                        name="game-link")
+        self._thread.start()
+
+    def stop(self, timeout=20.0):
+        """Called after STOP is set. Waits for the thread to unload the hook
+        and detach — the part that must not be cut short."""
+        self._retry.set()
+        if self._thread is not None:
+            self._thread.join(timeout)
+
+    def _loop(self):
+        try:
+            device = frida.get_local_device()
+        except Exception as e:
+            self.set_state(self.FAILED, f"frida indisponible : {e}")
+            return
+        while not STOP.is_set():
+            self.set_state(self.CLOSED)
+            proc = self._wait_for_game(device)
+            if proc is None:
+                return
+            self.set_state(self.CONNECTING)
+            try:
+                _game_session(self, device, proc, *self._args)
+                self._gone_pid = proc.pid
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                self.set_state(self.FAILED, f"erreur inattendue : {e}")
+            if STOP.is_set():
+                return
+            if self.status()[0] == self.FAILED:
+                # Not straight back at the same process: hammering a stuck
+                # game with attaches is what crashes it. Wait for it to close,
+                # or for a click on the status light.
+                self._wait_failed(device, proc.pid)
+
+    def _game_procs(self, device):
+        try:
+            return [p for p in device.enumerate_processes()
+                    if p.name.lower() == TARGET_PROCESS.lower()]
+        except Exception:
+            return []
+
+    def game_alive(self, device, pid):
+        return any(p.pid == pid for p in self._game_procs(device))
+
+    def _wait_for_game(self, device):
+        """The Farever process, once there is one; None if the meter stops."""
+        while not STOP.is_set():
+            procs = [p for p in self._game_procs(device)
+                     if p.pid != self._gone_pid]
+            if self._gone_pid is not None and not self.game_alive(
+                    device, self._gone_pid):
+                self._gone_pid = None       # it has finished closing
+            if procs:
+                if len(procs) > 1:
+                    print(f"[meter] {len(procs)} copies of {TARGET_PROCESS} "
+                          f"are running — using pid {procs[0].pid}.",
+                          file=sys.stderr)
+                return procs[0]
+            self._retry.wait(self.POLL_SECS)
+            self._retry.clear()
+        return None
+
+    def _wait_failed(self, device, pid):
+        while not STOP.is_set():
+            if self._retry.wait(self.POLL_SECS):
+                self._retry.clear()
+                return
+            if not any(p.pid == pid for p in self._game_procs(device)):
+                return
+
+
+def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
+    """The interface first, the game whenever it turns up."""
+    link = GameLink(session, ui_state, world, rift_rec, heal_sizer)
+    overlay = Overlay(session, None, ui_state, world,
+                      configure=link.configure, link=link)
     # From here the overlay owns shutdown: it's the only thing that can return
     # from the mainloop and let the finally below unload the hook and detach.
     _OVERLAY["ref"] = overlay
+    link.start()
     if STOP.is_set():
-        # Asked to stop during the hook's setup, which the overlay didn't exist
-        # to hear. Honour it rather than putting windows on screen.
         overlay.request_quit()
     try:
         overlay.run()
@@ -9571,11 +9660,8 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
             overlay.menubridge.stop()
         except Exception:
             pass
-        try:
-            script.unload()
-            fsession.detach()
-        except Exception:
-            pass
+        STOP.set()
+        link.stop()                 # unloads the hook and detaches
         release_instance_lock()
 
 
