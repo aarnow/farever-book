@@ -259,12 +259,24 @@ function buildDetail(n) {
 
 function buildEvents(n) {
   const p = el('div', 'panel events');
-  p.appendChild(el('h3', null, 'Événements'));
+  const head = el('div', 'phead');
+  const count = n.rows && n.rows.length ? ' (' + n.rows.length + ')' : '';
+  head.appendChild(el('h3', null, 'Événements' + count));
+  if (count) {
+    const clr = el('button', 'rowbtn', 'Effacer');
+    clr.addEventListener('click', () => notify('clear_events', {}));
+    head.appendChild(clr);
+  }
+  p.appendChild(head);
   if (!n.rows || !n.rows.length) {
     p.appendChild(el('div', 'empty',
       'Les kills de boss, records et fins de faille apparaîtront ici.'));
     return p;
   }
+  /* Newest first, in a box of its own that scrolls: the page never grows
+     with the feed. */
+  const list = el('div', 'evlist');
+  p.appendChild(list);
   n.rows.forEach((r) => {
     const row = el('div', 'ev' + (r.tone ? ' ' + r.tone : ''));
     row.appendChild(el('span', 'when', r.when));
@@ -274,20 +286,22 @@ function buildEvents(n) {
       b.addEventListener('click', () => notify(r.btn.id, r.btn.p || {}));
       row.appendChild(b);
     }
-    p.appendChild(row);
+    list.appendChild(row);
   });
   return p;
 }
 
 /* ---- rift report -------------------------------------------------------- */
+const players = (n) => n + (n > 1 ? ' joueurs' : ' joueur');
+
 function rankTable(rows, rateLabel) {
-  const box = el('div');
+  const box = el('div', 'tbl');
   const h = el('div', 'rk h');
   ['', 'Joueur', rateLabel, 'Total', 'Part'].forEach((t, i) =>
     h.appendChild(el('span', i > 1 ? 'num' : '', t)));
   box.appendChild(h);
   rows.forEach((r) => {
-    const row = el('div', 'rk' + (r.rank <= 3 ? ' top' : ''));
+    const row = el('div', 'rk' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : ''));
     row.appendChild(el('span', null, r.rank));
     const nm = el('span', 'nm', r.name);
     if (r.cls) nm.appendChild(el('span', 'cl', r.cls));
@@ -309,33 +323,52 @@ function buildReport(n) {
   const cols = el('div', 'phases');
   (n.phases || []).forEach((ph) => {
     const c = el('div', 'phase');
-    c.appendChild(el('h4', null, ph.label));
-    c.appendChild(el('div', 'rates', `${ph.dur}  ·  ${ph.dps}  ·  ${ph.hps}`));
-    c.appendChild(el('div', 'totals', ph.totals));
+    const top = el('div', 'phtop');
+    top.appendChild(el('h4', null, ph.label));
+    const facts = el('div', 'facts');
+    [['Durée', ph.dur], ['DPS', ph.dps.replace(' DPS', '')],
+     ['HPS', ph.hps.replace(' HPS', '')]].forEach(([k, v]) => {
+      const f = el('div', 'fact');
+      f.appendChild(el('span', null, k));
+      f.appendChild(el('b', null, v));
+      facts.appendChild(f);
+    });
+    top.appendChild(facts);
+    top.appendChild(el('div', 'totals', ph.totals));
+    c.appendChild(top);
     if (ph.mvp) {
-      c.appendChild(el('div', 'sub', 'MVP'));
-      const m = el('div', 'mvp', '★ ' + ph.mvp.name + ' ');
-      if (ph.mvp.cls) m.appendChild(el('small', null, ph.mvp.cls));
-      c.appendChild(m);
-      c.appendChild(el('div', null, ph.mvp.v));
+      const podium = el('div', 'podium');
+      const m = el('div', 'mvpbox');
+      m.appendChild(el('span', 'lbl', 'MVP dégâts'));
+      const mn = el('div', 'mvp', '★ ' + ph.mvp.name + ' ');
+      if (ph.mvp.cls) mn.appendChild(el('small', null, ph.mvp.cls));
+      m.appendChild(mn);
+      m.appendChild(el('div', 'v', ph.mvp.v));
+      podium.appendChild(m);
       if (ph.healer) {
-        const hl = el('div', 'healer', '✚ ' + ph.healer.name + ' ');
-        if (ph.healer.cls) hl.appendChild(el('small', null, ph.healer.cls));
-        hl.appendChild(document.createTextNode('  ' + ph.healer.v));
-        c.appendChild(hl);
+        const h = el('div', 'mvpbox heal');
+        h.appendChild(el('span', 'lbl', 'MVP soins'));
+        const hn = el('div', 'healer', '✚ ' + ph.healer.name + ' ');
+        if (ph.healer.cls) hn.appendChild(el('small', null, ph.healer.cls));
+        h.appendChild(hn);
+        h.appendChild(el('div', 'v', ph.healer.v));
+        podium.appendChild(h);
       }
+      c.appendChild(podium);
     } else {
       c.appendChild(el('div', 'empty', "rien n'a été enregistré pour cette phase"));
     }
     if (ph.dmg && ph.dmg.length) {
-      c.appendChild(el('div', 'sub', 'Dégâts — top 5'));
+      c.appendChild(el('div', 'sub', 'Dégâts — ' + players(ph.dmg.length)));
       c.appendChild(rankTable(ph.dmg, 'DPS'));
     }
-    c.appendChild(el('div', 'sub', 'Soins — top 5'));
+    c.appendChild(el('div', 'sub', 'Soins' + (ph.heal && ph.heal.length ? ' — ' + players(ph.heal.length) : '')));
     if (ph.heal && ph.heal.length) c.appendChild(rankTable(ph.heal, 'HPS'));
     else c.appendChild(el('div', 'empty', 'aucun soin enregistré'));
     if (ph.types && ph.types.length) {
       c.appendChild(el('div', 'sub', 'Dégâts par type'));
+      const tbox = el('div', 'tbl types');
+      c.appendChild(tbox);
       ph.types.forEach((x) => {
         const r = el('div', 'typ');
         const l = el('span', null, x.t);
@@ -346,7 +379,7 @@ function buildReport(n) {
         b.style.width = (Math.max(0.02, x.f) * 100) + '%';
         r.appendChild(b);
         r.appendChild(el('span', 'num', x.pct));
-        c.appendChild(r);
+        tbox.appendChild(r);
       });
     }
     cols.appendChild(c);

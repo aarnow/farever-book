@@ -2819,6 +2819,8 @@ APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "History": "Combats", "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
+# Class tags written into reports before the interface was translated.
+OLD_CLASS_TAGS = {"War": "Gue", "Pst": "Prê", "Rog": "Vol"}
 EVENTS_MAX = 40             # lines kept in the live page's event feed
 
 
@@ -3596,13 +3598,18 @@ class App:
 
     def _report_node(self, data):
         """A saved rift report, as display-ready data for the page."""
+        def cls(p):
+            # Reports saved before the translation carry English tags.
+            c = p.get("cls") or ""
+            return OLD_CLASS_TAGS.get(c, c)
+
         def rank(players, key, dur, total):
             out = []
-            for i, p in enumerate(players[:5], 1):
+            for i, p in enumerate(players, 1):
                 amt = float(p.get(key) or 0)
                 rate = _rate(amt, dur)
                 out.append({"rank": i, "name": p.get("name") or "?",
-                            "cls": p.get("cls") or "",
+                            "cls": cls(p),
                             "rate": _n(rate) if rate else "—",
                             "total": _n(amt),
                             "pct": f"{(amt / total * 100) if total else 0:.0f}%"})
@@ -3624,17 +3631,24 @@ class App:
                 "totals": f"{_n(total)} dégâts · {_n(heal)} soins"
                           + _overheal_note(ph),
                 "mvp": ({"name": mvp.get("name") or "?",
-                         "cls": mvp.get("cls") or "",
+                         "cls": cls(mvp),
                          "v": _rate_text(mvp.get("total", 0), dur, "DPS")
                          or f"{_n(mvp.get('total', 0))} dégâts"}
                         if mvp else None),
                 "healer": ({"name": healers[0].get("name") or "?",
-                            "cls": healers[0].get("cls") or "",
+                            "cls": cls(healers[0]),
                             "v": _rate_text(healers[0]["heal"], dur, "HPS")
                             or f"{_n(healers[0]['heal'])} soins"}
                            if healers else None),
                 "dmg": rank(players, "total", dur, total),
-                "heal": rank(healers, "heal", dur, heal),
+                # Everyone in the phase: those who healed nothing at the
+                # bottom, greyed, so the table always lists the whole group.
+                "heal": rank(healers, "heal", dur, heal) + [
+                    dict(r, rank=len(healers) + i, zero=True)
+                    for i, r in enumerate(rank(
+                        [p for p in players
+                         if (p.get("heal") or 0) <= 0.5], "heal", dur, heal),
+                        1)],
                 "types": [{"t": element_label(el),
                            "pct": _pct1(amt / total * 100 if total else 0),
                            "f": round(amt / (ph["elements"][0][1] or 1), 4),
@@ -4001,7 +4015,7 @@ class App:
             if not players:
                 out.append("  (rien d'enregistré)")
                 continue
-            for i, p in enumerate(players[:5], 1):
+            for i, p in enumerate(players, 1):
                 pct = p["total"] / ph["total"] * 100 if ph["total"] else 0.0
                 rate = _rate_text(p["total"], dur, "dps")
                 out.append(f"  dégâts {i}. {_report_name(p)} "
@@ -4009,7 +4023,7 @@ class App:
                            + f"({_n(p['total'])}, {_pct1(pct)})")
             healers = sorted((p for p in players if p["heal"] > 0.5),
                              key=lambda p: -p["heal"])
-            for i, p in enumerate(healers[:5], 1):
+            for i, p in enumerate(healers, 1):
                 pct = p["heal"] / ph["heal"] * 100 if ph["heal"] else 0.0
                 rate = _rate_text(p["heal"], dur, "hps")
                 out.append(f"  soins {i}. {_report_name(p)} "

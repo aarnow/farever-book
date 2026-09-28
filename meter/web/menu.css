@@ -351,6 +351,10 @@ select, input[type=text] {
            margin-right: 5px; }
 
 /* events */
+.phead { display: flex; align-items: center; justify-content: space-between;
+         margin-bottom: 6px; }
+.phead h3 { margin: 0; }
+.evlist { max-height: 172px; overflow-y: auto; padding-right: 4px; }
 .ev { display: flex; gap: 12px; align-items: center; padding: 5px 0;
       border-bottom: 1px solid var(--line); }
 .ev:last-child { border-bottom: 0; }
@@ -362,29 +366,64 @@ select, input[type=text] {
 .ev.ok .txt { color: var(--ok); }
 
 /* rift report */
+.report { padding: 18px 20px 22px; }
 .report .rtitle { display: flex; align-items: baseline; gap: 12px;
-                  margin-bottom: 12px; }
+                  margin-bottom: 16px; padding-bottom: 12px;
+                  border-bottom: 1px solid var(--line); }
 .report .rtitle b { font-size: 16px; color: var(--rift); }
 .report .rtitle span { color: var(--dim); }
 .phases { display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
-          gap: 22px; }
-.phase h4 { margin: 0; font-size: 15px; color: #F3C9E5; text-transform: uppercase; }
-.phase .rates { font-weight: 700; margin-top: 2px; }
-.phase .totals { color: var(--dim); font-size: 12px; margin-bottom: 8px; }
-.phase .sub { margin: 12px 0 4px; color: var(--rift); font-size: 11px;
+          grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
+          gap: 20px; }
+/* one card per phase */
+.phase {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+  min-width: 0;
+}
+.phtop { padding-bottom: 12px; margin-bottom: 4px;
+         border-bottom: 1px solid var(--line); }
+.phase h4 { margin: 0 0 10px; font-size: 15px; color: #F3C9E5;
+            text-transform: uppercase; letter-spacing: .5px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.fact { background: var(--panel-2); border: 1px solid var(--line);
+        border-radius: 6px; padding: 5px 12px; min-width: 84px; }
+.fact span { display: block; color: var(--dim); font-size: 10px;
+             text-transform: uppercase; letter-spacing: .5px; }
+.fact b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.phase .totals { color: var(--dim); font-size: 12px; }
+.phase .sub { margin: 18px 0 6px; color: var(--rift); font-size: 11px;
               font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
+.podium { display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 10px; margin-top: 14px; }
+.mvpbox { background: var(--panel-2); border: 1px solid var(--line);
+          border-left: 3px solid var(--accent); border-radius: 6px;
+          padding: 8px 12px; }
+.mvpbox.heal { border-left-color: var(--heal); }
+.mvpbox .lbl { color: var(--dim); font-size: 10px; text-transform: uppercase;
+               letter-spacing: .5px; }
+.mvpbox .v { color: var(--text); font-variant-numeric: tabular-nums; }
 .mvp { font-size: 18px; font-weight: 700; color: var(--accent); }
 .mvp small, .healer small { color: var(--dim); font-weight: 400; font-size: 12px; }
-.healer { color: var(--heal); font-weight: 600; margin-top: 4px; }
-.rk { display: grid; grid-template-columns: 20px minmax(100px, 1fr) 64px 76px 40px;
-      gap: 8px; padding: 2px 0; font-size: 12px; }
-.rk.h { color: var(--faint); font-size: 10px; text-transform: uppercase; }
+.healer { color: var(--heal); font-weight: 700; font-size: 16px; }
+/* tables: framed, a header band, a rule between rows */
+.tbl { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.rk { display: grid;
+      grid-template-columns: 22px minmax(100px, 1fr) 64px 76px 44px;
+      gap: 8px; padding: 6px 10px; font-size: 12px;
+      border-top: 1px solid var(--line); }
+.rk:nth-child(odd) { background: rgba(255, 255, 255, .02); }
+.rk.h { color: var(--dim); font-size: 10px; text-transform: uppercase;
+        letter-spacing: .5px; background: var(--panel-2); border-top: 0; }
+.tbl.types { padding: 6px 10px; }
 .rk .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rk.top .nm { font-weight: 700; }
 .rk .cl { color: var(--dim); margin-left: 5px; font-size: 11px; }
-.typ { display: grid; grid-template-columns: 80px minmax(0, 1fr) 54px; gap: 8px;
-       align-items: center; font-size: 12px; margin: 3px 0; }
+.typ { display: grid; grid-template-columns: 80px minmax(0, 1fr) 54px;
+       gap: 10px; align-items: center; font-size: 12px; margin: 5px 0; }
 .typ .b { height: 6px; border-radius: 3px; }
 
 /* ---- toast ------------------------------------------------------------------ */
@@ -403,3 +442,6 @@ select, input[type=text] {
   pointer-events: none;
 }
 #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* players who healed nothing in the phase, listed last */
+.rk.zero, .rk.zero .cl { color: var(--faint); }
