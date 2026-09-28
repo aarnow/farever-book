@@ -1,45 +1,47 @@
-# Starting it with the game, from Steam
+# Le lancer avec le jeu, depuis Steam
 
-> Let Steam launch both at once and stop thinking about it.
+> Steam lance les deux d'un coup, et tu n'y penses plus.
 
-Because the meter waits for Farever, you can have Steam start the pair together.
+Comme le compteur attend Farever, tu peux demander à Steam de lancer les deux
+ensemble.
 
-In Steam, right-click **Farever** → **Properties** → **General** → **Launch
-Options**, and paste this on one line:
+Dans Steam, clic droit sur **Farever** → **Propriétés** → **Général** →
+**Options de lancement**, et colle ceci sur une seule ligne :
 
 ```
-cmd /c start "" "C:\Users\YOU\AppData\Local\Programs\FareverMeter\FareverMeter.exe" & %command%
+cmd /c start "" "C:\Users\TOI\AppData\Local\Programs\FareverMeter\FareverMeter.exe" & %command%
 ```
 
-Replace `YOU` with your Windows username.
+Remplace `TOI` par ton nom d'utilisateur Windows.
 
-To get the path exactly right without typing it: find **Farever+ Meter** in the
-Start menu, right-click → **More** → **Open file location**, then right-click
-the shortcut → **Properties** and copy the **Target** box.
+Pour avoir le chemin exact sans le taper : cherche **Farever+ Meter** dans le
+menu Démarrer, clic droit → **Plus** → **Ouvrir l'emplacement du fichier**, puis
+clic droit sur le raccourci → **Propriétés** et copie le champ **Cible**.
 
-Now launching Farever from Steam starts the meter first, then the game.
+Désormais, lancer Farever depuis Steam démarre d'abord le compteur, puis le jeu.
 
-## Why it is shaped like that
+## Pourquoi cette forme
 
-Steam replaces `%command%` with the game and its arguments, but on Windows it
-does not run launch options through a shell — so `cmd /c` is what makes the `&`
-mean anything.
+Steam remplace `%command%` par le jeu et ses arguments, mais sous Windows il ne
+passe pas les options de lancement par un shell — c'est `cmd /c` qui donne un
+sens au `&`.
 
-`start ""` launches the meter *without waiting* for it, and the empty `""` is
-the window title `start` expects before a quoted path. Leave it out and it
-treats the path as the title.
+`start ""` lance le compteur *sans l'attendre*, et le `""` vide est le titre de
+fenêtre que `start` attend avant un chemin entre guillemets. Sans lui, le chemin
+serait pris pour le titre.
 
-Steam then waits on `cmd`, and `cmd` waits on the game, so **playtime, the
-Steam overlay and Rich Presence all keep working** — which they do not in the
-recipes that leave `start` off the game as well.
+Steam attend ensuite `cmd`, et `cmd` attend le jeu : **le temps de jeu,
+l'overlay Steam et le statut en jeu continuent de fonctionner** — ce qui n'est
+pas le cas des recettes qui lancent aussi le jeu avec `start`.
 
-## Two things to know
+## Deux choses à savoir
 
-* **When the game closes, the meter notices.** The overlay disappears and a
-  small window asks whether to exit the meter too — one click and both are
-  gone, so the pair behaves like a single program.
-* **Launching Farever outside Steam** — from a desktop shortcut, say — skips
-  the launch options entirely, so start the meter yourself that time.
+* **Quand le jeu se ferme, le compteur s'en rend compte.** L'overlay disparaît
+  et une petite fenêtre demande s'il faut aussi quitter le compteur — un clic et
+  les deux sont fermés, comme un seul programme.
+* **Si tu lances Farever hors de Steam** — depuis un raccourci sur le bureau,
+  par exemple — les options de lancement ne s'appliquent pas : lance alors le
+  compteur toi-même.
 
-If this feels like more machinery than you want, it is entirely optional. The
-meter waits for the game, so starting it whenever you like works just as well.
+Si ça te paraît trop compliqué, c'est entièrement facultatif. Le compteur attend
+le jeu, donc le lancer quand tu veux marche tout aussi bien.

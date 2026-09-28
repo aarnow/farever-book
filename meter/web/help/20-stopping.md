@@ -1,40 +1,41 @@
-# Stopping the meter
+# Arrêter le compteur
 
-> Two clean ways out, and one way that will cause you trouble.
+> Deux façons propres de l'arrêter, et une qui te causera des ennuis.
 
-Both of these shut down properly:
+Ces deux-là l'arrêtent proprement :
 
-* **Right-click the tray icon** by the clock → **Stop the meter**.
-* Open the game's **Esc** menu and use **Stop the meter** at the bottom of this
-  panel. It wants a second click to confirm, so a misclick mid-fight does not
-  end your session.
+* **Clic droit sur l'icône** près de l'horloge → **Arrêter le compteur**.
+* Ouvre le menu **Échap** du jeu et utilise **Arrêter le compteur** en bas de ce
+  panneau. Il faut cliquer une deuxième fois pour confirmer, pour qu'un clic
+  malheureux en plein combat ne coupe pas ta session.
 
-## Closing Farever itself
+## Fermer Farever
 
-Closing the game hides the overlay and pops a small window asking whether to
-exit the meter too — one click there and you are done.
+Fermer le jeu masque l'overlay et ouvre une petite fenêtre qui demande s'il faut
+aussi quitter le compteur — un clic et c'est fini.
 
-**Keep it running** leaves it in the tray instead. Note that it cannot reconnect
-to a relaunched game; start a fresh meter for that.
+**Le laisser tourner** le garde dans la zone de notification. Attention : il ne
+peut pas se reconnecter à un jeu relancé ; relance un nouveau compteur pour ça.
 
-## Do not end it from Task Manager
+## Ne l'arrête pas depuis le Gestionnaire des tâches
 
-That kills the process before it can unload its hook and detach, and a
-half-attached agent is what destabilises Farever across repeated relaunches.
-Both buttons above take the proper path.
+Ça tue le processus avant qu'il ait pu retirer son hook et se détacher, et un
+agent à moitié attaché est ce qui déstabilise Farever au fil des relances. Les
+deux boutons ci-dessus passent par le bon chemin.
 
-## Alt-tab takes the overlay with it
+## Alt-Tab emporte l'overlay avec lui
 
-Alt-tab away and the whole overlay goes, returning when you click back into the
-game — so a damage meter is not left floating over your browser. That includes
-this panel: the game's escape menu stays open behind you, so without it the
-largest window the overlay has would be the one thing left on screen.
+Fais Alt-Tab et tout l'overlay disparaît, puis revient quand tu recliques dans le
+jeu — pour qu'un compteur de dégâts ne reste pas flotter au-dessus de ton
+navigateur. Ce panneau aussi : le menu Échap du jeu reste ouvert derrière toi,
+donc sans ça la plus grande fenêtre de l'overlay serait la seule restée à
+l'écran.
 
-The tray icon stays put, which is how you would stop the meter from out there
-anyway.
+L'icône près de l'horloge reste là, et c'est de toute façon par elle que tu
+arrêterais le compteur depuis l'extérieur du jeu.
 
-## Windows 11 hides new tray icons
+## Windows 11 masque les nouvelles icônes
 
-First run, click the **^** arrow by the clock and **drag the Farever+ icon out**
-onto the taskbar, so it is there when you want it. The meter pops a notification
-on first run to say so.
+Au premier lancement, clique sur la flèche **^** près de l'horloge et **fais
+glisser l'icône Farever+** dans la barre des tâches, pour l'avoir sous la main.
+Le compteur affiche une notification au premier lancement pour te le rappeler.

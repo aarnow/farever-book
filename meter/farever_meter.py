@@ -274,8 +274,8 @@ KILL_TOAST_SECS = 8.0       # how long the time stays on screen
 # The reset confirmation. Short: it answers a keypress you just made, and a
 # banner sitting over your own damage numbers stops being reassuring quickly.
 RESET_TOAST_SECS = 2.2
-RESET_TOAST_TEXT = ("Reset Successful",
-                    "Awaiting new combat data")
+RESET_TOAST_TEXT = ("Réinitialisé",
+                    "En attente de nouvelles données de combat")
 
 
 
@@ -330,11 +330,15 @@ PARSE_LENGTH_SECS = 60
 # was no way to say "hidden, and I mean it".
 ELEMENT_MODES = ("Show", "Hide", "Show in ESC")
 ELEMENT_SHOW, ELEMENT_HIDE, ELEMENT_ESC = ELEMENT_MODES
+# What the menu shows for each mode. The English values above are what the
+# settings file stores, so they stay as they are.
+ELEMENT_MODE_LABELS = {"Show": "Afficher", "Hide": "Masquer",
+                       "Show in ESC": "Seulement avec Échap"}
 
 TOGGLEABLE_ELEMENTS = (
-    ("meter", "Damage meter"),
-    ("detail", "Breakdown"),
-    ("rift", "Rift timer"),
+    ("meter", "Compteur de dégâts"),
+    ("detail", "Détail"),
+    ("rift", "Minuteur de faille"),
 )
 
 
@@ -362,7 +366,7 @@ OOC_EXEMPT = ("rift",)
 
 # Short class tags for the meter. The game's own names come off ent.Unit.kind,
 # which for a hero is its class rather than a creature id.
-CLASS_ABBR = {"Warrior": "War", "Mage": "Mag", "Priest": "Pst", "Rogue": "Rog"}
+CLASS_ABBR = {"Warrior": "Gue", "Mage": "Mag", "Priest": "Prê", "Rogue": "Vol"}
 
 
 # The meter's name and class columns, in monospace cells. They used to be one
@@ -498,6 +502,14 @@ THEME_MODE_DEFAULT = "Dark Dynamic"
 # it maps to Dark Dynamic, not to the entry that merely has the same first word.
 # The old "Farever" and "Rift" keep their names and now mean what they say.
 THEME_MODE_ALIASES = {"Dynamic": "Dark Dynamic"}
+# What the menu shows for each theme; the keys above are what gets saved.
+THEME_MODE_LABELS = {
+    "Farever Dynamic": "Farever (dynamique)",
+    "Dark Dynamic": "Sombre (dynamique)",
+    "Sparkle Dynamic": "Scintillant (dynamique)",
+    "Farever": "Farever", "Dark": "Sombre", "Sparkle": "Scintillant",
+    "Rift": "Faille",
+}
 
 # Every font in the overlay is a *named* Tk font. That's what makes the scale
 # slider possible: reconfiguring a named font resizes every widget using it and
@@ -556,6 +568,10 @@ MENU_TABS = ("Help", "General", "History", "Actions", "Windows")
 # being looked at is what any of it is for. Held in memory only — the tab
 # follows you for the session and resets when the meter next starts.
 MENU_TAB_DEFAULT = "Help"
+# The tab names are ids (the panel sends them back); these are what it shows.
+MENU_TAB_LABELS = {"Help": "Aide", "General": "Général",
+                   "History": "Historique", "Actions": "Actions",
+                   "Windows": "Fenêtres"}
 # The project's fundraiser, at the top of Help. Its logo is optional: drop a
 # gofundme.png beside the other assets and the button wears it, otherwise it
 # falls back to a wordmark in the brand green. That way the button works
@@ -564,13 +580,14 @@ MENU_TAB_DEFAULT = "Help"
 SUPPORT_URL = "https://gofund.me/6922dd070"
 SUPPORT_LOGO = ROOT / "assets" / "gofundme.png"
 SUPPORT_BLURB = (
-    "Farever+ is sticking around. After a lot of feedback and support the "
-    "project has got to the point where I want to keep it going as long as "
-    "Shiro Games allows it. I plan on bringing more features and keeping the "
-    "app updated for new versions of the game to come.\n"
-    "Eventually we should have a logging site and a place to compete with "
-    "your peers for boss killing times, with the ability to inspect gear, "
-    "talents, and more.")
+    "Farever+ est là pour durer. Après beaucoup de retours et de soutien, le "
+    "projet en est au point où je veux le poursuivre aussi longtemps que "
+    "Shiro Games le permettra. Je prévois d'ajouter des fonctionnalités et de "
+    "garder l'application à jour pour les prochaines versions du jeu.\n"
+    "À terme, il devrait y avoir un site de logs et un endroit pour comparer "
+    "vos temps de kill de boss avec les autres joueurs, avec la possibilité "
+    "d'inspecter l'équipement, les talents, et plus encore.\n"
+    "(Message de Brudr, l'auteur de Farever+.)")
 # The Help tab's articles, as markdown beside the panel's other web assets.
 # Files rather than string constants so they stay writable prose — and the
 # numeric prefix is the running order, so inserting one is a rename rather than
@@ -580,13 +597,13 @@ HELP_DIR = (ROOT / "web" / "help") if FROZEN else (
 # Which heading each article sits under on the index. Anything not named here
 # lands in the last group, so a new file appears rather than disappearing.
 HELP_GROUPS = (
-    ("Getting started", ("10-steam", "20-stopping")),
+    ("Pour commencer", ("10-steam", "20-stopping")),
 )
 
 SCALE_GROUPS = (
-    ("meter", "Meter"),
-    ("detail", "Breakdown"),
-    ("menu", "Settings"),
+    ("meter", "Compteur"),
+    ("detail", "Détail"),
+    ("menu", "Réglages"),
 )
 # Where each group's slider starts when nothing is saved; absent means 100%.
 # The settings panel defaults to 130: it's read at arm's length mid-game with
@@ -747,6 +764,50 @@ ELEMENT_COLORS = {
     "Cheese": "#D8C25E", "Chaos": "#8E4FB5", "None": "#9A8B7A",
 }
 _ELEMENT_FOLD = {k.lower(): v for k, v in ELEMENT_COLORS.items()}
+# Display names for the affinities. The English keys are what the game sends
+# and what saved reports hold, so they are only translated on the way out.
+ELEMENT_LABELS = {
+    "Physical": "Physique", "Magic": "Magie", "Fire": "Feu",
+    "Spark": "Étincelle", "Earth": "Terre", "Water": "Eau", "Faith": "Foi",
+    "Light": "Lumière", "Raw": "Brut", "Cheese": "Fromage", "Chaos": "Chaos",
+    "None": "Aucun", "?": "Autre",
+}
+
+
+def element_label(el):
+    """The French name of an affinity, or the raw value for a new one."""
+    return ELEMENT_LABELS.get(el, str(el))
+
+
+# Rift report phases. New reports are written with the French labels; this
+# also translates the English ones in reports saved before the translation.
+PHASE_LABELS_FR = {"Rift phase": "Phase de faille", "Boss phase": "Phase du boss"}
+
+
+def phase_label(label):
+    return PHASE_LABELS_FR.get(label, label)
+
+
+# Month names for dates shown on screen, so they do not depend on the
+# Windows locale Python happens to start with.
+_MONTHS_FR = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.",
+              "août", "sept.", "oct.", "nov.", "déc.")
+
+
+def date_fr(lt, with_time=True):
+    """'27 sept. 21:07' for a time.struct_time."""
+    out = f"{lt.tm_mday} {_MONTHS_FR[lt.tm_mon - 1]}"
+    return f"{out} {lt.tm_hour:02d}:{lt.tm_min:02d}" if with_time else out
+
+
+def _pct1(x):
+    """A one-decimal percentage the French way: 33,3 %."""
+    return f"{x:.1f}".replace(".", ",") + " %"
+
+
+def _n(x):
+    """A whole number with French thousands grouping: 12 345."""
+    return f"{x:,.0f}".replace(",", "\u00a0")
 
 
 def element_color(name):
@@ -894,7 +955,7 @@ def request_stop():
         ov.request_quit()
 
 
-def message_box(text, title="Farever+ Meter", flags=0x40):
+def message_box(text, title="Farever+", flags=0x40):
     """A dialog is the only way to reach a user who has no console. Used for
     the failures that stop the meter starting at all — anything softer belongs
     in the log."""
@@ -1012,7 +1073,7 @@ def _zone_label(sig, world_map=None):
     from a dungeon without pattern-matching the path.
     """
     if not sig:
-        return "Unknown"
+        return "Inconnu"
     leaf = str(sig).replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
     leaf = _ZONE_STRIP.sub("", leaf) or str(sig)
     leaf = _CAMEL_SPLIT.sub(" ", leaf.replace("_", " ")).strip()
@@ -1020,7 +1081,7 @@ def _zone_label(sig, world_map=None):
     # " Overworld", not "Overworld: " — the region is what you would say first,
     # and the qualifier is only there to distinguish it from a dungeon of the
     # same name.
-    return f"{leaf} Overworld" if world_map else leaf
+    return f"{leaf} (monde ouvert)" if world_map else leaf
 
 
 def _dataset_name(targets, zone_sig, world_map=None):
@@ -1102,7 +1163,7 @@ def _report_name(p):
     return f"{name} ({p['cls']})" if p.get("cls") else name
 
 
-def _overheal_note(d, fmt=" ({:.0f}% over)"):
+def _overheal_note(d, fmt=" ({:.0f}% en excès)"):
     """The overheal clause for a report dict, or "" when there is none to give.
 
     Rift reports are reloaded from JSON on disk, and a file written before
@@ -1135,9 +1196,9 @@ def _rate(amount, duration):
 
 
 def _rate_text(amount, duration, unit):
-    """"12,345 DPS", or None when there is no rate to state."""
+    """"12 345 DPS", or None when there is no rate to state."""
     r = _rate(amount, duration)
-    return None if r is None else f"{r:,.0f} {unit}"
+    return None if r is None else f"{_n(r)} {unit}"
 
 
 def _overheal_pct(total, landed):
@@ -1714,7 +1775,7 @@ class RiftRecorder:
     and a report whose phase 1 and phase 2 counted different sets of players
     would be comparing nothing with nothing."""
 
-    PHASE_LABELS = ("Rift phase", "Boss phase")
+    PHASE_LABELS = ("Phase de faille", "Phase du boss")
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -2004,7 +2065,7 @@ class HistoryStore:
             heal = float(data.get("heal") or 0.0)
             players = len(data.get("players") or [])
         return {"path": str(path), "kind": kind,
-                "name": entry.get("name") or "Encounter",
+                "name": entry.get("name") or "Combat",
                 "at": float(entry.get("at") or 0.0),
                 "session": entry.get("session") or "",
                 "zone": (entry.get("zone") or {}).get("label") or "",
@@ -2456,21 +2517,22 @@ RESET_BIND = {"vk": VK_OEM_5, "shift": True, "ctrl": False, "alt": False}
 # its character (A-Z, 0-9 are their own VK) or a bare hex code, so an unusual
 # keyboard shows something rather than nothing.
 VK_NAMES = {
-    0x08: "Backspace", 0x09: "Tab", 0x0D: "Enter", 0x13: "Pause",
-    0x14: "Caps Lock", 0x1B: "Esc", 0x20: "Space", 0x21: "Page Up",
-    0x22: "Page Down", 0x23: "End", 0x24: "Home", 0x25: "Left", 0x26: "Up",
-    0x27: "Right", 0x28: "Down", 0x2D: "Insert", 0x2E: "Delete",
-    0x6A: "Num *", 0x6B: "Num +", 0x6D: "Num -", 0x6E: "Num .", 0x6F: "Num /",
+    0x08: "Retour arrière", 0x09: "Tab", 0x0D: "Entrée", 0x13: "Pause",
+    0x14: "Verr. Maj", 0x1B: "Échap", 0x20: "Espace", 0x21: "Page préc.",
+    0x22: "Page suiv.", 0x23: "Fin", 0x24: "Début", 0x25: "Gauche",
+    0x26: "Haut", 0x27: "Droite", 0x28: "Bas", 0x2D: "Inser", 0x2E: "Suppr",
+    0x6A: "Pavé *", 0x6B: "Pavé +", 0x6D: "Pavé -", 0x6E: "Pavé .",
+    0x6F: "Pavé /",
     0xBA: ";", 0xBB: "=", 0xBC: ",", 0xBD: "-", 0xBE: ".", 0xBF: "/",
     0xC0: "`", 0xDB: "[", 0xDC: "\\", 0xDD: "]", 0xDE: "'",
 }
-VK_NAMES.update({0x60 + i: f"Num {i}" for i in range(10)})
+VK_NAMES.update({0x60 + i: f"Pavé {i}" for i in range(10)})
 VK_NAMES.update({0x70 + i: f"F{i + 1}" for i in range(24)})
 # Mouse buttons are bindable too, but only these three. Left and right belong
 # to the game and always will; the hook SWALLOWS whatever it fires on, and
 # taking left-click away from somebody mid-fight is not a setting, it's a
 # hostage situation. Middle and the two side buttons are fair game.
-VK_MOUSE = {0x04: "Middle Click", 0x05: "Mouse 4", 0x06: "Mouse 5"}
+VK_MOUSE = {0x04: "Clic milieu", 0x05: "Souris 4", 0x06: "Souris 5"}
 VK_NAMES.update(VK_MOUSE)
 # Modifiers can't be the key itself, and Escape is how you back out of the
 # capture — binding it would leave no way to cancel.
@@ -2490,14 +2552,14 @@ def bind_label(bind=None):
     """"Shift + \\" — what the menu button and the floating hint both show, so
     they can't drift apart."""
     b = bind or RESET_BIND
-    parts = [n for n, k in (("Ctrl", "ctrl"), ("Alt", "alt"), ("Shift", "shift"))
+    parts = [n for n, k in (("Ctrl", "ctrl"), ("Alt", "alt"), ("Maj", "shift"))
              if b.get(k)]
     parts.append(_vk_name(b.get("vk", VK_OEM_5)))
     return " + ".join(parts)
 
 
 def reset_hint_text():
-    return f"Reset FareverPlus - {bind_label()}"
+    return f"Réinitialiser Farever+ : {bind_label()}"
 
 # ---------------------------------------------------------------------------
 # Version / update check
@@ -2511,14 +2573,14 @@ REPO = "brudrbear/FareverMeter"
 REPO_URL = f"https://github.com/{REPO}"
 
 
-QUIT_LABEL = "Stop the meter"
+QUIT_LABEL = "Arrêter le compteur"
 
 # The top line of the control menu. It used to shout about Ctrl+C, from when
 # the only way to run the meter was a console you could close out from under
 # it. The shipped build has no console and two proper exits, so the line just
 # says where they are — and doubles as the slot the update notice takes over.
-SHUTDOWN_HINT = ("Stop the meter with the button at the bottom, or from the "
-                 "Farever+ tray icon by the clock.")
+SHUTDOWN_HINT = ("Arrête le compteur avec le bouton en bas, ou depuis "
+                 "l'icône Farever+ près de l'horloge.")
 
 
 def start_hotkeys(callbacks: dict, target_pid):
@@ -2776,7 +2838,7 @@ class TrayIcon:
     and they're delivered to the thread that created the window, so it needs a
     pump of its own rather than sharing Tk's."""
 
-    def __init__(self, on_quit, tip="Farever+ Meter"):
+    def __init__(self, on_quit, tip="Farever+"):
         self.on_quit = on_quit
         self.tip = tip
         self.hwnd = None
@@ -2849,10 +2911,10 @@ class TrayIcon:
     def _menu(self):
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
-        u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Open the parse folder")
-        u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Open the log folder")
+        u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des parses")
+        u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Ouvrir le dossier du journal")
         u.AppendMenuW(m, MF_SEPARATOR, 0, None)
-        u.AppendMenuW(m, MF_STRING, TRAY_QUIT, "Stop the meter")
+        u.AppendMenuW(m, MF_STRING, TRAY_QUIT, "Arrêter le compteur")
         pt = wintypes.POINT()
         u.GetCursorPos(ctypes.byref(pt))
         # Required by TrackPopupMenu, or the menu refuses to close when the user
@@ -2967,7 +3029,7 @@ class TrayIcon:
             if not u.RegisterClassW(ctypes.byref(cls)):
                 raise OSError(ctypes.get_last_error())
             u.CreateWindowExW.restype = wintypes.HWND
-            self.hwnd = u.CreateWindowExW(0, "FareverMeterTray", "Farever+ Meter",
+            self.hwnd = u.CreateWindowExW(0, "FareverMeterTray", "Farever+",
                                           0, 0, 0, 0, 0, None, None,
                                           cls.hInstance, None)
             if not self.hwnd:
@@ -2980,9 +3042,10 @@ class TrayIcon:
             self._ready.set()
             return
         print("[meter] tray icon active.", file=sys.stderr)
-        self._balloon("Farever+ Meter is running",
-                      "Right-click this icon to stop it. If it's hidden, click "
-                      "the ^ arrow by the clock and drag it out.")
+        self._balloon("Farever+ est lancé",
+                      "Clic droit sur cette icône pour l'arrêter. Si elle est "
+                      "masquée, clique sur la flèche ^ près de l'horloge et "
+                      "fais-la glisser dans la barre des tâches.")
         self._ready.set()
         msg = wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
@@ -3845,7 +3908,7 @@ class Overlay:
 
         self.header = tk.Frame(border, bg=BG_HEADER)
         self.header.pack(fill="x")
-        self.title_lbl = tk.Label(self.header, text="Farever+ Party Meter",
+        self.title_lbl = tk.Label(self.header, text="Farever+ — Compteur",
                                   bg=BG_HEADER, fg=FG_HEADER,
                                   font=self.fonts["ui_b"], anchor="w",
                                   padx=8, pady=4)
@@ -3877,7 +3940,7 @@ class Overlay:
         self.m_body = body = tk.Frame(border, bg=BG_BODY, padx=8, pady=6)
         body.pack(fill="both", expand=True)
 
-        self.overview_title = tk.Label(body, text="PARTY", bg=BG_BODY,
+        self.overview_title = tk.Label(body, text="GROUPE", bg=BG_BODY,
                                        fg=ACCENT, font=self.fonts["ui_sm_b"],
                                        anchor="w")
         self.overview_title.pack(fill="x")
@@ -3901,12 +3964,12 @@ class Overlay:
         self.root.minsize(MIN_W["meter"], 0)
 
     def _meter_cols_text(self):
-        head = (f"  #  {'NAME':<{METER_NAME_CELLS}}{'CLS':<{METER_CLASS_CELLS}}"
-                f"{'DMG':>9} {'DPS':>6} {'%':>4}")
+        head = (f"  #  {'NOM':<{METER_NAME_CELLS}}{'CL.':<{METER_CLASS_CELLS}}"
+                f"{'DÉGÂTS':>9} {'DPS':>6} {'%':>4}")
         # OVER% rides with the healing columns because it is a share OF them:
         # on its own, next to a damage table, it would be a percentage of a
         # number that isn't on screen.
-        return head + (f"{'HEAL':>9}{'OVER':>6}" if self._show_heal else "")
+        return head + (f"{'SOINS':>9}{'EXCÈS':>6}" if self._show_heal else "")
 
     def _build_detail(self):
         self.d_border = border = tk.Frame(self.detail, bg=BG_BORDER, padx=2, pady=2)
@@ -3914,7 +3977,7 @@ class Overlay:
 
         self.d_header = tk.Frame(border, bg=BG_HEADER)
         self.d_header.pack(fill="x")
-        self.d_title = tk.Label(self.d_header, text="Breakdown",
+        self.d_title = tk.Label(self.d_header, text="Détail",
                                 bg=BG_HEADER, fg=FG_HEADER,
                                 font=self.fonts_d["ui_b"], anchor="w",
                                 padx=8, pady=4)
@@ -3922,7 +3985,7 @@ class Overlay:
         # Sits in the header rather than the body so it reads as a caption on
         # the window instead of another data row. It tints with the header.
         self.d_tip = tk.Label(self.d_header,
-                              text="Click a player in the meter to view details",
+                              text="Clique sur un joueur du compteur pour voir son détail",
                               bg=BG_HEADER, fg=FG_HEADER_DIM,
                               font=self.fonts_d["ui_tiny_i"], anchor="e", padx=8)
         self.d_tip.pack(side="right")
@@ -3968,7 +4031,7 @@ class Overlay:
         self._side_shown = 0
         # Idle text lives in the sidebar too, so the panel is never a bare
         # coloured rectangle with nothing in it.
-        self.side_idle = tk.Label(self.d_side, text="waiting\nfor combat ...",
+        self.side_idle = tk.Label(self.d_side, text="en attente\nd'un combat…",
                                   bg=BG_BODY_SOFT, fg=FG_DIM,
                                   font=self.fonts_d["ui"], anchor="w",
                                   justify="left")
@@ -3981,13 +4044,13 @@ class Overlay:
 
         self.d_cols = cols = tk.Frame(right, bg=BG_BODY)
         cols.pack(fill="x", pady=(0, 2))
-        self.dmg_col = SkillColumn(cols, "DAMAGE", DMG_BAR, self.fonts_d)
+        self.dmg_col = SkillColumn(cols, "DÉGÂTS", DMG_BAR, self.fonts_d)
         self.dmg_col.f.pack(side="left", anchor="n")
         # Kept as attributes so the healing toggle can unpack them; re-packing
         # in this order puts them back to the right of the damage column.
         self.col_sep = tk.Frame(cols, bg=BG_BODY_SOFT, width=1)
         self.col_sep.pack(side="left", fill="y", padx=6)
-        self.heal_col = SkillColumn(cols, "HEALING", HEAL_BAR, self.fonts_d)
+        self.heal_col = SkillColumn(cols, "SOINS", HEAL_BAR, self.fonts_d)
         self.heal_col.f.pack(side="left", anchor="n")
 
         # Stays with the tables rather than the sidebar: it is a breakdown OF
@@ -4050,12 +4113,13 @@ class Overlay:
             # takes the encounter with it, which is worth one extra click to
             # rule out. The arming is state on this side and disarms itself
             # after four seconds — see _quit_clicked.
-            "quit": ("Click again to stop" if self._quit_armed
+            "quit": ("Clique encore pour arrêter" if self._quit_armed
                      else QUIT_LABEL),
             "quitArmed": bool(self._quit_armed),
             "banner": self._menu_banner(),
             "tab": self._menu_tab,
-            "tabs": list(MENU_TABS),
+            "tabs": [{"v": t, "t": MENU_TAB_LABELS.get(t, t)}
+                     for t in MENU_TABS],
             "page": self._menu_page(self._menu_tab),
         }
 
@@ -4130,7 +4194,7 @@ class Overlay:
              # Opening a link changes nothing on the panel, and the browser
              # does not come forward when one is already running — so without
              # this the click reads as having done nothing at all.
-             "toast": "Opened in your browser",
+             "toast": "Ouvert dans ton navigateur",
              "paras": SUPPORT_BLURB.split("\n")},
             {"k": "gap"},
         ]
@@ -4138,22 +4202,22 @@ class Overlay:
     def _page_help(self):
         arts = self._help_articles()
         if not arts:
-            return [{"k": "section", "t": "Help"},
+            return [{"k": "section", "t": "Aide"},
                     {"k": "note", "warn": True,
-                     "t": "The help articles are missing from this build."}]
+                     "t": "Les articles d'aide sont absents de cette version."}]
         # One article open: its text, and the way back.
         if self._help_open:
             art = next((a for a in arts if a["id"] == self._help_open), None)
             if art:
                 return ([{"k": "button", "id": "help_close",
-                          "t": "‹  All help topics"},
+                          "t": "‹  Tous les sujets d'aide"},
                          {"k": "section", "t": art["title"]}]
                         + art["blocks"]
                         + [{"k": "gap"},
-                           {"k": "note", "t": "The full README on GitHub goes "
-                                              "further than these do."},
+                           {"k": "note", "t": "Le README complet de Brudr sur "
+                                              "GitHub (en anglais) va plus loin."},
                            {"k": "button", "id": "open_repo",
-                            "t": "Farever+ on GitHub"}])
+                            "t": "Farever+ sur GitHub"}])
         # ...or the index, which opens with the fundraiser.
         seen, out = set(), self._support_block()
         for heading, ids in HELP_GROUPS:
@@ -4164,15 +4228,15 @@ class Overlay:
             out.append({"k": "section", "t": heading})
             out.append({"k": "list", "id": f"help:{heading}", "rows": [
                 {"t": a["title"], "meta": a["blurb"],
-                 "btns": [{"id": "help_open", "t": "Read",
+                 "btns": [{"id": "help_open", "t": "Lire",
                            "p": {"id": a["id"]}}]}
                 for a in rows]})
         rest = [a for a in arts if a["id"] not in seen]
         if rest:
-            out.append({"k": "section", "t": "More"})
+            out.append({"k": "section", "t": "Autres"})
             out.append({"k": "list", "id": "help:more", "rows": [
                 {"t": a["title"], "meta": a["blurb"],
-                 "btns": [{"id": "help_open", "t": "Read",
+                 "btns": [{"id": "help_open", "t": "Lire",
                            "p": {"id": a["id"]}}]}
                 for a in rest]})
         return out
@@ -4186,10 +4250,11 @@ class Overlay:
         except Exception as e:
             print(f"[meter] the {tab} page failed to build: {e!r}",
                   file=sys.stderr)
-            return [{"k": "section", "t": tab},
+            return [{"k": "section", "t": MENU_TAB_LABELS.get(tab, tab)},
                     {"k": "note", "warn": True,
-                     "t": f"This page couldn't be built: {e}. The rest of the "
-                          f"panel still works, and the details are in the log."}]
+                     "t": f"Cette page n'a pas pu être construite : {e}. Le "
+                          f"reste du panneau fonctionne, et le détail est "
+                          f"dans le journal."}]
 
     def _menu_page_inner(self, tab):
         builder = {
@@ -4206,44 +4271,50 @@ class Overlay:
         all_players = self.mode == "all"
         parsing = self._parse_state is not None
         return [
-            {"k": "section", "t": "Meter"},
+            {"k": "section", "t": "Compteur"},
             {"k": "button", "id": "toggle_mode", "on": all_players,
-             "t": ("Show party only" if all_players else "Show all players")
-                  + "   (resets data)"},
+             "t": ("Afficher le groupe seulement" if all_players
+                   else "Afficher tous les joueurs")
+                  + "   (réinitialise les données)"},
             {"k": "button", "id": "toggle_rift_auto_view",
              "t": self._tick(self._rift_auto_view,
-                             "Auto 'View All Players' in rifts")},
-            {"k": "note", "t": "Presses the button above for you at both rift "
-                               "boundaries — all-players going in, party-only "
-                               "coming out — instead of asking. Each switch "
-                               "resets the encounter, as it does above."},
+                             "« Tous les joueurs » automatique en faille")},
+            {"k": "note", "t": "Appuie sur le bouton ci-dessus à ta place à "
+                               "l'entrée et à la sortie d'une faille — tous "
+                               "les joueurs en entrant, le groupe seul en "
+                               "sortant — au lieu de te demander. Chaque "
+                               "bascule réinitialise le combat, comme "
+                               "ci-dessus."},
             {"k": "button", "id": "toggle_auto_reset",
-             "t": self._tick(self._auto_reset_boss, "Auto reset on boss pull")},
-            {"k": "field", "t": "Reset data",
-             "c": {"k": "label", "t": ("press a key…" if self._binding_now
+             "t": self._tick(self._auto_reset_boss,
+                             "Réinitialiser au pull d'un boss")},
+            {"k": "field", "t": "Réinitialiser",
+             "c": {"k": "label", "t": ("appuie sur une touche…"
+                                       if self._binding_now
                                        else bind_label())}},
-            {"k": "button", "id": "begin_bind", "t": "Change that key"},
+            {"k": "button", "id": "begin_bind", "t": "Changer cette touche"},
 
-            {"k": "section", "t": "Look"},
-            {"k": "field", "t": "Theme",
+            {"k": "section", "t": "Apparence"},
+            {"k": "field", "t": "Thème",
              "c": {"k": "select", "id": "set_theme", "v": self._theme_mode,
-                   "o": list(THEME_MODES)}},
-            {"k": "field", "t": "Transparency",
+                   "o": [{"v": m, "t": THEME_MODE_LABELS.get(m, m)}
+                         for m in THEME_MODES]}},
+            {"k": "field", "t": "Transparence",
              "c": {"k": "slider", "id": "set_transparency",
                    "v": self._transparency, "min": 0, "max": TRANSPARENCY_MAX,
                    "step": 5, "unit": "%"}},
-            {"k": "field", "t": "Panel size",
+            {"k": "field", "t": "Taille du panneau",
              "c": {"k": "slider", "id": "set_menu_zoom",
                    "v": int(round(self._scales.get("menu", 1.0) * 100)),
                    "min": 50, "max": 200, "step": 5, "unit": "%"}},
-            {"k": "note", "t": "This panel only, and independent of Windows' "
-                               "own display scaling — which the meter now "
-                               "ignores, so a 300% desktop no longer makes "
-                               "the overlay three times the size."},
+            {"k": "note", "t": "Ce panneau seulement, indépendamment de la "
+                               "mise à l'échelle de Windows — que le compteur "
+                               "ignore : un bureau à 300 % ne rend plus "
+                               "l'overlay trois fois plus grand."},
             {"k": "gap"},
             {"k": "button", "id": "toggle_parse", "on": parsing,
-             "t": (f"Stop {PARSE_LENGTH_SECS}s Parse" if parsing
-                   else f"{PARSE_LENGTH_SECS}s Parse Mode")},
+             "t": (f"Arrêter le parse de {PARSE_LENGTH_SECS} s" if parsing
+                   else f"Mode parse {PARSE_LENGTH_SECS} s")},
         ]
 
     # -- Windows ----------------------------------------------------------
@@ -4251,28 +4322,29 @@ class Overlay:
         """One row per window: what shows it, and how big it is. A window is
         one thing, so it gets one row — the pre-tabs menu listed the same five
         windows twice, a screen apart, under SCALING and SHOW / HIDE."""
-        out = [{"k": "section", "t": "Each window: visibility · size"}]
+        out = [{"k": "section", "t": "Chaque fenêtre : visibilité · taille"}]
         for key, label in TOGGLEABLE_ELEMENTS:
             out.append({"k": "field", "t": label,
                         "c": {"k": "select", "id": f"show:{key}",
                               "v": self._show.get(key, ELEMENT_SHOW),
-                              "o": list(ELEMENT_MODES)}})
+                              "o": [{"v": m, "t": ELEMENT_MODE_LABELS[m]}
+                                    for m in ELEMENT_MODES]}})
         for group, label in SCALE_GROUPS:
             if group == "menu":
                 continue        # it has its own slider on General
             lo, hi = UI_SCALE_MIN, UI_SCALE_MAX
-            out.append({"k": "field", "t": f"{label} size",
+            out.append({"k": "field", "t": f"Taille : {label.lower()}",
                         "c": {"k": "slider", "id": f"scale:{group}",
                               "v": int(round(self._scales[group] * 100)),
                               "min": lo, "max": hi, "step": 5, "unit": "%"}})
         out += [
-            {"k": "note", "t": "The rift timer wears the meter's fonts, so it "
-                               "sizes with the meter."},
-            {"k": "section", "t": "Content"},
+            {"k": "note", "t": "Le minuteur de faille utilise les polices du "
+                               "compteur : il suit donc sa taille."},
+            {"k": "section", "t": "Contenu"},
             {"k": "button", "id": "toggle_heal",
-             "t": self._tick(self._show_heal, "Healing columns")},
+             "t": self._tick(self._show_heal, "Colonnes de soins")},
             {"k": "button", "id": "toggle_hide_ooc",
-             "t": self._tick(self._hide_ooc, "Hide out of combat")},
+             "t": self._tick(self._hide_ooc, "Masquer hors combat")},
         ]
         return out
 
@@ -4281,23 +4353,26 @@ class Overlay:
     def _page_actions(self):
         have_report = self._report_data is not None
         return [
-            {"k": "section", "t": "Parse"},
+            {"k": "section", "t": "Parses"},
             # Greyed rather than hidden before the first rift: a button that
             # appears out of nowhere mid-session is one nobody knew to look for.
             {"k": "button", "id": "reopen_report",
              "tone": None if have_report else "disabled",
-             "t": ("Last Rift Report" if have_report
-                   else "Last Rift Report   (no rift yet)")},
-            {"k": "button", "id": "open_parses", "t": "Parses & Rift Reports"},
-            {"k": "section", "t": "Reset"},
+             "t": ("Dernier rapport de faille" if have_report
+                   else "Dernier rapport de faille   (aucune faille encore)")},
+            {"k": "button", "id": "open_parses",
+             "t": "Dossier des parses et rapports"},
+            {"k": "section", "t": "Réinitialisation"},
             # Exactly what the hotkey fires, labelled with the keybind — the
             # hotkey is the one that is useful mid-fight, when this panel is
             # not an option.
             {"k": "button", "id": "reset_data",
-             "t": f"Reset encounter data   ({bind_label()})"},
-            {"k": "button", "id": "reset_pos", "t": "Reset window positions"},
-            {"k": "section", "t": "Project"},
-            {"k": "button", "id": "open_repo", "t": "Farever+ on GitHub"},
+             "t": f"Réinitialiser le combat   ({bind_label()})"},
+            {"k": "button", "id": "reset_pos",
+             "t": "Réinitialiser la position des fenêtres"},
+            {"k": "section", "t": "Projet"},
+            {"k": "button", "id": "open_repo",
+             "t": "Farever+ sur GitHub (projet d'origine)"},
         ]
 
     # -- the three list-backed tabs ---------------------------------------
@@ -4307,15 +4382,16 @@ class Overlay:
         browser for a feature that is not recording anything reads as broken
         rather than unused."""
         out = [
-            {"k": "section", "t": "Combat history"},
+            {"k": "section", "t": "Historique des combats"},
             {"k": "button", "id": "toggle_history",
              "t": self._tick(self._history_on,
-                             "Keep a history of finished encounters")},
-            {"k": "note", "t": "The meter keeps one encounter at a time — a "
-                               "reset, a zone change or a boss pull throws it "
-                               "away. With this on, each finished encounter is "
-                               "saved to disk first, named for whatever took "
-                               "the most damage and where."},
+                             "Garder un historique des combats terminés")},
+            {"k": "note", "t": "Le compteur ne garde qu'un combat à la fois — "
+                               "une réinitialisation, un changement de zone "
+                               "ou le pull d'un boss l'efface. Avec cette "
+                               "option, chaque combat terminé est d'abord "
+                               "enregistré sur le disque, nommé d'après ce "
+                               "qui a pris le plus de dégâts et l'endroit."},
         ]
         if not self._history_on:
             return out
@@ -4329,53 +4405,53 @@ class Overlay:
             try:
                 body = self._history_text(entry)
             except Exception as e:
-                body = f"That dataset couldn't be read: {e!r}"
+                body = f"Impossible de lire ce combat : {e!r}"
             return [
                 {"k": "button", "id": "close_dataset",
-                 "t": "‹  Back to datasets"},
-                {"k": "section", "t": entry.get("name") or "Encounter"},
-                {"k": "button", "id": "copy_history", "t": "Copy to clipboard"},
+                 "t": "‹  Retour à la liste"},
+                {"k": "section", "t": entry.get("name") or "Combat"},
+                {"k": "button", "id": "copy_history",
+                 "t": "Copier dans le presse-papiers"},
                 {"k": "code", "t": body},
                 {"k": "note", "t": self._history_note_text or ""},
             ]
         rows = []
         for e in (self._history_entries or [])[:200]:
             # Summaries are plain dicts off HistoryStore.entries().
-            name = e.get("name") or "Encounter"
+            name = e.get("name") or "Combat"
             # A summary's `zone` is a plain label string; the LOADED entry's is
             # a dict with a "label" in it (which is what _history_text reads).
             # Accepting both, because assuming the dict shape here is what took
             # the History tab — and with it the refresh loop — down.
             z = e.get("zone")
             where = (z.get("label") if isinstance(z, dict) else z) or ""
-            when = time.strftime("%d %b %H:%M",
-                                 time.localtime(e.get("at") or 0))
+            when = date_fr(time.localtime(e.get("at") or 0))
             q = (self._history_query_text or "").strip().lower()
             if q and q not in f"{name} {where}".lower():
                 continue
-            btns = [{"id": "open_dataset", "t": "Open",
+            btns = [{"id": "open_dataset", "t": "Ouvrir",
                      "p": {"path": e.get("path", "")}}]
             # Only rifts have a report to re-open.
             if e.get("kind") == "rift":
-                btns.insert(0, {"id": "open_report", "t": "Report",
+                btns.insert(0, {"id": "open_report", "t": "Rapport",
                                 "p": {"path": e.get("path", "")}})
             rows.append({"t": name,
                          "meta": " · ".join(x for x in (where, when) if x),
                          "btns": btns})
         out += [
-            {"k": "section", "t": "Where it is saved"},
+            {"k": "section", "t": "Emplacement"},
             {"k": "button", "id": "open_history_folder",
              "t": str(self._history.dir)},
-            {"k": "note", "t": "Nothing in the meter ever deletes from this "
-                               "folder. Tidy it up yourself when you want the "
-                               "space back."},
-            {"k": "section", "t": "Datasets"},
+            {"k": "note", "t": "Le compteur ne supprime jamais rien dans ce "
+                               "dossier. Fais le ménage toi-même quand tu "
+                               "veux récupérer de la place."},
+            {"k": "section", "t": "Combats enregistrés"},
             {"k": "search", "id": "history_query",
              "v": (self._history_query_text or ""),
-             "count": f"{len(rows)} shown"},
-            {"k": "button", "id": "reload_history", "t": "Refresh"},
+             "count": f"{len(rows)} affiché(s)"},
+            {"k": "button", "id": "reload_history", "t": "Actualiser"},
             {"k": "list", "id": "history", "h": 300, "rows": rows,
-             "empty": "No finished encounters saved yet."},
+             "empty": "Aucun combat terminé enregistré pour l'instant."},
             {"k": "note", "t": self._history_note_text or ""},
         ]
         return out
@@ -4701,11 +4777,11 @@ class Overlay:
                                          padx=14, pady=8)
         body.pack(fill="both", expand=True)
 
-        self.rift_title = tk.Label(body, text="NEXT RIFT", bg=RIFT_BODY,
+        self.rift_title = tk.Label(body, text="PROCHAINE FAILLE", bg=RIFT_BODY,
                                    fg=RIFT_TITLE, font=self.fonts["ui_sm_b"],
                                    anchor="w")
         self.rift_title.pack(fill="x")
-        self.rift_lbl = tk.Label(body, text="No rift upcoming", bg=RIFT_BODY,
+        self.rift_lbl = tk.Label(body, text="Aucune faille à venir", bg=RIFT_BODY,
                                  fg=RIFT_TIME, font=self.fonts["ui_idle_i"],
                                  anchor="w")
         self.rift_lbl.pack(fill="x")
@@ -4735,8 +4811,8 @@ class Overlay:
         now = time.localtime()
         into_hour = now.tm_min * 60 + now.tm_sec
         if into_hour < RIFT_QUIET_MINS * 60:
-            self.rift_title.config(text="RIFT TIMER")
-            self.rift_lbl.config(text="No rift upcoming",
+            self.rift_title.config(text="MINUTEUR DE FAILLE")
+            self.rift_lbl.config(text="Aucune faille à venir",
                                  font=self.fonts["ui_idle_i"])
             self._set_rift_box(RIFT_BOX_FAR)
             self._set_pulsing(False)
@@ -4745,7 +4821,7 @@ class Overlay:
         self._rift_idle = False
         left = 3600 - into_hour
         mins, secs = divmod(left, 60)
-        self.rift_title.config(text="NEXT RIFT")
+        self.rift_title.config(text="PROCHAINE FAILLE")
         self.rift_lbl.config(text=f"{mins:02d}:{secs:02d}",
                              font=self.fonts["mono_xl_b"])
         # Three stages: ordinary while it's far off, rift-coloured inside 15
@@ -4848,7 +4924,7 @@ class Overlay:
         # only commits on Yes.
         self._prompt_every_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
-            body, text="Do this every time", variable=self._prompt_every_var,
+            body, text="Toujours faire ça", variable=self._prompt_every_var,
             bg=RIFT_BODY, fg=RIFT_TITLE, activebackground=RIFT_BODY,
             activeforeground=RIFT_TIME, selectcolor=RIFT_GLOW,
             font=self.fonts["ui_10"], anchor="w",
@@ -4870,8 +4946,8 @@ class Overlay:
             b.pack(side="left", expand=True, fill="x", padx=4)
             return b
 
-        answer_button("Yes", self._enqueue(lambda: self._answer_rift(True)), True)
-        answer_button("No", self._enqueue(lambda: self._answer_rift(False)), False)
+        answer_button("Oui", self._enqueue(lambda: self._answer_rift(True)), True)
+        answer_button("Non", self._enqueue(lambda: self._answer_rift(False)), False)
         self.promptwin.minsize(MIN_W["prompt"], 0)
 
 
@@ -4884,11 +4960,12 @@ class Overlay:
         # is off, so a ticked box would be claiming a state that isn't real.
         self._prompt_every_var.set(False)
         if kind == "enter":
-            self.prompt_title.config(text="You have entered a rift")
-            self.prompt_question.config(text="Enable 'View All Players'?")
+            self.prompt_title.config(text="Tu es entré dans une faille")
+            self.prompt_question.config(text="Afficher tous les joueurs ?")
         else:
-            self.prompt_title.config(text="You have left the rift")
-            self.prompt_question.config(text="Return to viewing party members only?")
+            self.prompt_title.config(text="Tu as quitté la faille")
+            self.prompt_question.config(
+                text="Revenir à l'affichage du groupe seulement ?")
         self._prompt_open = True
         self.promptwin.update_idletasks()
         l, t, r, b = self._game_rect()
@@ -4992,7 +5069,7 @@ class Overlay:
         # Stamped with the kill time on open — the card can be brought back
         # from the menu long after the rift, and an unstamped one reads as
         # current.
-        self._report_title = tk.Label(header, text="RIFT REPORT",
+        self._report_title = tk.Label(header, text="RAPPORT DE FAILLE",
                                       bg=RIFT_GLOW, fg=RIFT_TIME,
                                       font=self.fonts["ui_b"], anchor="w",
                                       padx=12, pady=6)
@@ -5024,7 +5101,7 @@ class Overlay:
 
         footer = tk.Frame(body, bg=RIFT_BODY)
         footer.pack(fill="x", pady=(10, 0))
-        tk.Button(footer, text="Copy", command=self._enqueue(self._copy_report),
+        tk.Button(footer, text="Copier", command=self._enqueue(self._copy_report),
                   font=self.fonts["ui_b"], bg=RIFT_EDGE, fg="#2C0A1E",
                   activebackground=RIFT_TITLE, activeforeground="#2C0A1E",
                   relief="flat", bd=0, padx=24, pady=5, cursor="hand2",
@@ -5033,7 +5110,7 @@ class Overlay:
         # Close lives down here as well as the header ✕: on a forced popup
         # the footer is where the hand already is after reading, and the ✕ is
         # a small target parked over the game.
-        tk.Button(footer, text="Close",
+        tk.Button(footer, text="Fermer",
                   command=self._enqueue(self._close_report),
                   font=self.fonts["ui_b"], bg=RIFT_EDGE, fg="#2C0A1E",
                   activebackground=RIFT_TITLE, activeforeground="#2C0A1E",
@@ -5049,7 +5126,7 @@ class Overlay:
         # Same wording as the minimap's tip: the card takes clicks whenever
         # it's up, but there's only a cursor to click with once the game lets
         # go of it, which isn't something you'd guess.
-        tk.Label(body, text="Press L-ALT or ESC to enable free mouse",
+        tk.Label(body, text="Appuie sur Alt gauche ou Échap pour libérer la souris",
                  bg=RIFT_BODY, fg=RIFT_GLOW, font=self.fonts["ui_tiny_i"],
                  anchor="w").pack(fill="x", pady=(6, 0))
 
@@ -5132,11 +5209,11 @@ class Overlay:
             tk.Label(row, text=f"{pct:4.0f}%", bg=RIFT_BODY, fg=RIFT_TITLE,
                      font=self.fonts["mono_sm"], anchor="e",
                      width=5).pack(side="right")
-            tk.Label(row, text=f"{int(amount):,}", bg=RIFT_BODY,
+            tk.Label(row, text=f"{_n(amount)}", bg=RIFT_BODY,
                      fg=RIFT_TITLE, font=self.fonts["mono_sm"],
                      anchor="e", width=10).pack(side="right", padx=(0, 4))
             rate = _rate(amount, ph["duration"])
-            tk.Label(row, text="—" if rate is None else f"{rate:,.0f}",
+            tk.Label(row, text="—" if rate is None else f"{_n(rate)}",
                      bg=RIFT_BODY, fg=RIFT_TIME, font=self.fonts["mono_10"],
                      anchor="e", width=8).pack(side="right", padx=(0, 6))
 
@@ -5144,17 +5221,17 @@ class Overlay:
         # are what the report is now built around, and under those the totals
         # they were computed from — the same primary/subtext pairing every
         # block on this card uses.
-        line(ph["label"].upper(), font="ui_b", fg=RIFT_PEAK)
+        line(phase_label(ph["label"]).upper(), font="ui_b", fg=RIFT_PEAK)
         dps = _rate_text(ph["total"], ph["duration"], "DPS")
         hps = _rate_text(ph["heal"], ph["duration"], "HPS")
         line(f"{self._mmss(ph['duration'])}   ·   {dps or '— DPS'}"
              f"   ·   {hps or '— HPS'}", fg=RIFT_TIME)
-        line(f"{int(ph['total']):,} dmg   ·   {int(ph['heal']):,} heal"
+        line(f"{_n(ph['total'])} dégâts   ·   {_n(ph['heal'])} soins"
              + _overheal_note(ph), font="ui_sm_b", fg=RIFT_TITLE)
 
         players = ph["players"]
         if not players:
-            line("nothing was recorded for this phase", font="ui_idle_i",
+            line("rien n'a été enregistré pour cette phase", font="ui_idle_i",
                  fg=RIFT_TITLE, pady=12)
             return
 
@@ -5173,14 +5250,14 @@ class Overlay:
                      font=self.fonts["ui_sm_b"], anchor="s").pack(
                 side="left", padx=(5, 0), pady=(0, 4))
         mvp_dps = _rate_text(mvp["total"], ph["duration"], "DPS")
-        line(mvp_dps or f"{int(mvp['total']):,} damage", fg=RIFT_TIME)
+        line(mvp_dps or f"{_n(mvp['total'])} dégâts", fg=RIFT_TIME)
         if mvp_dps:
-            line(f"{int(mvp['total']):,} damage", font="ui_sm_b",
+            line(f"{_n(mvp['total'])} dégâts", font="ui_sm_b",
                  fg=RIFT_TITLE)
         healer = max(players, key=lambda p: p["heal"])
         if healer["heal"] > 0.5:
             hps_txt = _rate_text(healer["heal"], ph["duration"], "HPS")
-            heal_total = f"{int(healer['heal']):,} heal"
+            heal_total = f"{_n(healer['heal'])} soins"
             who = self._elide_name(healer["name"])
             if healer.get("cls"):
                 who += f" ({healer['cls']})"
@@ -5189,7 +5266,7 @@ class Overlay:
                      font=self.fonts["ui_rank_b"], anchor="w").pack(
                 fill="x", pady=(2, 0))
             if hps_txt:
-                line(heal_total + _overheal_note(healer, "   {:.0f}% over"),
+                line(heal_total + _overheal_note(healer, "   {:.0f}% en excès"),
                      font="ui_sm_b", fg=RIFT_TITLE)
 
         def rank_header(rate_label):
@@ -5198,7 +5275,7 @@ class Overlay:
             rank_row exactly — they are read as one table."""
             row = tk.Frame(col, bg=RIFT_BODY)
             row.pack(fill="x")
-            tk.Label(row, text="SHARE", bg=RIFT_BODY, fg=RIFT_TITLE,
+            tk.Label(row, text="PART", bg=RIFT_BODY, fg=RIFT_TITLE,
                      font=self.fonts["mono_sm"], anchor="e",
                      width=5).pack(side="right")
             tk.Label(row, text="TOTAL", bg=RIFT_BODY, fg=RIFT_TITLE,
@@ -5208,7 +5285,7 @@ class Overlay:
                      font=self.fonts["mono_sm"], anchor="e",
                      width=10).pack(side="right", padx=(0, 6))
 
-        heading("DAMAGE — TOP 5")
+        heading("DÉGÂTS — TOP 5")
         rank_header("DPS")
         for i, p in enumerate(players[:5], 1):
             pct = p["total"] / ph["total"] * 100 if ph["total"] else 0.0
@@ -5216,9 +5293,9 @@ class Overlay:
 
         healers = sorted((p for p in players if p["heal"] > 0.5),
                          key=lambda p: -p["heal"])
-        heading("HEALING — TOP 5")
+        heading("SOINS — TOP 5")
         if not healers:
-            line("no healing recorded", font="ui_idle_i", fg=RIFT_TITLE)
+            line("aucun soin enregistré", font="ui_idle_i", fg=RIFT_TITLE)
         else:
             rank_header("HPS")
         for i, p in enumerate(healers[:5], 1):
@@ -5228,7 +5305,7 @@ class Overlay:
         # Every type in its own colour — the bar and the name wear it, the
         # percentage stays quiet. Unknown affinities get a stable hash tint
         # from element_color, so a new patch element shows up coloured.
-        heading("DAMAGE BY TYPE")
+        heading("DÉGÂTS PAR TYPE")
         top = ph["elements"][0][1] if ph["elements"] else 0.0
         for el, amt in ph["elements"][:8]:
             pct = amt / ph["total"] * 100 if ph["total"] else 0.0
@@ -5237,13 +5314,13 @@ class Overlay:
             color = _lerp_hex(element_color(el), "#FFFFFF", 0.30)
             row = tk.Frame(col, bg=RIFT_BODY)
             row.pack(fill="x", pady=1)
-            tk.Label(row, text="Other" if el == "?" else el, bg=RIFT_BODY,
+            tk.Label(row, text=element_label(el), bg=RIFT_BODY,
                      fg=color, font=self.fonts["ui_sm_b"], width=9,
                      anchor="w").pack(side="left")
             bar = "▰" * max(1, round(amt / top * 12)) if top else ""
             tk.Label(row, text=bar, bg=RIFT_BODY, fg=color,
                      font=self.fonts["mono_sm"], anchor="w").pack(side="left")
-            tk.Label(row, text=f"{pct:4.1f}%", bg=RIFT_BODY, fg=RIFT_TIME,
+            tk.Label(row, text=f"{_pct1(pct):>6}", bg=RIFT_BODY, fg=RIFT_TIME,
                      font=self.fonts["mono_sm"], anchor="e").pack(side="right")
 
     def show_rift_report(self, report):
@@ -5267,10 +5344,10 @@ class Overlay:
         # "21:03" on yesterday's run reads as tonight's. The date appears
         # exactly when it stops being obvious.
         lt = time.localtime(self._report_data["at"])
-        fmt = ("%H:%M" if time.strftime("%Y%m%d", lt) == time.strftime("%Y%m%d")
-               else "%b %d, %H:%M")
-        self._report_title.config(
-            text="RIFT REPORT — " + time.strftime(fmt, lt))
+        when = (time.strftime("%H:%M", lt)
+                if time.strftime("%Y%m%d", lt) == time.strftime("%Y%m%d")
+                else date_fr(lt))
+        self._report_title.config(text="RAPPORT DE FAILLE — " + when)
         self._render_report()
         self._report_open = True
         self.reportwin.update_idletasks()
@@ -5387,9 +5464,9 @@ class Overlay:
 
     def _history_idle_note(self):
         if not self._history_entries:
-            return ("Nothing saved yet. A finished encounter appears here "
-                    f"once it has run {HISTORY_MIN_SECS:.0f}s and landed "
-                    f"{HISTORY_MIN_EVENTS} hits or heals.")
+            return ("Rien d'enregistré pour l'instant. Un combat apparaît "
+                    f"ici une fois qu'il a duré {HISTORY_MIN_SECS:.0f} s et "
+                    f"compté {HISTORY_MIN_EVENTS} coups ou soins.")
         return ""
 
     def _reload_history(self):
@@ -5403,7 +5480,7 @@ class Overlay:
         """Open one dataset's breakdown — the page the card has no room for."""
         entry = self._history.load(summary["path"])
         if entry is None:
-            self._history_note("That dataset couldn't be read.",
+            self._history_note("Impossible de lire ce combat.",
                                transient=True)
             return
         self._history_detail = entry
@@ -5417,7 +5494,7 @@ class Overlay:
         entry = self._history.load(summary["path"])
         data = (entry or {}).get("data") or {}
         if not isinstance(data.get("phases"), list):
-            self._history_note("That dataset isn't a rift report.",
+            self._history_note("Ce combat n'est pas un rapport de faille.",
                                transient=True)
             return
         self._report_data = data
@@ -5446,7 +5523,7 @@ class Overlay:
         """The opened dataset as chat-pasteable lines."""
         data = entry.get("data") or {}
         names = data.get("skill_names") or {}
-        out = [f"Farever+ — {entry.get('name') or 'Encounter'}"]
+        out = [f"Farever+ — {entry.get('name') or 'Combat'}"]
         where = (entry.get("zone") or {}).get("label")
         if where:
             out.append(f"({where}, "
@@ -5455,18 +5532,18 @@ class Overlay:
                        + ")")
 
         def block(label, duration, players, total, heal):
-            out.append(f"== {label} — {self._mmss(duration)}, "
-                       f"{int(total):,} dmg, {int(heal):,} heal ==")
+            out.append(f"== {phase_label(label)} — {self._mmss(duration)}, "
+                       f"{_n(total)} dégâts, {_n(heal)} soins ==")
             for p in players[:10]:
                 dmg = float(p.get("total") or 0.0)
                 pct = dmg / total * 100 if total else 0.0
                 rate = _rate_text(dmg, duration, "dps")
                 out.append(f"  {p.get('name') or '?'}: "
                            + (f"{rate} " if rate else "")
-                           + f"({int(dmg):,}, {pct:.1f}%)")
+                           + f"({_n(dmg)}, {_pct1(pct)})")
                 for lbl, tot, n, _c in self._merge_history_skills(
                         p.get("skills"), names, 5):
-                    out.append(f"     {lbl}: {int(tot):,} ({n} hits)")
+                    out.append(f"     {lbl} : {_n(tot)} ({n} coups)")
 
         if isinstance(data.get("phases"), list):
             for ph in data["phases"]:
@@ -5476,7 +5553,7 @@ class Overlay:
                       float(ph.get("total") or 0.0),
                       float(ph.get("heal") or 0.0))
         else:
-            block("Encounter", float(data.get("duration") or 0.0),
+            block("Combat", float(data.get("duration") or 0.0),
                   data.get("players") or [],
                   float(data.get("total") or 0.0),
                   float(data.get("heal") or 0.0))
@@ -5492,7 +5569,7 @@ class Overlay:
         except tk.TclError as e:
             print(f"[meter] couldn't copy the dataset: {e}", file=sys.stderr)
             return
-        self._history_note("Copied to clipboard.", transient=True)
+        self._history_note("Copié dans le presse-papiers.", transient=True)
 
     def _save_rift_report(self, report):
         """The report into parses/, three ways: .json is the full metrics —
@@ -5559,7 +5636,7 @@ class Overlay:
         occasionally copies text."""
         if not self._report_data:
             return
-        flash = "Copied to clipboard"
+        flash = "Copié dans le presse-papiers"
         try:
             copy_image_to_clipboard(
                 render_rift_report_image(self._report_data))
@@ -5574,7 +5651,7 @@ class Overlay:
                 print(f"[meter] couldn't copy the report: {e2}",
                       file=sys.stderr)
                 return
-            flash = "Copied as text"
+            flash = "Copié en texte"
         self._report_flash.config(text=flash)
         if self._report_flash_job is not None:
             try:
@@ -5592,7 +5669,7 @@ class Overlay:
 
     def _report_text(self, data):
         """The plaintext version — chat-pasteable lines, no box drawing."""
-        out = ["Farever+ Rift Report"]
+        out = ["Farever+ — Rapport de faille"]
         for ph in data["phases"]:
             dur = ph["duration"]
             # Rate first here too. The card, the image and this line are three
@@ -5600,33 +5677,34 @@ class Overlay:
             # different number than the picture would be its own bug report.
             dps = _rate_text(ph["total"], dur, "DPS")
             hps = _rate_text(ph["heal"], dur, "HPS")
-            out.append(f"== {ph['label']} — {self._mmss(dur)}, "
+            out.append(f"== {phase_label(ph['label'])} — {self._mmss(dur)}, "
                        f"{dps or '— DPS'}, {hps or '— HPS'} "
-                       f"({int(ph['total']):,} dmg, {int(ph['heal']):,} heal"
-                       + _overheal_note(ph, ", {:.0f}% overheal") + ") ==")
+                       f"({_n(ph['total'])} dégâts, {_n(ph['heal'])} soins"
+                       + _overheal_note(ph, ", {:.0f}% de soin en excès")
+                       + ") ==")
             players = ph["players"]
             if not players:
-                out.append("  (nothing recorded)")
+                out.append("  (rien d'enregistré)")
                 continue
             for i, p in enumerate(players[:5], 1):
                 pct = p["total"] / ph["total"] * 100 if ph["total"] else 0.0
                 rate = _rate_text(p["total"], dur, "dps")
-                out.append(f"  dmg {i}. {_report_name(p)} "
+                out.append(f"  dégâts {i}. {_report_name(p)} "
                            + (f"{rate} " if rate else "")
-                           + f"({int(p['total']):,}, {pct:.1f}%)")
+                           + f"({_n(p['total'])}, {_pct1(pct)})")
             healers = sorted((p for p in players if p["heal"] > 0.5),
                              key=lambda p: -p["heal"])
             for i, p in enumerate(healers[:5], 1):
                 pct = p["heal"] / ph["heal"] * 100 if ph["heal"] else 0.0
                 rate = _rate_text(p["heal"], dur, "hps")
-                out.append(f"  heal {i}. {_report_name(p)} "
+                out.append(f"  soins {i}. {_report_name(p)} "
                            + (f"{rate} " if rate else "")
-                           + f"({int(p['heal']):,}, {pct:.1f}%"
-                           + _overheal_note(p, ", {:.0f}% over") + ")")
+                           + f"({_n(p['heal'])}, {_pct1(pct)}"
+                           + _overheal_note(p, ", {:.0f}% en excès") + ")")
             if ph["elements"]:
-                out.append("  types: " + " · ".join(
-                    f"{'Other' if el == '?' else el} "
-                    f"{amt / ph['total'] * 100 if ph['total'] else 0.0:.1f}%"
+                out.append("  types : " + " · ".join(
+                    f"{element_label(el)} "
+                    f"{_pct1(amt / ph['total'] * 100 if ph['total'] else 0.0)}"
                     for el, amt in ph["elements"][:8]))
         return "\n".join(out)
 
@@ -5804,7 +5882,7 @@ class Overlay:
             self._parse_until = time.time() + PARSE_PREROLL_SECS
             self.parsewin.deiconify()
             self.parsewin.attributes("-topmost", True)
-            self._set_parse_banner(f"PARSE STARTS IN {PARSE_PREROLL_SECS}")
+            self._set_parse_banner(f"PARSE DANS {PARSE_PREROLL_SECS}")
         else:
             self._stop_parse()
 
@@ -5818,7 +5896,7 @@ class Overlay:
         self.focus_player = None
         self._parse_state = "parsing"
         self._parse_until = now + PARSE_LENGTH_SECS
-        self._set_parse_banner(f"PARSE  {PARSE_LENGTH_SECS}s")
+        self._set_parse_banner(f"PARSE  {PARSE_LENGTH_SECS} s")
 
     def _finish_parse(self):
         """Nothing to switch off: the session's capture window has already
@@ -5826,7 +5904,7 @@ class Overlay:
         moves the UI into its 'sample is sitting there to be read' state, and
         writes the result out before anything can clear it."""
         self._parse_state = "done"
-        self._set_parse_banner(f"PARSE COMPLETE  {PARSE_LENGTH_SECS}s",
+        self._set_parse_banner(f"PARSE TERMINÉ  {PARSE_LENGTH_SECS} s",
                                fill=BG_HEADER_UNLOCKED)
         self._save_parse_image()
 
@@ -5843,11 +5921,11 @@ class Overlay:
         if fp is not None:
             fdps = fp.total / duration if duration > 0 else 0.0
             crit_pct = (fp.crits / fp.hits * 100) if fp.hits else 0.0
-            stats = [f"{int(fp.total)} dmg", f"{fdps:.0f} dps",
-                     f"{fp.hits} hits", f"{crit_pct:.0f}% crit",
-                     f"{int(fp.heal_total)} heal"]
+            stats = [f"{_n(fp.total)} dégâts", f"{fdps:.0f} DPS",
+                     f"{fp.hits} coups", f"{crit_pct:.0f} % critiques",
+                     f"{_n(fp.heal_total)} soins"]
             if fp.heal_total > 0.5:
-                stats.append(f"{fp.overheal_pct:.0f}% overheal")
+                stats.append(f"{fp.overheal_pct:.0f} % de soin en excès")
             if fp.kills:
                 stats.append(f"{fp.kills} kills")
             el = sorted(fp.elements.items(), key=lambda kv: -kv[1][1])
@@ -5858,13 +5936,14 @@ class Overlay:
                 "stats": " · ".join(stats),
                 "skills": self._merge_named(fp.skills),
                 "heals": self._merge_named(fp.heals),
-                "elements": "  ".join(f"{k}:{int(v[1])}" for k, v in el[:6]),
+                "elements": "  ".join(f"{element_label(k)}:{int(v[1])}"
+                                      for k, v in el[:6]),
             }
         return {
-            "title": f"Farever+ {PARSE_LENGTH_SECS}s Parse",
-            "when": time.strftime("%Y-%m-%d %H:%M"),
+            "title": f"Farever+ — Parse de {PARSE_LENGTH_SECS} s",
+            "when": time.strftime("%d/%m/%Y %H:%M"),
             "duration": duration,
-            "mode": "PARTY" if self.mode == "party" else "ALL PLAYERS",
+            "mode": "GROUPE" if self.mode == "party" else "TOUS LES JOUEURS",
             "rows": [{
                 "name": p.name, "total": p.total, "heal": p.heal_total,
                 "heal_self": p.heal_self, "overheal": p.overheal_pct,
@@ -5921,12 +6000,12 @@ class Overlay:
             if left <= 0:
                 self._begin_parse(now)
             else:
-                self._set_parse_banner(f"PARSE STARTS IN {math.ceil(left)}")
+                self._set_parse_banner(f"PARSE DANS {math.ceil(left)}")
         elif self._parse_state == "parsing":
             if left <= 0:
                 self._finish_parse()
             else:
-                self._set_parse_banner(f"PARSE  {math.ceil(left)}s")
+                self._set_parse_banner(f"PARSE  {math.ceil(left)} s")
 
     # ---- drag / lock ----
     def _is_locked(self):
@@ -6299,17 +6378,17 @@ class Overlay:
         if self._game_exit_win is not None:
             return
         win = tk.Toplevel(self.root)
-        win.title("Farever+ Meter")
+        win.title("Farever+")
         win.attributes("-topmost", True)
         win.resizable(False, False)
         body = tk.Frame(win, bg=BG_BODY, padx=16, pady=14)
         body.pack(fill="both", expand=True)
-        tk.Label(body, text="Farever has stopped.",
+        tk.Label(body, text="Farever s'est arrêté.",
                  bg=BG_BODY, fg=FG_VALUE,
                  font=("Segoe UI", 11, "bold")).pack(anchor="w")
         tk.Label(body,
-                 text="The game has closed, so the meter has nothing left to "
-                      "read.\nWould you like to exit the meter?",
+                 text="Le jeu est fermé : le compteur n'a plus rien à "
+                      "lire.\nVeux-tu quitter le compteur ?",
                  bg=BG_BODY, fg=FG_TEXT, justify="left",
                  font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 12))
         row = tk.Frame(body, bg=BG_BODY)
@@ -6326,12 +6405,12 @@ class Overlay:
 
         # No second-click arming here, unlike the Quit button: with the game
         # gone there is no encounter left for a misclick to destroy.
-        tk.Button(row, text="Exit the meter", command=lambda: close(True),
+        tk.Button(row, text="Quitter le compteur", command=lambda: close(True),
                   bg=FG_WARN, fg=FG_HEADER, activebackground=FG_WARN,
                   activeforeground=FG_HEADER, relief="flat", bd=0,
                   padx=12, pady=6, cursor="hand2",
                   font=("Segoe UI", 9, "bold")).pack(side="left")
-        tk.Button(row, text="Keep it running", command=lambda: close(False),
+        tk.Button(row, text="Le laisser tourner", command=lambda: close(False),
                   bg=BG_BODY_SOFT, fg=FG_TEXT, activebackground=BG_BAR_TRACK,
                   activeforeground=FG_VALUE, relief="flat", bd=0,
                   padx=12, pady=6, cursor="hand2",
@@ -6430,7 +6509,7 @@ class Overlay:
         self._refresh_visibility()
 
     def _sort_btn_text(self):
-        return "▼ Healing" if self._sort_heal else "▼ Damage"
+        return "▼ Soins" if self._sort_heal else "▼ Dégâts"
 
     def _toggle_sort(self):
         self._sort_heal = not self._sort_heal
@@ -6507,7 +6586,7 @@ class Overlay:
         the meter did something, which the toast says — the same line the kill
         time uses, in its plain colour rather than the record gold."""
         self._enqueue(
-            lambda: self._show_kill_toast("FIGHT RESET — METER CLEARED",
+            lambda: self._show_kill_toast("COMBAT ABANDONNÉ — COMPTEUR VIDÉ",
                                           best=False))()
 
     def on_boss_timed_kill(self, kinds, secs):
@@ -6529,7 +6608,7 @@ class Overlay:
         if not kinds:
             # A bar with no kind can't key a record, but the time is still
             # worth saying — it just can't be compared to anything.
-            self._show_kill_toast(f"BOSS DOWN  {self._mmss(secs)}", best=False)
+            self._show_kill_toast(f"BOSS VAINCU  {self._mmss(secs)}", best=False)
             return
         # The record keys on the internal kind — stable across localization
         # and any rename the cdb ships — but the toast speaks the game's
@@ -6541,16 +6620,16 @@ class Overlay:
         if prev is None:
             self._best_times[key] = secs
             self._save_best_times()
-            text = f"{name} DOWN  {self._mmss(secs)} — FIRST RECORDED KILL"
+            text = f"{name} VAINCU  {self._mmss(secs)} — PREMIER KILL ENREGISTRÉ"
             best = True
         elif secs < prev:
             self._best_times[key] = secs
             self._save_best_times()
-            text = (f"{name} DOWN  {self._mmss(secs)} — NEW BEST "
-                    f"(was {self._mmss(prev)})")
+            text = (f"{name} VAINCU  {self._mmss(secs)} — NOUVEAU RECORD "
+                    f"(avant : {self._mmss(prev)})")
             best = True
         else:
-            text = f"{name} DOWN  {self._mmss(secs)} — BEST {self._mmss(prev)}"
+            text = f"{name} VAINCU  {self._mmss(secs)} — RECORD {self._mmss(prev)}"
             best = False
         print(f"[meter] boss kill timed: {key} {secs:.1f}s"
               + (f" (best {self._best_times[key]:.1f}s)"), file=sys.stderr)
@@ -7261,8 +7340,8 @@ class Overlay:
             text=(f"{mins}:{secs:02d}   {int(party_total)}" if duration > 0 else ""))
 
         self.overview_title.config(
-            text=("PARTY" if self.mode == "party" else "ALL PLAYERS")
-            + f"   ({len(rows)})" + ("   · LAST" if holding else ""))
+            text=("GROUPE" if self.mode == "party" else "TOUS LES JOUEURS")
+            + f"   ({len(rows)})" + ("   · DERNIER" if holding else ""))
 
         focus = self._resolve_focus(rows)
         # Bars scale against the biggest number of their own kind on screen.
@@ -7287,7 +7366,7 @@ class Overlay:
         # ---- breakdown window ----
         fp = next((p for p in rows if p.name == focus), None)
         if fp is None:
-            self.d_title.config(text="Breakdown")
+            self.d_title.config(text="Détail")
             self._detail_idle = True
             self._set_side_stats([])
             self.dmg_col.show([], 0)
@@ -7295,27 +7374,28 @@ class Overlay:
             self.elem_lbl.config(text="")
         else:
             self._detail_idle = False
-            self.d_title.config(text=f"Breakdown — {fp.name}")
+            self.d_title.config(text=f"Détail — {fp.name}")
             fdps = fp.total / duration if duration > 0 else 0.0
             crit_pct = (fp.crits / fp.hits * 100) if fp.hits else 0.0
             # Thousands separators, which the old single line could not
             # afford the width for: the sidebar is the one place a five-figure
             # damage number has room to be readable at a glance.
-            stats = [("DMG", f"{int(fp.total):,}"), ("DPS", f"{fdps:,.0f}"),
-                     ("HITS", f"{fp.hits:,}"), ("CRIT", f"{crit_pct:.0f}%")]
+            stats = [("DÉGÂTS", _n(fp.total)), ("DPS", _n(fdps)),
+                     ("COUPS", _n(fp.hits)), ("CRITIQUES", f"{crit_pct:.0f}%")]
             if self._show_heal:
-                stats.append(("HEAL", f"{int(fp.heal_total):,}"))
+                stats.append(("SOINS", _n(fp.heal_total)))
                 if fp.heal_total > 0.5:
-                    stats.append(("OVERHEAL", f"{fp.overheal_pct:.0f}%"))
+                    stats.append(("SOIN EN EXCÈS", f"{fp.overheal_pct:.0f}%"))
             if fp.kills:
-                stats.append(("KILLS", f"{fp.kills:,}"))
+                stats.append(("KILLS", _n(fp.kills)))
             self._set_side_stats(stats)
             self.dmg_col.show(self._merge_named(fp.skills), fp.total)
             if self._show_heal:
                 self.heal_col.show(self._merge_named(fp.heals), fp.heal_total)
             el = sorted(fp.elements.items(), key=lambda kv: -kv[1][1])
             self.elem_lbl.config(
-                text="  ".join(f"{k}:{int(v[1])}" for k, v in el[:6]))
+                text="  ".join(f"{element_label(k)}:{int(v[1])}"
+                               for k, v in el[:6]))
 
     def _resolve_focus(self, rows):
         if self.focus_player and any(p.name == self.focus_player for p in rows):
@@ -7643,7 +7723,7 @@ class SkillColumn:
             label, tot, hits, _crits, slf = entries[i]
             pct = (tot / denom * 100) if denom else 0.0
             _rf, lbl, bar, _track, self_bar = self.rows[i]
-            lbl.config(text=f"{label[:16]:<16}{int(tot):>8} {pct:>3.0f}% {hits:>3}h")
+            lbl.config(text=f"{label[:16]:<16}{int(tot):>8} {pct:>3.0f}% {hits:>3}×")
             frac = _clamp01(tot / top)
             bar.place_configure(relwidth=frac)
             # The self share of THIS row, in the same scale as the row's bar —
@@ -7986,10 +8066,10 @@ def find_game_process(device):
         # that it doesn't need to be pretty — but it does need to be asked,
         # since guessing wrong means metering the wrong client.
         i = ask_choice(
-            "Farever+ Meter",
-            f"{len(infos)} copies of Farever are running.\n"
-            "Which one should the meter attach to?",
-            [f"pid {p.pid} — {path or '(path unavailable)'}"
+            "Farever+",
+            f"{len(infos)} instances de Farever sont lancées.\n"
+            "À laquelle le compteur doit-il se connecter ?",
+            [f"pid {p.pid} — {path or '(chemin indisponible)'}"
              for p, path in infos])
         return infos[i][0]
     while True:
@@ -8074,8 +8154,8 @@ def render_parse_image(data, path):
     d.text((x0, y), f"{data['mode']}   ({len(rows)})", font=ui_small, fill=ACCENT)
     y += 18
     d.text((x0, y),
-           f"  #  {'NAME':<12}{'DMG':>9} {'DPS':>6} {'%':>4}"
-           f"{'HEAL':>9}{'OVER':>6}",
+           f"  #  {'NOM':<12}{'DÉGÂTS':>9} {'DPS':>6} {'%':>4}"
+           f"{'SOINS':>9}{'EXCÈS':>6}",
            font=mono, fill=FG_DIM)
     y += line_h
 
@@ -8100,7 +8180,7 @@ def render_parse_image(data, path):
         y += 6
         d.line((x0, y, x1, y), fill=BG_BAR_TRACK)
         y += 10
-        d.text((x0, y), f"BREAKDOWN — {focus['name']}", font=ui, fill=FG_TEXT)
+        d.text((x0, y), f"DÉTAIL — {focus['name']}", font=ui, fill=FG_TEXT)
         y += 24
         d.text((x0, y), focus["stats"], font=mono_small, fill=FG_DIM)
         y += line_h + 4
@@ -8108,8 +8188,8 @@ def render_parse_image(data, path):
         # Damage left, healing right — each column's bars scale to that column's
         # own biggest entry, exactly like the live breakdown.
         colw = (x1 - x0 - 18) // 2
-        columns = ((x0, "DAMAGE", focus["skills"], DMG_BAR, focus["total"]),
-                   (x0 + colw + 18, "HEALING", focus["heals"], HEAL_BAR,
+        columns = ((x0, "DÉGÂTS", focus["skills"], DMG_BAR, focus["total"]),
+                   (x0 + colw + 18, "SOINS", focus["heals"], HEAL_BAR,
                     focus["heal"]))
         for cx, title, _entries, _colour, _denom in columns:
             d.text((cx, y), title, font=ui_small, fill=ACCENT)
@@ -8123,7 +8203,7 @@ def render_parse_image(data, path):
             for label, amount, hits, _crits, slf in entries:
                 pct = (amount / denom * 100) if denom else 0.0
                 d.text((cx, cy),
-                       f"{label[:16]:<16}{int(amount):>8} {pct:>3.0f}% {hits:>3}h",
+                       f"{label[:16]:<16}{int(amount):>8} {pct:>3.0f}% {hits:>3}×",
                        font=mono_small, fill=FG_TEXT)
                 cy += line_h
                 frac = amount / scale
@@ -8179,8 +8259,8 @@ def render_rift_report_image(data, path=None):
     d = ImageDraw.Draw(img)
 
     d.rectangle((0, 0, W - 1, 39), fill=RIFT_GLOW)
-    d.text((RIFT_IMG_PAD, 10), "RIFT REPORT", font=ui, fill=RIFT_TIME)
-    stamp = time.strftime("%Y-%m-%d %H:%M", time.localtime(data["at"]))
+    d.text((RIFT_IMG_PAD, 10), "RAPPORT DE FAILLE", font=ui, fill=RIFT_TIME)
+    stamp = time.strftime("%d/%m/%Y %H:%M", time.localtime(data["at"]))
     d.text((W - RIFT_IMG_PAD - d.textlength(stamp, font=mono_small), 14),
            stamp, font=mono_small, fill=RIFT_PEAK)
 
@@ -8208,7 +8288,7 @@ def render_rift_report_image(data, path=None):
 
     def column(cx, ph):
         y = 52
-        d.text((cx, y), ph["label"].upper(), font=ui, fill=RIFT_PEAK)
+        d.text((cx, y), phase_label(ph["label"]).upper(), font=ui, fill=RIFT_PEAK)
         y += 24
         # Rates first, totals under them — the same primary/subtext pairing
         # the on-screen card uses, because this image IS that card to anyone
@@ -8219,13 +8299,13 @@ def render_rift_report_image(data, path=None):
                f"{dps or '— DPS'}  ·  {hps or '— HPS'}",
                font=ui, fill=RIFT_TIME)
         y += 20
-        d.text((cx, y), f"{int(ph['total']):,} dmg  ·  "
-               f"{int(ph['heal']):,} heal" + _overheal_note(ph),
+        d.text((cx, y), f"{_n(ph['total'])} dégâts  ·  "
+               f"{_n(ph['heal'])} soins" + _overheal_note(ph),
                font=ui_small, fill=RIFT_TITLE)
         y += 22
         players = ph["players"]
         if not players:
-            d.text((cx, y), "nothing was recorded for this phase",
+            d.text((cx, y), "rien n'a été enregistré pour cette phase",
                    font=ui_small, fill=RIFT_TITLE)
             return y + 20
 
@@ -8240,7 +8320,7 @@ def render_rift_report_image(data, path=None):
                    mvp["cls"], font=ui_small, fill=RIFT_TITLE)
         y += 30
         mvp_dps = _rate_text(mvp["total"], ph["duration"], "DPS")
-        mvp_total = f"{int(mvp['total']):,} damage"
+        mvp_total = f"{_n(mvp['total'])} dégâts"
         d.text((cx + 28, y), mvp_dps or mvp_total, font=ui, fill=RIFT_TIME)
         y += 19
         if mvp_dps:
@@ -8249,7 +8329,7 @@ def render_rift_report_image(data, path=None):
         healer = max(players, key=lambda p: p["heal"])
         if healer["heal"] > 0.5:
             hps_txt = _rate_text(healer["heal"], ph["duration"], "HPS")
-            heal_total = f"{int(healer['heal']):,} heal"
+            heal_total = f"{_n(healer['heal'])} soins"
             who = Overlay._elide_name(healer["name"])
             if healer.get("cls"):
                 who += f" ({healer['cls']})"
@@ -8259,7 +8339,7 @@ def render_rift_report_image(data, path=None):
             y += 20
             if hps_txt:
                 d.text((cx + 22, y),
-                       heal_total + _overheal_note(healer, "   {:.0f}% over"),
+                       heal_total + _overheal_note(healer, "   {:.0f}% en excès"),
                        font=ui_small, fill=RIFT_TITLE)
                 y += 17
 
@@ -8285,10 +8365,10 @@ def render_rift_report_image(data, path=None):
                 # total it came from and the share it represents are subtext.
                 # Right-aligned to fixed gutters so the columns line up down
                 # the card however wide the numbers run.
-                amt = f"{int(p[key]):,}"
+                amt = f"{_n(p[key])}"
                 pct = f"{p[key] / total * 100 if total else 0.0:.0f}%"
                 rate = _rate(p[key], ph["duration"])
-                rate_s = "—" if rate is None else f"{rate:,.0f}"
+                rate_s = "—" if rate is None else f"{_n(rate)}"
                 d.text((cx + RIFT_IMG_COL_W
                         - d.textlength(pct, font=mono_small), y + 3),
                        pct, font=mono_small, fill=RIFT_TITLE)
@@ -8304,7 +8384,7 @@ def render_rift_report_image(data, path=None):
         def rank_header(y, rate_label):
             """Names the three columns once. Same gutters as rank_rows, so the
             heading sits directly over the numbers it names."""
-            for text, gutter in ((("SHARE"), 0),
+            for text, gutter in ((("PART"), 0),
                                  (("TOTAL"), RIFT_IMG_PCT_W),
                                  ((rate_label), RIFT_IMG_PCT_W + RIFT_IMG_TOT_W)):
                 d.text((cx + RIFT_IMG_COL_W - gutter
@@ -8312,25 +8392,25 @@ def render_rift_report_image(data, path=None):
                        text, font=mono_small, fill=RIFT_TITLE)
             return y + 15
 
-        y = heading(cx, y + 6, "DAMAGE — TOP 5")
+        y = heading(cx, y + 6, "DÉGÂTS — TOP 5")
         y = rank_header(y, "DPS")
         y = rank_rows(y, players, ph["total"], "total")
         healers = sorted((p for p in players if p["heal"] > 0.5),
                          key=lambda p: -p["heal"])
-        y = heading(cx, y + 4, "HEALING — TOP 5")
+        y = heading(cx, y + 4, "SOINS — TOP 5")
         if healers:
             y = rank_header(y, "HPS")
             y = rank_rows(y, healers, ph["heal"], "heal")
         else:
-            d.text((cx, y), "no healing recorded", font=ui_small,
+            d.text((cx, y), "aucun soin enregistré", font=ui_small,
                    fill=RIFT_TITLE)
             y += 19
 
-        y = heading(cx, y + 4, "DAMAGE BY TYPE")
+        y = heading(cx, y + 4, "DÉGÂTS PAR TYPE")
         top = ph["elements"][0][1] if ph["elements"] else 0.0
         for el, amt in ph["elements"][:8]:
             colour = _lerp_hex(element_color(el), "#FFFFFF", 0.30)
-            d.text((cx, y), "Other" if el == "?" else str(el),
+            d.text((cx, y), element_label(el),
                    font=ui_small, fill=colour)
             frac = amt / top if top else 0.0
             bar_x = cx + 78
@@ -8339,8 +8419,8 @@ def render_rift_report_image(data, path=None):
                         fill=colour)
             pct = amt / ph["total"] * 100 if ph["total"] else 0.0
             d.text((cx + RIFT_IMG_COL_W
-                    - d.textlength(f"{pct:.1f}%", font=mono_small), y + 2),
-                   f"{pct:.1f}%", font=mono_small, fill=RIFT_TIME)
+                    - d.textlength(_pct1(pct), font=mono_small), y + 2),
+                   _pct1(pct), font=mono_small, fill=RIFT_TIME)
             y += 18
         return y
 
@@ -8664,17 +8744,17 @@ def locate_hlboot(pid):
     if not HAS_CONSOLE:
         # Asked at most once per install in practice: the file normally sits
         # next to the running exe, and that's checked first.
-        p = ask_directory("Farever+ Meter — where is Farever installed? "
-                          "(the folder containing hlboot.dat)")
+        p = ask_directory("Farever+ — où Farever est-il installé ? "
+                          "(le dossier qui contient hlboot.dat)")
         if p is None:
             return None
         cand = p if p.is_file() else p / "hlboot.dat"
         if cand.is_file():
             return cand
-        message_box(f"No hlboot.dat in:\n{p}\n\nThe meter will start with the "
-                    "data it shipped with, which is fine unless Farever has "
-                    "patched since this version was built.",
-                    "Farever+ Meter", 0x30)      # MB_ICONWARNING
+        message_box(f"Pas de hlboot.dat dans :\n{p}\n\nLe compteur démarre "
+                    "avec les données fournies, ce qui convient sauf si "
+                    "Farever a été mis à jour depuis.",
+                    "Farever+", 0x30)      # MB_ICONWARNING
         return None
     while True:
         try:
@@ -8752,11 +8832,11 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     try:
         fsession = device.attach(pid)
     except frida.ProcessNotFoundError:
-        sys.exit(f"[!] {TARGET_PROCESS} (pid {pid}) exited before attach. "
-                 "Relaunch the game, then the meter.")
+        sys.exit(f"[!] {TARGET_PROCESS} (pid {pid}) s'est fermé avant la "
+                 "connexion. Relance le jeu, puis le compteur.")
     except frida.PermissionDeniedError:
-        sys.exit("[!] permission denied attaching — if Farever runs as "
-                 "administrator, run the meter from an elevated terminal too.")
+        sys.exit("[!] connexion refusée — si Farever tourne en "
+                 "administrateur, lance aussi le compteur en administrateur.")
 
     def on_detached(*args):
         """The frida session died — in practice, the game closed or crashed.
@@ -9170,10 +9250,11 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
         # put two empty windows on screen and never say why they stay empty.
         if not HAS_CONSOLE:
             message_box(
-                "The meter couldn't hook into Farever, so it won't show any "
-                "numbers.\n\nFully close Farever, reopen it, and start the "
-                f"meter again.\n\nThe details are in:\n{LOG_FILE}",
-                "Farever+ Meter — couldn't attach", 0x30)   # MB_ICONWARNING
+                "Le compteur n'a pas pu se connecter à Farever : il "
+                "n'affichera aucun chiffre.\n\nFerme complètement Farever, "
+                "relance-le, puis relance le compteur.\n\nLe détail est "
+                f"dans :\n{LOG_FILE}",
+                "Farever+ — connexion impossible", 0x30)   # MB_ICONWARNING
 
     print("[*] overlay starting. Open the game's escape menu for the control "
           "menu (and to drag the windows / click a row to inspect). Only "
@@ -9246,17 +9327,17 @@ def _cli():
         # instead of exiting silently, which would look like nothing happened.
         if not HAS_CONSOLE and e.code not in (0, None):
             print(f"[meter] {e.code}", file=sys.stderr)
-            message_box(e.code, "Farever+ Meter — can't start", 0x10)
+            message_box(e.code, "Farever+ — démarrage impossible", 0x10)
         raise
     except Exception:
         import traceback
         traceback.print_exc()
         if not HAS_CONSOLE:
             message_box(
-                "The meter hit an unexpected error and stopped.\n\n"
-                f"The details are in:\n{LOG_FILE}\n\n"
-                "Send that file to whoever gave you the meter.",
-                "Farever+ Meter — error", 0x10)
+                "Le compteur a rencontré une erreur inattendue et s'est "
+                "arrêté.\n\n"
+                f"Le détail est dans :\n{LOG_FILE}",
+                "Farever+ — erreur", 0x10)
         raise
 
 

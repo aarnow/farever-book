@@ -283,7 +283,7 @@ function buildNode(n) {
         im.alt = n.t || '';
         b.appendChild(im);
       } else {
-        b.appendChild(el('span', 'wordmark', n.t || 'Support'));
+        b.appendChild(el('span', 'wordmark', n.t || 'Soutenir'));
       }
       b.title = n.url || '';
       b.addEventListener('click', () => {
@@ -339,7 +339,7 @@ function buildNode(n) {
 
     case 'search': {
       const row = el('div', 'searchrow');
-      row.appendChild(el('label', null, 'Search'));
+      row.appendChild(el('label', null, 'Rechercher'));
       const i = el('input');
       i.type = 'text';
       i.value = n.v || '';
@@ -355,7 +355,7 @@ function buildNode(n) {
       const box = el('div', 'list' + (n.grow ? ' grow' : ''));
       if (n.h && !n.grow) box.style.maxHeight = n.h + 'px';
       if (!n.rows || !n.rows.length) {
-        box.appendChild(el('div', 'empty', n.empty || 'Nothing here yet.'));
+        box.appendChild(el('div', 'empty', n.empty || "Rien pour l'instant."));
         return box;
       }
       n.rows.forEach((r) => box.appendChild(buildRow(r)));
@@ -453,8 +453,12 @@ function renderTabs(tabs, active) {
   if (nav.dataset.sig === sig) return;
   nav.dataset.sig = sig;
   nav.textContent = '';
-  tabs.forEach((t) => {
-    const b = el('button', t === active ? 'active' : '', t);
+  /* A tab is either a plain id, or {v: id, t: label} when the label is
+     translated — the id is what goes back to the host. */
+  tabs.forEach((tab) => {
+    const t = typeof tab === 'string' ? tab : tab.v;
+    const label = typeof tab === 'string' ? tab : tab.t;
+    const b = el('button', t === active ? 'active' : '', label);
     b.addEventListener('click', () => notify('set_tab', { value: t }));
     nav.appendChild(b);
   });
@@ -480,7 +484,7 @@ window.applyState = function (json) {
   if (s.shard !== prev.shard) $('#shard').textContent = s.shard || '…';
   if (s.quit !== prev.quit || s.quitArmed !== prev.quitArmed) {
     const q = $('#quit');
-    q.textContent = s.quit || 'Quit';
+    q.textContent = s.quit || 'Quitter';
     /* Armed reads as a warning rather than as a link — the second click is the
        one that ends the session. */
     q.className = 'btn warn' + (s.quitArmed ? ' armed' : '');

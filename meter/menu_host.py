@@ -281,7 +281,7 @@ class MenuWindow:
         self._want = geom           # re-applied in attach(); see _fix_size
         self._last_geom = None      # dedupes the move/resize event pair
         self.window = webview.create_window(
-            "Farever+ Controls",
+            "Farever+ — Réglages",
             html=_document(),
             width=int(geom.get("w") or DEFAULT_W),
             height=int(geom.get("h") or DEFAULT_H),
