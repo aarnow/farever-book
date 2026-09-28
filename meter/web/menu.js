@@ -533,6 +533,7 @@ function buildNode(n) {
     case 'collection': return buildCollection(n);
     case 'hunt': return buildHunt(n);
     case 'map': return buildMap(n);
+    case 'character': return buildCharacter(n);
     default: return el('div');
   }
 }
@@ -1502,3 +1503,117 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.pcshade').forEach((x) => x.remove());
   }
 });
+
+/* ---- the Character tab ------------------------------------------------- */
+function charClass(p) {
+  return classEl(p.cls, p.ck, 'cl');
+}
+
+function buildCharacter(n) {
+  const box = el('div', 'charpage');
+  const side = el('div', 'charside');
+  side.appendChild(el('div', 'section', 'Joueurs à proximité'));
+  if (!n.live) {
+    side.appendChild(el('p', 'note', 'Lance le jeu pour voir les joueurs autour de toi.'));
+  } else if (!(n.near || []).length) {
+    side.appendChild(el('p', 'note', 'Personne à proximité.'));
+  }
+  const near = el('div', 'charlist');
+  (n.near || []).forEach((p) => {
+    const row = el('div', 'charrow' + (p.me ? ' me' : ''));
+    const t = el('span', 'cn');
+    t.appendChild(charClass(p));
+    t.appendChild(el('b', null, p.n));
+    t.appendChild(el('span', 'lv', 'niv. ' + (p.lvl || '?')));
+    row.appendChild(t);
+    const b = el('button', 'rowbtn', p.busy ? 'Analyse…' : p.saved ? 'Réanalyser' : 'Analyser');
+    b.type = 'button';
+    if (p.busy) b.disabled = true;
+    b.addEventListener('click', () => notify('char_analyze', { name: p.n }));
+    row.appendChild(b);
+    near.appendChild(row);
+  });
+  side.appendChild(near);
+  side.appendChild(el('div', 'section', 'Profils enregistrés'));
+  if (!(n.saved || []).length) side.appendChild(el('p', 'note', 'Aucun pour l’instant : analyse un joueur.'));
+  const saved = el('div', 'charlist');
+  (n.saved || []).forEach((p) => {
+    const row = el('div', 'charrow click' + (n.open && n.open.n === p.n ? ' on' : ''));
+    const t = el('span', 'cn');
+    t.appendChild(charClass(p));
+    t.appendChild(el('b', null, p.n));
+    t.appendChild(el('span', 'lv', 'niv. ' + (p.lvl || '?')));
+    row.appendChild(t);
+    row.appendChild(el('span', 'wh', p.when));
+    row.addEventListener('click', () => notify('char_open', { name: p.n }));
+    saved.appendChild(row);
+  });
+  side.appendChild(saved);
+  box.appendChild(side);
+
+  const main = el('div', 'charmain');
+  const o = n.open;
+  if (!o) {
+    main.appendChild(el('div', 'empty charempty', 'Choisis un joueur à analyser, ou un profil enregistré.'));
+  } else {
+    const head = el('div', 'charhead');
+    const lv = el('div', 'clvl');
+    lv.appendChild(el('span', null, 'Niveau'));
+    lv.appendChild(el('b', null, String(o.lvl || '?')));
+    head.appendChild(lv);
+    const ic = el('span', 'cico');
+    ic.appendChild(classEl(o.cls, o.ck, 'big'));
+    head.appendChild(ic);
+    const t = el('div', 'ct');
+    t.appendChild(el('b', null, o.n));
+    t.appendChild(el('span', null, o.cls + ' · analysé le ' + o.when));
+    head.appendChild(t);
+    const x = el('button', 'rowbtn', 'Oublier ce profil');
+    x.type = 'button';
+    x.addEventListener('click', () => notify('char_forget', { name: o.n }));
+    head.appendChild(x);
+    main.appendChild(head);
+
+    main.appendChild(el('div', 'sub2', 'Équipement'));
+    const gear = el('div', 'gearlist');
+    (o.gear || []).forEach((g) => {
+      const r = el('div', 'gear' + (g.rk ? ' r-' + g.rk : ''));
+      const gi = el('span', 'gi');
+      if (g.img) {
+        const im = document.createElement('img');
+        im.src = g.img;
+        im.alt = '';
+        gi.appendChild(im);
+      }
+      r.appendChild(gi);
+      const gt = el('div', 'gt');
+      gt.appendChild(el('b', 'nm', g.name));
+      gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : ''].filter(Boolean).join(' · ')));
+      r.appendChild(gt);
+      gear.appendChild(r);
+    });
+    if (!(o.gear || []).length) gear.appendChild(el('div', 'empty', 'Aucun équipement lu.'));
+    main.appendChild(gear);
+
+    const chips = (title, list) => {
+      main.appendChild(el('div', 'sub2', title + ' (' + list.length + ')'));
+      const c = el('div', 'chips');
+      list.forEach((x2) => c.appendChild(el('span', 'chip', x2)));
+      if (!list.length) c.appendChild(el('span', 'none', 'aucun'));
+      main.appendChild(c);
+    };
+    chips('Compétences placées', o.slots || []);
+    chips('Talents', o.talents || []);
+    chips('Maîtrises', o.masteries || []);
+    if ((o.other || []).length) {
+      main.appendChild(el('div', 'sub2', 'Aussi équipé'));
+      const c = el('div', 'chips');
+      o.other.forEach((g) => c.appendChild(el('span', 'chip', g.name)));
+      main.appendChild(c);
+    }
+    main.appendChild(el('p', 'note', 'Les attributs (Vitalité, Foi, critiques…) ne sont pas '
+      + 'transmis au client : le jeu les calcule à la demande.'));
+  }
+  box.appendChild(main);
+  return box;
+}

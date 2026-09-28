@@ -100,6 +100,8 @@ def main():
     # stale offset.
     kproxy = offs("hxbit.ObjProxy_OkillCount_Int_rank_Int")
     eproxy = offs("hxbit.ObjProxy_Ocompleted_Float")
+    spec = offs("st.player.HeroSpecialization")
+    skill = offs("st.skill.Skill")
     # Dungeons. GameLayer.mainActivity is the running activity; for a dungeon
     # it is an st.activity.Dungeon, whose globalCtx is the DungeonContext that
     # carries the run's state, clock and death count. The difficulty lives on
@@ -393,6 +395,13 @@ def main():
         # the element was completed — a chest opened, an orb picked up, an
         # obelisk discovered. An element never completed has no entry.
         "ElementProxy": {"completed": eproxy["completed"][0]},
+        # Any player's profile (the Character tab), measured 2026-09-28:
+        # the client holds every hero's equipment, talents and skills.
+        "HeroDetail": {"skills": hero["skills"][0],
+                       "specialization": hero["specialization"][0]},
+        "Specialization": {k: spec[k][0] for k in
+                           ("talents", "skillSlots", "skillMasteries")},
+        "Skill": {"kind": skill["kind"][0]},
         "StringMap": {"h": smap["h"][0]},
         "CodexProxy": {"count": kproxy["killCount"][0],
                        "rank": kproxy["rank"][0]},
@@ -500,6 +509,10 @@ def main():
             print(f"[written] {_OUT_DIR / 'boss_portraits'} ({n} portraits)")
         except Exception as e:
             print(f"[!] boss portraits skipped ({e})")
+        types = extract_item_types(Path(hlboot).parent)
+        (_OUT_DIR / "item_types.json").write_text(json.dumps(types, indent=0),
+                                                  encoding="utf-8")
+        print(f"[written] {_OUT_DIR / 'item_types.json'} ({len(types)} items)")
         rar = extract_item_rarity(Path(hlboot).parent)
         out_rar = _OUT_DIR / "item_rarity.json"
         out_rar.write_text(json.dumps(rar, indent=0), encoding="utf-8")
@@ -621,8 +634,8 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("ach", "activity", "item", "itemType", "rarity", "unit",
-             "unitType", "zone")
+FR_SHEETS = ("ach", "activity", "item", "itemType", "rarity", "skill",
+             "unit", "unitType", "zone")
 # Sheets whose French descriptions the app shows (the collection's details).
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc")}
 
@@ -663,7 +676,24 @@ def extract_fr_names(game_dir):
             txt = "".join(node.itertext()).strip() if node is not None else ""
             if txt:
                 rows[row.tag] = txt
+            # a skill's masteries are rows of their own, nested in it
+            for m in row.findall("mastery/*"):
+                mn = m.find("text.name")
+                mt = "".join(mn.itertext()).strip() if mn is not None else ""
+                if mt:
+                    rows[m.tag] = mt
     return out
+
+
+def extract_item_types(game_dir):
+    """item id -> its type (Head, Hands, GreatAxe, Pickaxe, Mount...), from
+    data.cdb: what sorts a character's equipment into gear and the rest."""
+    import pak_extract
+    cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
+                                            "data.cdb"))
+    sheet = next(s for s in cdb["sheets"] if s["name"] == "item")
+    return {ln["id"]: ln["type"] for ln in sheet["lines"]
+            if isinstance(ln.get("id"), str) and ln.get("type")}
 
 
 def extract_item_rarity(game_dir):

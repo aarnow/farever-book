@@ -55,3 +55,5 @@ analysis_out/bestiary_img/
 .meter_codex.json
 analysis_out/map_tiles/
 .meter_elements.json
+.meter_profiles.json
+.meter_heroprobe.json

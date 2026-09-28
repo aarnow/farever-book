@@ -448,6 +448,7 @@ function hookGameTick(base) {
         Interceptor.attach(base.add(fi * 8).readPointer(), {
             onEnter: function () {
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
+                if (rosterDue || analyzeWanted !== null) characterTick();
                 if (codexDue && hbKeys) {
                     codexDue = false;
                     refreshCodex();
@@ -995,6 +996,158 @@ function refreshElements() {
     } catch (e) {}
 }
 
+// ---- the players around, and their profiles (the Character tab) ----
+// Measured 2026-09-28 (a probe over ~25 players): for EVERY hero on the
+// layer the client holds its class, level, equipment (Hero.loadout's
+// equipment container, in slot order), its talents
+// (HeroSpecialization.talents, a StringMap of talent ids), the skills in its
+// slots and its skill masteries. Its attributes are NOT held as values: the
+// UnitAttributes fields read 0 (ours included) and its `attributes` IntMap
+// only has defaults — the game computes them on demand.
+//
+// The roster is sent every ~10 s; a full profile only when the app asks for
+// one (recv "analyze"), both on the game thread (the talent map read
+// allocates).
+let rosterDue = false;
+let analyzeWanted = null;
+
+function mapHandle(md) {
+    // hxbit.MapData -> the StringMap behind it (null for any other type)
+    if (!md || md.isNull()) return null;
+    const v = md.add(OFF.MapData.map).readPointer();
+    if (!v || v.isNull()) return null;
+    const inner = v.readPointer().readU32() === 15
+        ? v.add(OFF.MapData.value).readPointer() : v;
+    if (!inner || inner.isNull() || typeName(inner) !== "haxe.ds.StringMap")
+        return null;
+    return inner.add(OFF.StringMap.h).readPointer();
+}
+
+function mapKeys(h, max) {
+    const out = [];
+    if (!h || h.isNull() || !hbKeys) return out;
+    const keys = hbKeys(h);
+    if (!keys || keys.isNull()) return out;
+    const n = keys.add(16).readS32();
+    for (let i = 0; i < n && i < max; i++) {
+        const kb = keys.add(24 + i * 8).readPointer();
+        if (kb && !kb.isNull()) out.push(kb.readUtf16String());
+    }
+    return out;
+}
+
+function proxyStrings(proxy, max) {
+    const out = [];
+    if (!proxy || proxy.isNull()) return out;
+    const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+    if (!dyn || dyn.isNull()) return out;
+    const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+    if (!arr || arr.isNull()) return out;
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    for (let i = 0; i < n && i < max; i++) {
+        const q = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        if (q && !q.isNull() && typeName(q) === "String") out.push(hlStr(q));
+    }
+    return out;
+}
+
+// The equipment container, slot by slot (a null for an empty slot).
+function equipSlots(loadout) {
+    const out = [];
+    const inv = loadout.add(OFF.Loadout.equipment).readPointer();
+    if (!inv || inv.isNull()) return out;
+    const arr = inv.add(OFF.Inventory.content).readPointer();
+    if (!arr || arr.isNull()) return out;
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    for (let i = 0; i < n && i < 64; i++) {
+        const raw = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        const slot = (raw && !raw.isNull()) ? slotItem(raw) : null;
+        const inf = slot ? itemInfo(slot.item) : null;
+        out.push(inf ? [inf.kind, inf.rarity, inf.level] : null);
+    }
+    return out;
+}
+
+function profileOf(h) {
+    const H = OFF.Hero, D = OFF.HeroDetail, S = OFF.Specialization;
+    const r = {};
+    try { r.k = hlStr(h.add(H.kind).readPointer()); } catch (e) {}
+    try { r.lvl = h.add(H.level).readS32(); } catch (e) {}
+    try {
+        const lo = h.add(H.loadout).readPointer();
+        r.equip = (lo && !lo.isNull()) ? equipSlots(lo) : [];
+    } catch (e) { r.equip = []; }
+    try {
+        const sp = h.add(D.specialization).readPointer();
+        if (sp && !sp.isNull()) {
+            r.talents = mapKeys(mapHandle(sp.add(S.talents).readPointer()), 80);
+            r.slots = proxyStrings(sp.add(S.skillSlots).readPointer(), 20);
+            r.masteries = proxyStrings(sp.add(S.skillMasteries).readPointer(), 60);
+        }
+    } catch (e) {}
+    return r;
+}
+
+// The players on the layer: [{n, k, lvl, me, h}] (h: the hero pointer).
+function layerPlayers() {
+    const out = [];
+    const P = OFF.Player, G = OFF.GameLayer;
+    const layer = localHero.add(OFF.Hero.layer).readPointer();
+    const proxy = layer.add(G.players).readPointer();
+    const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+    const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    for (let i = 0; i < n && i < SHARD_MAX; i++) {
+        try {
+            const p = data.add(24 + i * 8).readPointer();
+            if (!p || p.isNull()) continue;
+            const nm = hlStr(p.add(P.name).readPointer());
+            const h = p.add(P.hero).readPointer();
+            if (!nm || !h || h.isNull()) continue;
+            out.push({ n: nm, h: h, me: h.equals(localHero),
+                       k: hlStr(h.add(OFF.Hero.kind).readPointer()),
+                       lvl: h.add(OFF.Hero.level).readS32() });
+        } catch (e) {}
+    }
+    return out;
+}
+
+// GAME THREAD ONLY.
+function characterTick() {
+    if (!localHero || localHero.isNull() || !OFF.HeroDetail) return;
+    try {
+        const players = layerPlayers();
+        if (rosterDue) {
+            rosterDue = false;
+            send({ kind: "roster", players: players.map(function (p) {
+                return { n: p.n, k: p.k, lvl: p.lvl, me: p.me };
+            }) });
+        }
+        if (analyzeWanted !== null) {
+            const want = analyzeWanted;
+            analyzeWanted = null;
+            const p = players.find(function (x) { return x.n === want; });
+            if (!p) send({ kind: "profile", n: want, missing: true });
+            else {
+                const prof = profileOf(p.h);
+                prof.n = p.n;
+                prof.me = p.me;
+                send({ kind: "profile", profile: prof });
+            }
+        }
+    } catch (e) { log("character tick failed: " + e); }
+}
+
+function listenAnalyze() {
+    recv("analyze", function (msg) {
+        analyzeWanted = msg.name;
+        listenAnalyze();                // recv is one-shot: listen again
+    });
+}
+
 function resetBossBars() {
     // A loading screen tears the HUD down: a bar that was up on the way out
     // must not stay "up" in the new zone. No up/down events — the pull isn't
@@ -1193,6 +1346,8 @@ function main() {
     if (!setupNameApi()) log("skill-name API unavailable; showing raw ids");
     if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");
     every(function () { codexDue = true; }, 8000);
+    every(function () { rosterDue = true; }, 5000);
+    listenAnalyze();
 
     // DATA.map_fn (Main.getMapId) is no longer resolved or called — measured
     // returning the machine hostname; the zone signal reads layer.world.level.

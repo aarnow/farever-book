@@ -256,5 +256,17 @@
   },
   "ElementProxy": {
     "completed": 24
+  },
+  "HeroDetail": {
+    "skills": 488,
+    "specialization": 1224
+  },
+  "Specialization": {
+    "talents": 136,
+    "skillSlots": 152,
+    "skillMasteries": 144
+  },
+  "Skill": {
+    "kind": 184
   }
 }

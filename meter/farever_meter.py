@@ -104,6 +104,8 @@ DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
 # Each character's kill counts per monster (the game's codex), last read.
 CODEX_FILE = _WRITABLE / ".meter_codex.json"
+# Profiles built in the Character tab (player -> equipment, talents...).
+PROFILES_FILE = _WRITABLE / ".meter_profiles.json"
 # Each character's world elements (chests, orbs, obelisks...) -> state.
 ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 LOG_FILE = DATA_HOME / "meter.log"
@@ -2719,11 +2721,12 @@ def _wants_params(fn):
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
 APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
-            "Settings", "Help")
+            "Character", "Settings", "Help")
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
                   "Hunt": "Chasse", "Map": "Carte",
+                  "Character": "Personnage",
                   "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
@@ -2867,6 +2870,11 @@ class App:
         self._collection_owned = None       # .meter_collection.json, loaded
         self._codex_data = None             # .meter_codex.json, loaded
         self._elements_logged = False
+        self._roster = []                   # players around, from the hook
+        self._roster_at = 0.0
+        self._profiles = None               # .meter_profiles.json, loaded
+        self._char_sel = None               # the profile being read
+        self._char_wait = None              # (name, since) of an analysis
         self._elements_data = None          # .meter_elements.json, loaded
         self._dungeon_cache = {}            # file name -> (mtime, data)
         self._binding_now = False
@@ -3153,6 +3161,11 @@ class App:
             "open_dungeon_run": lambda p: self._open_dungeon_run(
                 p.get("file", "")),
             "close_dungeon_run": lambda: setattr(self, "_dungeon_view", None),
+            # character
+            "char_analyze": lambda p: self._analyze(p.get("name")),
+            "char_open": lambda p: setattr(self, "_char_sel", p.get("name")),
+            "char_close": lambda: setattr(self, "_char_sel", None),
+            "char_forget": lambda p: self._forget_profile(p.get("name")),
             # settings
             "toggle_heal": self._toggle_heal,
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
@@ -3268,6 +3281,7 @@ class App:
                    "Collection": self._page_collection,
                    "Hunt": self._page_hunt,
                    "Map": self._page_map,
+                   "Character": self._page_character,
                    "Settings": self._page_settings,
                    "Help": self._page_help}.get(tab)
         try:
@@ -3626,6 +3640,76 @@ class App:
         return [{"k": "hunt", "id": "hunt", "sync": sync,
                  **bestiary_view(entry.get("ranks") or {},
                                  self._collection())}]
+
+    # ---- character
+    def on_character(self, p):
+        """The players around (roster) or one player's profile, from the
+        hook. Hook thread."""
+        def done():
+            if p.get("kind") == "roster":
+                self._roster = p.get("players") or []
+                self._roster_at = time.time()
+                return
+            wait, self._char_wait = self._char_wait, None
+            if p.get("missing"):
+                self._toast_msg(f"{p.get('n')} n'est plus à proximité.")
+                return
+            prof = dict(p.get("profile") or {}, at=time.time())
+            name = prof.get("n")
+            if not name:
+                return
+            profs = self._profiles_data()
+            profs[name] = prof
+            try:
+                PROFILES_FILE.write_text(json.dumps(profs, ensure_ascii=False),
+                                         encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the profile: {e}",
+                      file=sys.stderr)
+            self._char_sel = name
+        self._enqueue(done)()
+
+    def _profiles_data(self):
+        if self._profiles is None:
+            try:
+                self._profiles = json.loads(
+                    PROFILES_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._profiles = {}
+        return self._profiles
+
+    def _analyze(self, name):
+        script = self.link.script if self.link is not None else None
+        if script is None:
+            self._toast_msg("Le jeu n'est pas connecté.")
+            return
+        try:
+            script.post({"type": "analyze", "name": name})
+            self._char_wait = (name, time.time())
+        except Exception as e:
+            self._toast_msg(f"Analyse impossible : {e}")
+
+    def _forget_profile(self, name):
+        profs = self._profiles_data()
+        if profs.pop(name, None) is not None:
+            try:
+                PROFILES_FILE.write_text(json.dumps(profs, ensure_ascii=False),
+                                         encoding="utf-8")
+            except OSError:
+                pass
+        if self._char_sel == name:
+            self._char_sel = None
+
+    def _page_character(self):
+        profs = self._profiles_data()
+        live = self.game_connected() and time.time() - self._roster_at < 30
+        roster = self._roster if live else []
+        wait = self._char_wait
+        if wait and time.time() - wait[1] > 15:
+            self._char_wait = wait = None
+        return [{"k": "character", "id": "character",
+                 **character_view(roster, profs, self._char_sel,
+                                  wait[0] if wait else None, live)}]
 
     def _page_map(self):
         data = self._elements()
@@ -4947,6 +5031,81 @@ def _farm_view(items, fams, owned):
     return out
 
 
+_ITEM_TYPES = None
+
+
+def item_type(kind):
+    global _ITEM_TYPES
+    if _ITEM_TYPES is None:
+        try:
+            _ITEM_TYPES = json.loads(
+                (ANALYSIS / "item_types.json").read_text(encoding="utf-8"))
+        except Exception:
+            _ITEM_TYPES = {}
+    return _ITEM_TYPES.get(kind) or ""
+
+
+# Equipment that is gear (shown on the profile), by item type; the rest of
+# the equipment container is tools, bags, the mount and glider, consumables.
+ARMOUR_SLOTS = ("Head", "Shoulders", "Chest", "Back", "Hands", "Waist",
+                "Legs", "Feet")
+NOT_GEAR = {"GearPickaxe", "GearSickle", "Bag", "Misc", "Mount",
+            "GearGlider", "Consumable", "Usable", "HealthPotion", "Quest",
+            "Currency"}
+CLASS_FR = {"Warrior": "Guerrier", "Mage": "Mage", "Priest": "Prêtre",
+            "Rogue": "Voleur"}
+
+
+def _skill_label(sid):
+    return _fr_names("skill").get(sid) or _pretty_id(sid)
+
+
+def character_view(roster, profiles, sel, waiting, live):
+    """The Character tab: the players around (to analyse), the profiles
+    already built, and the open one."""
+    near = []
+    for r in sorted(roster, key=lambda r: (not r.get("me"),
+                                           -(r.get("lvl") or 0),
+                                           r.get("n") or "")):
+        near.append({"n": r.get("n"), "lvl": r.get("lvl"),
+                     "cls": CLASS_FR.get(r.get("k"), r.get("k") or ""),
+                     "ck": class_key(r.get("k")), "me": bool(r.get("me")),
+                     "saved": r.get("n") in profiles,
+                     "busy": r.get("n") == waiting})
+    saved = [{"n": n, "lvl": p.get("lvl"),
+              "cls": CLASS_FR.get(p.get("k"), p.get("k") or ""),
+              "ck": class_key(p.get("k")),
+              "when": date_fr(time.localtime(p.get("at") or 0))}
+             for n, p in sorted(profiles.items(),
+                                key=lambda kv: -(kv[1].get("at") or 0))]
+    view = {"near": near, "saved": saved, "live": live, "open": None}
+    prof = profiles.get(sel) if sel else None
+    if prof:
+        gear, other = [], []
+        for slot in prof.get("equip") or ():
+            if not slot:
+                continue
+            kind, rar, lvl = (list(slot) + [None, None, None])[:3]
+            rar = rar or item_rarity(kind) or ""
+            t = item_type(kind)
+            entry = {"id": kind, "name": item_label(kind),
+                     "img": item_icon(kind), "rk": rar.lower(),
+                     "rar": rarity_label(rar) if rar else "",
+                     "type": item_type_label(t) if t else "",
+                     "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None}
+            (other if t in NOT_GEAR else gear).append(entry)
+        view["open"] = {
+            "n": prof.get("n"), "lvl": prof.get("lvl"),
+            "cls": CLASS_FR.get(prof.get("k"), prof.get("k") or ""),
+            "ck": class_key(prof.get("k")), "me": bool(prof.get("me")),
+            "when": date_fr(time.localtime(prof.get("at") or 0)),
+            "gear": gear, "other": other,
+            "talents": [_skill_label(t) for t in prof.get("talents") or ()],
+            "slots": [_skill_label(t) for t in prof.get("slots") or ()],
+            "masteries": [_skill_label(t) for t in prof.get("masteries") or ()]}
+    return view
+
+
 _WORLD_MAP = None
 
 
@@ -5416,6 +5575,10 @@ def _data_is_current():
             return False
     except (OSError, ValueError):
         pass
+    if not (ANALYSIS / "item_types.json").exists():
+        print("[meter] item_types.json absent — regenerating for the "
+              "Character tab.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "map.json").exists():
         print("[meter] map.json absent — regenerating for the Map tab.",
               file=sys.stderr)
@@ -6881,6 +7044,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_codex(p)
+        elif k in ("roster", "profile"):
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_character(p)
         elif k == "elements":
             ov = _OVERLAY["ref"]
             if ov is not None:
