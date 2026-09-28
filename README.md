@@ -51,6 +51,7 @@ fenêtre Windows séparée.
 | **Donjons** | Chaque donjon est enregistré automatiquement : difficulté (lue dans le lobby), résultat (victoire, échec, abandon), temps du run (l'horloge du jeu), morts, groupe, un rapport en deux phases (exploration puis boss) comme pour les failles, et le butin ramassé (dont le coffre de fin). Noms des donjons, objets et boss en français, tirés du jeu. Records par donjon et par difficulté. |
 | **Collection** | Montures, planeurs et compagnons : ta collection est lue en jeu et gardée hors jeu. Compteurs par catégorie, recherche, filtres (tous, manquants, obtenus) et, pour chaque élément, comment l'obtenir d'après les données du jeu (butin et chances, marchands, coffres, succès, zones de capture et taux d'apparition). |
 | **Chasse** | Tableau de chasse : le nombre de kills de ton personnage pour chaque monstre, lu dans le Codex du jeu (il inclut donc tout ce que tu as tué avant Farever+), avec le rang du Codex. Filtres par région, recherche, tri. |
+| **Carte** | La carte de Siagarta (les tuiles de la minimap du jeu), déplaçable et zoomable, avec les points de complétion : coffres du monde, de chambre forte et de recette, orbes rouges, obélisques et points de réapparition. Filtres par catégorie et par région, compteurs, détail au clic. |
 | **Réglages** | Colonnes de soins, réinitialisation au pull d'un boss, « Tous les joueurs » automatique en faille, raccourci clavier, taille de l'interface, dossiers. |
 | **Aide** | Utilisation, lancement avec Steam. |
 

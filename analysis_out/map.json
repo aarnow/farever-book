@@ -1,0 +1,4014 @@
+{
+"meta": {
+"world": "W1_Siagarta",
+"units_per_tile": 576.0,
+"tile_px": 512,
+"tx": [
+-4,
+6
+],
+"ty": [
+-6,
+4
+],
+"tiles": [
+"-1_-1",
+"-1_-2",
+"-1_-3",
+"-1_-4",
+"-1_-5",
+"-1_0",
+"-1_1",
+"-1_2",
+"-1_3",
+"-1_4",
+"-2_-1",
+"-2_-2",
+"-2_-3",
+"-2_-4",
+"-2_-5",
+"-2_0",
+"-2_1",
+"-2_2",
+"-2_3",
+"-2_4",
+"-3_-1",
+"-3_-2",
+"-3_-3",
+"-3_-4",
+"-3_-5",
+"-3_0",
+"-3_1",
+"-3_2",
+"-3_3",
+"-3_4",
+"-4_-1",
+"-4_-2",
+"-4_-3",
+"-4_0",
+"-4_1",
+"0_-1",
+"0_-2",
+"0_-3",
+"0_-4",
+"0_-5",
+"0_-6",
+"0_0",
+"0_1",
+"0_2",
+"0_3",
+"0_4",
+"1_-1",
+"1_-2",
+"1_-3",
+"1_-4",
+"1_-5",
+"1_-6",
+"1_0",
+"1_1",
+"1_2",
+"1_3",
+"1_4",
+"2_-1",
+"2_-2",
+"2_-3",
+"2_-4",
+"2_-5",
+"2_-6",
+"2_0",
+"2_1",
+"2_2",
+"2_3",
+"3_-1",
+"3_-2",
+"3_-3",
+"3_-4",
+"3_-5",
+"3_-6",
+"3_0",
+"3_1",
+"3_2",
+"3_3",
+"3_4",
+"4_-1",
+"4_-2",
+"4_-3",
+"4_-4",
+"4_-5",
+"4_-6",
+"4_0",
+"4_1",
+"4_2",
+"4_3",
+"4_4",
+"5_-1",
+"5_-2",
+"5_-3",
+"5_-4",
+"5_-5",
+"5_-6",
+"5_0",
+"5_1",
+"5_2",
+"5_3",
+"5_4",
+"6_-1",
+"6_-2",
+"6_-3",
+"6_-4",
+"6_0",
+"6_1",
+"6_2"
+]
+},
+"points": [
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_24",
+"x": -0.7,
+"y": 1093.2,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_66",
+"x": -31.3,
+"y": 1180.7,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_69",
+"x": -45.9,
+"y": 1154.9,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_34",
+"x": -46.3,
+"y": 1287.3,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_21",
+"x": -84.2,
+"y": 1447.1,
+"zone": "Z1_Primevalley_Plain",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_3",
+"x": -88.4,
+"y": 1495.2,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_10",
+"x": -60.9,
+"y": 154.4,
+"zone": "Z1_Enripit_Bridge",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_5",
+"x": -70.0,
+"y": 142.6,
+"zone": "Z1_Enripit_Bridge",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_244",
+"x": -55.4,
+"y": -966.9,
+"zone": "Z3_CrimsonIsland_Sacristy",
+"region": "Z3_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_7",
+"x": -14.9,
+"y": -800.9,
+"zone": "Z3_CrimsonIsland_Sacristy",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_229",
+"x": -12.2,
+"y": -795.9,
+"zone": "Z3_CrimsonIsland_Sacristy",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_230",
+"x": -20.3,
+"y": -803.6,
+"zone": "Z3_CrimsonIsland_Sacristy",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_231",
+"x": -10.8,
+"y": -805.1,
+"zone": "Z3_CrimsonIsland_Sacristy",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_10",
+"x": 870.8,
+"y": -6.2,
+"zone": "Z2_Azuram_Fields",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_201",
+"x": 904.7,
+"y": 917.0,
+"zone": "Z2_Krisomal_Lighthouse",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_150",
+"x": 874.1,
+"y": 215.6,
+"zone": "Z2_Azuram_Fields",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_110",
+"x": 919.8,
+"y": 598.3,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_111",
+"x": 911.4,
+"y": 599.4,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_112",
+"x": 914.8,
+"y": 592.9,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_141",
+"x": 865.5,
+"y": 625.5,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_149",
+"x": 865.5,
+"y": 625.5,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_148",
+"x": 865.5,
+"y": 625.5,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_147",
+"x": 865.5,
+"y": 625.5,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_146",
+"x": 865.5,
+"y": 625.5,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_66",
+"x": 908.5,
+"y": 739.7,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_26",
+"x": 1016.3,
+"y": 932.0,
+"zone": "Z2_Krisomal_Hill",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_125",
+"x": 1033.8,
+"y": 1028.6,
+"zone": "Z2_Krisomal_Hill",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_159",
+"x": 964.4,
+"y": 184.7,
+"zone": "Z2_Azuram_Fields",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_21",
+"x": 1013.8,
+"y": -709.0,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_23",
+"x": 1086.5,
+"y": 986.1,
+"zone": "Z2_Krisomal_Hill",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_126",
+"x": 1097.6,
+"y": 1140.5,
+"zone": "Z2_Krisomal_Hill",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_127",
+"x": 1056.7,
+"y": 1142.1,
+"zone": "Z2_Krisomal_Hill",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_151",
+"x": 1142.2,
+"y": 193.8,
+"zone": "Z2_Azuram_Highland",
+"region": "Z2_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_4",
+"x": 1098.3,
+"y": -1132.6,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_175",
+"x": 1096.8,
+"y": -1157.9,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_176",
+"x": 1099.1,
+"y": -1161.5,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_177",
+"x": 1095.0,
+"y": -1162.4,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_117",
+"x": 1201.9,
+"y": 84.7,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_154",
+"x": 1193.6,
+"y": 81.3,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_156",
+"x": 1200.3,
+"y": 76.9,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_134",
+"x": 1243.5,
+"y": 1021.5,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_135",
+"x": 1243.5,
+"y": 1021.5,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_136",
+"x": 1243.5,
+"y": 1021.5,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_137",
+"x": 1243.5,
+"y": 1021.5,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_152",
+"x": 1214.3,
+"y": 298.6,
+"zone": "Z2_Azuram_Highland",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_11",
+"x": 1183.4,
+"y": -673.9,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_179",
+"x": 1324.5,
+"y": -88.4,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_118",
+"x": 1269.7,
+"y": 1052.1,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_34",
+"x": 1302.1,
+"y": 1100.8,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_119",
+"x": 1297.5,
+"y": 1107.0,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_120",
+"x": 1294.5,
+"y": 1107.0,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_121",
+"x": 1291.5,
+"y": 1107.0,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_192",
+"x": 1342.7,
+"y": 1094.7,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_181",
+"x": 1342.7,
+"y": 1091.7,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_130",
+"x": 1343.8,
+"y": 1168.5,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_131",
+"x": 1337.8,
+"y": 1168.5,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_132",
+"x": 1331.3,
+"y": 1168.5,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_166",
+"x": 1284.2,
+"y": 1226.3,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_17",
+"x": 1293.9,
+"y": 1265.3,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_30",
+"x": 1287.0,
+"y": 1348.9,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_39",
+"x": 1251.5,
+"y": 108.8,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_164",
+"x": 1342.6,
+"y": 137.5,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_165",
+"x": 1338.1,
+"y": 143.0,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_108",
+"x": 1316.4,
+"y": 172.7,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_58",
+"x": 1341.5,
+"y": 329.0,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_142",
+"x": 1254.7,
+"y": 328.6,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_153",
+"x": 1295.8,
+"y": 297.5,
+"zone": "Z2_Azuram_Highland",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_45",
+"x": 1326.9,
+"y": -124.5,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_170",
+"x": 1325.1,
+"y": -500.0,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_174",
+"x": 1285.1,
+"y": -592.5,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_172",
+"x": 1289.1,
+"y": -589.5,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_173",
+"x": 1283.6,
+"y": -587.0,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_51",
+"x": 1376.7,
+"y": 875.4,
+"zone": "Z2_Krisomal_Cliff",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_133",
+"x": 1354.8,
+"y": 1044.1,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_35",
+"x": 1413.8,
+"y": 1236.6,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_129",
+"x": 1350.8,
+"y": 1168.5,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_32",
+"x": 1422.0,
+"y": 1363.5,
+"zone": "Z2_Krisomal_South",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_206",
+"x": 1389.2,
+"y": 1629.4,
+"zone": "Z2_Krisomal_Abyss",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_42",
+"x": 1352.1,
+"y": 1693.2,
+"zone": "Z2_Krisomal_Abyss",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_207",
+"x": 1392.9,
+"y": 1646.2,
+"zone": "Z2_Krisomal_Abyss",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_208",
+"x": 1403.8,
+"y": 1636.3,
+"zone": "Z2_Krisomal_Abyss",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_140",
+"x": 1375.4,
+"y": 268.5,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_143",
+"x": 1435.7,
+"y": 217.4,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_145",
+"x": 1423.0,
+"y": 217.5,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_167",
+"x": 1360.4,
+"y": 226.8,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_139",
+"x": 1369.7,
+"y": 361.7,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_15",
+"x": 1432.7,
+"y": 577.2,
+"zone": "Z2_Krisomal_Priaire",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_122",
+"x": 1464.1,
+"y": 1072.0,
+"zone": "Z2_Krisomal_Chapel",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_123",
+"x": 1458.2,
+"y": 1076.2,
+"zone": "Z2_Krisomal_Chapel",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_124",
+"x": 1458.5,
+"y": 1067.4,
+"zone": "Z2_Krisomal_Chapel",
+"region": "Z2_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_6",
+"x": 1447.6,
+"y": 1072.5,
+"zone": "Z2_Krisomal_Chapel",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_31",
+"x": 1469.5,
+"y": 1300.5,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_53",
+"x": 1467.0,
+"y": 169.3,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_60",
+"x": 1507.5,
+"y": 256.2,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_144",
+"x": 1454.7,
+"y": 202.8,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_113",
+"x": 1441.7,
+"y": 203.9,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_187",
+"x": 1511.6,
+"y": 502.0,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_40",
+"x": 1629.9,
+"y": 1211.5,
+"zone": "Z2_Krisomal_Port",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_36",
+"x": 1611.8,
+"y": 1381.6,
+"zone": "Z2_Krisomal_Port",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_39",
+"x": 1556.5,
+"y": 1367.9,
+"zone": "Z2_Krisomal_Port",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_168",
+"x": 1579.6,
+"y": 1457.0,
+"zone": "Z2_Krisomal_Port",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_191",
+"x": 1628.9,
+"y": 387.3,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_52",
+"x": 1611.2,
+"y": -329.0,
+"zone": "Z2_Nescent_Route",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_205",
+"x": 1704.8,
+"y": 930.8,
+"zone": "Z2_Krisomal_North",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_190",
+"x": 1656.0,
+"y": 217.7,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_70",
+"x": 1652.2,
+"y": 387.2,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_188",
+"x": 1658.7,
+"y": 408.2,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_138",
+"x": 1710.9,
+"y": 625.5,
+"zone": "Z2_Krisomal_Cliff",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_72",
+"x": 1739.0,
+"y": -70.1,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_203",
+"x": 1781.8,
+"y": 1293.0,
+"zone": "Z2_Krisomal_Abyss",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_204",
+"x": 1823.8,
+"y": 1317.7,
+"zone": "Z2_Krisomal_Abyss",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_169",
+"x": 1820.0,
+"y": 112.5,
+"zone": "Z2_Nescent_Flowers",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_197",
+"x": 1791.2,
+"y": 236.0,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_178",
+"x": 1738.1,
+"y": 688.0,
+"zone": "Z2_Krisomal_Cliff",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_115",
+"x": 1805.3,
+"y": 850.6,
+"zone": "Z2_Krisomal_Cliff",
+"region": "Z2_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_5",
+"x": 1741.7,
+"y": -210.3,
+"zone": "Z2_Nescent_Thorn",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_26",
+"x": 75.5,
+"y": 1034.3,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_47",
+"x": 13.0,
+"y": 1118.6,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_8",
+"x": 23.5,
+"y": 1148.8,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_18",
+"x": 60.2,
+"y": 1122.2,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_26",
+"x": 58.8,
+"y": 1175.0,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_100",
+"x": 49.9,
+"y": 1494.4,
+"zone": "Z1_Primevalley_Plain",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_1",
+"x": 37.7,
+"y": 172.2,
+"zone": "Z1_Enripit_Bridge",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_4",
+"x": 16.1,
+"y": 568.6,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_22",
+"x": 65.6,
+"y": 752.3,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_232",
+"x": 37.5,
+"y": -861.4,
+"zone": "Z3_CrimsonIsland_Sacristy",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_48",
+"x": 1877.2,
+"y": 238.7,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_199",
+"x": 1919.9,
+"y": 372.5,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_200",
+"x": 1910.3,
+"y": 365.9,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_202",
+"x": 1864.5,
+"y": -151.5,
+"zone": "Z2_Nescent_Abode",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_158",
+"x": 1861.2,
+"y": -229.6,
+"zone": "Z2_Nescent_Thorn",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_157",
+"x": 1842.4,
+"y": -219.2,
+"zone": "Z2_Nescent_Thorn",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_74",
+"x": 1996.8,
+"y": 62.2,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_183",
+"x": 1996.8,
+"y": 149.3,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_184",
+"x": 2001.3,
+"y": 146.3,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_185",
+"x": 2001.8,
+"y": 150.8,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_106",
+"x": 1956.6,
+"y": 147.2,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_13",
+"x": 1980.2,
+"y": 111.2,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_114",
+"x": 2000.7,
+"y": 174.2,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_196",
+"x": 1964.6,
+"y": 201.6,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_107",
+"x": 2008.1,
+"y": 210.2,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_155",
+"x": 1960.4,
+"y": 197.1,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_116",
+"x": 1998.7,
+"y": 222.5,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_198",
+"x": 1923.6,
+"y": 361.1,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_37",
+"x": 1974.7,
+"y": 329.3,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_75",
+"x": 1958.9,
+"y": 501.3,
+"zone": "Z2_Nescent_Trunk",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_194",
+"x": 1983.1,
+"y": 504.7,
+"zone": "Z2_Azuram_Flying",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_193",
+"x": 1982.4,
+"y": 585.8,
+"zone": "Z2_Nescent_Trunk",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_76",
+"x": 2042.4,
+"y": 156.8,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_64",
+"x": 2036.6,
+"y": 187.2,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_182",
+"x": 2078.8,
+"y": 98.3,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_67",
+"x": 2047.7,
+"y": 241.4,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_1",
+"x": 2091.9,
+"y": 239.8,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_195",
+"x": 2101.4,
+"y": 283.7,
+"zone": "Z2_Azuram_Top",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_101",
+"x": 2035.8,
+"y": 192.7,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_186",
+"x": 2051.8,
+"y": 217.3,
+"zone": "Z2_Nescent_Hive",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_36",
+"x": 138.5,
+"y": 1317.8,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_44",
+"x": 121.9,
+"y": -852.8,
+"zone": "Z3_CrimsonIsland_Pit",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_29",
+"x": 284.5,
+"y": 936.2,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_1",
+"x": 197.2,
+"y": 264.7,
+"zone": "Z2_Azuram_Bridge",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_103",
+"x": 197.7,
+"y": 256.5,
+"zone": "Z2_Azuram_Bridge",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_104",
+"x": 206.2,
+"y": 256.0,
+"zone": "Z2_Azuram_Bridge",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_105",
+"x": 201.7,
+"y": 263.5,
+"zone": "Z2_Azuram_Bridge",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_15",
+"x": 208.4,
+"y": 299.2,
+"zone": "Z2_Azuram_Bridge",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_3",
+"x": 266.1,
+"y": 587.9,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_9",
+"x": 252.2,
+"y": 635.9,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_3",
+"x": 244.8,
+"y": 636.3,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_74",
+"x": 286.9,
+"y": 833.3,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_75",
+"x": 284.0,
+"y": 839.9,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_228",
+"x": 284.7,
+"y": -561.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_8",
+"x": 287.0,
+"y": -572.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_254",
+"x": 241.5,
+"y": -560.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_255",
+"x": 283.5,
+"y": -519.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_227",
+"x": 266.8,
+"y": -605.2,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_252",
+"x": 283.5,
+"y": -661.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_253",
+"x": 241.5,
+"y": -619.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_225",
+"x": 275.6,
+"y": -698.4,
+"zone": "Z3_CrimsonIsland_Pit",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_257",
+"x": 281.8,
+"y": -796.7,
+"zone": "Z3_CrimsonIsland_Pit",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_241",
+"x": 278.3,
+"y": -894.2,
+"zone": "Z3_CrimsonIsland_North",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_19",
+"x": 310.9,
+"y": 950.5,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_30",
+"x": 297.3,
+"y": 936.2,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_31",
+"x": 309.7,
+"y": 933.7,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_32",
+"x": 318.9,
+"y": 922.7,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_2",
+"x": 345.5,
+"y": 952.1,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_20",
+"x": 340.2,
+"y": 961.9,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_25",
+"x": 324.8,
+"y": 961.7,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_27",
+"x": 374.3,
+"y": 1302.1,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_14",
+"x": 334.2,
+"y": 1326.1,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_49",
+"x": 373.4,
+"y": 1302.8,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_50",
+"x": 357.4,
+"y": 1292.8,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_51",
+"x": 377.9,
+"y": 1316.8,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_52",
+"x": 383.9,
+"y": 1300.3,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_96",
+"x": 383.9,
+"y": 1439.0,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_95",
+"x": 380.8,
+"y": 1434.3,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_97",
+"x": 379.1,
+"y": 1440.4,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_73",
+"x": 289.9,
+"y": 839.2,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_279",
+"x": 351.0,
+"y": -966.0,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_233",
+"x": 342.4,
+"y": -1083.0,
+"zone": "Z3_CrimsonIsland_Prison",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_248",
+"x": 369.1,
+"y": -1138.0,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_224",
+"x": 363.3,
+"y": -447.1,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_55",
+"x": 372.5,
+"y": -446.8,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_50",
+"x": 313.5,
+"y": -562.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_209",
+"x": 304.9,
+"y": -591.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_210",
+"x": 304.9,
+"y": -587.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_242",
+"x": 369.3,
+"y": -639.7,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_226",
+"x": 290.3,
+"y": -580.1,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_212",
+"x": 373.5,
+"y": -703.8,
+"zone": "Z3_CrimsonIsland_Sewers",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_213",
+"x": 373.2,
+"y": -693.3,
+"zone": "Z3_CrimsonIsland_Sewers",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_214",
+"x": 373.1,
+"y": -680.9,
+"zone": "Z3_CrimsonIsland_Sewers",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_42",
+"x": 379.5,
+"y": -766.7,
+"zone": "Z3_CrimsonIsland_Sewers",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_280",
+"x": 350.8,
+"y": -762.0,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_18",
+"x": 367.0,
+"y": -864.0,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_83",
+"x": 438.4,
+"y": 975.5,
+"zone": "Z1_Primevalley_Lookout",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_16",
+"x": 391.9,
+"y": 1290.4,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_13",
+"x": 407.4,
+"y": 495.9,
+"zone": "Z2_Azuram_Veld",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_54",
+"x": 405.0,
+"y": -126.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_237",
+"x": 411.4,
+"y": -1051.3,
+"zone": "Z3_CrimsonIsland_Prison",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_238",
+"x": 411.4,
+"y": -1055.8,
+"zone": "Z3_CrimsonIsland_Prison",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_221",
+"x": 406.2,
+"y": -265.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_222",
+"x": 411.4,
+"y": -300.9,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_163",
+"x": 394.5,
+"y": -475.1,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_22",
+"x": 386.4,
+"y": -524.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_45",
+"x": 409.0,
+"y": -507.7,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_243",
+"x": 442.5,
+"y": -540.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_38",
+"x": 478.5,
+"y": -650.2,
+"zone": "Z3_CrimsonIsland_Sewers",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_49",
+"x": 390.4,
+"y": -600.1,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_46",
+"x": 394.4,
+"y": -679.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_245",
+"x": 402.5,
+"y": -739.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_161",
+"x": 565.2,
+"y": -187.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_56",
+"x": 568.0,
+"y": -188.7,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_162",
+"x": 508.2,
+"y": -187.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_13",
+"x": 532.5,
+"y": -982.7,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_17",
+"x": 493.0,
+"y": -1005.1,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_77",
+"x": 571.5,
+"y": -1005.1,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_220",
+"x": 548.9,
+"y": -1103.1,
+"zone": "Z3_CrimsonIsland_Garden",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_251",
+"x": 491.9,
+"y": -1077.5,
+"zone": "Z3_CrimsonIsland_Garden",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_240",
+"x": 563.9,
+"y": -1162.0,
+"zone": "Z3_CrimsonIsland_Garden",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_6",
+"x": 494.9,
+"y": -283.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_171",
+"x": 568.7,
+"y": -355.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_15",
+"x": 480.4,
+"y": -297.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_22",
+"x": 511.4,
+"y": -345.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_282",
+"x": 504.5,
+"y": -310.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_236",
+"x": 488.9,
+"y": -575.9,
+"zone": "Z3_CrimsonIsland_North",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_51",
+"x": 568.5,
+"y": -493.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_249",
+"x": 535.0,
+"y": -637.2,
+"zone": "Z3_CrimsonIsland_North",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_12",
+"x": 543.7,
+"y": -752.5,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_16",
+"x": 520.8,
+"y": -752.0,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_250",
+"x": 532.2,
+"y": -752.5,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_273",
+"x": 532.7,
+"y": -753.3,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_274",
+"x": 555.3,
+"y": -756.0,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_275",
+"x": 509.1,
+"y": -755.7,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_276",
+"x": 531.9,
+"y": -766.8,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_52",
+"x": 495.1,
+"y": -841.0,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_264",
+"x": 537.1,
+"y": -859.8,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_266",
+"x": 514.8,
+"y": -818.2,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_268",
+"x": 538.9,
+"y": -853.3,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_21",
+"x": 558.1,
+"y": -901.2,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_23",
+"x": 537.3,
+"y": -901.6,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_261",
+"x": 492.8,
+"y": -871.0,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_262",
+"x": 538.7,
+"y": -871.3,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_265",
+"x": 537.3,
+"y": -883.1,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_263",
+"x": 537.2,
+"y": -871.5,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_267",
+"x": 515.4,
+"y": -923.6,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_269",
+"x": 539.5,
+"y": -871.7,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_271",
+"x": 516.6,
+"y": -955.8,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_272",
+"x": 548.4,
+"y": -955.8,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_283",
+"x": 482.5,
+"y": -909.0,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_4",
+"x": 669.9,
+"y": 93.7,
+"zone": "Z2_Azuram_Fields",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_247",
+"x": 661.2,
+"y": -184.4,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_189",
+"x": 598.9,
+"y": -103.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_48",
+"x": 658.1,
+"y": -1110.9,
+"zone": "Z3_CrimsonIsland_Garden",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_19",
+"x": 622.1,
+"y": -316.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_7",
+"x": 609.9,
+"y": -297.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_260",
+"x": 665.8,
+"y": -291.1,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_14",
+"x": 583.4,
+"y": -390.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_281",
+"x": 660.1,
+"y": -410.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_235",
+"x": 581.9,
+"y": -575.9,
+"zone": "Z3_CrimsonIsland_North",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_246",
+"x": 598.1,
+"y": -526.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_219",
+"x": 651.9,
+"y": -697.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_217",
+"x": 640.2,
+"y": -701.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_218",
+"x": 641.3,
+"y": -694.6,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_47",
+"x": 595.4,
+"y": -843.2,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_270",
+"x": 598.4,
+"y": -871.5,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_284",
+"x": 582.8,
+"y": -909.6,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_12",
+"x": 678.9,
+"y": 497.6,
+"zone": "Z2_Azuram_Veld",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_20",
+"x": 720.2,
+"y": 584.6,
+"zone": "Z2_Azuram_Veld",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_53",
+"x": 742.5,
+"y": -172.9,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_20",
+"x": 714.7,
+"y": -1034.6,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_278",
+"x": 713.9,
+"y": -966.1,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_239",
+"x": 693.2,
+"y": -1069.9,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_180",
+"x": 678.2,
+"y": -213.2,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_211",
+"x": 678.2,
+"y": -257.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_234",
+"x": 678.3,
+"y": -261.3,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_258",
+"x": 672.7,
+"y": -285.7,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_215",
+"x": 680.7,
+"y": -380.9,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_216",
+"x": 680.0,
+"y": -362.3,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_25",
+"x": 743.6,
+"y": -307.1,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_259",
+"x": 672.5,
+"y": -296.6,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_29",
+"x": 682.9,
+"y": -453.0,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_256",
+"x": 695.4,
+"y": -441.4,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_277",
+"x": 714.0,
+"y": -761.9,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_16",
+"x": 850.8,
+"y": 1066.6,
+"zone": "Z2_Krisomal_Lighthouse",
+"region": "Z2_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_109",
+"x": 782.7,
+"y": 287.0,
+"zone": "Z2_Azuram_Road",
+"region": "Z2_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_14",
+"x": 827.4,
+"y": 321.3,
+"zone": "Z2_Azuram_Road",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_9",
+"x": 812.6,
+"y": 519.6,
+"zone": "Z2_Azuram_Veld",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_65",
+"x": 850.7,
+"y": 697.0,
+"zone": "Z2_Azuram_Mound",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_8",
+"x": 863.1,
+"y": 850.7,
+"zone": "Z2_Krisomal_Lighthouse",
+"region": "Z2_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_43",
+"x": 830.7,
+"y": -1129.9,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_128",
+"x": 770.7,
+"y": -380.3,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_160",
+"x": 770.7,
+"y": -365.6,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_59",
+"x": 781.5,
+"y": -373.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_18",
+"x": 783.8,
+"y": -735.7,
+"zone": "Z3_CrimsonIsland_Garden",
+"region": "Z3_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_223",
+"x": 829.2,
+"y": -856.0,
+"zone": "Z3_CrimsonIsland_North",
+"region": "Z3_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_5",
+"x": -1035.2,
+"y": -43.5,
+"zone": "Z1_BelEtir_Ruins",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_25",
+"x": -1031.1,
+"y": 1011.7,
+"zone": "Z1_Honeywoods_Foliage",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_22",
+"x": -981.5,
+"y": 1026.2,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_8",
+"x": -975.6,
+"y": 1099.4,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_79",
+"x": -995.9,
+"y": 1477.4,
+"zone": "Z1_Honeywoods_Isle",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_78",
+"x": -995.9,
+"y": 1477.4,
+"zone": "Z1_Honeywoods_Isle",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_80",
+"x": -995.9,
+"y": 1477.4,
+"zone": "Z1_Honeywoods_Isle",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_41",
+"x": -960.3,
+"y": 2244.2,
+"zone": "Z1_Meridion_Hills",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_34",
+"x": -1047.5,
+"y": 760.3,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_42",
+"x": -1030.8,
+"y": 767.4,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_46",
+"x": -1047.5,
+"y": -394.5,
+"zone": "Z1_BelEtir_Islets",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_3",
+"x": -1012.8,
+"y": -573.1,
+"zone": "Z1_BelEtir_Shore",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_27",
+"x": -1016.3,
+"y": -507.8,
+"zone": "Z1_BelEtir_Altar",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_2",
+"x": -1117.0,
+"y": 880.0,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_18",
+"x": -1081.8,
+"y": 897.9,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_19",
+"x": -1074.3,
+"y": 872.3,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_20",
+"x": -1104.0,
+"y": 869.5,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_28",
+"x": -1140.2,
+"y": 466.6,
+"zone": "Z1_Enripit_Falls",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_33",
+"x": -1071.0,
+"y": 647.8,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_57",
+"x": -1058.4,
+"y": 741.9,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_30",
+"x": -1139.1,
+"y": 773.6,
+"zone": "Z1_Honeywoods_Foliage",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_32",
+"x": -1231.0,
+"y": 1381.4,
+"zone": "Z1_Honeywoods_Piton",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_35",
+"x": -1188.2,
+"y": 562.2,
+"zone": "Z1_Enripit_Falls",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_38",
+"x": -1319.3,
+"y": -69.2,
+"zone": "Z1_BelEtir_Piton",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_33",
+"x": -1300.7,
+"y": 117.0,
+"zone": "Z1_BelEtir_Pond",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_7",
+"x": -1268.7,
+"y": 537.6,
+"zone": "Z1_Enripit_Falls",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_62",
+"x": -1288.8,
+"y": 543.2,
+"zone": "Z1_Enripit_Falls",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_88",
+"x": -1337.8,
+"y": 837.3,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_89",
+"x": -1333.0,
+"y": 842.5,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_91",
+"x": -1340.4,
+"y": 843.7,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_37",
+"x": -1395.4,
+"y": -72.6,
+"zone": "Z1_BelEtir_Piton",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_4",
+"x": -1360.6,
+"y": -121.1,
+"zone": "Z1_BelEtir_Piton",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_56",
+"x": -172.4,
+"y": 72.2,
+"zone": "Z1_Enripit_Bridge",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_60",
+"x": -153.5,
+"y": 64.2,
+"zone": "Z1_Enripit_Bridge",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_24",
+"x": -144.3,
+"y": 81.1,
+"zone": "Z1_Enripit_Bridge",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_11",
+"x": -145.5,
+"y": 1220.2,
+"zone": "Z1_Primevalley_Island",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_53",
+"x": -109.5,
+"y": 1315.6,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_63",
+"x": -120.5,
+"y": 1308.1,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_82",
+"x": -109.5,
+"y": 1300.1,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "vault",
+"id": "VaultChest_1",
+"x": -114.1,
+"y": 1308.0,
+"zone": "Z1_Primevalley_Coast",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_40",
+"x": -130.5,
+"y": 1712.5,
+"zone": "Z1_Meridion_Ruins",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_29",
+"x": -167.1,
+"y": 161.6,
+"zone": "Z1_Enripit_Rock",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_99",
+"x": -128.1,
+"y": 125.2,
+"zone": "Z1_Enripit_Rock",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_41",
+"x": -160.6,
+"y": 345.6,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_11",
+"x": -185.4,
+"y": 440.6,
+"zone": "Z1_Enripit_Plains",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_61",
+"x": -176.9,
+"y": 511.1,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_10",
+"x": -156.1,
+"y": 669.0,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_31",
+"x": -160.5,
+"y": 681.7,
+"zone": "Z1_Enripit_Fields",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_9",
+"x": -243.8,
+"y": 901.7,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_24",
+"x": -256.9,
+"y": 988.0,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_45",
+"x": -284.6,
+"y": 996.5,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_47",
+"x": -284.6,
+"y": 1005.5,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_43",
+"x": -278.1,
+"y": 1003.5,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_44",
+"x": -278.6,
+"y": 998.0,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_48",
+"x": -283.1,
+"y": 1001.0,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_17",
+"x": -208.2,
+"y": 1113.7,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_43",
+"x": -260.0,
+"y": 518.2,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_27",
+"x": -281.3,
+"y": 655.3,
+"zone": "Z1_Enripit_Camp",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "2Z1_World_Greenlands_WorldChest_36",
+"x": -262.3,
+"y": 708.0,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_33",
+"x": -212.0,
+"y": 716.0,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_28",
+"x": -370.7,
+"y": 1036.1,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_46",
+"x": -288.1,
+"y": 1001.0,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_44",
+"x": -325.2,
+"y": 1897.4,
+"zone": "Z1_Meridion_Beach",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_2",
+"x": -349.9,
+"y": 660.9,
+"zone": "Z1_Enripit_Camp",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_9",
+"x": -296.0,
+"y": 750.3,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_81",
+"x": -449.8,
+"y": 929.5,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_23",
+"x": -415.3,
+"y": 1073.1,
+"zone": "Z1_Primevalley_Col",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_35",
+"x": -393.0,
+"y": 1458.3,
+"zone": "Z1_Primevalley_Hub",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_49",
+"x": -478.8,
+"y": 2142.5,
+"zone": "Z1_Meridion_Cliff",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_50",
+"x": -473.0,
+"y": 650.6,
+"zone": "Z1_Enripit_Fields",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_84",
+"x": -519.7,
+"y": 1400.2,
+"zone": "Z1_Honeywoods_Grove",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "WorldLoot_18",
+"x": -574.9,
+"y": 1897.8,
+"zone": "Z1_Meridion_Cliff",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_2",
+"x": -518.7,
+"y": -386.3,
+"zone": "Z1_BelEtir_NuonCave",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_7",
+"x": -605.9,
+"y": 1064.7,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_92",
+"x": -605.3,
+"y": 1063.6,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_85",
+"x": -617.8,
+"y": 1247.3,
+"zone": "Z1_Honeywoods_Grove",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_86",
+"x": -659.9,
+"y": 1234.4,
+"zone": "Z1_Honeywoods_Grove",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_76",
+"x": -632.3,
+"y": 1426.6,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_77",
+"x": -622.5,
+"y": 1431.1,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_90",
+"x": -600.6,
+"y": 1423.7,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_87",
+"x": -604.6,
+"y": 1419.8,
+"zone": "Z1_Honeywoods_Grove",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_72",
+"x": -623.0,
+"y": 1441.5,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_8",
+"x": -647.8,
+"y": 1605.8,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_10",
+"x": -621.1,
+"y": 1621.4,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_12",
+"x": -637.1,
+"y": 1615.8,
+"zone": "Z1_Meridion_Sand",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_13",
+"x": -599.8,
+"y": 1623.5,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "WorldLoot_11",
+"x": -620.3,
+"y": 1640.6,
+"zone": "Z1_Meridion_Sand",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_37",
+"x": -635.0,
+"y": 228.3,
+"zone": "",
+"region": ""
+},
+{
+"c": "orb",
+"id": "RedOrb_World_54",
+"x": -585.9,
+"y": 245.0,
+"zone": "",
+"region": ""
+},
+{
+"c": "orb",
+"id": "RedOrb_World_58",
+"x": -604.2,
+"y": 312.6,
+"zone": "Z1_Enripit_Crest",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_6",
+"x": -578.3,
+"y": 330.3,
+"zone": "Z1_Enripit_Crest",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_55",
+"x": -613.0,
+"y": -443.7,
+"zone": "Z1_BelEtir_Cliff",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_56",
+"x": -742.7,
+"y": 14.6,
+"zone": "Z1_BelEtir_Gardens",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_57",
+"x": -705.1,
+"y": 93.8,
+"zone": "Z1_BelEtir_Gardens",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_54",
+"x": -722.2,
+"y": 1107.2,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_70",
+"x": -704.3,
+"y": 1329.9,
+"zone": "Z1_Honeywoods_Grove",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_71",
+"x": -722.9,
+"y": 1324.9,
+"zone": "Z1_Honeywoods_Grove",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_16",
+"x": -706.2,
+"y": 1360.6,
+"zone": "Z1_Honeywoods_Bay",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_17",
+"x": -703.3,
+"y": 1354.3,
+"zone": "Z1_Honeywoods_Bay",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_102",
+"x": -699.1,
+"y": 1361.6,
+"zone": "Z1_Honeywoods_Bay",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_6",
+"x": -749.6,
+"y": 1834.7,
+"zone": "Z1_Meridion_Strand",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_6",
+"x": -714.2,
+"y": 319.9,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_11",
+"x": -737.8,
+"y": 778.4,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_14",
+"x": -737.8,
+"y": 785.9,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_15",
+"x": -737.8,
+"y": 781.9,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_59",
+"x": -796.9,
+"y": 1203.0,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_55",
+"x": -821.2,
+"y": 1182.1,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_94",
+"x": -777.4,
+"y": 1867.9,
+"zone": "Z1_Meridion_Creek",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_93",
+"x": -773.9,
+"y": 1864.8,
+"zone": "Z1_Meridion_Creek",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_5",
+"x": -778.6,
+"y": 1863.2,
+"zone": "Z1_Meridion_Creek",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_36",
+"x": -819.9,
+"y": 1973.7,
+"zone": "Z1_Meridion_Meadow",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_63",
+"x": -777.0,
+"y": 2031.6,
+"zone": "Z1_Meridion_Meadow",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_38",
+"x": -861.0,
+"y": 522.3,
+"zone": "Z1_Enripit_Plains",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_39",
+"x": -834.0,
+"y": 552.8,
+"zone": "Z1_Enripit_Plains",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_61",
+"x": -858.5,
+"y": -715.5,
+"zone": "Z1_BelEtir_Islets",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_67",
+"x": -870.8,
+"y": 864.5,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_68",
+"x": -866.8,
+"y": 887.4,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_41",
+"x": -949.8,
+"y": 957.4,
+"zone": "Z1_Honeywoods_Foliage",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "Z1_World_Greenlands_WorldChest_62",
+"x": -956.2,
+"y": 1037.2,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_21",
+"x": -921.0,
+"y": 978.5,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_23",
+"x": -958.4,
+"y": 1020.0,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_64",
+"x": -952.1,
+"y": 1054.0,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_28",
+"x": -872.4,
+"y": 1040.8,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_65",
+"x": -866.2,
+"y": 1066.2,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "chest",
+"id": "W1_Siagarta_WorldChest_19",
+"x": -902.2,
+"y": 1758.7,
+"zone": "Z1_Meridion_Creek",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_7",
+"x": -936.1,
+"y": 1933.7,
+"zone": "Z1_Meridion_Bay",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_1",
+"x": -928.9,
+"y": 1937.0,
+"zone": "Z1_Meridion_Bay",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_98",
+"x": -924.4,
+"y": 1944.5,
+"zone": "Z1_Meridion_Bay",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_4",
+"x": -908.9,
+"y": 2031.7,
+"zone": "Z1_Meridion_Meadow",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_2",
+"x": -904.9,
+"y": 2033.7,
+"zone": "Z1_Meridion_Meadow",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_3",
+"x": -904.9,
+"y": 2029.2,
+"zone": "Z1_Meridion_Meadow",
+"region": "Z1_Region"
+},
+{
+"c": "recipe",
+"id": "Recipe_Chest_Root_12",
+"x": -930.1,
+"y": 454.3,
+"zone": "Z1_Enripit_Crest",
+"region": "Z1_Region"
+},
+{
+"c": "orb",
+"id": "RedOrb_World_40",
+"x": -882.2,
+"y": 543.3,
+"zone": "Z1_Enripit_Plains",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_25",
+"x": -26.2,
+"y": 561.6,
+"zone": "Z1_Enripit_Hill",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_28",
+"x": -181.6,
+"y": 525.6,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "W1_Siagarta_RespawnPoint_1",
+"x": -330.2,
+"y": 954.2,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_21",
+"x": -181.7,
+"y": 1393.4,
+"zone": "Z1_Primevalley_Plain",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_19",
+"x": -239.8,
+"y": 1963.5,
+"zone": "Z1_Meridion_Beach",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "RespawnZone",
+"x": 113.1,
+"y": 848.4,
+"zone": "",
+"region": ""
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_31",
+"x": 538.6,
+"y": -245.9,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_29",
+"x": 427.4,
+"y": 364.6,
+"zone": "Z2_Azuram_Veld",
+"region": "Z2_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_33",
+"x": 532.6,
+"y": -775.9,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_36",
+"x": 679.7,
+"y": -887.9,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "respawn",
+"id": "W1_Siagarta_RespawnPoint_2",
+"x": 617.8,
+"y": -922.2,
+"zone": "Z3_CrimsonIsland_Library",
+"region": "Z3_Region"
+},
+{
+"c": "respawn",
+"id": "W1_Siagarta_RespawnPoint_3",
+"x": 390.7,
+"y": -898.1,
+"zone": "Z3_CrimsonIsland_Cathedral",
+"region": "Z3_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_27",
+"x": 1094.8,
+"y": 781.1,
+"zone": "Z2_Krisomal_Hill",
+"region": "Z2_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_35",
+"x": 800.1,
+"y": -831.4,
+"zone": "Z3_CrimsonIsland_Beach",
+"region": "Z3_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_15",
+"x": -720.6,
+"y": -62.7,
+"zone": "Z1_BelEtir_Gardens",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_26",
+"x": -394.9,
+"y": -277.6,
+"zone": "Z1_BelEtir_Gardens",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_30",
+"x": -560.9,
+"y": 368.9,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_14",
+"x": -655.2,
+"y": 472.4,
+"zone": "Z1_Enripit_Crest",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_13",
+"x": -696.6,
+"y": 1450.4,
+"zone": "Z1_Primevalley_Hump",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_12",
+"x": -498.1,
+"y": 1746.6,
+"zone": "Z1_Meridion_Sand",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "RespawnZone",
+"x": -517.9,
+"y": 1970.1,
+"zone": "",
+"region": ""
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_10",
+"x": -1032.7,
+"y": -214.2,
+"zone": "Z1_BelEtir_Shore",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_8",
+"x": -1024.4,
+"y": 565.1,
+"zone": "Z1_Enripit_Hollow",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_6",
+"x": -978.4,
+"y": 879.7,
+"zone": "Z1_Honeywoods_Root",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_5",
+"x": -971.3,
+"y": 1010.0,
+"zone": "Z1_Honeywoods_Foliage",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_9",
+"x": -1064.1,
+"y": 919.3,
+"zone": "Z1_Honeywoods_Canopy",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_4",
+"x": -964.3,
+"y": 1394.6,
+"zone": "Z1_Honeywoods_Isle",
+"region": "Z1_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_3",
+"x": -1355.6,
+"y": -164.7,
+"zone": "Z1_BelEtir_Piton",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "respawn",
+"id": "Z1_World_Greenlands_RespawnPoint_7",
+"x": -1317.0,
+"y": 852.2,
+"zone": "Z1_Honeywoods_Cave",
+"region": "Z1_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_3",
+"x": -395.0,
+"y": 1460.0,
+"zone": "Z1_Primevalley_Hub",
+"region": "Z1_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_27",
+"x": -994.0,
+"y": 54.0,
+"zone": "Z1_BelEtir_Ruins",
+"region": "Bel_Etir_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_25",
+"x": -604.5,
+"y": 310.5,
+"zone": "Z1_Enripit_Crest",
+"region": "Z1_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_6",
+"x": -799.5,
+"y": 1203.0,
+"zone": "Z1_Honeywoods_Forest",
+"region": "Z1_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_1",
+"x": -822.3,
+"y": 1973.1,
+"zone": "Z1_Meridion_Meadow",
+"region": "Z1_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_10",
+"x": 535.0,
+"y": -639.5,
+"zone": "Z3_CrimsonIsland_North",
+"region": "Z3_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_16",
+"x": 1325.0,
+"y": -502.5,
+"zone": "Z2_Eksod_Kobolds",
+"region": "Z2_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_11",
+"x": 601.5,
+"y": -103.5,
+"zone": "Z3_CrimsonIsland_South",
+"region": "Z3_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_29",
+"x": 1362.5,
+"y": 228.5,
+"zone": "Z2_Azuram_Hub",
+"region": "Z2_Region"
+},
+{
+"c": "obelisk",
+"id": "W1_Siagarta_Obelisk_1",
+"x": 1579.5,
+"y": 1459.5,
+"zone": "Z2_Krisomal_Port",
+"region": "Z2_Region"
+},
+{
+"c": "obelisk",
+"id": "Z1_World_Greenlands_Obelisk_20",
+"x": 1822.5,
+"y": 112.5,
+"zone": "Z2_Nescent_Flowers",
+"region": "Z2_Region"
+}
+]
+}

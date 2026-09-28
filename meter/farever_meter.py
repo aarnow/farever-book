@@ -2716,12 +2716,12 @@ def _wants_params(fn):
 # ---------------------------------------------------------------------------
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
-APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Settings",
-            "Help")
+APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
+            "Settings", "Help")
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
-                  "Hunt": "Chasse",
+                  "Hunt": "Chasse", "Map": "Carte",
                   "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
@@ -3263,6 +3263,7 @@ class App:
                    "Dungeons": self._page_dungeons,
                    "Collection": self._page_collection,
                    "Hunt": self._page_hunt,
+                   "Map": self._page_map,
                    "Settings": self._page_settings,
                    "Help": self._page_help}.get(tab)
         try:
@@ -3581,6 +3582,9 @@ class App:
         return [{"k": "hunt", "id": "hunt", "sync": sync,
                  **bestiary_view(entry.get("ranks") or {},
                                  self._collection())}]
+
+    def _page_map(self):
+        return [{"k": "map", "id": "map", **map_view()}]
 
     def _collection(self):
         if self._collection_owned is None:
@@ -4819,6 +4823,59 @@ def bestiary_view(ranks, owned=None):
             "total": sum(i["kills"] for i in items)}
 
 
+_WORLD_MAP = None
+
+
+def world_map():
+    """{"meta": tiles and transform, "points": [{c, id, x, y, zone,
+    region}]} from analysis_out/map.json (hltools/map_data.py)."""
+    global _WORLD_MAP
+    if _WORLD_MAP is None:
+        try:
+            _WORLD_MAP = json.loads(
+                (ANALYSIS / "map.json").read_text(encoding="utf-8"))
+        except Exception:
+            _WORLD_MAP = {}
+    return _WORLD_MAP
+
+
+# category -> (label, group). The groups are the map panel's sections.
+MAP_CATS = {"chest": ("Coffre du monde", "Coffres"),
+            "vault": ("Coffre de chambre forte", "Coffres"),
+            "recipe": ("Coffre de recette", "Coffres"),
+            "orb": ("Orbe rouge", "Orbes"),
+            "obelisk": ("Obélisque", "Utilitaires"),
+            "respawn": ("Point de réapparition", "Utilitaires")}
+
+
+def map_view():
+    """The Map tab's data: the tile grid, every point with its French zone
+    and region, and the categories and regions with their counts."""
+    wm = world_map()
+    pts = []
+    for p in wm.get("points") or ():
+        if p.get("c") not in MAP_CATS:
+            continue
+        num = re.search(r"(\d+)$", str(p.get("id") or ""))
+        pts.append({"c": p["c"], "x": p["x"], "y": p["y"],
+                    "n": int(num.group(1)) if num else 0,
+                    "z": _zone_label(p["zone"]) if p.get("zone") else "",
+                    "r": p.get("region") or "other"})
+    cats = [{"v": k, "t": t, "g": g, "n": sum(1 for p in pts if p["c"] == k)}
+            for k, (t, g) in MAP_CATS.items()]
+    regions = []
+    seen = sorted({p["r"] for p in pts} - {"other"},
+                  key=lambda r: (r not in HUNT_REGIONS, r))
+    for r in seen + ["other"]:
+        n = sum(1 for p in pts if p["r"] == r)
+        if n:
+            regions.append({"v": r, "n": n,
+                            "t": _fr_names("zone").get(r) or _pretty_id(r)
+                            if r != "other" else "Autres"})
+    return {"meta": wm.get("meta") or {}, "points": pts, "cats": cats,
+            "regions": regions}
+
+
 _UNIT_NAMES = None
 
 
@@ -5216,6 +5273,10 @@ def _data_is_current():
             return False
     except (OSError, ValueError):
         pass
+    if not (ANALYSIS / "map.json").exists():
+        print("[meter] map.json absent — regenerating for the Map tab.",
+              file=sys.stderr)
+        return False
     if not (ANALYSIS / "bestiary.json").exists():
         print("[meter] bestiary.json absent — regenerating for the hunting "
               "log.", file=sys.stderr)

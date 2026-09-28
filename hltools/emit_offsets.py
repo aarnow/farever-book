@@ -472,6 +472,15 @@ def main():
             print(f"[written] {out_best} ({len(best)} monsters)")
         except Exception as e:
             print(f"[!] bestiary skipped ({e})")
+        try:
+            import map_data
+            wmap = map_data.build(Path(hlboot).parent, _OUT_DIR / "map_tiles")
+            out_map = _OUT_DIR / "map.json"
+            out_map.write_text(json.dumps(wmap, indent=0), encoding="utf-8")
+            print(f"[written] {out_map} ({len(wmap['points'])} points, "
+                  f"{len(wmap['meta']['tiles'])} tiles)")
+        except Exception as e:
+            print(f"[!] world map skipped ({e})")
         dungeons = extract_dungeons(Path(hlboot).parent)
         out_dg = _OUT_DIR / "dungeons.json"
         out_dg.write_text(json.dumps(dungeons, indent=0), encoding="utf-8")

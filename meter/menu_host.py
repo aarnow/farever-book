@@ -251,7 +251,7 @@ class AppWindow:
         2 MB limit on an HTML string, and the window came up blank."""
         self._images_sent = True
         for ns, folder in (("coll", "collection_img"),
-                           ("best", "bestiary_img")):
+                           ("best", "bestiary_img"), ("map", "map_tiles")):
             imgs = list(_analysis_images(folder).items())
             for i in range(0, len(imgs), 40):
                 chunk = json.dumps(dict(imgs[i:i + 40]))

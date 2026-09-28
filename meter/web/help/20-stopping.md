@@ -39,6 +39,10 @@ seul à la prochaine session.
 * **Chasse** — ton tableau de chasse : combien de fois ton personnage a tué
   chaque monstre, d'après le Codex du jeu, et le rang atteint.
 
+* **Carte** — la carte du monde avec les coffres, les orbes rouges, les
+  obélisques et les points de réapparition. Glisse pour te déplacer, molette
+  pour zoomer, clic sur un point pour son détail.
+
 Le minuteur de faille est toujours visible en bas du menu : il compte jusqu'à
 la prochaine faille (elles s'ouvrent à chaque heure pile), puis les 3 minutes
 pendant lesquelles le portail reste ouvert.
