@@ -352,6 +352,21 @@ def _element_show_key(key):
     return key
 
 
+# ---------------------------------------------------------------------------
+# Second-screen mode
+# ---------------------------------------------------------------------------
+# With it on, these windows stop being an overlay: they get a normal title bar,
+# leave "always on top", take clicks, and stay up whatever the game is doing —
+# so they can sit on another monitor without ever covering the game. The
+# floating bits that only make sense over the action (rift timer and prompt,
+# kill / parse / reset banners, the settings hint) stay overlays.
+SCREEN2_KEYS = ("meter", "detail", "report")
+SCREEN2_TITLES = {"meter": "Farever+ — Compteur",
+                  "detail": "Farever+ — Détail",
+                  "report": "Farever+ — Rapport de faille"}
+# Where a first-time second-screen window lands on the other monitor.
+SCREEN2_MARGIN = 40
+
 # Elements the out-of-combat rule doesn't touch. The rift countdown is most use
 # exactly when you're standing around between pulls, so hiding it out of combat
 # would hide it for its whole useful life.
@@ -2455,6 +2470,43 @@ def _main_hwnd_of_pid(pid):
     return best["hwnd"]
 
 
+class _MONITORINFO(ctypes.Structure):
+    _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT),
+                ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+
+
+def _monitor_work_areas():
+    """Every monitor's work area (the screen minus the taskbar), as
+    (left, top, right, bottom) in physical pixels. Empty off Windows."""
+    if sys.platform != "win32":
+        return []
+    out = []
+    proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
+                              ctypes.POINTER(wintypes.RECT), wintypes.LPARAM)
+
+    def visit(hmon, _hdc, _rect, _data):
+        mi = _MONITORINFO()
+        mi.cbSize = ctypes.sizeof(_MONITORINFO)
+        if ctypes.windll.user32.GetMonitorInfoW(hmon, ctypes.byref(mi)):
+            r = mi.rcWork
+            out.append((r.left, r.top, r.right, r.bottom))
+        return True
+
+    try:
+        ctypes.windll.user32.EnumDisplayMonitors(None, None, proc(visit), 0)
+    except Exception:
+        return []
+    return out
+
+
+def _monitor_containing(x, y):
+    """The work area of the monitor holding (x, y), or None."""
+    for r in _monitor_work_areas():
+        if r[0] <= x < r[2] and r[1] <= y < r[3]:
+            return r
+    return None
+
+
 def _window_rect_of_pid(pid):
     """(left, top, right, bottom) of a process's largest visible top-level
     window, or None. Used to centre the control menu on the game rather than on
@@ -2787,6 +2839,7 @@ IMAGE_ICON, LR_LOADFROMFILE = 1, 0x0010
 SM_CXSMICON, SM_CYSMICON = 49, 50
 
 TRAY_QUIT, TRAY_LOG, TRAY_PARSES = 1001, 1002, 1003
+TRAY_SETTINGS = 1004
 
 WNDPROC = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, wintypes.HWND, wintypes.UINT,
                              wintypes.WPARAM, wintypes.LPARAM)
@@ -2911,6 +2964,7 @@ class TrayIcon:
     def _menu(self):
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
+        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Ouvrir les réglages")
         u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des parses")
         u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Ouvrir le dossier du journal")
         u.AppendMenuW(m, MF_SEPARATOR, 0, None)
@@ -2929,6 +2983,12 @@ class TrayIcon:
     def _on_command(self, cmd):
         if cmd == TRAY_QUIT:
             self.on_quit()
+        elif cmd == TRAY_SETTINGS:
+            # The tray runs on its own thread; the overlay's Tk work has to be
+            # queued onto the Tk one.
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov._enqueue(ov.open_settings_from_tray)()
         elif cmd == TRAY_LOG:
             try:
                 DATA_HOME.mkdir(parents=True, exist_ok=True)
@@ -3382,6 +3442,12 @@ class Overlay:
         self._history_query_text = ""
         self._history_note_text = ""
         self._hide_ooc = False         # "hide out of combat" setting
+        # Second-screen mode — see SCREEN2_KEYS.
+        self._screen2 = False
+        # The settings panel opened from the tray icon rather than from the
+        # game's escape menu: shown until it is closed, whatever the game does.
+        self._panel_forced = False
+        self._s2_save_job = None       # debounced save after a native move
         self._best_times = self._load_best_times()   # fastest boss kills, secs by kind
         # _show is what the player asked for, _shown is what's actually mapped
         # (they differ while out-of-combat hiding is in effect).
@@ -3483,6 +3549,9 @@ class Overlay:
         self._apply_history_setting()
 
         pos = self._load_positions()
+        # Every saved position, both modes' — _save_pos writes the current
+        # mode's windows into it and keeps the other mode's untouched.
+        self._pos_mem = dict(pos)
         # The panel is not a Tk window, so it is not in _place_windows' list —
         # it takes its geometry with it when it is spawned instead.
         self._panel_geom = pos.get("panel") or {}
@@ -3644,6 +3713,17 @@ class Overlay:
         for key, win in self._fade_win.items():
             if not self._shown[key]:
                 win.withdraw()
+        # A window that moves by its own title bar never goes through
+        # _bind_drag, so its new place is saved from here instead.
+        for win in (self.root, self.detail, self.reportwin):
+            win.bind("<Configure>",
+                     lambda e, w=win: self._on_s2_configure(e, w), add="+")
+            # The title bar's ✕ must not end the program (closing the Tk root
+            # would): it just puts the window away in the taskbar.
+            win.protocol("WM_DELETE_WINDOW", lambda w=win: self._on_s2_close(w))
+        if self._screen2:
+            self._apply_window_mode()
+            self._place_mode_windows()
         self.root.after(60, self._apply_clickthrough)
         self._install_hotkeys()
 
@@ -3672,7 +3752,8 @@ class Overlay:
             except Exception:
                 return {}
         out = {}
-        for key in ("meter", "detail", "menu", "rift"):
+        for key in ("meter", "detail", "menu", "rift",
+                    "s2_meter", "s2_detail", "s2_report"):
             try:
                 out[key] = at(d[key]["x"], d[key]["y"])
             except Exception:
@@ -3810,6 +3891,8 @@ class Overlay:
             self.mode = data["mode"]
         if isinstance(data.get("hide_ooc"), bool):
             self._hide_ooc = data["hide_ooc"]
+        if isinstance(data.get("screen2"), bool):
+            self._screen2 = data["screen2"]
         if isinstance(data.get("auto_reset_boss"), bool):
             self._auto_reset_boss = data["auto_reset_boss"]
         if isinstance(data.get("rift_auto_view"), bool):
@@ -3867,6 +3950,7 @@ class Overlay:
                 "reset_bind": dict(RESET_BIND),
                 "mode": self.mode,
                 "hide_ooc": self._hide_ooc,
+                "screen2": bool(self._screen2),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "rift_auto_view": bool(self._rift_auto_view),
                 "scales": {g: round(self._scales[g], 3)
@@ -3880,28 +3964,44 @@ class Overlay:
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
 
+    @staticmethod
+    def _win_xy(win):
+        """A window's position as its geometry string states it — the same
+        reference point geometry("+x+y") sets, title bar or not."""
+        m = re.match(r"\d+x\d+[+-](-?\d+)[+-](-?\d+)", win.geometry())
+        if m:
+            return int(m.group(1)), int(m.group(2))
+        return win.winfo_x(), win.winfo_y()
+
     def _save_pos(self):
         self._save_settings()
+        mem = self._pos_mem
+        # The meter, breakdown and report each keep one position per mode, so
+        # switching back and forth puts them back where they were in each.
+        prefix = "s2_" if self._screen2 else ""
+        mem[prefix + "meter"] = self._win_xy(self.root)
+        mem[prefix + "detail"] = self._win_xy(self.detail)
+        if self._screen2 and self._report_open:
+            mem["s2_report"] = self._win_xy(self.reportwin)
+        mem["menu"] = (self.menu.winfo_x(), self.menu.winfo_y())
+        mem["rift"] = (self.riftwin.winfo_x(), self.riftwin.winfo_y())
+        out = {
+            # Stamps which coordinate space these are in, so the next load
+            # knows whether they need migrating — see _load_positions.
+            "space": "physical",
+            # Whatever the panel last told us it was — see MenuBridge.geom.
+            # Falls back to the geometry we started it with, so closing the
+            # meter without ever having moved the panel doesn't wipe it.
+            "panel": (self.menubridge.geom or self._panel_geom or {}),
+        }
+        for key, xy in mem.items():
+            if key != "panel" and isinstance(xy, (tuple, list)):
+                out[key] = {"x": int(xy[0]), "y": int(xy[1])}
         try:
-            POSITION_CACHE.write_text(json.dumps({
-                # Stamps which coordinate space these are in, so the next load
-                # knows whether they need migrating — see _load_positions.
-                "space": "physical",
-                "meter": {"x": self.root.winfo_x(), "y": self.root.winfo_y()},
-                "detail": {"x": self.detail.winfo_x(),
-                           "y": self.detail.winfo_y()},
-                "menu": {"x": self.menu.winfo_x(), "y": self.menu.winfo_y()},
-                "rift": {"x": self.riftwin.winfo_x(),
-                         "y": self.riftwin.winfo_y()},
-                # Whatever the panel last told us it was — see MenuBridge.geom.
-                # Falls back to the geometry we started it with, so closing the
-                # meter without ever having moved the panel doesn't wipe it.
-                "panel": (self.menubridge.geom or self._panel_geom or {}),
-            }))
+            POSITION_CACHE.write_text(json.dumps(out))
         except OSError:
             pass
 
-    # ---- UI ----
     def _build_meter(self):
         self.m_border = border = tk.Frame(self.root, bg=BG_BORDER, padx=2, pady=2)
         border.pack(fill="both", expand=True)
@@ -4340,6 +4440,18 @@ class Overlay:
         out += [
             {"k": "note", "t": "Le minuteur de faille utilise les polices du "
                                "compteur : il suit donc sa taille."},
+            {"k": "section", "t": "2nd écran"},
+            {"k": "button", "id": "toggle_screen2",
+             "t": self._tick(self._screen2, "Mode 2nd écran")},
+            {"k": "note", "t": "Le compteur, le détail et le rapport de faille "
+                               "deviennent des fenêtres normales, avec une "
+                               "barre de titre : déplace-les sur un autre "
+                               "écran, ils ne passent plus jamais par-dessus "
+                               "le jeu et restent affichés même quand tu "
+                               "utilises une autre application. Le minuteur "
+                               "de faille et les notifications restent sur "
+                               "l'écran du jeu. Les réglages s'ouvrent aussi "
+                               "depuis l'icône Farever+ près de l'horloge."},
             {"k": "section", "t": "Contenu"},
             {"k": "button", "id": "toggle_heal",
              "t": self._tick(self._show_heal, "Colonnes de soins")},
@@ -4486,6 +4598,7 @@ class Overlay:
             # -- Windows
             "toggle_heal": self._toggle_heal,
             "toggle_hide_ooc": self._toggle_hide_ooc,
+            "toggle_screen2": self._toggle_screen2,
             # -- Actions
             "reopen_report": self._reopen_report,
             "open_parses": self._open_parses,
@@ -4646,6 +4759,12 @@ class Overlay:
         where a posted message only works for a window that pumps for it.
         """
         self._typing = False
+        if self._panel_forced:
+            # Opened from the tray: Escape closes the panel itself, and the
+            # game's menu — which was never opened — is left alone.
+            self._panel_forced = False
+            self._refresh_visibility()
+            return
         self._refocus_game()
         self.root.after(PANEL_ESC_REPLAY_MS, self._replay_escape)
 
@@ -4676,6 +4795,7 @@ class Overlay:
         when I press Esc".
         """
         self._panel_visible = False
+        self._panel_forced = False
         self.menubridge.invalidate()
 
 
@@ -5351,11 +5471,21 @@ class Overlay:
         self._render_report()
         self._report_open = True
         self.reportwin.update_idletasks()
-        l, t, r, b = self._game_rect()
         w = max(self.reportwin.winfo_reqwidth(), 300)
         h = max(self.reportwin.winfo_reqheight(), 200)
-        self.reportwin.geometry(
-            f"+{l + ((r - l) - w) // 2}+{t + ((b - t) - h) // 2}")
+        saved = self._pos_mem.get("s2_report") if self._screen2 else None
+        if saved and self._pos_visible(*saved):
+            self.reportwin.geometry(f"+{saved[0]}+{saved[1]}")
+        else:
+            if self._screen2:
+                # Centred on the meter's monitor, not over the game.
+                mx, my = self._win_xy(self.root)
+                l, t, r, b = (_monitor_containing(mx + 10, my + 10)
+                              or self._game_rect())
+            else:
+                l, t, r, b = self._game_rect()
+            self.reportwin.geometry(
+                f"+{l + ((r - l) - w) // 2}+{t + ((b - t) - h) // 2}")
         self._apply_clickthrough()   # the card has to be clickable
         self._refresh_visibility()
 
@@ -6027,7 +6157,10 @@ class Overlay:
         stopped moving.
         """
         state = {}
-        free = unlocked or (lambda: not self._is_locked())
+        base_free = unlocked or (lambda: not self._is_locked())
+
+        def free():
+            return self._screen2_win(win) or base_free()
 
         def start(e):
             # A whole-window handle (the rift report binds its Toplevel, which
@@ -6052,7 +6185,8 @@ class Overlay:
         def end(e):
             if state.pop("on", None):
                 self._save_pos()
-                self._refocus_game()
+                if not self._screen2_win(win):
+                    self._refocus_game()
 
         for w in widgets:
             w.bind("<Button-1>", start)
@@ -6185,7 +6319,7 @@ class Overlay:
     def _on_row_click(self, name):
         # Same rule as the window's click-through, or the row would be
         # clickable-looking and inert while the mouse is free.
-        if self._mouse_available() and name:
+        if (self._screen2 or self._mouse_available()) and name:
             self.focus_player = name
 
     def _set_win_clickthrough(self, win, enabled, activatable=False):
@@ -6252,6 +6386,11 @@ class Overlay:
         # The rift report too: close and copy are its whole interface, and it
         # only ever appears the moment the fight (and the danger) is over.
         self._set_win_clickthrough(self.reportwin, False)
+        # Second-screen windows are ordinary windows: clickable, and allowed
+        # to take focus like any other application's.
+        if self._screen2:
+            for win in (self.root, self.detail, self.reportwin):
+                self._set_win_clickthrough(win, False, activatable=True)
 
 
     def _sync_game_ui(self):
@@ -6730,12 +6869,16 @@ class Overlay:
         changed = False
         for key in self._element_win:
             show_key = _element_show_key(key)
-            hidden = blanket or (ooc_hidden and show_key not in OOC_EXEMPT)
+            # A second-screen window is not over the game, so none of the
+            # rules that keep the game's screen clear apply to it.
+            s2 = self._screen2_key(key)
+            hidden = not s2 and (
+                blanket or (ooc_hidden and show_key not in OOC_EXEMPT))
             mode = self._show.get(show_key, ELEMENT_SHOW)
             if mode == ELEMENT_HIDE:
                 base = False           # hidden, and stays hidden in the menu
             elif mode == ELEMENT_ESC:
-                base = self._menu_unlock
+                base = s2 or self._menu_unlock
             else:
                 base = True
             want = base and not hidden
@@ -6753,7 +6896,8 @@ class Overlay:
             # whose only content is the fact that it has none. It comes back
             # the moment anything is recorded, and the escape menu still shows
             # it regardless, so the Show/hide tick can be seen to do something.
-            if key == "detail" and self._detail_idle and not self._menu_unlock:
+            if (key == "detail" and self._detail_idle and not self._menu_unlock
+                    and not s2):
                 want = False
             changed |= self._want_visible(key, want)
         # ...and the control menu goes with everything else when you alt-tab.
@@ -6767,15 +6911,17 @@ class Overlay:
         # the one you were trying to get out of the way.
         menu_visible = (self._menu_unlock and not self._prompt_open
                         and self._focused and not menu_hidden)
+        # Opened from the tray icon: up until it is closed, game or no game.
+        panel_visible = menu_visible or self._panel_forced
         # Whatever route the menu leaves by — Esc, alt-tab, the game opening
         # something over it — the keyboard leaves with it if a search box was
         # holding it.
-        if not menu_visible:
+        if not panel_visible:
             self._stop_typing()
         # The WebView2 settings panel follows exactly the same rule, and is
         # started the first time it is wanted rather than at launch — a player
         # who never opens the menu never pays for a second process.
-        self._sync_panel(menu_visible)
+        self._sync_panel(panel_visible)
         # The Tk control menu is retired: the WebView2 panel above is the
         # settings UI now. Its widgets are still built — 200-odd places across
         # this file still reference them, and unpicking that is a separate job
@@ -6792,8 +6938,8 @@ class Overlay:
         # just died, so out-of-combat is precisely when it exists. It stays up
         # until its ✕ is clicked; a card that vanished on its own before you
         # could read the numbers would be worse than no card.
-        changed |= self._want_visible("report",
-                                      self._report_open and not blanket)
+        changed |= self._want_visible(
+            "report", self._report_open and (self._screen2 or not blanket))
         if changed:
             self._start_fade()
 
@@ -6916,14 +7062,16 @@ class Overlay:
             win.attributes("-alpha", self._alpha[key])
             if visible:
                 win.deiconify()
-                win.attributes("-topmost", True)
+                if not self._screen2_key(key):
+                    win.attributes("-topmost", True)
             else:
                 win.withdraw()
             return True
         if visible:
             win.attributes("-alpha", self._alpha[key])
             win.deiconify()
-            win.attributes("-topmost", True)   # re-assert over the game's UI
+            if not self._screen2_key(key):
+                win.attributes("-topmost", True)   # re-assert over the game
         return True
 
     def _start_fade(self):
@@ -7028,6 +7176,8 @@ class Overlay:
         The slider is a percentage taken OFF the overlay's normal opacity, so 0
         is the look the meter has always had rather than a subtly different
         one. The exempt windows ignore it entirely."""
+        if self._screen2_key(key):
+            return 1.0          # a normal window: fully opaque
         if key in TRANSPARENCY_EXEMPT or not self._transparency:
             return OVERLAY_ALPHA
         return OVERLAY_ALPHA * (1.0 - min(TRANSPARENCY_MAX,
@@ -7084,14 +7234,147 @@ class Overlay:
             self._fade_job = self.root.after(FADE_STEP_MS, self._step_fade)
 
     def _reset_pos(self):
+        """Back to the default places — for the current mode only, so resetting
+        the second-screen layout doesn't also throw away the overlay one."""
+        if self._screen2:
+            for key in ("s2_meter", "s2_detail", "s2_report"):
+                self._pos_mem.pop(key, None)
+            self._place_mode_windows()
+        else:
+            for key in ("meter", "detail", "menu", "rift"):
+                self._pos_mem.pop(key, None)
+            self._default_meter_pos()
+            self._default_detail_pos()
+            self._default_menu_pos()
+            self._default_rift_pos()
+        self._save_pos()
+
+    # ---- second-screen mode ----
+    def _screen2_key(self, key):
+        return self._screen2 and key in SCREEN2_KEYS
+
+    def _screen2_win(self, win):
+        return self._screen2 and win in (self.root, self.detail, self.reportwin)
+
+    def _toggle_screen2(self):
+        self._save_pos()                # remember this mode's layout first
+        self._screen2 = not self._screen2
+        self._save_settings()
+        self._apply_window_mode()
+        self._place_mode_windows()
+        self._save_pos()
+        self._refresh_visibility()
+        self._refresh_menu()
+        print(f"[meter] second-screen mode {'on' if self._screen2 else 'off'}",
+              file=sys.stderr)
+
+    def _apply_window_mode(self):
+        """Turn the meter, breakdown and report into normal windows (second
+        screen) or back into overlay windows.
+
+        The window is withdrawn around the change: Tk only applies
+        overrideredirect when the window is next mapped, and it rebuilds the
+        Windows wrapper while doing so — which is why click-through is
+        re-applied at the end, on the new wrapper."""
+        normal = self._screen2
+        for key, win in (("meter", self.root), ("detail", self.detail),
+                         ("report", self.reportwin)):
+            win.withdraw()
+            win.overrideredirect(not normal)
+            try:
+                win.wm_attributes("-transparentcolor",
+                                  "" if normal else TRANSPARENT_KEY)
+            except tk.TclError:
+                pass
+            win.attributes("-topmost", not normal)
+            if normal:
+                win.title(SCREEN2_TITLES[key])
+                # Sized by their content (and the size sliders), as before.
+                win.resizable(False, False)
+            self._alpha[key] = (self._alpha_for(key) if self._shown.get(key)
+                                else 0.0)
+            win.attributes("-alpha", self._alpha[key])
+            if self._shown.get(key):
+                win.deiconify()
+        self.root.update_idletasks()
+        self._apply_clickthrough()
+
+    def _place_mode_windows(self):
+        """Put the meter and breakdown where they were last left in the current
+        mode, or in the mode's default place."""
+        mem = self._pos_mem
+        if not self._screen2:
+            m, d = mem.get("meter"), mem.get("detail")
+            if m and self._pos_visible(*m):
+                self.root.geometry(f"+{m[0]}+{m[1]}")
+            else:
+                self._default_meter_pos()
+            self.root.update_idletasks()
+            if d and self._pos_visible(*d):
+                self.detail.geometry(f"+{d[0]}+{d[1]}")
+            else:
+                self._default_detail_pos()
+            return
+        m, d = mem.get("s2_meter"), mem.get("s2_detail")
+        if m and self._pos_visible(*m):
+            self.root.geometry(f"+{m[0]}+{m[1]}")
+        else:
+            # First time: on a monitor the game isn't on, if there is one.
+            l, t, r, b = self._screen2_default_area()
+            self.root.geometry(f"+{l + SCREEN2_MARGIN}+{t + SCREEN2_MARGIN}")
+        self.root.update_idletasks()
+        if d and self._pos_visible(*d):
+            self.detail.geometry(f"+{d[0]}+{d[1]}")
+        else:
+            x, y = self._win_xy(self.root)
+            h = max(self.root.winfo_reqheight(), self.root.winfo_height(), 240)
+            self.detail.geometry(f"+{x}+{y + h + 50}")
+
+    def _screen2_default_area(self):
+        """The work area of a monitor the game is not on, or the game's own
+        monitor when there is only one."""
+        l, t, r, b = self._game_rect()
+        cx, cy = (l + r) // 2, (t + b) // 2
+        areas = _monitor_work_areas()
+        for a in areas:
+            if not (a[0] <= cx < a[2] and a[1] <= cy < a[3]):
+                return a
+        return _monitor_containing(cx, cy) or (l, t, r, b)
+
+    def _on_s2_configure(self, event, win):
+        """A second-screen window moved (by its title bar) — save once the
+        move has settled rather than on every pixel of it."""
+        if event.widget is not win or not self._screen2:
+            return
+        if self._s2_save_job is not None:
+            try:
+                self.root.after_cancel(self._s2_save_job)
+            except tk.TclError:
+                pass
+        self._s2_save_job = self.root.after(600, self._s2_save)
+
+    def _s2_save(self):
+        self._s2_save_job = None
+        self._save_pos()
+
+    def _on_s2_close(self, win):
+        """The title bar's ✕. The report really closes; the meter and the
+        breakdown only go to the taskbar — closing the meter's window must not
+        stop the program (the tray icon and the settings panel do that)."""
+        if win is self.reportwin:
+            self._close_report()
+            return
         try:
-            POSITION_CACHE.unlink()
-        except OSError:
+            win.iconify()
+        except tk.TclError:
             pass
-        self._default_meter_pos()
-        self._default_detail_pos()
-        self._default_menu_pos()
-        self._default_rift_pos()
+
+    def open_settings_from_tray(self):
+        """Show the settings panel without the game's escape menu — the way in
+        when the meter lives on another screen."""
+        self._panel_forced = True
+        self.menubridge.invalidate()
+        self._refresh_visibility()
 
     def _toggle_mode(self):
         self.mode = "all" if self.mode == "party" else "party"
