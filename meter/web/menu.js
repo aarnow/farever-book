@@ -358,6 +358,9 @@ function buildEvents(n) {
 /* ---- rift report -------------------------------------------------------- */
 const players = (n) => n + (n > 1 ? ' joueurs' : ' joueur');
 
+/* The player whose report card is open, and which of their phases. */
+const REPORT_SEL = { name: null, phase: 0, detail: null };
+
 function rankTable(rows, rateLabel) {
   const box = el('div', 'tbl');
   const h = el('div', 'rk h');
@@ -365,7 +368,9 @@ function rankTable(rows, rateLabel) {
     h.appendChild(el('span', i > 1 ? 'num' : '', t)));
   box.appendChild(h);
   rows.forEach((r) => {
-    const row = el('div', 'rk' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : ''));
+    const row = el('div', 'rk click' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : ''));
+    row.title = 'Détail de ' + r.name;
+    row.addEventListener('click', () => { REPORT_SEL.name = r.name; renderPlayerCard(); });
     row.appendChild(el('span', null, r.rank));
     const nm = el('span', 'nm', r.name);
     if (r.cls || r.ck) nm.appendChild(classEl(r.cls, r.ck, 'cl'));
@@ -379,6 +384,7 @@ function rankTable(rows, rateLabel) {
 }
 
 function buildReport(n) {
+  REPORT_SEL.detail = n.detail || null;
   const p = el('div', 'panel report');
   const t = el('div', 'rtitle');
   t.appendChild(el('b', null, n.title));
@@ -1402,3 +1408,97 @@ function renderFarm(box, n) {
   if (!shown.length) list.appendChild(el('div', 'empty', 'Rien à afficher.'));
   box.appendChild(list);
 }
+
+/* A player's card in a report: their damage and healing, skill by skill. */
+function renderPlayerCard() {
+  document.querySelectorAll('.pcshade').forEach((x) => x.remove());
+  const d = REPORT_SEL.detail && REPORT_SEL.detail[REPORT_SEL.name];
+  if (!d) return;
+  const phases = d.phases || [];
+  if (REPORT_SEL.phase >= phases.length) REPORT_SEL.phase = 0;
+  const ph = phases[REPORT_SEL.phase];
+  const shade = el('div', 'collshade pcshade');
+  const close = () => { REPORT_SEL.name = null; shade.remove(); };
+  shade.addEventListener('click', (e) => { if (e.target === shade) close(); });
+  const card = el('div', 'colldetail pcard');
+  const x = el('button', 'x', '×');
+  x.type = 'button';
+  x.addEventListener('click', close);
+  card.appendChild(x);
+  const h = el('div', 'pch');
+  const nm = el('h3', null, d.name + ' ');
+  if (d.cls || d.ck) nm.appendChild(classEl(d.cls, d.ck, 'big'));
+  h.appendChild(nm);
+  if (phases.length > 1) {
+    const seg = el('div', 'seg');
+    phases.forEach((p, i) => {
+      const b = el('button', i === REPORT_SEL.phase ? 'on' : '', p.label);
+      b.type = 'button';
+      b.addEventListener('click', () => { REPORT_SEL.phase = i; renderPlayerCard(); });
+      seg.appendChild(b);
+    });
+    h.appendChild(seg);
+  }
+  card.appendChild(h);
+  const facts = el('div', 'facts');
+  (ph.facts || []).forEach(([k, v]) => {
+    const f = el('div', 'fact');
+    f.appendChild(el('span', null, k));
+    f.appendChild(el('b', null, v));
+    facts.appendChild(f);
+  });
+  card.appendChild(facts);
+
+  const table = (title, rows, cols) => {
+    card.appendChild(el('div', 'sub2', title));
+    if (!rows.length) { card.appendChild(el('p', 'none', 'rien d’enregistré')); return; }
+    const t = el('div', 'tbl pctbl');
+    const hd = el('div', 'pr h');
+    ['Compétence', ''].concat(cols.map((c) => c[0])).forEach((c, i) =>
+      hd.appendChild(el('span', i > 1 ? 'num' : '', c)));
+    t.appendChild(hd);
+    rows.forEach((r) => {
+      const row = el('div', 'pr');
+      row.appendChild(el('span', 'nm', r.n));
+      const b = el('div', 'bar dmg');
+      const i = el('i', 'all');
+      i.style.width = (Math.max(0.01, r.f) * 100) + '%';
+      b.appendChild(i);
+      row.appendChild(b);
+      cols.forEach((c) => row.appendChild(el('span', 'num', r[c[1]])));
+      t.appendChild(row);
+    });
+    card.appendChild(t);
+  };
+  table('Sources de dégâts', ph.skills || [],
+        [['Part', 'pct'], ['Dégâts', 't'], ['Coups', 'hits'], ['Crit.', 'crit'], ['Moy.', 'avg']]);
+  if ((ph.heals || []).length) {
+    table('Sources de soins', ph.heals, [['Part', 'pct'], ['Soins', 't'], ['Nombre', 'hits']]);
+  }
+  if ((ph.elements || []).length) {
+    card.appendChild(el('div', 'sub2', 'Dégâts par type'));
+    const tb = el('div', 'tbl types');
+    ph.elements.forEach((x2) => {
+      const r = el('div', 'typ');
+      const l = el('span', null, x2.t);
+      l.style.color = x2.c;
+      r.appendChild(l);
+      const b = el('div', 'b');
+      b.style.background = x2.c;
+      b.style.width = (Math.max(0.02, x2.f) * 100) + '%';
+      r.appendChild(b);
+      r.appendChild(el('span', 'num', x2.pct));
+      tb.appendChild(r);
+    });
+    card.appendChild(tb);
+  }
+  shade.appendChild(card);
+  document.body.appendChild(shade);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && REPORT_SEL.name) {
+    REPORT_SEL.name = null;
+    document.querySelectorAll('.pcshade').forEach((x) => x.remove());
+  }
+});

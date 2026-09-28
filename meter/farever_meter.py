@@ -5216,7 +5216,8 @@ def _summon_label(kind):
     `Totem_` prefix off the kind instead looks like it works — `Summon_Imp`
     reduces to a plausible "Imp" — but it is a guess that happens to read well,
     and it degenerates to a raw id on every summon not named that way."""
-    return _unit_names().get(kind) or _pretty_id(kind)
+    return (_fr_names("unit").get(kind) or _unit_names().get(kind)
+            or _pretty_id(kind))
 
 
 # ---------------------------------------------------------------------------
@@ -5776,6 +5777,7 @@ def report_view(data):
         })
     when = date_fr(time.localtime(data.get("at") or 0))
     out = {"k": "report", "id": "report",
+           "detail": _report_players(data),
            "title": data.get("title") or "Rapport de faille",
            "sub": data.get("sub") or "",
            "when": when, "phases": phases}
@@ -5786,6 +5788,88 @@ def report_view(data):
 
 RARITY_ORDER = {"Common": 0, "Uncommon": 1, "Rare": 2, "Epic": 3,
                 "Legendary": 4}
+
+def _report_players(data):
+    """Each player of a report, phase by phase: what their damage and
+    healing were made of — per skill (share, hits, crit rate, average hit)
+    and per element. Everything a saved report already holds."""
+    names = data.get("skill_names") or {}
+
+    def label(sid):
+        return names.get(sid) or _pretty_id(str(sid).split(":")[-1])
+
+    out = {}
+    for ph in data.get("phases") or []:
+        dur = float(ph.get("duration") or 0)
+        for p in ph.get("players") or []:
+            who = p.get("name") or "?"
+            total = float(p.get("total") or 0)
+            heal = float(p.get("heal") or 0)
+            # One row per NAME: the game names every step of a basic-attack
+            # combo "Attaque", and three "Attaque" rows read as a bug.
+            merged = {}
+            for sid, v in (p.get("skills") or {}).items():
+                hits, amt, crits = (list(v) + [0, 0, 0])[:3]
+                m = merged.setdefault(label(sid), [0, 0.0, 0])
+                m[0] += hits
+                m[1] += amt
+                m[2] += crits
+            skills = []
+            for name, (hits, amt, crits) in merged.items():
+                skills.append({"n": name, "t": _n(amt),
+                               "f": round(amt / total, 4) if total else 0,
+                               "pct": _pct1(amt / total * 100 if total else 0),
+                               "hits": _n(hits),
+                               "crit": f"{crits / hits * 100:.0f} %"
+                                       if hits else "—",
+                               "avg": _n(amt / hits) if hits else "—",
+                               "_a": amt})
+            skills.sort(key=lambda s: -s.pop("_a"))
+            hmerged = {}
+            for sid, v in (p.get("heals") or {}).items():
+                hits, amt = (list(v) + [0, 0])[:2]
+                m = hmerged.setdefault(label(sid), [0, 0.0])
+                m[0] += hits
+                m[1] += amt
+            heals = []
+            for name, (hits, amt) in hmerged.items():
+                heals.append({"n": name, "t": _n(amt),
+                              "f": round(amt / heal, 4) if heal else 0,
+                              "pct": _pct1(amt / heal * 100 if heal else 0),
+                              "hits": _n(hits), "_a": amt})
+            heals.sort(key=lambda s: -s.pop("_a"))
+            els = sorted((p.get("elements") or {}).items(),
+                         key=lambda kv: -(kv[1][1] if isinstance(kv[1], list)
+                                          else kv[1]))
+            elements = []
+            for el_, v in els:
+                amt = v[1] if isinstance(v, list) else v
+                elements.append({"t": element_label(el_),
+                                 "pct": _pct1(amt / total * 100 if total
+                                              else 0),
+                                 "f": round(amt / total, 4) if total else 0,
+                                 "c": element_color(el_)})
+            hits = int(p.get("hits") or 0)
+            entry = out.setdefault(who, {"name": who,
+                                         "ck": class_key(p.get("cls")),
+                                         "cls": OLD_CLASS_TAGS.get(
+                                             p.get("cls") or "",
+                                             p.get("cls") or ""),
+                                         "phases": []})
+            entry["phases"].append({
+                "label": phase_label(ph.get("label") or "Phase"),
+                "facts": [
+                    ["Dégâts", _n(total)],
+                    ["DPS", _n(_rate(total, dur)) if _rate(total, dur)
+                     else "—"],
+                    ["Coups", _n(hits)],
+                    ["Critiques", f"{int(p.get('crits') or 0) / hits * 100:.0f} %"
+                     if hits else "—"],
+                    ["Kills", _n(int(p.get("kills") or 0))],
+                    ["Soins", _n(heal)]],
+                "skills": skills, "heals": heals, "elements": elements})
+    return out
+
 
 LOOT_PHASES = (("coffre", "Coffre de fin"), ("boss", "Phase du boss"),
                ("exploration", "Exploration"))
