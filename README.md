@@ -79,12 +79,24 @@ plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
 ## Installation et lancement
 
-Ce fork se lance depuis les sources (Windows).
+Ce fork se lance depuis les sources (Windows). Il faut
+[Python](https://www.python.org/downloads/), puis un double-clic sur
+**`Installer Farever+.cmd`** : il installe les modules (dans les bonnes
+versions) et crée le raccourci **Farever+** sur le Bureau et dans le menu
+Démarrer. Le raccourci lance l'application sans fenêtre de console ; son
+journal est alors dans `%LOCALAPPDATA%\FareverMeter\meter.log` (bouton du
+journal dans les Réglages). Le script peut être relancé sans risque, par
+exemple après avoir déplacé le dossier.
+
+À la main, avec la console (pratique pour lire le journal en direct) :
 
 ```
 pip install frida==17.18.0 pillow pywebview
 python meter/farever_meter.py
 ```
+
+Au premier lancement avec le jeu, Farever+ extrait ses données du jeu
+(images, carte, catalogues) : une à deux minutes.
 
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
 
