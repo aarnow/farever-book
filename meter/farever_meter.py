@@ -2462,6 +2462,8 @@ class MenuBridge:
         try:
             self.proc = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                # Where the window finds the boss portraits it inlines.
+                env=dict(os.environ, FAREVER_ANALYSIS=str(ANALYSIS)),
                 stderr=None,            # its log lines join ours
                 text=True, encoding="utf-8", bufsize=1,
                 creationflags=CREATE_NO_WINDOW if sys.platform == "win32" else 0)
@@ -3629,33 +3631,60 @@ class App:
         by_kind = {}
         for _n, d in runs:
             by_kind.setdefault(d.get("kind"), []).append(d)
-        rows = []
-        for kind, ds in sorted(by_kind.items(),
-                               key=lambda kv: -max(x.get("at", 0)
-                                                   for x in kv[1])):
-            won = sum(1 for d in ds if d.get("result") == "victoire")
-            recs = []
-            for diff, label in DUNGEON_DIFFICULTIES.items():
-                best = self._dungeon_best(kind, diff)
-                if best:
-                    recs.append(f"{label} {_mmss(best)}")
-            meta = (f"{len(ds)} run{'s' if len(ds) > 1 else ''} · {won} "
-                    f"victoire{'s' if won > 1 else ''}"
-                    + (" · records : " + ", ".join(recs) if recs else ""))
-            rows.append({"t": dungeon_name(kind), "meta": meta,
-                         "btns": [{"id": "open_dungeon_kind", "t": "Voir",
-                                   "p": {"kind": kind}}]})
-        return [
-            {"k": "section", "t": "Donjons"},
-            {"k": "note", "t": "Chaque donjon est enregistré automatiquement "
-                               "de l'entrée à la sortie : difficulté, temps "
-                               "(celui du jeu), morts, groupe et classement "
-                               "complet, en deux phases — exploration et "
-                               "boss. Les échecs et abandons sont gardés "
-                               "aussi."},
-            {"k": "list", "id": "dungeons", "grow": True, "rows": rows,
-             "empty": "Aucun donjon enregistré pour l'instant."},
-        ]
+
+        def row(kind, boss):
+            ds = by_kind.get(kind) or []
+            # Second line the boss, third the runs and records.
+            stats = []
+            if ds:
+                won = sum(1 for d in ds if d.get("result") == "victoire")
+                stats.append(f"{len(ds)} run{'s' if len(ds) > 1 else ''} · "
+                             f"{won} victoire{'s' if won > 1 else ''}")
+                recs = [f"{label} {_mmss(best)}"
+                        for diff, label in DUNGEON_DIFFICULTIES.items()
+                        for best in [self._dungeon_best(kind, diff)] if best]
+                if recs:
+                    stats.append("records : " + ", ".join(recs))
+            else:
+                stats.append("pas encore fait")
+            return {"t": dungeon_name(kind),
+                    "meta": f"Boss : {_boss_label(boss)}" if boss else "",
+                    "meta2": " · ".join(stats),
+                    "portrait": boss or "",
+                    "btns": [{"id": "open_dungeon_kind", "t": "Voir",
+                              "p": {"kind": kind}, "off": not ds}]}
+
+        # Every dungeon of the game, by region, in the game's own order;
+        # runs of a dungeon the list doesn't know (a newer game) at the end.
+        out = [{"k": "section", "t": "Donjons"},
+               {"k": "note", "t": "Chaque donjon est enregistré "
+                                  "automatiquement de l'entrée à la sortie : "
+                                  "difficulté, temps (celui du jeu), morts, "
+                                  "groupe, classement complet en deux "
+                                  "phases — exploration et boss — et butin. "
+                                  "Les échecs et abandons sont gardés "
+                                  "aussi."}]
+        regions, known = {}, set()
+        for dg in dungeon_catalogue():
+            regions.setdefault(dg.get("region") or "", []).append(dg)
+            known.add(dg["kind"])
+        others = [{"kind": k, "boss": (ds[0].get("boss") or "")}
+                  for k, ds in by_kind.items() if k not in known]
+        if others:
+            regions.setdefault("", []).extend(others)
+        for i, (region, dgs) in enumerate(regions.items()):
+            title = (_fr_names("zone").get(region) if region else None) \
+                or ("Autres donjons" if regions.keys() - {""} else "")
+            if title:
+                out.append({"k": "sub", "t": title})
+            out.append({"k": "list", "id": f"dungeons_{i}",
+                        "rows": [row(dg["kind"], dg.get("boss"))
+                                 for dg in dgs]})
+        if not regions:
+            out.append({"k": "list", "id": "dungeons", "grow": True,
+                        "rows": [],
+                        "empty": "Aucun donjon enregistré pour l'instant."})
+        return out
 
     # ---- settings
     def _page_settings(self):
@@ -4434,6 +4463,22 @@ def item_icon(kind):
     return _ITEM_ICONS[kind]
 
 
+_DUNGEONS = None
+
+
+def dungeon_catalogue():
+    """Every dungeon in the game, [{kind, boss, region}], from
+    analysis_out/dungeons.json (the game's achievements). [] when absent."""
+    global _DUNGEONS
+    if _DUNGEONS is None:
+        try:
+            _DUNGEONS = json.loads(
+                (ANALYSIS / "dungeons.json").read_text(encoding="utf-8"))
+        except Exception:
+            _DUNGEONS = []
+    return _DUNGEONS
+
+
 def item_label(kind):
     """An item's French name, else its prettified id."""
     return _fr_names("item").get(kind) or _pretty_id(kind)
@@ -4677,6 +4722,14 @@ def _data_is_current():
     # heal_specs.json arrived when healing started counting overheal — without
     # it a heal that restores nothing cannot be sized, which is the whole
     # feature. Same upgrade trap as the two above.
+    if not (ANALYSIS / "boss_portraits").is_dir():
+        print("[meter] boss_portraits absent — regenerating for the dungeon "
+              "list.", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "dungeons.json").exists():
+        print("[meter] dungeons.json absent — regenerating for the dungeon "
+              "list.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "item_icons").is_dir():
         print("[meter] item_icons absent — regenerating for the loot "
               "icons.", file=sys.stderr)

@@ -233,6 +233,18 @@ select, input[type=text] {
 .row:last-child { border-bottom: 0; }
 .row .name { font-weight: 600; }
 .row .meta { flex: 1; font-size: 12px; }
+/* dungeon list: boss portrait, then the name over its details */
+.prow { gap: 16px; padding: 10px 14px; }
+.prow .portrait { flex: none; width: 80px; height: 80px; border-radius: 8px;
+                  overflow: hidden; background: var(--panel-2);
+                  border: 1px solid var(--line); }
+.prow .portrait img { width: 100%; height: 100%; display: block;
+                      object-fit: cover; }
+.prow .ptext { flex: 1; min-width: 0; display: flex; flex-direction: column;
+               justify-content: center; gap: 4px; }
+.prow .ptext .name { font-size: 15px; }
+.prow .ptext .meta { color: var(--dim); flex: none; }
+.prow .ptext .meta2 { color: var(--text); }
 .rowbtn {
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -244,6 +256,10 @@ select, input[type=text] {
   cursor: pointer;
 }
 .rowbtn:hover { border-color: var(--dim); }
+.rowbtn:disabled { opacity: .35; cursor: default; }
+.rowbtn:disabled:hover { border-color: var(--line); }
+.subhead { margin: 16px 0 2px; color: var(--dim); font-size: 11px; font-weight: 700;
+           text-transform: uppercase; letter-spacing: .6px; }
 
 
 /* ---- toolbar and cards -------------------------------------------------------- */

@@ -289,7 +289,30 @@ def _document():
             .replace("/*CSS*/", read("menu.css"))
             .replace("/*JS*/", read("menu.js"))
             .replace("/*ICONS*/",
-                     "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"))
+                     "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
+                     "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
+                     + ";"))
+
+
+def _boss_portraits():
+    """{"Cleodora": data URI, ...}: the dungeon bosses' portraits, extracted
+    from the game into analysis_out/boss_portraits/ — inlined once here
+    rather than sent with every state push."""
+    import base64
+    folder = Path(os.environ.get("FAREVER_ANALYSIS")
+                  or HERE.parent / "analysis_out") / "boss_portraits"
+    out = {}
+    try:
+        files = sorted(folder.glob("*.png"))
+    except OSError:
+        return out
+    for path in files:
+        try:
+            out[path.stem] = ("data:image/png;base64,"
+                              + base64.b64encode(path.read_bytes()).decode())
+        except OSError:
+            continue
+    return out
 
 
 def _class_icons():

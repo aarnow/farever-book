@@ -11,7 +11,8 @@
  *   {k:"button", id, t, on?, tone?, p?}
  *   {k:"field", t, c:<control>}   controls: select | slider | text | label
  *   {k:"search", id, v, count?}
- *   {k:"list", id, h?, grow?, rows:[{t?, name?, cls?, meta?, btns?}], empty?}
+ *   {k:"list", id, h?, grow?, rows:[{t?, name?, cls?, meta?, btns?:[{id,t,p?,off?}]}], empty?}
+ *   {k:"sub", t}   a small heading inside a section
  * Live and report nodes:
  *   {k:"toolbar", btns}          {k:"cards", items}
  *   {k:"meter", title, heal, rows, empty}
@@ -165,6 +166,7 @@ function buildControl(c) {
 
 /* ---- generic nodes ------------------------------------------------------ */
 function buildRow(r) {
+  if (r.portrait !== undefined) return buildPortraitRow(r);
   const row = el('div', 'row');
   if (r.name !== undefined) row.appendChild(el('span', 'name', r.name));
   if (r.cls !== undefined) row.appendChild(el('span', 'cls', r.cls));
@@ -172,7 +174,35 @@ function buildRow(r) {
   if (r.meta !== undefined) row.appendChild(el('span', 'meta', r.meta));
   (r.btns || []).forEach((b) => {
     const btn = el('button', 'rowbtn', b.t);
-    btn.addEventListener('click', () => notify(b.id, b.p || {}));
+    if (b.off) btn.disabled = true;
+    else btn.addEventListener('click', () => notify(b.id, b.p || {}));
+    row.appendChild(btn);
+  });
+  return row;
+}
+
+/* A row led by a boss portrait (the dungeon list): the name over its
+   details, vertically centred against the picture. */
+function buildPortraitRow(r) {
+  const row = el('div', 'row prow');
+  const pic = el('div', 'portrait');
+  const src = (window.__PORTRAITS__ || {})[r.portrait];
+  if (src) {
+    const im = document.createElement('img');
+    im.src = src;
+    im.alt = '';
+    pic.appendChild(im);
+  }
+  row.appendChild(pic);
+  const txt = el('div', 'ptext');
+  txt.appendChild(el('span', 'name', r.t));
+  if (r.meta) txt.appendChild(el('span', 'meta', r.meta));
+  if (r.meta2) txt.appendChild(el('span', 'meta meta2', r.meta2));
+  row.appendChild(txt);
+  (r.btns || []).forEach((b) => {
+    const btn = el('button', 'rowbtn', b.t);
+    if (b.off) btn.disabled = true;
+    else btn.addEventListener('click', () => notify(b.id, b.p || {}));
     row.appendChild(btn);
   });
   return row;
@@ -421,6 +451,7 @@ function buildNode(n) {
     }
     case 'code': return el('pre', 'code', n.t);
     case 'gap': return el('div', 'gap');
+    case 'sub': return el('div', 'subhead', n.t);
     case 'button': return button(n);
     case 'field': {
       const row = el('div', 'field');

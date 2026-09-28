@@ -1,0 +1,62 @@
+[
+{
+"kind": "R1_POI_Dungeon_Manfish_Ruins",
+"boss": "Nepsilon",
+"region": "Z1_Region"
+},
+{
+"kind": "R1_POI_Boss_Ratsar",
+"boss": "Ratsar",
+"region": "Z1_Region"
+},
+{
+"kind": "R1_POI_Nepsid_Boss",
+"boss": "Crabgantua",
+"region": "Z1_Region"
+},
+{
+"kind": "R1_POI_AmaymonGoulp",
+"boss": "Reblochonk",
+"region": "Z1_Region"
+},
+{
+"kind": "Bee_Hive",
+"boss": "Gatsbee",
+"region": "Z1_Region"
+},
+{
+"kind": "R1_POI_MokshisHivetree",
+"boss": "Mokshi",
+"region": "Z1_Region"
+},
+{
+"kind": "Z1_POI_Dungeon_ManfishAbyss",
+"boss": "SpongeBlob",
+"region": "Z2_Region"
+},
+{
+"kind": "R1_POI_Dungeon_AbbandonedMines",
+"boss": "Golcano",
+"region": "Z2_Region"
+},
+{
+"kind": "R1_POI_CleodorasNest",
+"boss": "Cleodora",
+"region": "Z2_Region"
+},
+{
+"kind": "R1_POI_GorgonsHollow",
+"boss": "MunsterChuck",
+"region": "Z2_Region"
+},
+{
+"kind": "R1_POI_Dungeon_CrimsonBarraks_POI_Def",
+"boss": "RobinHoof",
+"region": "Z3_Region"
+},
+{
+"kind": "R1_POI_CrimsonSacristy",
+"boss": "Phrixes",
+"region": "Z3_Region"
+}
+]

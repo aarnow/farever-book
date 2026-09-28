@@ -449,6 +449,17 @@ def main():
                           encoding="utf-8")
         print(f"[written] {out_fr} ("
               + ", ".join(f"{len(v)} {k}" for k, v in fr.items()) + ")")
+        dungeons = extract_dungeons(Path(hlboot).parent)
+        out_dg = _OUT_DIR / "dungeons.json"
+        out_dg.write_text(json.dumps(dungeons, indent=0), encoding="utf-8")
+        print(f"[written] {out_dg} ({len(dungeons)} dungeons)")
+        try:
+            n = extract_boss_portraits(Path(hlboot).parent,
+                                       [d["boss"] for d in dungeons],
+                                       _OUT_DIR / "boss_portraits")
+            print(f"[written] {_OUT_DIR / 'boss_portraits'} ({n} portraits)")
+        except Exception as e:
+            print(f"[!] boss portraits skipped ({e})")
         rar = extract_item_rarity(Path(hlboot).parent)
         out_rar = _OUT_DIR / "item_rarity.json"
         out_rar.write_text(json.dumps(rar, indent=0), encoding="utf-8")
@@ -570,7 +581,7 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("activity", "item", "rarity", "unit")
+FR_SHEETS = ("activity", "item", "rarity", "unit", "zone")
 
 
 def extract_fr_names(game_dir):
@@ -614,6 +625,95 @@ def extract_item_rarity(game_dir):
     return {ln["id"]: ln["rarity"] for ln in sheet["lines"]
             if isinstance(ln.get("id"), str)
             and isinstance(ln.get("rarity"), str) and ln["rarity"]}
+
+
+# An achievement naming a boss the unit sheet spells differently.
+BOSS_ALIASES = {"Splongeblob": "SpongeBlob"}
+
+
+def extract_dungeons(game_dir):
+    """Every dungeon in the game, in the game's order: [{kind, boss,
+    region}]. The activity sheet ships empty in data.cdb, so the list comes
+    from the achievements — one per dungeon, "Defeat [Boss] in ::target::
+    on Normal difficulty…", whose target is the dungeon's activity id and
+    whose category (Combat_Z1…) names its region (Z1_Region…)."""
+    import re
+    import pak_extract
+    raw = pak_extract.read_entry(Path(game_dir) / "res.light.pak", "data.cdb")
+    if raw is None:
+        raise RuntimeError("data.cdb not in res.light.pak")
+    cdb = json.loads(raw)
+    units = {ln["id"] for s in cdb["sheets"] if s["name"] == "unit"
+             for ln in s["lines"] if isinstance(ln.get("id"), str)}
+    lower = {u.lower(): u for u in units}
+    out, seen = [], set()
+    ach = next(s for s in cdb["sheets"] if s["name"] == "ach")
+    for ln in ach["lines"]:
+        desc = ln.get("desc") or ""
+        m = re.match(r"Defeat \[(\w+)\].*::target::.*difficulty", desc)
+        if not m:
+            continue
+        for o in ln.get("objectives") or ():
+            if o.get("ref") != "ActivityCompleted":
+                continue
+            for t in o.get("targets") or ():
+                ref = t.get("ref")
+                if not (isinstance(ref, list) and len(ref) == 2
+                        and isinstance(ref[1], str)) or ref[1] in seen:
+                    continue
+                boss = BOSS_ALIASES.get(m.group(1), m.group(1))
+                boss = boss if boss in units else lower.get(boss.lower(), boss)
+                cat = str(ln.get("category") or "")
+                region = cat.split("_", 1)[1] if "_" in cat else ""
+                seen.add(ref[1])
+                out.append({"kind": ref[1], "boss": boss,
+                            "region": f"{region}_Region" if region else ""})
+    return out
+
+
+BOSS_PORTRAIT_PX = 192
+
+
+def extract_boss_portraits(game_dir, bosses, out_dir):
+    """Each dungeon boss's portrait, out_dir/<unit id>.png, for the dungeon
+    list. The unit's row in data.cdb names it: gfx {file, size, x, y} in
+    res.pak (UI/Portraits/Units/...)."""
+    import io
+    import struct
+    import pak_extract
+    from PIL import Image
+
+    game_dir = Path(game_dir)
+    cdb = json.loads(pak_extract.read_entry(game_dir / "res.light.pak",
+                                            "data.cdb"))
+    gfx = {ln["id"]: ln.get("gfx") for s in cdb["sheets"]
+           if s["name"] == "unit" for ln in s["lines"]
+           if isinstance(ln.get("id"), str)}
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pak = game_dir / "res.pak"
+    done = 0
+    with open(pak, "rb") as f:
+        header_size = struct.unpack_from("<i", f.read(12), 4)[0]
+        f.seek(0)
+        entries, data_off = pak_extract.read_tree(f.read(header_size),
+                                                  pak.name)
+        by_path = {e.path: e for e in entries}
+        for boss in bosses:
+            g = gfx.get(boss)
+            e = by_path.get(g.get("file")) if isinstance(g, dict) else None
+            if e is None:
+                continue
+            f.seek(data_off + e.pos)
+            img = Image.open(io.BytesIO(f.read(e.size))).convert("RGBA")
+            n = int(g.get("size") or img.width)
+            x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
+            img = img.crop((x, y, x + n, y + n))
+            img = img.resize((BOSS_PORTRAIT_PX, BOSS_PORTRAIT_PX),
+                             Image.LANCZOS)
+            img.save(out_dir / f"{boss}.png", optimize=True)
+            done += 1
+    return done
 
 
 ITEM_ICON_PX = 48
