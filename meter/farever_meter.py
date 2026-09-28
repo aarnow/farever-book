@@ -6455,9 +6455,8 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     # Connected. From here the hook feeds on_message until the game closes.
     link.script = script
     link.set_state(GameLink.CONNECTED, pid=pid)
-    print("[*] connected. Open the game's escape menu for the control menu "
-          "(and to drag the windows / click a row to inspect). Only hotkey: "
-          "Shift+\\ resets the encounter.", file=sys.stderr)
+    print("[*] connected — everything shows in the Farever+ window; the "
+          "reset hotkey is set in Réglages.", file=sys.stderr)
     try:
         while not STOP.is_set() and not detached.wait(0.5):
             pass
