@@ -445,3 +445,6 @@ select, input[type=text] {
 
 /* players who healed nothing in the phase, listed last */
 .rk.zero, .rk.zero .cl { color: var(--faint); }
+
+/* outside the live page's grid, a toolbar needs its own space below it */
+#page:not(.page-Live) > .toolbar { margin-bottom: 16px; }
