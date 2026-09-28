@@ -100,6 +100,8 @@ SETTINGS_CACHE = _WRITABLE / ".meter_settings.json"
 BEST_TIMES_CACHE = _WRITABLE / ".meter_besttimes.json"
 PARSES_DIR = _WRITABLE / "parses"   # finished-parse images land here (gitignored)
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
+# What the account owns (mounts, gliders, companions), as last read in game.
+COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
 LOG_FILE = DATA_HOME / "meter.log"
 TARGET_PROCESS = "Farever.exe"
 
@@ -2709,9 +2711,9 @@ def _wants_params(fn):
 # ---------------------------------------------------------------------------
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
-APP_TABS = ("Live", "Rifts", "Dungeons", "Settings", "Help")
+APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Settings", "Help")
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
-                  "Dungeons": "Donjons",
+                  "Dungeons": "Donjons", "Collection": "Collection",
                   "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
@@ -2852,6 +2854,7 @@ class App:
         self._rift_view = None              # the rift report being read
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_view = None           # the dungeon run being read
+        self._collection_owned = None       # .meter_collection.json, loaded
         self._dungeon_cache = {}            # file name -> (mtime, data)
         self._binding_now = False
         self._menu_unlock = False           # no game menu to follow any more
@@ -3247,6 +3250,7 @@ class App:
     def _page(self, tab):
         builder = {"Live": self._page_live, "Rifts": self._page_rifts,
                    "Dungeons": self._page_dungeons,
+                   "Collection": self._page_collection,
                    "Settings": self._page_settings,
                    "Help": self._page_help}.get(tab)
         try:
@@ -3494,6 +3498,48 @@ class App:
             self._event(txt, tone, {"id": "open_dungeon_run", "t": "Voir",
                                     "p": {"file": name}} if name else None)
         self._enqueue(done)()
+
+    def on_collection(self, p):
+        """The account's collection, read in game. Saved, so the Collection
+        tab shows it with the game closed. Hook thread."""
+        if p.get("types"):
+            print(f"[meter] collection element types: {p['types']}",
+                  file=sys.stderr)
+        owned = {k: sorted(set(p.get(k) or ()))
+                 for k in ("mounts", "gliders", "pets")}
+
+        def done():
+            owned["at"] = time.time()
+            self._collection_owned = owned
+            try:
+                COLLECTION_FILE.write_text(json.dumps(owned),
+                                           encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the collection: {e}",
+                      file=sys.stderr)
+            print(f"[meter] collection: {len(owned['mounts'])} mounts, "
+                  f"{len(owned['gliders'])} gliders, {len(owned['pets'])} "
+                  "companions", file=sys.stderr)
+        self._enqueue(done)()
+
+    def _collection(self):
+        if self._collection_owned is None:
+            try:
+                self._collection_owned = json.loads(
+                    COLLECTION_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._collection_owned = {}
+        return self._collection_owned
+
+    def _page_collection(self):
+        owned = self._collection()
+        at = owned.get("at")
+        sync = (f"Lue en jeu le {date_fr(time.localtime(at))}. Elle se met "
+                "à jour toute seule quand le jeu est ouvert."
+                if at else "Pas encore lue : lance le jeu avec Farever+ "
+                           "ouvert, ta collection se remplira toute seule.")
+        return [{"k": "collection", "id": "collection",
+                 "sync": sync, **collection_view(owned)}]
 
     def on_dungeon_loot(self, name, loot):
         """Loot that arrived after the run was saved (the reward chest):
@@ -4422,6 +4468,158 @@ class App:
         self._show_reset_toast()
 
 
+_COLLECTION = None
+
+
+def collection_catalogue():
+    """{"mounts": [...], "gliders": [...], "pets": [...]}: every collectible
+    with how it is obtained, from analysis_out/collection.json (built from the
+    game's data and levels by hltools/collection_data.py). {} when absent."""
+    global _COLLECTION
+    if _COLLECTION is None:
+        try:
+            _COLLECTION = json.loads(
+                (ANALYSIS / "collection.json").read_text(encoding="utf-8"))
+        except Exception:
+            _COLLECTION = {}
+    return _COLLECTION
+
+
+COLLECTION_CATS = (("mounts", "Montures", "monture"),
+                   ("gliders", "Planeurs", "planeur"),
+                   ("pets", "Compagnons", "compagnon"))
+CLASS_LABELS = {"warrior": "Guerrier", "mage": "Mage", "rogue": "Voleur",
+                "priest": "Prêtre"}
+CHEST_LABELS = {"VaultChest": "Coffre-fort", "WorldChest": "Coffre",
+                "BossChest": "Coffre du boss"}
+
+
+def _fr_ref(text):
+    """The game's [Id] references in a French text, replaced by names."""
+    def one(m):
+        rid = m.group(1)
+        for sheet in ("zone", "unit", "activity", "item", "itemType",
+                      "unitType"):
+            name = _fr_names(sheet).get(rid)
+            if name:
+                return name
+        return _pretty_id(rid)
+    return re.sub(r"\[([A-Za-z0-9_]+)\]", one, text or "")
+
+
+def _zone_label(z):
+    return _fr_names("zone").get(z) or _pretty_id(z or "")
+
+
+def _unit_label(u):
+    return (_fr_names("unit").get(u) or _unit_names().get(u)
+            or _pretty_id(u or ""))
+
+
+def _source_text(s, bosses):
+    """One way to obtain a collectible, in French."""
+    k, ch = s.get("k"), s.get("chance")
+    pct = ("" if ch is None else " — garanti" if ch >= 1
+           else f" — {_pct(ch)}")
+    if k == "family":
+        name = _fr_names("unitType").get(s.get("id")) or _pretty_id(s["id"])
+        return f"Butin des ennemis : {name}{pct}"
+    if k == "unit":
+        dg = bosses.get(s.get("id"))
+        where = f" ({dungeon_name(dg)})" if dg else ""
+        return f"Butin de {_unit_label(s.get('id'))}{where}{pct}"
+    if k == "chest":
+        kind = CHEST_LABELS.get(s.get("id"), "Coffre")
+        zone = f" — {_zone_label(s['zone'])}" if s.get("zone") else ""
+        return f"{kind}{zone}{pct}"
+    if k == "shop":
+        npc = s.get("npc")
+        who = (_fr_names("unit").get(npc) if npc else None) or "un marchand"
+        zone = f" — {_zone_label(s['zone'])}" if s.get("zone") else ""
+        cost = ", ".join(f"{c['n']} × {item_label(c['item'])}"
+                         if c.get("n") else item_label(c["item"])
+                         for c in s.get("cost") or () if c.get("item"))
+        return f"Vendu par {who}{zone}" + (f" (prix : {cost})" if cost else "")
+    if k == "ach":
+        chain = s.get("chain") or [s.get("id")]
+        name = next((_fr_names("ach").get(a) for a in chain
+                     if _fr_names("ach").get(a)), None)
+        desc = next((_fr_desc("ach").get(a) for a in chain
+                     if _fr_desc("ach").get(a)), "")
+        v = s.get("v")
+        desc = _fr_ref(desc.replace("::targetValue::", str(v)
+                                    if v is not None else "…"))
+        name = _fr_ref(name) if name else desc or _pretty_id(s.get("id"))
+        if name and v and len(chain) > 1:
+            name = f"{name} ({v})"
+        return f"Succès « {name} »" + (f" : {desc}" if desc and desc != name
+                                        else "")
+    if k == "starter":
+        return (f"Planeur de départ du {CLASS_LABELS.get(s.get('cls'), '?')}")
+    if k == "spawn":
+        zones = ", ".join(_zone_label(z) for z in s.get("zones") or ())
+        where = "en faille" if s.get("rift") else (zones or "dans le monde")
+        rate = ("" if ch is None or ch >= 1
+                else f" · {_pct(ch)} des apparitions")
+        return f"Se capture : {where}{rate}"
+    return k or "?"
+
+
+_SPARK = None
+
+
+def _spark_units():
+    global _SPARK
+    if _SPARK is None:
+        try:
+            _SPARK = set(json.loads((ANALYSIS / "unit_traits.json")
+                                    .read_text(encoding="utf-8"))["spark"])
+        except Exception:
+            _SPARK = set()
+    return _SPARK
+
+
+def collection_view(owned):
+    """The Collection page's data: categories with counts, every item with
+    its name, rarity, whether it is owned, description and sources."""
+    cat = collection_catalogue()
+    bosses = {d.get("boss"): d.get("kind") for d in dungeon_catalogue()}
+    cats, items = [], []
+    for key, label, one in COLLECTION_CATS:
+        mine = set(owned.get(key) or ())
+        rows = cat.get(key) or []
+        got = sum(1 for e in rows if e["id"] in mine)
+        cats.append({"v": key, "t": label, "one": one, "n": len(rows),
+                     "got": got})
+        for e in rows:
+            iid = e["id"]
+            pet = key == "pets"
+            spark = pet and iid in _spark_units()
+            rar = e.get("rarity") or ""
+            srcs = []
+            spawns = {}
+            for s in e.get("src") or ():
+                if s.get("k") == "spawn":
+                    # one line per rate, with every zone it spawns in
+                    key2 = (bool(s.get("rift")), s.get("chance"))
+                    if key2 not in spawns:
+                        spawns[key2] = dict(s, zones=[])
+                        srcs.append(spawns[key2])
+                    spawns[key2]["zones"] += [z for z in s.get("zones") or ()
+                                              if z not in spawns[key2]["zones"]]
+                else:
+                    srcs.append(s)
+            items.append({
+                "id": iid, "c": key, "own": iid in mine,
+                "name": _unit_label(iid) if pet else item_label(iid),
+                "rk": "legendary" if spark else rar.lower(),
+                "rar": "Étincelle" if spark else
+                       (rarity_label(rar) if rar else ""),
+                "desc": _fr_ref(_fr_desc("item").get(iid)) if not pet else "",
+                "src": [_source_text(s, bosses) for s in srcs]})
+    return {"cats": cats, "items": items}
+
+
 _UNIT_NAMES = None
 
 
@@ -4558,6 +4756,13 @@ def droptable_view(dg, got):
                    -RARITY_ORDER.get(e.get("rarity"), -1))})
     rows.sort(key=lambda r: r.pop("_k"))
     return rows
+
+
+def _fr_desc(sheet):
+    """id -> French description for a sheet (ach, item), from
+    names_fr.json's "_desc"."""
+    _fr_names(sheet)
+    return (_FR_NAMES or {}).get("_desc", {}).get(sheet) or {}
 
 
 def item_label(kind):
@@ -4803,6 +5008,10 @@ def _data_is_current():
     # heal_specs.json arrived when healing started counting overheal — without
     # it a heal that restores nothing cannot be sized, which is the whole
     # feature. Same upgrade trap as the two above.
+    if not (ANALYSIS / "collection.json").exists():
+        print("[meter] collection.json absent — regenerating for the "
+              "Collection tab.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "boss_portraits").is_dir():
         print("[meter] boss_portraits absent — regenerating for the dungeon "
               "list.", file=sys.stderr)
@@ -6133,6 +6342,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                       + ("identified." if first else "changed."), file=sys.stderr)
         elif k == "pickup":
             dungeon.pickup(p)
+        elif k == "collection":
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_collection(p)
         elif k == "dungeon":
             # The running activity and, in a dungeon, its state — see
             # DungeonTracker for what each field was measured to mean.

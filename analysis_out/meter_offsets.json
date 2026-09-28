@@ -185,7 +185,9 @@
     "collection": 184
   },
   "Collection": {
-    "pets": 168
+    "pets": 168,
+    "mounts": 136,
+    "gliders": 128
   },
   "ArrayProxyData": {
     "array": 40

@@ -32,6 +32,10 @@ seul à la prochaine session.
   contenu du coffre de fin. Les records par difficulté sont
   marqués d'une étoile.
 
+* **Collection** — tes montures, planeurs et compagnons. Farever+ la lit
+  tout seul quand le jeu est ouvert et la garde pour la consulter jeu fermé.
+  Clique sur un élément pour savoir comment l'obtenir.
+
 Le minuteur de faille est toujours visible en bas du menu : il compte jusqu'à
 la prochaine faille (elles s'ouvrent à chaque heure pile), puis les 3 minutes
 pendant lesquelles le portail reste ouvert.

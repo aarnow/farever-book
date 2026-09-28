@@ -362,7 +362,9 @@ def main():
         # seen firing live with exactly these strings. NOT item ids: only two
         # Critter_* items exist in the cdb and both are special grants.
         "AccountProgress": {"collection": acct["collection"][0]},
-        "Collection": {"pets": coll["pets"][0]},
+        # mounts / gliders: the same proxy arrays, of item kinds.
+        "Collection": {"pets": coll["pets"][0], "mounts": coll["mounts"][0],
+                       "gliders": coll["gliders"][0]},
         # hxbit wraps a replicated array in a proxy: Group.players is an
         # ArrayProxyData whose ArrayDyn wraps an ArrayObj. Two hops, and the
         # party roster is the reason they are here.
@@ -449,6 +451,18 @@ def main():
                           encoding="utf-8")
         print(f"[written] {out_fr} ("
               + ", ".join(f"{len(v)} {k}" for k, v in fr.items()) + ")")
+        try:
+            import collection_data
+            coll = collection_data.build(Path(hlboot).parent,
+                                         _OUT_DIR / "collection_img")
+            out_coll = _OUT_DIR / "collection.json"
+            out_coll.write_text(json.dumps(coll, indent=0),
+                                encoding="utf-8")
+            print(f"[written] {out_coll} ("
+                  + ", ".join(f"{len(v)} {k}" for k, v in coll.items())
+                  + ")")
+        except Exception as e:
+            print(f"[!] collection catalogue skipped ({e})")
         dungeons = extract_dungeons(Path(hlboot).parent)
         out_dg = _OUT_DIR / "dungeons.json"
         out_dg.write_text(json.dumps(dungeons, indent=0), encoding="utf-8")
@@ -581,7 +595,10 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("activity", "item", "itemType", "rarity", "unit", "zone")
+FR_SHEETS = ("ach", "activity", "item", "itemType", "rarity", "unit",
+             "unitType", "zone")
+# Sheets whose French descriptions the app shows (the collection's details).
+FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc")}
 
 
 def extract_fr_names(game_dir):
@@ -596,13 +613,22 @@ def extract_fr_names(game_dir):
     if raw is None:
         raise RuntimeError("lang/export_fr.xml not in res.pak")
     root = ET.fromstring(raw)
-    out = {}
+    out = {"_desc": {}}
     for sheet in root.findall("sheet"):
         name = sheet.get("name")
         if name not in FR_SHEETS:
             continue
         rows = out.setdefault(name, {})
+        descs = out["_desc"].setdefault(name, {}) if name in FR_DESC else None
         for row in sheet:
+            if descs is not None:
+                for tag in FR_DESC[name]:
+                    d = row.find(tag)
+                    txt = "".join(d.itertext()).strip() if d is not None \
+                        else ""
+                    if txt:
+                        descs[row.tag] = txt
+                        break
             node = row.find("texts.name")
             if node is None:
                 node = row.find("texts.name.v")     # itemType: {v, plural}

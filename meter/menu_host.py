@@ -245,9 +245,26 @@ class AppWindow:
             finally:
                 os._exit(0)
 
+    def _send_collection_images(self):
+        """The collection's pictures, handed over once the page is up, in
+        batches: inlined, they took the page past WebView2's 2 MB limit on
+        an HTML string, and the window came up blank."""
+        self._images_sent = True
+        imgs = list(_collection_images().items())
+        for i in range(0, len(imgs), 40):
+            chunk = json.dumps(dict(imgs[i:i + 40]))
+            try:
+                self.window.evaluate_js(
+                    f"window.addCollImages({json.dumps(chunk)})")
+            except Exception as e:
+                _log(f"collection images push failed: {e!r}")
+                return
+
     def _push(self, data):
         """Hand one state object to the page — as a JSON string argument,
         never interpolated: it carries player names straight off the wire."""
+        if not getattr(self, "_images_sent", False):
+            self._send_collection_images()
         try:
             self.window.evaluate_js(
                 f"window.applyState({json.dumps(json.dumps(data))})")
@@ -284,14 +301,38 @@ def _document():
             _log(f"missing web asset {name}: {e}")
             return ""
 
-    html = read("menu.html")
-    return (html
+    html = (read("menu.html")
             .replace("/*CSS*/", read("menu.css"))
             .replace("/*JS*/", read("menu.js"))
             .replace("/*ICONS*/",
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
                      "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
                      + ";"))
+    # WebView2 shows nothing at all for an HTML string over 2 MB.
+    if len(html.encode("utf-8")) > 1_800_000:
+        _log(f"page is {len(html.encode('utf-8')) // 1024} KB — close to "
+             "WebView2's 2 MB limit")
+    return html
+
+
+def _collection_images():
+    """{"Mount_Wolf_01": data URI, ...}: the collection's pictures, extracted
+    from the game into analysis_out/collection_img/ — inlined once, here."""
+    import base64
+    folder = Path(os.environ.get("FAREVER_ANALYSIS")
+                  or HERE.parent / "analysis_out") / "collection_img"
+    out = {}
+    try:
+        files = sorted(folder.glob("*.webp"))
+    except OSError:
+        return out
+    for path in files:
+        try:
+            out[path.stem] = ("data:image/webp;base64,"
+                              + base64.b64encode(path.read_bytes()).decode())
+        except OSError:
+            continue
+    return out
 
 
 def _boss_portraits():

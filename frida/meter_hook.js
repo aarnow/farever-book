@@ -758,6 +758,71 @@ function sweepInventory() {
     } catch (e) {}
 }
 
+// ---- the collection (mounts, gliders, companions) ----
+// AccountProgress.collection: three hxbit proxy arrays. `pets` holds unit
+// kinds as plain strings (measured 2026-08-07). `mounts` and `gliders` are
+// read the same way, an element being taken as a String or, failing that,
+// as an item whose kind is read — and its class is reported once, so the
+// log says which it was.
+let collSig = null;
+let collTypesSent = false;
+
+function collElem(p) {
+    const t = typeName(p);
+    if (t && (t.lastIndexOf("st.Item", 0) === 0
+              || t.lastIndexOf("st.item.", 0) === 0))
+        return hlStr(p.add(OFF.Item.kind).readPointer());
+    return hlStr(p);
+}
+
+function readCollList(coll, off, types, key) {
+    if (off == null) return null;
+    const proxy = coll.add(off).readPointer();
+    if (!proxy || proxy.isNull()) return [];
+    const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+    if (!dyn || dyn.isNull()) return [];
+    const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+    if (!arr || arr.isNull()) return [];
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    if (n < 0 || n > 4096) return null;
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        const p = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        if (!p || p.isNull()) continue;
+        if (i === 0) types[key] = typeName(p);
+        const s = collElem(p);
+        if (s) out.push(s);
+    }
+    return out;
+}
+
+function checkCollection() {
+    try {
+        if (!localHero || localHero.isNull() || !OFF.Collection
+            || !OFF.AccountProgress || OFF.Player.accountProgress == null)
+            return;
+        const player = localHero.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return;
+        const acct = player.add(OFF.Player.accountProgress).readPointer();
+        if (!acct || acct.isNull()) return;
+        const coll = acct.add(OFF.AccountProgress.collection).readPointer();
+        if (!coll || coll.isNull()) return;
+        const C = OFF.Collection, types = {};
+        const msg = { kind: "collection",
+                      mounts: readCollList(coll, C.mounts, types, "mounts"),
+                      gliders: readCollList(coll, C.gliders, types, "gliders"),
+                      pets: readCollList(coll, C.pets, types, "pets") };
+        if (msg.mounts === null || msg.gliders === null || msg.pets === null)
+            return;
+        const sig = JSON.stringify(msg);
+        if (sig === collSig) return;
+        collSig = sig;
+        if (!collTypesSent) { msg.types = types; collTypesSent = true; }
+        send(msg);
+    } catch (e) {}
+}
+
 function resetBossBars() {
     // A loading screen tears the HUD down: a bar that was up on the way out
     // must not stay "up" in the new zone. No up/down events — the pull isn't
@@ -981,6 +1046,7 @@ function main() {
         checkRift();
         checkDungeon();
         if (++sweepBeat % 3 === 0) sweepInventory();
+        if (sweepBeat % 12 === 0) checkCollection();
     }, 400);
 
     // The shard roster, on its own slow clock. A hub list of 30 people is not

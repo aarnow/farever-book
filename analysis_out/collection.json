@@ -1,0 +1,2672 @@
+{
+"mounts": [
+{
+"id": "Mount_Wolf_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z2_Azuram_Highland",
+"cost": []
+}
+]
+},
+{
+"id": "Mount_Wolf_02",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Wolf",
+"chance": 0.001
+},
+{
+"k": "family",
+"id": "Coyote",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Wolf_03",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CollectMounts_50",
+"chain": [
+"CollectMounts_50",
+"CollectMounts_25",
+"CollectMounts_10",
+"CollectMounts_1"
+],
+"v": 50
+}
+]
+},
+{
+"id": "Mount_Wolf_04",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z2_Azuram_Highland",
+"cost": []
+}
+]
+},
+{
+"id": "Mount_Wolf_05",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z2_Azuram_Highland",
+"cost": []
+}
+]
+},
+{
+"id": "Mount_Wolf_06",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CompleteRegion_Z2",
+"chain": [
+"CompleteRegion_Z2"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Hound_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Hound_02",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Hound_03",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Hound_04",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Hound_05",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Hound_06",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "NoDead_Boss_Rift",
+"chain": [
+"NoDead_Boss_Rift"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Demon_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 10000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 10000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 10000
+}
+]
+}
+]
+},
+{
+"id": "Mount_Demon_02",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Demon",
+"chance": 0.001
+},
+{
+"k": "family",
+"id": "Demon_Rift",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.001
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Demon_03",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CompleteRegion_Z3",
+"chain": [
+"CompleteRegion_Z3"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Demon_04",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Demon_05",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 10000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 10000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 10000
+}
+]
+}
+]
+},
+{
+"id": "Mount_Demon_06",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "DemonSuperElite",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Goat_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z1_Primevalley_Hub",
+"cost": []
+}
+]
+},
+{
+"id": "Mount_Goat_02",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z1_Primevalley_Hub",
+"cost": []
+}
+]
+},
+{
+"id": "Mount_Goat_03",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z1_Primevalley_Hub",
+"cost": []
+}
+]
+},
+{
+"id": "Mount_Goat_04",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CompleteDungeon_Z1_All",
+"chain": [
+"CompleteDungeon_Z1_All"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Goat_05",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "Bestiary_Z1",
+"chain": [
+"Bestiary_Z1"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Goat_06",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+}
+]
+},
+{
+"id": "SparkHorse_01",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Boar_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Boar",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Boar_02",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Boar_03",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "Bestiary_Z2",
+"chain": [
+"Bestiary_Z2"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Boar_04",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Boar_05",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CollectMounts_10",
+"chain": [
+"CollectMounts_10",
+"CollectMounts_1"
+],
+"v": 10
+}
+]
+},
+{
+"id": "Mount_Boar_06",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+}
+]
+},
+{
+"id": "Mount_Skunk_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Skunk",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Skunk_02",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CompleteRegion_Z1",
+"chain": [
+"CompleteRegion_Z1"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Skunk_03",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CollectMounts_25",
+"chain": [
+"CollectMounts_25",
+"CollectMounts_10",
+"CollectMounts_1"
+],
+"v": 25
+}
+]
+},
+{
+"id": "Mount_Skunk_04",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "MunsterChuck",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Skunk_05",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CompleteDungeon_Z2_All",
+"chain": [
+"CompleteDungeon_Z2_All"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Skunk_06",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Croco_01",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Croco_02",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Croco_03",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Croco_04",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Croco_05",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Croco_06",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Aries_01",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "Bestiary_Z3",
+"chain": [
+"Bestiary_Z3"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Aries_02",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CompleteDungeon_Z3_All",
+"chain": [
+"CompleteDungeon_Z3_All"
+],
+"v": null
+}
+]
+},
+{
+"id": "Mount_Aries_03",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_South",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Mount_Aries_04",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Aries_05",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Phrixes",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Aries_06",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Ladybug_Red",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Mokshi",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Ladybug_Green",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z1_Honeywoods_Cave",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Mount_Ladybug_Blue",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Bee",
+"chance": 0.001
+},
+{
+"k": "family",
+"id": "Swarowl",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Ladybug_DarkBlue",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Ladybug_Orange",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Ladybug_Purple",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Cleodora",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Ladybug_Yellow",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Ladybug_Demonic",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Crab_Blue",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Crabgantua",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Crab_BlueGrey",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Crab_Demonic",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Mount_Crab_Purple",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Crab_Red",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Crab",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Mount_Crab_Red02",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Mount_Crab_Yellow",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z1_Enripit_Hill",
+"chance": 1.0
+}
+]
+}
+],
+"gliders": [
+{
+"id": "Glider_Owl_Grey",
+"rarity": "Epic",
+"src": [
+{
+"k": "starter",
+"cls": "rogue"
+}
+]
+},
+{
+"id": "Glider_Owl_Brown",
+"rarity": "Epic",
+"src": [
+{
+"k": "starter",
+"cls": "warrior"
+}
+]
+},
+{
+"id": "Glider_Owl_BlueGrey",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z1_Primevalley_Hub",
+"cost": []
+}
+]
+},
+{
+"id": "Glider_Owl_Brown02",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z1_Primevalley_Hub",
+"cost": []
+}
+]
+},
+{
+"id": "Glider_Owl_PurpleGrey",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z1_Primevalley_Hub",
+"cost": []
+}
+]
+},
+{
+"id": "Glider_Owl_BlackWarm",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "FindAllSecrets_Z1",
+"chain": [
+"FindAllSecrets_Z1"
+],
+"v": null
+}
+]
+},
+{
+"id": "Glider_Raccoon_Grey",
+"rarity": "Epic",
+"src": [
+{
+"k": "starter",
+"cls": "mage"
+}
+]
+},
+{
+"id": "Glider_Raccoon_Orange",
+"rarity": "Epic",
+"src": [
+{
+"k": "starter",
+"cls": "priest"
+}
+]
+},
+{
+"id": "Glider_Raccoon_Brown01",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z2_Azuram_Highland",
+"cost": []
+}
+]
+},
+{
+"id": "Glider_Raccoon_Brown02",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z2_Azuram_Highland",
+"cost": []
+}
+]
+},
+{
+"id": "Glider_Raccoon_BlueGrey",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": null,
+"zone": "Z2_Azuram_Highland",
+"cost": []
+}
+]
+},
+{
+"id": "Glider_Raccoon_BlackBrown",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "FindAllSecrets_Z2",
+"chain": [
+"FindAllSecrets_Z2"
+],
+"v": null
+}
+]
+},
+{
+"id": "Glider_Dragon_BlueGreen",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "SecretOrbPOI_Z1",
+"chain": [
+"SecretOrbPOI_Z1"
+],
+"v": null
+}
+]
+},
+{
+"id": "Glider_Dragon_Blue",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Dragon_Orange",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Dragon_Yellow",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z2_Krisomal_Chapel",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Dragon_Pink",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CollectGliders_50",
+"chain": [
+"CollectGliders_50",
+"CollectGliders_25",
+"CollectGliders_10",
+"CollectGliders_5"
+],
+"v": 50
+}
+]
+},
+{
+"id": "Glider_Dragon_Lava",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Golcano",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Dragon_Demon",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Bat_Grey",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Bat_BlackWhite",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Reblochonk",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Bat_Brown",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Glider_Bat_Burning",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CollectGliders_25",
+"chain": [
+"CollectGliders_25",
+"CollectGliders_10",
+"CollectGliders_5"
+],
+"v": 25
+}
+]
+},
+{
+"id": "Glider_Bat_WhiteBlack",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Ratsar",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Bat_Demon",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Butterfly_Pink",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Butterfly_Blue",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z2_Nescent_Thorn",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Butterfly_Green",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "SecretOrbPOI_Z2",
+"chain": [
+"SecretOrbPOI_Z2"
+],
+"v": null
+}
+]
+},
+{
+"id": "Glider_Butterfly_Orange",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Butterfly_Yellow",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Gatsbee",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Butterfly_Demon",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "SecretOrbPOI_Z3",
+"chain": [
+"SecretOrbPOI_Z3"
+],
+"v": null
+}
+]
+},
+{
+"id": "Glider_Butterfly_EA_Spark",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_FlyingFish_BlueGreen",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Glider_FlyingFish_Red",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z1_Primevalley_Coast",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_FlyingFish_Orange",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Nepsilon",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_FlyingFish_Green",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_FlyingFish_Acid",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "SpongeBlob",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_FlyingFish_Demon",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.01
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Falcon_Brown",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Falcon_Black",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Falcon_Blue",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Falcon_Green",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Falcon_Grey",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Falcon_Red",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Falcon_White",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Sprout_Yellow",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Sprout_Orange",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z2_Azuram_Top",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Sprout_Brown",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Sprout_Green",
+"rarity": "Epic",
+"src": [
+{
+"k": "family",
+"id": "Sprouts",
+"chance": 0.001
+}
+]
+},
+{
+"id": "Glider_Sprout_WhitePink",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "CollectGliders_10",
+"chain": [
+"CollectGliders_10",
+"CollectGliders_5"
+],
+"v": 10
+}
+]
+},
+{
+"id": "Glider_Sprout_Red",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z2_Eksod_Kobolds",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Crimson01",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "RobinHoof",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Crimson02",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Crimson03",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "FindAllSecrets_Z3",
+"chain": [
+"FindAllSecrets_Z3"
+],
+"v": null
+}
+]
+},
+{
+"id": "Glider_Crimson04",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Crimson05",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Crimson06",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Demon_Blue",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 7500
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 7500
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 7500
+}
+]
+}
+]
+},
+{
+"id": "Glider_Demon_Blue02",
+"rarity": "Epic",
+"src": []
+},
+{
+"id": "Glider_Demon_Grey",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_Sacristy",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Demon_Purple",
+"rarity": "Epic",
+"src": [
+{
+"k": "unit",
+"id": "DemonSuperElite_Fairy",
+"chance": 0.01
+}
+]
+},
+{
+"id": "Glider_Demon_Red01",
+"rarity": "Epic",
+"src": [
+{
+"k": "ach",
+"id": "Close_10_Gates_Once",
+"chain": [
+"Close_10_Gates_Once"
+],
+"v": 10
+}
+]
+},
+{
+"id": "Glider_Demon_Red02",
+"rarity": "Epic",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 7500
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 7500
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 7500
+}
+]
+}
+]
+},
+{
+"id": "Glider_Pigeon_Grey",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_South",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Pigeon_Grey02",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_South",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Pigeon_Beige",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_South",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Pigeon_Blue",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_South",
+"chance": 1.0
+}
+]
+},
+{
+"id": "Glider_Pigeon_Purple",
+"rarity": "Epic",
+"src": [
+{
+"k": "chest",
+"id": "Chest",
+"zone": "Z3_CrimsonIsland_South",
+"chance": 1.0
+}
+]
+}
+],
+"pets": [
+{
+"id": "Rabbit_Yellow",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Rabbit_Brown",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Rabbit_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Rabbit_Grey",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Rabbit_Yellow02",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Rabbit_Pink",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Rabbit_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Rabbit_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"rift": false,
+"chance": 0.0101
+}
+]
+},
+{
+"id": "Rabbit_EarlyAccess_Spark",
+"rarity": "",
+"src": []
+},
+{
+"id": "Sheep_Beige",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Krisomal_North"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "Sheep_Black",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Krisomal_North"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "Sheep_Brown",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Krisomal_North"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "Sheep_Brown02",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Krisomal_North"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "Sheep_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Sheep_Black02",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Krisomal_North"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "Sheep_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Krisomal_Chapel"
+],
+"chance": 1.0
+}
+]
+},
+{
+"id": "Squirrel_Brown",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Cliff"
+],
+"rift": false,
+"chance": 0.1979
+}
+]
+},
+{
+"id": "Squirrel_Blue",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Cliff"
+],
+"rift": false,
+"chance": 0.1979
+}
+]
+},
+{
+"id": "Squirrel_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Squirrel_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Cliff"
+],
+"rift": false,
+"chance": 0.1979
+}
+]
+},
+{
+"id": "Squirrel_Grey",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Cliff"
+],
+"rift": false,
+"chance": 0.1979
+}
+]
+},
+{
+"id": "Squirrel_Red",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Cliff"
+],
+"rift": false,
+"chance": 0.1979
+}
+]
+},
+{
+"id": "Squirrel_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Cliff"
+],
+"rift": false,
+"chance": 0.0104
+}
+]
+},
+{
+"id": "DemonDog_Red",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "DemonDog_Beige",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "DemonDog_Blue",
+"rarity": "",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+}
+]
+},
+{
+"id": "DemonDog_Blue02",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "DemonDog_Orange",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "DemonDog_Purple",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"rift": false,
+"chance": 0.2
+}
+]
+},
+{
+"id": "Goat_Beige01",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Goat_Beige02",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Goat_Black",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Sacristy"
+],
+"chance": 1.0
+}
+]
+},
+{
+"id": "Goat_Brown",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Goat_Demon",
+"rarity": "",
+"src": [
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z2_Azuram_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z3_CrimsonIsland_South",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+},
+{
+"k": "shop",
+"npc": "DemonHunterZoey",
+"zone": "Z1_Primevalley_Hub",
+"cost": [
+{
+"item": null,
+"n": 5000
+}
+]
+}
+]
+},
+{
+"id": "Goat_Grey",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Goat_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"rift": false,
+"chance": 0.0103
+}
+]
+},
+{
+"id": "Frog_BlueGreen",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_BelEtir_Islets"
+],
+"chance": 1.0
+},
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_Blue",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_BluePurple",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_Brown",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_Yellow",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_RedOrange",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.1414
+}
+]
+},
+{
+"id": "Frog_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Frog_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Fields",
+"Z1_Primevalley_Lookout"
+],
+"rift": false,
+"chance": 0.0101
+}
+]
+},
+{
+"id": "Ladybug_Red",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Honeywoods_Isle"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Ladybug_Blue",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Honeywoods_Isle"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Ladybug_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Honeywoods_Isle"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Ladybug_Purple",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Honeywoods_Isle"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Ladybug_Yellow",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Honeywoods_Cave"
+],
+"chance": 1.0
+}
+]
+},
+{
+"id": "Ladybug_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Ladybug_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Honeywoods_Isle"
+],
+"rift": false,
+"chance": 0.0103
+}
+]
+},
+{
+"id": "Turtle_Grey",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.1649
+}
+]
+},
+{
+"id": "Turtle_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.1649
+}
+]
+},
+{
+"id": "Turtle_Blue",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.1649
+}
+]
+},
+{
+"id": "Turtle_Pink",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.1649
+}
+]
+},
+{
+"id": "Turtle_Red",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.1649
+}
+]
+},
+{
+"id": "Turtle_Yellow",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.1649
+}
+]
+},
+{
+"id": "Turtle_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Nescent_Flowers"
+],
+"rift": false,
+"chance": 0.0103
+}
+]
+},
+{
+"id": "Turtle_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Lizard_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Crest",
+"Z1_Primevalley_Island",
+"Z2_Krisomal_South"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Lizard_Blue",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Crest",
+"Z1_Primevalley_Island",
+"Z2_Krisomal_South"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Lizard_Yellow",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Crest",
+"Z1_Primevalley_Island",
+"Z2_Krisomal_South"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Lizard_RedOrange",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Crest",
+"Z1_Primevalley_Island",
+"Z2_Krisomal_South"
+],
+"rift": false,
+"chance": 0.2474
+}
+]
+},
+{
+"id": "Lizard_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "Lizard_BlueOrange",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"chance": 1.0
+}
+]
+},
+{
+"id": "Lizard_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z1_Enripit_Crest",
+"Z1_Primevalley_Island",
+"Z2_Krisomal_South"
+],
+"rift": false,
+"chance": 0.0103
+}
+]
+},
+{
+"id": "StinkBug_Green",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Krisomal_Lighthouse"
+],
+"rift": false,
+"chance": 0.2462
+}
+]
+},
+{
+"id": "StinkBug_Purple",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Krisomal_Lighthouse"
+],
+"rift": false,
+"chance": 0.2462
+}
+]
+},
+{
+"id": "StinkBug_Blue",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Krisomal_Lighthouse"
+],
+"rift": false,
+"chance": 0.2462
+}
+]
+},
+{
+"id": "StinkBug_RedOrange",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Krisomal_Lighthouse"
+],
+"rift": false,
+"chance": 0.2462
+}
+]
+},
+{
+"id": "StinkBug_Demon",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [],
+"rift": true,
+"chance": 0.125
+}
+]
+},
+{
+"id": "StinkBug_Spark",
+"rarity": "",
+"src": [
+{
+"k": "spawn",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Krisomal_Lighthouse"
+],
+"rift": false,
+"chance": 0.0154
+}
+]
+}
+]
+}
