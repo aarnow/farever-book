@@ -54,3 +54,4 @@ analysis_out/collection_img/
 analysis_out/bestiary_img/
 .meter_codex.json
 analysis_out/map_tiles/
+.meter_elements.json

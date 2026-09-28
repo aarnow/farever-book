@@ -420,7 +420,11 @@ function hookGameTick(base) {
         Interceptor.attach(base.add(fi * 8).readPointer(), {
             onEnter: function () {
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
-                if (codexDue && hbKeys) { codexDue = false; refreshCodex(); }
+                if (codexDue && hbKeys) {
+                    codexDue = false;
+                    refreshCodex();
+                    refreshElements();
+                }
             }
         });
     } catch (e) {
@@ -898,6 +902,68 @@ function refreshCodex() {
         if (sig === codexSig) return;
         codexSig = sig;
         send({ kind: "codex", hero: localName, ranks: out });
+    } catch (e) {}
+}
+
+// ---- the world's elements (map completion) ----
+// Progress.elements: element id (a chest's, an orb's, an obelisk's) ->
+// its ProgressState, per character. The game asks it through
+// Progress.hasElementDiscovered / hasElementCompleted / getElementState.
+// Same MapData -> StringMap route as the codex. Measured 2026-09-28: each
+// value is an hxbit.ObjProxy_Ocompleted_Float whose `completed` is the time
+// the element was completed; an element never completed has no entry (a
+// player with every chest and orb had all of them, and none of the 18
+// points of a region they never visited).
+let elementsDue = true;
+let elementsSig = null;
+
+function progressMap(field) {
+    try {
+        if (!localHero || localHero.isNull() || !OFF.Progress
+            || OFF.Progress[field] == null || OFF.Player.progress == null)
+            return null;
+        const player = localHero.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return null;
+        const prog = player.add(OFF.Player.progress).readPointer();
+        if (!prog || prog.isNull()) return null;
+        const md = prog.add(OFF.Progress[field]).readPointer();
+        if (!md || md.isNull()) return null;
+        const v = md.add(OFF.MapData.map).readPointer();
+        if (!v || v.isNull()) return null;
+        const inner = v.readPointer().readU32() === 15
+            ? v.add(OFF.MapData.value).readPointer() : v;
+        if (!inner || inner.isNull()) return null;
+        const h = inner.add(OFF.StringMap.h).readPointer();
+        return (h && !h.isNull()) ? h : null;
+    } catch (e) { return null; }
+}
+
+// GAME THREAD ONLY (hbkeys/hbget allocate).
+function refreshElements() {
+    const h = progressMap("elements");
+    if (!h || !hbKeys || !hbGet) return;
+    try {
+        const keys = hbKeys(h);
+        if (!keys || keys.isNull()) return;
+        const n = keys.add(16).readS32();
+        if (n < 0 || n > 50000) return;
+        const out = {};
+        const at = OFF.ElementProxy ? OFF.ElementProxy.completed : 24;
+        for (let i = 0; i < n; i++) {
+            const kb = keys.add(24 + i * 8).readPointer();
+            if (!kb || kb.isNull()) continue;
+            const id = kb.readUtf16String();
+            if (!id) continue;
+            const v = hbGet(h, kb);
+            if (!v || v.isNull()) { out[id] = null; continue; }
+            let val = null;
+            try { val = v.add(at).readDouble(); } catch (e) {}
+            out[id] = val;
+        }
+        const sig = localName + JSON.stringify(out);
+        if (sig === elementsSig) return;
+        elementsSig = sig;
+        send({ kind: "elements", hero: localName, states: out });
     } catch (e) {}
 }
 

@@ -769,3 +769,18 @@ select, input[type=text] {
 .mpop .ph .mk { position: static; }
 .mpop .pz { color: var(--dim); font-size: 12px; margin-top: 4px; }
 .mpop .pc { color: var(--faint); font-size: 11px; margin-top: 2px; }
+
+/* map completion */
+.mmarks .mk.found { opacity: .35; }
+.mmarks .mk.found:hover, .mmarks .mk.found.sel { opacity: 1; }
+.mprog { display: flex; justify-content: space-between; align-items: baseline; }
+.mprog b { font-size: 15px; }
+.mprog span { color: var(--dim); font-size: 12px; }
+.mpanel .collbar { margin: 6px 0 6px; }
+.msync { color: var(--faint); font-size: 10px; margin-bottom: 8px; }
+.mhide { width: 100%; border: 1px solid var(--line); background: var(--panel);
+         color: var(--dim); border-radius: 6px; padding: 5px; font: inherit;
+         font-size: 11px; cursor: pointer; margin-bottom: 6px; }
+.mhide.on { color: var(--text); border-color: var(--accent); }
+.mpop .pf { font-size: 12px; font-weight: 700; color: var(--dim); margin-top: 4px; }
+.mpop .pf.on { color: var(--heal); }

@@ -104,6 +104,8 @@ DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
 # Each character's kill counts per monster (the game's codex), last read.
 CODEX_FILE = _WRITABLE / ".meter_codex.json"
+# Each character's world elements (chests, orbs, obelisks...) -> state.
+ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 LOG_FILE = DATA_HOME / "meter.log"
 TARGET_PROCESS = "Farever.exe"
 
@@ -2864,6 +2866,8 @@ class App:
         self._dungeon_view = None           # the dungeon run being read
         self._collection_owned = None       # .meter_collection.json, loaded
         self._codex_data = None             # .meter_codex.json, loaded
+        self._elements_logged = False
+        self._elements_data = None          # .meter_elements.json, loaded
         self._dungeon_cache = {}            # file name -> (mtime, data)
         self._binding_now = False
         self._menu_unlock = False           # no game menu to follow any more
@@ -3558,6 +3562,46 @@ class App:
                       file=sys.stderr)
         self._enqueue(done)()
 
+    def on_elements(self, p):
+        """A character's completed world elements (element id -> when),
+        read in game: the map's completion. Saved per character. Hook
+        thread."""
+        hero = p.get("hero") or "?"
+        states = p.get("states") or {}
+
+        def done():
+            try:
+                data = json.loads(ELEMENTS_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                data = {}
+            first = not self._elements_logged
+            self._elements_data = data
+            data.setdefault("heroes", {})[hero] = {"states": states,
+                                                   "at": time.time()}
+            data["last"] = hero
+            try:
+                ELEMENTS_FILE.write_text(json.dumps(data), encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the map progress: {e}",
+                      file=sys.stderr)
+            if first:
+                self._elements_logged = True
+                pts = world_map().get("points") or []
+                done_ = sum(1 for q in pts if _element_done(states,
+                                                            q.get("id")))
+                print(f"[meter] map progress: {hero}, {done_} / {len(pts)} "
+                      "points", file=sys.stderr)
+        self._enqueue(done)()
+
+    def _elements(self):
+        if self._elements_data is None:
+            try:
+                self._elements_data = json.loads(
+                    ELEMENTS_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._elements_data = {}
+        return self._elements_data
+
     def _codex(self):
         if self._codex_data is None:
             try:
@@ -3584,7 +3628,16 @@ class App:
                                  self._collection())}]
 
     def _page_map(self):
-        return [{"k": "map", "id": "map", **map_view()}]
+        data = self._elements()
+        hero = data.get("last")
+        entry = (data.get("heroes") or {}).get(hero) or {}
+        at = entry.get("at")
+        sync = (f"Progression de {hero}, lue en jeu le "
+                f"{date_fr(time.localtime(at))}." if at else
+                "Progression pas encore lue : lance le jeu avec Farever+ "
+                "ouvert.")
+        return [{"k": "map", "id": "map", "sync": sync,
+                 **map_view(entry.get("states") if at else None)}]
 
     def _collection(self):
         if self._collection_owned is None:
@@ -4848,16 +4901,34 @@ MAP_CATS = {"chest": ("Coffre du monde", "Coffres"),
             "respawn": ("Point de réapparition", "Utilitaires")}
 
 
-def map_view():
+# Regions whose points are in the game's files but not yet playable (Bel-Etir
+# is still in development, 2026-09-28): left off the map and its totals.
+MAP_UNRELEASED_REGIONS = {"Bel_Etir_Region"}
+
+
+def _element_done(states, eid):
+    """Whether a world element has been completed (chest opened, orb picked
+    up, obelisk discovered): Progress.elements has it, with a time. A value
+    kept from the first measuring build is a [byte, time] pair."""
+    v = (states or {}).get(eid)
+    if isinstance(v, list):
+        v = v[-1] if v else None
+    return isinstance(v, (int, float)) and v > 0
+
+
+def map_view(states=None):
     """The Map tab's data: the tile grid, every point with its French zone
-    and region, and the categories and regions with their counts."""
+    and region (and whether it is done, when the progress has been read),
+    and the categories and regions with their counts."""
     wm = world_map()
     pts = []
     for p in wm.get("points") or ():
-        if p.get("c") not in MAP_CATS:
+        if p.get("c") not in MAP_CATS \
+                or p.get("region") in MAP_UNRELEASED_REGIONS:
             continue
         num = re.search(r"(\d+)$", str(p.get("id") or ""))
         pts.append({"c": p["c"], "x": p["x"], "y": p["y"],
+                    "f": 1 if _element_done(states, p.get("id")) else 0,
                     "n": int(num.group(1)) if num else 0,
                     "z": _zone_label(p["zone"]) if p.get("zone") else "",
                     "r": p.get("region") or "other"})
@@ -4873,7 +4944,7 @@ def map_view():
                             "t": _fr_names("zone").get(r) or _pretty_id(r)
                             if r != "other" else "Autres"})
     return {"meta": wm.get("meta") or {}, "points": pts, "cats": cats,
-            "regions": regions}
+            "regions": regions, "known": states is not None}
 
 
 _UNIT_NAMES = None
@@ -6623,6 +6694,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_codex(p)
+        elif k == "elements":
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_elements(p)
         elif k == "dungeon":
             # The running activity and, in a dungeon, its state — see
             # DungeonTracker for what each field was measured to mean.

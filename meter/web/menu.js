@@ -1101,7 +1101,8 @@ function renderFamilies(box, n) {
    tiles (sent after the page, like the other pictures) in a transformed
    layer, and the points in a layer of their own, placed in screen pixels so
    they keep their size at every zoom. */
-const MAP = { s: null, x: 0, y: 0, on: {}, reg: 'all', sel: null, node: null };
+const MAP = { s: null, x: 0, y: 0, on: {}, reg: 'all', sel: null, node: null,
+              hideFound: false };
 const MAP_COLORS = { chest: '#E2B65B', vault: '#C07CF0', recipe: '#5B8DEF',
                      orb: '#F2665E', obelisk: '#B89CFF', respawn: '#4FD1C5' };
 
@@ -1134,7 +1135,7 @@ function buildMap(n) {
   vp.appendChild(world);
   const marks = el('div', 'mmarks');
   (n.points || []).forEach((p, i) => {
-    const d = el('div', 'mk mk-' + p.c);
+    const d = el('div', 'mk mk-' + p.c + (p.f ? ' found' : ''));
     d.dataset.i = i;
     const [px, py] = mapPx(n, p.x, p.y);
     d.dataset.px = px;
@@ -1162,6 +1163,25 @@ function mapPanel(n) {
   const p = el('div', 'mpanel');
   p.appendChild(el('div', 'mtitle', 'Carte de Siagarta'));
   const inReg = (pt) => MAP.reg === 'all' || pt.r === MAP.reg;
+  const pts = n.points || [];
+  // "found / total" when the progress has been read, the total otherwise
+  const tally = (list) => n.known
+    ? list.filter((pt) => pt.f).length + ' / ' + list.length : String(list.length);
+  if (n.known) {
+    const mine = pts.filter(inReg);
+    const got = mine.filter((pt) => pt.f).length;
+    const pct = mine.length ? Math.round(got / mine.length * 100) : 0;
+    const prog = el('div', 'mprog');
+    prog.appendChild(el('b', null, got + ' / ' + mine.length));
+    prog.appendChild(el('span', null, pct + ' %'));
+    p.appendChild(prog);
+    const bar_ = el('div', 'collbar');
+    const fill = el('i');
+    fill.style.width = pct + '%';
+    bar_.appendChild(fill);
+    p.appendChild(bar_);
+  }
+  p.appendChild(el('div', 'msync', n.sync || ''));
   const regs = el('div', 'mregs');
   [{ v: 'all', t: 'Tout Siagarta' }].concat(n.regions || []).forEach((r) => {
     const b = el('button', MAP.reg === r.v ? 'on' : '', r.t);
@@ -1170,6 +1190,13 @@ function mapPanel(n) {
     regs.appendChild(b);
   });
   p.appendChild(regs);
+  if (n.known) {
+    const hf = el('button', 'mhide' + (MAP.hideFound ? ' on' : ''),
+      MAP.hideFound ? '✓ Éléments trouvés masqués' : 'Masquer les éléments trouvés');
+    hf.type = 'button';
+    hf.addEventListener('click', () => { MAP.hideFound = !MAP.hideFound; mapRefreshPanel(); mapApply(); });
+    p.appendChild(hf);
+  }
   const all = el('div', 'mall');
   [['Tout afficher', true], ['Tout masquer', false]].forEach(([t, v]) => {
     const b = el('button', null, t);
@@ -1185,21 +1212,21 @@ function mapPanel(n) {
   (n.cats || []).forEach((c) => {
     if (c.g !== group) {
       group = c.g;
-      const shown = (n.points || []).filter((pt) => inReg(pt)
-        && (n.cats.find((x) => x.v === pt.c) || {}).g === group).length;
+      const shown = pts.filter((pt) => inReg(pt)
+        && (n.cats.find((x) => x.v === pt.c) || {}).g === group);
       const h = el('div', 'mgroup');
       h.appendChild(el('b', null, group));
-      h.appendChild(el('span', null, String(shown)));
+      h.appendChild(el('span', null, tally(shown)));
       p.appendChild(h);
       grid = el('div', 'mcats');
       p.appendChild(grid);
     }
-    const cnt = (n.points || []).filter((pt) => pt.c === c.v && inReg(pt)).length;
+    const cnt = tally(pts.filter((pt) => pt.c === c.v && inReg(pt)));
     const b = el('button', 'mcat' + (MAP.on[c.v] ? ' on' : ''));
     b.type = 'button';
     b.appendChild(el('i', 'mk mk-' + c.v));
     b.appendChild(el('span', 'ml', c.t));
-    b.appendChild(el('span', 'mn', String(cnt)));
+    b.appendChild(el('span', 'mn', cnt));
     b.addEventListener('click', () => { MAP.on[c.v] = !MAP.on[c.v]; mapRefreshPanel(); mapApply(); });
     grid.appendChild(b);
   });
@@ -1241,7 +1268,8 @@ function mapApply() {
   const pts = (MAP.node && MAP.node.points) || [];
   document.querySelectorAll('.mmarks .mk').forEach((d) => {
     const p = pts[d.dataset.i];
-    const show = p && MAP.on[p.c] && (MAP.reg === 'all' || p.r === MAP.reg);
+    const show = p && MAP.on[p.c] && (MAP.reg === 'all' || p.r === MAP.reg)
+      && !(MAP.hideFound && p.f);
     d.style.display = show ? '' : 'none';
     if (!show) return;
     d.style.transform = `translate(${d.dataset.px * MAP.s + MAP.x}px, ${d.dataset.py * MAP.s + MAP.y}px)`;
@@ -1310,6 +1338,7 @@ function mapPopup() {
   pop.appendChild(h);
   const reg = (n.regions || []).find((r) => r.v === p.r);
   pop.appendChild(el('div', 'pz', [p.z, reg && reg.v !== 'other' ? reg.t : ''].filter(Boolean).join(' — ') || 'Zone inconnue'));
+  if (n.known) pop.appendChild(el('div', 'pf' + (p.f ? ' on' : ''), p.f ? '✓ Trouvé' : 'Pas encore trouvé'));
   pop.appendChild(el('div', 'pc', 'n° ' + p.n + ' · x ' + Math.round(p.x) + ', y ' + Math.round(p.y)));
   mapApply();
 }

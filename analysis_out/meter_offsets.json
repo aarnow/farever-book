@@ -202,7 +202,8 @@
   },
   "Progress": {
     "unitsProgress": 168,
-    "itemProgress": 176
+    "itemProgress": 176,
+    "elements": 152
   },
   "MapData": {
     "map": 40,
@@ -252,5 +253,8 @@
   "Texts": {
     "name_vidx": 1,
     "desc_vidx": 0
+  },
+  "ElementProxy": {
+    "completed": 24
   }
 }

@@ -99,6 +99,7 @@ def main():
     # record (and so renames the class) fails loudly here instead of reading a
     # stale offset.
     kproxy = offs("hxbit.ObjProxy_OkillCount_Int_rank_Int")
+    eproxy = offs("hxbit.ObjProxy_Ocompleted_Float")
     # Dungeons. GameLayer.mainActivity is the running activity; for a dungeon
     # it is an st.activity.Dungeon, whose globalCtx is the DungeonContext that
     # carries the run's state, clock and death count. The difficulty lives on
@@ -383,8 +384,15 @@ def main():
         # threshold set has three tiers, so rank==3 means the entry is done and
         # nothing has to know WHICH set applies.
         "Progress": {"unitsProgress": progress["unitsProgress"][0],
-                     "itemProgress": progress["itemProgress"][0]},
+                     "itemProgress": progress["itemProgress"][0],
+                     # element id -> ProgressState (discovered, completed):
+                     # the world's chests, orbs, obelisks... per character
+                     "elements": progress["elements"][0]},
         "MapData": {"map": mapdata["map"][0], "value": 8},
+        # Progress.elements' value (measured 2026-09-28): `completed` is when
+        # the element was completed — a chest opened, an orb picked up, an
+        # obelisk discovered. An element never completed has no entry.
+        "ElementProxy": {"completed": eproxy["completed"][0]},
         "StringMap": {"h": smap["h"][0]},
         "CodexProxy": {"count": kproxy["killCount"][0],
                        "rank": kproxy["rank"][0]},
