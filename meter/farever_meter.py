@@ -4846,14 +4846,13 @@ def bestiary_view(ranks, owned=None):
             "kills": int(kills), "rank": int(rank),
             "max": len(steps) or 3,
             "next": nxt})
-    drops = _family_drops(owned or {})
     fams = {}
     for it in items:
         f = it["famId"]
         if not f:
             continue
         a = fams.setdefault(f, {"id": f, "name": it["fam"], "kills": 0,
-                                "species": 0, "hunted": 0, "drops": [],
+                                "species": 0, "hunted": 0,
                                 "top": (-1, "")})
         a["top"] = max(a["top"], (it["kills"], it["id"]))
         a["kills"] += it["kills"]
@@ -4865,15 +4864,87 @@ def bestiary_view(ranks, owned=None):
                     if (ANALYSIS / "bestiary_img" / f"family_{f}.webp")
                     .exists() else a["top"][1])
         del a["top"]
-        for d in drops.get(f, ()):
-            p, k = d["chance"], a["kills"]
-            a["drops"].append(dict(
-                d, pct=_pct(p), odds=f"1 chance sur {_n(round(1 / p))}",
-                # the chance of having seen it drop by now, at this rate
-                had=_pct(1 - (1 - p) ** k) if k else ""))
     return {"regions": regions, "items": items,
             "families": sorted(fams.values(), key=lambda a: -a["kills"]),
+            "farm": _farm_view(items, fams, owned or {}),
             "total": sum(i["kills"] for i in items)}
+
+
+def _farm_view(items, fams, owned):
+    """The mounts and gliders a monster can drop, each with every monster
+    (a whole family, or one unit — a dungeon boss, an elite demon) that can
+    drop it, the kills behind each, and the chances: per kill, and of having
+    seen it drop by now (1 - (1-p)^kills, each kill an independent roll)."""
+    by_id = {it["id"]: it for it in items}
+    out = []
+    for cat, label in (("mounts", "Monture"), ("gliders", "Planeur")):
+        mine = set(owned.get(cat) or ())
+        for e in collection_catalogue().get(cat) or ():
+            sources, miss = [], 1.0
+            for s in e.get("src") or ():
+                p = s.get("chance")
+                if s.get("k") not in ("family", "unit") or not p:
+                    continue
+                if s["k"] == "family":
+                    fam = fams.get(s["id"]) or {}
+                    kills = fam.get("kills", 0)
+                    species = sorted((it for it in items
+                                      if it["famId"] == s["id"]
+                                      and it["kills"]),
+                                     key=lambda it: -it["kills"])
+                    sources.append({
+                        "kind": "family", "fid": s["id"],
+                        "img": fam.get("img") or "",
+                        "name": _family_label(s["id"]),
+                        "sub": f"toute la famille · {fam.get('species', 0)} "
+                               "espèces",
+                        "species": [{"name": it["name"], "k": it["kills"]}
+                                    for it in species[:8]],
+                        "kills": kills, "p": p})
+                else:
+                    it = by_id.get(s["id"]) or {}
+                    kills = it.get("kills", 0)
+                    dg = next((d.get("kind") for d in dungeon_catalogue()
+                               if d.get("boss") == s["id"]), None)
+                    sources.append({
+                        "kind": "unit", "img": s["id"],
+                        "name": _unit_label(s["id"]),
+                        "sub": (f"boss de {dungeon_name(dg)}" if dg else
+                                it.get("fam") or "monstre"),
+                        "kills": kills, "p": p})
+                miss *= (1 - p) ** kills
+            if not sources:
+                continue
+            # One set of numbers per item: the kills of every source summed,
+            # the chance per kill (a range when the sources differ), and the
+            # chance of having seen it drop by now over all of them.
+            total = sum(s["kills"] for s in sources)
+            ps = sorted({s["p"] for s in sources})
+            pct = (_pct(ps[0]) if len(ps) == 1
+                   else f"{_pct(ps[0])} à {_pct(ps[-1])}")
+            odds = (f"1 chance sur {_n(round(1 / ps[0]))}" if len(ps) == 1
+                    else "selon le monstre")
+            # every monster that can drop it: a family's species, or the
+            # unit itself — portraits only, the name on hover
+            mobs = []
+            for s in sources:
+                if s["kind"] == "family":
+                    mobs += [{"img": it["id"], "name": it["name"],
+                              "k": it["kills"]}
+                             for it in items if it["famId"] == s["fid"]]
+                else:
+                    mobs.append({"img": s["img"], "name": s["name"],
+                                 "k": s["kills"]})
+            mobs.sort(key=lambda x: -x["k"])
+            out.append({"id": e["id"], "name": item_label(e["id"]),
+                        "cat": label, "rk": (e.get("rarity") or "").lower(),
+                        "own": e["id"] in mine, "kills": total,
+                        "pct": pct, "odds": odds,
+                        "had": _pct(1 - miss) if total else "",
+                        "mobs": mobs})
+    # what is still to farm first, the most advanced of those first
+    out.sort(key=lambda m: (m["own"], -m["kills"]))
+    return out
 
 
 _WORLD_MAP = None

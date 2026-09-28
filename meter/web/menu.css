@@ -784,3 +784,55 @@ select, input[type=text] {
 .mhide.on { color: var(--text); border-color: var(--accent); }
 .mpop .pf { font-size: 12px; font-weight: 700; color: var(--dim); margin-top: 4px; }
 .mpop .pf.on { color: var(--heal); }
+
+/* hunting log: farmable mounts and gliders */
+.farmseg { display: inline-flex; margin: 0 0 8px; }
+.farmseg button { padding: 6px 14px; }
+/* at most three columns (full screen), fewer as the window narrows */
+.farmlist { display: grid; gap: 10px; align-items: start;
+            grid-template-columns: repeat(auto-fill,
+              minmax(max(320px, calc((100% - 20px) / 3)), 1fr)); }
+.farmcard { background: var(--panel); border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px 14px; }
+.farmcard.own { border-color: #2F6B45; }
+.farmcard .fhead { display: flex; align-items: center; gap: 12px; }
+.farmcard .fic { width: 56px; height: 56px; flex: none; border-radius: 8px;
+                 background: #121318; border: 1px solid var(--line);
+                 overflow: hidden; display: grid; place-items: center; }
+.farmcard .fic img { width: 100%; height: 100%; object-fit: contain;
+                     filter: grayscale(1) brightness(.6); }
+.farmcard.own .fic img { filter: none; }
+.farmcard .ft { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.farmcard .nm { font-size: 15px; }
+.farmcard.r-epic .nm { color: #B57BEF; }
+.farmcard.r-legendary .nm { color: #F29A4A; }
+.farmcard.r-rare .nm { color: #5B8DEF; }
+.farmcard .fam { color: var(--dim); font-size: 12px; }
+.farmcard .fstat { color: var(--accent); font-weight: 700; font-size: 13px;
+                   text-align: right; max-width: 220px; }
+.farmcard .fstat.own { color: var(--heal); }
+.fsrc { display: grid; align-items: center; gap: 12px; margin-top: 10px;
+        padding-top: 10px; border-top: 1px solid var(--line);
+        grid-template-columns: 44px minmax(0, 1fr) 80px 120px 90px; }
+.fsrc .sp { width: 44px; height: 44px; border-radius: 6px; overflow: hidden;
+            background: #121318; display: grid; place-items: center; }
+.fsrc .sp img { width: 100%; height: 100%; object-fit: cover; }
+.fsrc .st { display: flex; flex-direction: column; min-width: 0; }
+.fsrc .ss { color: var(--dim); font-size: 11px; }
+.fsrc .sl { color: var(--faint); font-size: 11px; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; }
+.fsrc .sk, .fsrc .sc { display: flex; flex-direction: column; text-align: right; }
+.fsrc .sk b, .fsrc .sc b { font-variant-numeric: tabular-nums; }
+.fsrc .sk span, .fsrc .sc span { color: var(--faint); font-size: 11px; }
+.fsrc .sh { text-align: right; color: var(--dim); font-size: 12px; }
+.farmcard .fstats { display: flex; gap: 8px; margin-top: 10px; }
+.farmcard .fs { background: var(--panel-2); border: 1px solid var(--line);
+                border-radius: 6px; padding: 5px 12px; }
+.farmcard .fs b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; }
+.farmcard .fs span { color: var(--faint); font-size: 11px; }
+.farmcard .fmobs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.farmcard .fmob { width: 36px; height: 36px; border-radius: 6px; overflow: hidden;
+                  background: #121318; border: 1px solid var(--line); cursor: default; }
+.farmcard .fmob img { width: 100%; height: 100%; object-fit: cover;
+                      filter: grayscale(1) brightness(.5); }
+.farmcard .fmob.seen img { filter: none; }

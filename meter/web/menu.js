@@ -901,7 +901,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ---- the hunting log ---------------------------------------------------- */
-const HUNT = { view: 'units', reg: 'all', filter: 'all', sort: 'kills', q: '' };
+const HUNT = { view: 'units', reg: 'all', filter: 'all', sort: 'kills', q: '',
+               farm: 'missing' };
 let HUNT_NODE = null;
 
 function buildHunt(n) {
@@ -954,7 +955,7 @@ function renderHunt(box, n) {
   box.appendChild(stats);
 
   const views = el('div', 'seg huntview');
-  [['units', 'Monstres'], ['families', 'Familles']].forEach(([v, t]) => {
+  [['units', 'Monstres'], ['families', 'Familles'], ['farm', 'Montures']].forEach(([v, t]) => {
     const b = el('button', HUNT.view === v ? 'on' : '', t);
     b.type = 'button';
     b.addEventListener('click', () => { HUNT.view = v; rerenderHunt(); });
@@ -963,6 +964,10 @@ function renderHunt(box, n) {
   box.appendChild(views);
   if (HUNT.view === 'families') {
     renderFamilies(box, n);
+    return;
+  }
+  if (HUNT.view === 'farm') {
+    renderFarm(box, n);
     return;
   }
 
@@ -1071,25 +1076,6 @@ function renderFamilies(box, n) {
     t.appendChild(el('span', 'fam', f.hunted + ' / ' + f.species + ' espèces chassées'));
     top.appendChild(t);
     card.appendChild(top);
-    (f.drops || []).forEach((d) => {
-      const r = el('div', 'fdrop' + (d.own ? ' own' : ''));
-      const ic = el('span', 'ic');
-      const src = (window.__COLL__ || {})[d.id];
-      if (src) {
-        const im = document.createElement('img');
-        im.src = src;
-        im.alt = '';
-        ic.appendChild(im);
-      }
-      r.appendChild(ic);
-      const tx = el('div', 'dt');
-      tx.appendChild(el('span', 'dn', d.name));
-      tx.appendChild(el('span', 'do', d.pct + ' par kill (' + d.odds + ')'));
-      r.appendChild(tx);
-      r.appendChild(el('span', 'dh', d.own ? '✓ obtenu'
-        : d.had ? d.had + ' de chances de l’avoir eu' : ''));
-      card.appendChild(r);
-    });
     grid.appendChild(card);
   });
   if (!fams.length) grid.appendChild(el('div', 'empty', 'Rien à afficher.'));
@@ -1352,3 +1338,67 @@ function mapPopupPlace() {
 }
 
 window.addEventListener('resize', () => { if (document.querySelector('.mapvp')) mapApply(); });
+
+/* The mounts and gliders monsters can drop: each with every monster that can
+   drop it, the kills behind it and the chances, per kill and so far. */
+function renderFarm(box, n) {
+  const all = n.farm || [];
+  box.appendChild(el('p', 'note', 'Les montures et planeurs qui tombent sur des monstres, avec le '
+    + 'total de tes kills sur tous ceux qui peuvent les donner (survole un portrait pour son nom). '
+    + 'Les chances « déjà eue » supposent un tirage indépendant à chaque kill.'));
+  const seg = el('div', 'seg farmseg');
+  [['missing', 'À obtenir'], ['own', 'Obtenues'], ['all', 'Toutes']].forEach(([v, t]) => {
+    const b = el('button', HUNT.farm === v ? 'on' : '', t);
+    b.type = 'button';
+    b.addEventListener('click', () => { HUNT.farm = v; rerenderHunt(); });
+    seg.appendChild(b);
+  });
+  box.appendChild(seg);
+  const shown = all.filter((m) => HUNT.farm === 'all' || (HUNT.farm === 'own') === m.own);
+  box.appendChild(el('div', 'collcount', shown.length + ' objet' + (shown.length > 1 ? 's' : '')));
+  const list = el('div', 'farmlist');
+  shown.forEach((m) => {
+    const card = el('div', 'farmcard' + (m.own ? ' own' : '') + (m.rk ? ' r-' + m.rk : ''));
+    const head = el('div', 'fhead');
+    const ic = el('span', 'fic');
+    const src = (window.__COLL__ || {})[m.id];
+    if (src) {
+      const im = document.createElement('img');
+      im.src = src;
+      im.alt = '';
+      ic.appendChild(im);
+    }
+    head.appendChild(ic);
+    const t = el('div', 'ft');
+    t.appendChild(el('b', 'nm', m.name));
+    const nm = (m.mobs || []).length;
+    t.appendChild(el('span', 'fam', m.cat + ' · ' + nm + ' monstre' + (nm > 1 ? 's peuvent ' : ' peut ')
+      + (m.cat === 'Planeur' ? 'le' : 'la') + ' donner'));
+    head.appendChild(t);
+    head.appendChild(el('span', 'fstat' + (m.own ? ' own' : ''), m.own ? '✓ obtenue'
+      : m.had ? m.had + ' de chances de l’avoir déjà eue' : 'aucun kill'));
+    card.appendChild(head);
+    // one row of numbers: kills summed over every source, chance per kill
+    const stats = el('div', 'fstats');
+    [[fmtN(m.kills), m.kills > 1 ? 'kills au total' : 'kill au total'],
+     [m.pct, m.odds]].forEach(([v, t]) => {
+      const c = el('div', 'fs');
+      c.appendChild(el('b', null, v));
+      c.appendChild(el('span', null, t));
+      stats.appendChild(c);
+    });
+    card.appendChild(stats);
+    // every monster that can drop it, portraits only, name on hover
+    const mobs = el('div', 'fmobs');
+    (m.mobs || []).forEach((x) => {
+      const mb = el('span', 'fmob' + (x.k ? ' seen' : ''));
+      mb.title = x.name + ' — ' + fmtN(x.k) + (x.k > 1 ? ' kills' : ' kill');
+      mb.appendChild(huntImg(x.img));
+      mobs.appendChild(mb);
+    });
+    card.appendChild(mobs);
+    list.appendChild(card);
+  });
+  if (!shown.length) list.appendChild(el('div', 'empty', 'Rien à afficher.'));
+  box.appendChild(list);
+}
