@@ -730,6 +730,7 @@ class HealSizeEstimator:
     """
 
     WINDOW = 64          # observations kept per (player, skill)
+    UNDER_MIN_HP = 3     # a smaller shortfall than this is not reported
 
     def __init__(self, specs=None):
         self._obs: dict[tuple, deque] = defaultdict(
@@ -835,7 +836,9 @@ class HealSizeEstimator:
                                       self._unsized)
         if not (computed or guessed or unsized):
             return None
-        under = sorted((k, v) for k, v in self._audit.items() if v[0] > 1.02)
+        # Both a ratio and a few HP: on an 8 HP heal, 2% is rounding.
+        under = sorted((k, v) for k, v in self._audit.items()
+                       if v[0] > 1.02 and v[1] - v[2] >= self.UNDER_MIN_HP)
         self._computed = self._guessed = self._unsized = 0
         self._audit = {}
         line = (f"[meter] heal sizing: {computed} computed, "
