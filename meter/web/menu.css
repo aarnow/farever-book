@@ -469,8 +469,19 @@ select, input[type=text] {
 .lootrow { display: grid; grid-template-columns: minmax(0, 1fr) auto 56px;
            gap: 12px; padding: 6px 12px; align-items: baseline; }
 .lootrow + .lootrow { border-top: 1px solid var(--line); }
-.lootrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.lootrow { align-items: center; }
+.lootrow .nm { display: flex; align-items: center; gap: 10px; min-width: 0;
                font-weight: 600; }
+.lootrow .nm .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lootrow .ic { flex: none; width: 32px; height: 32px; border-radius: 6px;
+               background: var(--panel-2); border: 1px solid var(--line);
+               display: grid; place-items: center; overflow: hidden; }
+.lootrow .ic img { width: 30px; height: 30px; }
+.lootrow.r-common .ic { border-color: #5A5850; }
+.lootrow.r-uncommon .ic { border-color: #3E7A4C; }
+.lootrow.r-rare .ic { border-color: #34508A; }
+.lootrow.r-epic .ic { border-color: #6A4692; }
+.lootrow.r-legendary .ic { border-color: #8F5A2C; }
 .lootrow .rar { color: var(--dim); font-size: 12px; }
 .lootrow .num { text-align: right; font-variant-numeric: tabular-nums; }
 .lootrow.r-common .nm { color: #C8C4BA; }

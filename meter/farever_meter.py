@@ -4397,6 +4397,43 @@ def _fr_names(sheet):
     return _FR_NAMES.get(sheet) or {}
 
 
+_ITEM_RARITY = None
+
+
+def item_rarity(kind):
+    """An item's base rarity from its sheet row (analysis_out/
+    item_rarity.json); a weapon's own copy rarity overrides it."""
+    global _ITEM_RARITY
+    if _ITEM_RARITY is None:
+        try:
+            _ITEM_RARITY = json.loads(
+                (ANALYSIS / "item_rarity.json").read_text(encoding="utf-8"))
+        except Exception:
+            _ITEM_RARITY = {}
+    return _ITEM_RARITY.get(kind)
+
+
+_ITEM_ICONS = {}
+
+
+def item_icon(kind):
+    """An item's icon as a data URI (analysis_out/item_icons/<id>.png,
+    extracted from the game by emit_offsets.py), or "" when there is none.
+    Inlined because the window loads nothing from anywhere."""
+    kind = str(kind or "")
+    if kind not in _ITEM_ICONS:
+        uri = ""
+        if re.fullmatch(r"[A-Za-z0-9_]+", kind):
+            try:
+                import base64
+                data = (ANALYSIS / "item_icons" / f"{kind}.png").read_bytes()
+                uri = "data:image/png;base64," + base64.b64encode(data).decode()
+            except OSError:
+                pass
+        _ITEM_ICONS[kind] = uri
+    return _ITEM_ICONS[kind]
+
+
 def item_label(kind):
     """An item's French name, else its prettified id."""
     return _fr_names("item").get(kind) or _pretty_id(kind)
@@ -4640,6 +4677,14 @@ def _data_is_current():
     # heal_specs.json arrived when healing started counting overheal — without
     # it a heal that restores nothing cannot be sized, which is the whole
     # feature. Same upgrade trap as the two above.
+    if not (ANALYSIS / "item_icons").is_dir():
+        print("[meter] item_icons absent — regenerating for the loot "
+              "icons.", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "item_rarity.json").exists():
+        print("[meter] item_rarity.json absent — regenerating for the loot "
+              "rarities.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "names_fr.json").exists():
         print("[meter] names_fr.json absent — regenerating for the French "
               "names (dungeons, items, bosses).", file=sys.stderr)
@@ -4972,6 +5017,9 @@ def report_view(data):
     return out
 
 
+RARITY_ORDER = {"Common": 0, "Uncommon": 1, "Rare": 2, "Epic": 3,
+                "Legendary": 4}
+
 LOOT_PHASES = (("coffre", "Coffre de fin"), ("boss", "Phase du boss"),
                ("exploration", "Exploration"))
 
@@ -4985,16 +5033,21 @@ def loot_view(loot):
         for it in loot:
             if it.get("phase") != key:
                 continue
-            k = (it.get("item"), it.get("rarity"), it.get("level"))
+            k = (it.get("item"),
+                 it.get("rarity") or item_rarity(it.get("item")),
+                 it.get("level"))
             merged[k] = merged.get(k, 0) + int(it.get("count") or 1)
         if merged:
             groups.append({"t": label, "items": [
                 {"name": item_label(item), "qty": qty,
+                 "img": item_icon(item),
                  "rarity": rarity_label(rar) if rar else "",
                  "rk": (rar or "").lower(),
                  "level": f"niv. {lvl}" if isinstance(lvl, int) and lvl > 0
                  else ""}
-                for (item, rar, lvl), qty in merged.items()]})
+                for (item, rar, lvl), qty in sorted(
+                    merged.items(),
+                    key=lambda kv: -RARITY_ORDER.get(kv[0][1], -1))]})
     return groups
 
 

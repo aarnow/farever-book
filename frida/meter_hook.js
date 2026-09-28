@@ -678,11 +678,16 @@ function itemInfo(it) {
                  && cls.lastIndexOf("st.item.", 0) !== 0)) return null;
     const out = { cls: cls, kind: null, rarity: null, level: null };
     try { out.kind = hlStr(it.add(OFF.Item.kind).readPointer()); } catch (e) {}
-    // rarity is declared only on st.item.Weapon; at any other class the
-    // offset is past the end of the object.
+    // level is declared on st.item.Gear (armour and weapons alike, so the
+    // Weapon offset serves both); rarity only on st.item.Weapon — at any
+    // other class that offset is past the end of the object. Everything
+    // else's rarity is its sheet row's, looked up by the app.
+    const gear = cls === "st.item.Weapon" || cls === "st.item.Armor";
+    if (gear && OFF.Weapon) {
+        try { out.level = it.add(OFF.Weapon.level).readS32(); } catch (e) {}
+    }
     if (cls === "st.item.Weapon" && OFF.Weapon) {
         try { out.rarity = hlStr(it.add(OFF.Weapon.rarity).readPointer()); } catch (e) {}
-        try { out.level = it.add(OFF.Weapon.level).readS32(); } catch (e) {}
     }
     return out;
 }

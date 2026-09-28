@@ -603,7 +603,17 @@ function buildLoot(groups) {
     const tbl = el('div', 'tbl lootlist');
     g.items.forEach((it) => {
       const r = el('div', 'lootrow' + (it.rk ? ' r-' + it.rk : ''));
-      r.appendChild(el('span', 'nm', it.name));
+      const nm = el('span', 'nm');
+      const ic = el('span', 'ic');
+      if (it.img) {
+        const im = document.createElement('img');
+        im.src = it.img;
+        im.alt = '';
+        ic.appendChild(im);
+      }
+      nm.appendChild(ic);
+      nm.appendChild(el('span', 'n', it.name));
+      r.appendChild(nm);
       r.appendChild(el('span', 'rar', [it.rarity, it.level].filter(Boolean).join(' · ')));
       r.appendChild(el('span', 'num', '×' + it.qty));
       tbl.appendChild(r);

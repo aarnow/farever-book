@@ -449,6 +449,17 @@ def main():
                           encoding="utf-8")
         print(f"[written] {out_fr} ("
               + ", ".join(f"{len(v)} {k}" for k, v in fr.items()) + ")")
+        rar = extract_item_rarity(Path(hlboot).parent)
+        out_rar = _OUT_DIR / "item_rarity.json"
+        out_rar.write_text(json.dumps(rar, indent=0), encoding="utf-8")
+        print(f"[written] {out_rar} ({len(rar)} items)")
+        try:
+            n = extract_item_icons(Path(hlboot).parent,
+                                   _OUT_DIR / "item_icons")
+            print(f"[written] {_OUT_DIR / 'item_icons'} ({n} icons)")
+        except Exception as e:
+            print(f"[!] item icons skipped ({e}) — the loot list shows "
+                  f"names only")
         smeta = extract_status_meta(Path(hlboot).parent)
         out_status = _OUT_DIR / "status_meta.json"
         out_status.write_text(json.dumps(smeta, ensure_ascii=False, indent=0),
@@ -588,6 +599,85 @@ def extract_fr_names(game_dir):
             if txt:
                 rows[row.tag] = txt
     return out
+
+
+def extract_item_rarity(game_dir):
+    """item id -> the item's base rarity, from data.cdb. Only a weapon
+    carries its own rarity per copy (st.item.Weapon.rarity); every other item
+    — armour, materials — is the rarity its sheet row says."""
+    import pak_extract
+    raw = pak_extract.read_entry(Path(game_dir) / "res.light.pak", "data.cdb")
+    if raw is None:
+        raise RuntimeError("data.cdb not in res.light.pak")
+    cdb = json.loads(raw)
+    sheet = next(s for s in cdb["sheets"] if s["name"] == "item")
+    return {ln["id"]: ln["rarity"] for ln in sheet["lines"]
+            if isinstance(ln.get("id"), str)
+            and isinstance(ln.get("rarity"), str) and ln["rarity"]}
+
+
+ITEM_ICON_PX = 48
+
+
+def extract_item_icons(game_dir, out_dir):
+    """Every item's icon as a small PNG, out_dir/<item id>.png — for the
+    dungeon loot list. data.cdb's item row names it: gfx {file, size, x, y},
+    a `size`-pixel tile at column x, row y of `file` in res.pak. res.pak is
+    close to a gigabyte, so only its directory and the files used are read."""
+    import io
+    import struct
+    import pak_extract
+    from PIL import Image
+
+    game_dir = Path(game_dir)
+    raw = pak_extract.read_entry(game_dir / "res.light.pak", "data.cdb")
+    if raw is None:
+        raise RuntimeError("data.cdb not in res.light.pak")
+    cdb = json.loads(raw)
+    sheet = next(s for s in cdb["sheets"] if s["name"] == "item")
+    wanted = {}
+    for ln in sheet["lines"]:
+        g = ln.get("gfx")
+        if isinstance(ln.get("id"), str) and isinstance(g, dict) \
+                and g.get("file") and g.get("size"):
+            wanted[ln["id"]] = g
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pak = game_dir / "res.pak"
+    done = 0
+    with open(pak, "rb") as f:
+        header_size = struct.unpack_from("<i", f.read(12), 4)[0]
+        f.seek(0)
+        entries, data_off = pak_extract.read_tree(f.read(header_size),
+                                                  pak.name)
+        by_path = {e.path: e for e in entries}
+        sheets = {}
+        for iid, g in wanted.items():
+            path = g["file"]
+            if path not in sheets:
+                e = by_path.get(path)
+                img = None
+                if e is not None:
+                    f.seek(data_off + e.pos)
+                    try:
+                        img = Image.open(io.BytesIO(f.read(e.size)))
+                        img = img.convert("RGBA")
+                    except Exception:
+                        img = None
+                sheets[path] = img
+            img = sheets[path]
+            if img is None:
+                continue
+            n = int(g["size"])
+            x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
+            if x + n > img.width or y + n > img.height:
+                continue
+            tile = img.crop((x, y, x + n, y + n))
+            tile = tile.resize((ITEM_ICON_PX, ITEM_ICON_PX), Image.LANCZOS)
+            tile.save(out_dir / f"{iid}.png", optimize=True)
+            done += 1
+    return done
 
 
 # Which rank-threshold set a unit's codex entry uses. Measured 2026-08-05 on a
