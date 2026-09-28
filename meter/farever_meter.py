@@ -320,22 +320,6 @@ HEAL_BAR = "#5E9C4A"      # green — healing bars
 SELF_HEAL_BAR = "#08BD71"
 
 
-# The project's fundraiser, at the top of Help. Its logo is optional: drop a
-# gofundme.png beside the other assets and the button wears it, otherwise it
-# falls back to a wordmark in the brand green. That way the button works
-# whether or not the image has been added, rather than the page shipping a
-# broken picture.
-SUPPORT_URL = "https://gofund.me/6922dd070"
-SUPPORT_LOGO = ROOT / "assets" / "gofundme.png"
-SUPPORT_BLURB = (
-    "Farever+ est là pour durer. Après beaucoup de retours et de soutien, le "
-    "projet en est au point où je veux le poursuivre aussi longtemps que "
-    "Shiro Games le permettra. Je prévois d'ajouter des fonctionnalités et de "
-    "garder l'application à jour pour les prochaines versions du jeu.\n"
-    "À terme, il devrait y avoir un site de logs et un endroit pour comparer "
-    "vos temps de kill de boss avec les autres joueurs, avec la possibilité "
-    "d'inspecter l'équipement, les talents, et plus encore.\n"
-    "(Message de Brudr, l'auteur de Farever+.)")
 # The Help tab's articles, as markdown beside the panel's other web assets.
 # Files rather than string constants so they stay writable prose — and the
 # numeric prefix is the running order, so inserting one is a rename rather than
@@ -2046,8 +2030,6 @@ def bind_label(bind=None):
 # everyone they're out of date forever.
 VERSION = "4.0.1"
 
-REPO = "brudrbear/FareverMeter"
-REPO_URL = f"https://github.com/{REPO}"
 
 
 QUIT_LABEL = "Arrêter le compteur"
@@ -3265,11 +3247,9 @@ class App:
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 100)),
             "open_log": self._open_log_folder,
-            "open_repo": self._open_repo,
             # help
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),
             "help_close": lambda: setattr(self, "_help_open", None),
-            "open_support": lambda: self._open_url(SUPPORT_URL),
         }
         return acts
 
@@ -3694,9 +3674,6 @@ class App:
             {"k": "button", "id": "open_parses",
              "t": "Dossier des parses et rapports"},
             {"k": "button", "id": "open_log", "t": "Dossier du journal"},
-            {"k": "section", "t": "Projet"},
-            {"k": "button", "id": "open_repo",
-             "t": "Farever+ sur GitHub (projet d'origine)"},
         ]
 
     # ---- carried over from the old overlay, unchanged but for the shims above ----
@@ -4394,49 +4371,7 @@ class App:
         App._help_articles._cache = out
         return out
 
-    @staticmethod
-    def _support_logo_uri():
-        """The fundraiser logo as a data URI, or None if it was never added.
 
-        Cached on the function: it is read on every Help index build, and the
-        file cannot change while the meter runs.
-        """
-        cached = getattr(App._support_logo_uri, "_cache", "unset")
-        if cached != "unset":
-            return cached
-        uri = None
-        try:
-            if SUPPORT_LOGO.is_file():
-                import base64
-                uri = ("data:image/png;base64,"
-                       + base64.b64encode(
-                           SUPPORT_LOGO.read_bytes()).decode("ascii"))
-        except OSError as e:
-            print(f"[meter] couldn't read the fundraiser logo: {e}",
-                  file=sys.stderr)
-        App._support_logo_uri._cache = uri
-        return uri
-
-    def _support_block(self):
-        """The fundraiser, at the top of the Help index.
-
-        Top of Help rather than tucked into Actions: it is the one thing on the
-        panel that is asking rather than telling, and burying an ask reads as
-        more of an ask than putting it where it can be seen and scrolled past.
-        """
-        # One node rather than a logo plus two paragraphs, so the whole thing
-        # is a single card the renderer can centre and tint as a unit — three
-        # loose nodes could only ever be styled one at a time.
-        return [
-            {"k": "support", "id": "open_support", "t": "gofundme",
-             "img": self._support_logo_uri(), "url": SUPPORT_URL,
-             # Opening a link changes nothing on the panel, and the browser
-             # does not come forward when one is already running — so without
-             # this the click reads as having done nothing at all.
-             "toast": "Ouvert dans ton navigateur",
-             "paras": SUPPORT_BLURB.split("\n")},
-            {"k": "gap"},
-        ]
 
     def _page_help(self):
         arts = self._help_articles()
@@ -4451,14 +4386,9 @@ class App:
                 return ([{"k": "button", "id": "help_close",
                           "t": "‹  Tous les sujets d'aide"},
                          {"k": "section", "t": art["title"]}]
-                        + art["blocks"]
-                        + [{"k": "gap"},
-                           {"k": "note", "t": "Le README complet de Brudr sur "
-                                              "GitHub (en anglais) va plus loin."},
-                           {"k": "button", "id": "open_repo",
-                            "t": "Farever+ sur GitHub"}])
-        # ...or the index, which opens with the fundraiser.
-        seen, out = set(), self._support_block()
+                        + art["blocks"])
+        # ...or the index.
+        seen, out = set(), []
         for heading, ids in HELP_GROUPS:
             rows = [a for a in arts if a["id"] in ids]
             if not rows:
@@ -4572,40 +4502,7 @@ class App:
         StringVar so the spec builder can read it back on the next tick."""
         setattr(self, attr, text or "")
 
-    def _open_url(self, url):
-        """Open a link in the player's browser.
 
-        Deliberately does nothing about focus, after an attempt that made
-        things worse. The panel is topmost, so a browser can open behind it —
-        the obvious fix was to hide the panel and hold it down while the
-        browser came forward. It did not come forward: `webbrowser.open` hands
-        the URL to an ALREADY RUNNING browser as a new tab, and an existing
-        window is not raised by that, so AllowSetForegroundWindow (which only
-        licenses a process being started) had nothing to license. The result
-        was the panel vanishing, the game keeping focus, and nothing visibly
-        happening — worse than the browser merely being behind something.
-
-        Raising a window that belongs to a browser we did not launch is not
-        something this can do reliably, so it does not pretend to. The tab
-        opens; alt-tab reaches it.
-        """
-        if sys.platform == "win32":
-            # Harmless and correct for the case where the browser IS being
-            # started: it lets that new process take the foreground. Does
-            # nothing when a browser is already running, which is why it is
-            # not a fix on its own.
-            try:
-                ctypes.windll.user32.AllowSetForegroundWindow(-1)
-            except Exception:
-                pass
-        import webbrowser
-        try:
-            webbrowser.open(url)
-        except Exception as e:
-            print(f"[meter] couldn't open {url}: {e}", file=sys.stderr)
-
-    def _open_repo(self):
-        self._open_url(REPO_URL)
 
     def _enqueue(self, fn):
         """Wrap `fn` so it runs on the Tk thread at the next refresh. Hotkey and

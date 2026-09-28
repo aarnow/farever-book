@@ -44,16 +44,6 @@ if not _help:
 for f in _help:
     datas.append((str(f), "res/web/help"))
 
-# The fundraiser logo on the Help tab. Optional on purpose — the button falls
-# back to a wordmark when it is absent, so a missing image is a slightly
-# plainer button rather than a broken build.
-_logo = ROOT / "assets" / "gofundme.png"
-if _logo.is_file():
-    datas.append((str(_logo), "res/assets"))
-else:
-    print("[i] assets/gofundme.png not found — the Help tab's support button "
-          "will use its text fallback.")
-
 # The self-heal path re-runs these against the running game's hlboot.dat after a
 # Farever patch, so they have to ship — without them an installed meter couldn't
 # recover from a patch without a new release.

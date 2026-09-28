@@ -12,7 +12,6 @@
  *   {k:"field", t, c:<control>}   controls: select | slider | text | label
  *   {k:"search", id, v, count?}
  *   {k:"list", id, h?, grow?, rows:[{t?, name?, cls?, meta?, btns?}], empty?}
- *   {k:"support", ...}
  * Live and report nodes:
  *   {k:"toolbar", btns}          {k:"cards", items}
  *   {k:"meter", title, heal, rows, empty}
@@ -402,25 +401,6 @@ function buildNode(n) {
     case 'code': return el('pre', 'code', n.t);
     case 'gap': return el('div', 'gap');
     case 'button': return button(n);
-    case 'support': {
-      const card = el('div', 'support');
-      const b = el('button', 'linkcard');
-      if (n.img) {
-        const im = el('img');
-        im.src = n.img;
-        im.alt = n.t || '';
-        b.appendChild(im);
-      } else {
-        b.appendChild(el('span', 'wordmark', n.t || 'Soutenir'));
-      }
-      b.addEventListener('click', () => {
-        notify(n.id, {});
-        if (n.toast) showToast(n.toast);
-      });
-      card.appendChild(b);
-      (n.paras || []).forEach((p) => card.appendChild(inline(el('p'), p)));
-      return card;
-    }
     case 'field': {
       const row = el('div', 'field');
       row.appendChild(el('label', null, n.t));
