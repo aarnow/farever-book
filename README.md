@@ -17,6 +17,27 @@
 > Le projet d'origine ne publie pas de licence : ce fork est destiné à un usage
 > personnel et n'est pas redistribué.
 
+## Position du studio
+
+Message de Steven, community manager de Shiro Games, sur le Discord de Farever,
+le 27/05/2026 :
+
+> I'll confirm what has been said earlier
+>
+> While we won't promote the use of add-ons during the EA (to keep players on
+> the intended experience at first), we won't condemn personal use of add-ons
+> like minimaps or DPS meter 🙏
+
+Autrement dit : pendant l'accès anticipé, le studio ne met pas en avant les
+add-ons, mais tolère leur usage personnel. C'est le cadre de ce fork : usage
+personnel, sans diffusion. Cette tolérance peut évoluer, à surveiller.
+
+Pour être exact sur ce que fait Farever+ dans le jeu : il ne modifie aucune
+donnée et n'envoie rien sur le réseau, mais Frida s'injecte dans le processus
+du jeu et dévie quelques fonctions en mémoire pour être prévenu des coups et
+des soins. En cas de plantage à signaler aux développeurs, reproduis-le sans
+Farever+ avant de l'envoyer.
+
 ## Ce que fait Farever+
 
 Farever+ lit en mémoire les données de combat de Farever (sorts, éléments,
