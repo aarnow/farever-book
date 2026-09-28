@@ -23,10 +23,14 @@ seul à la prochaine session.
 ## Les pages
 
 * **En direct** — le compteur de dégâts et de soins, le détail du joueur
-  sélectionné (clique sur une ligne du compteur), le minuteur de faille et les
-  événements : kills de boss, records, fins de faille.
+  sélectionné (clique sur une ligne du compteur) et les événements : kills de
+  boss, records, fins de faille.
 * **Failles** — toutes les failles terminées, avec leur classement complet.
 * **Combats** — l'historique des combats, s'il est activé.
+
+Le minuteur de faille est toujours visible en bas du menu : il compte jusqu'à
+la prochaine faille (elles s'ouvrent à chaque heure pile), puis les 3 minutes
+pendant lesquelles le portail reste ouvert.
 
 ## Réinitialiser en plein combat
 
@@ -36,10 +40,9 @@ plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
 ## Arrêter Farever+
 
-Ferme simplement cette fenêtre, ou utilise **Arrêter le compteur** en bas du
-menu (il faut cliquer deux fois), ou **clic droit sur l'icône** près de
-l'horloge → **Arrêter le compteur**. Dans tous les cas, Farever+ se détache
-proprement du jeu.
+Ferme simplement cette fenêtre (la croix en haut à droite), ou fais **clic droit
+sur l'icône** près de l'horloge → **Arrêter le compteur**. Dans les deux cas,
+Farever+ se détache proprement du jeu.
 
 **Ne l'arrête pas depuis le Gestionnaire des tâches** : ça tue le processus avant
 qu'il ait pu se détacher du jeu, et c'est ce qui peut déstabiliser Farever.

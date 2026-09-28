@@ -68,8 +68,10 @@ import webview  # noqa: E402  (must follow the environment set-up above)
 HERE = Path(__file__).resolve().parent
 if getattr(sys, "frozen", False):
     WEB_DIR = Path(sys._MEIPASS) / "res" / "web"
+    ICON_DIR = Path(sys._MEIPASS) / "res" / "assets" / "classes"
 else:
     WEB_DIR = HERE / "web"
+    ICON_DIR = HERE.parent / "assets" / "classes"
 
 DEFAULT_W, DEFAULT_H = 1200, 800
 MIN_W, MIN_H = 720, 480
@@ -285,7 +287,24 @@ def _document():
     html = read("menu.html")
     return (html
             .replace("/*CSS*/", read("menu.css"))
-            .replace("/*JS*/", read("menu.js")))
+            .replace("/*JS*/", read("menu.js"))
+            .replace("/*ICONS*/",
+                     "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"))
+
+
+def _class_icons():
+    """{"warrior": data URI, ...} for the class icons that exist — inlined in
+    the page, so nothing is ever loaded from anywhere."""
+    import base64
+    out = {}
+    folder = ICON_DIR
+    for key in ("warrior", "mage", "priest", "rogue"):
+        try:
+            data = (folder / f"{key}.png").read_bytes()
+        except OSError:
+            continue
+        out[key] = "data:image/png;base64," + base64.b64encode(data).decode()
+    return out
 
 
 def main():

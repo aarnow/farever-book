@@ -22,6 +22,23 @@
 
 const $ = (sel) => document.querySelector(sel);
 
+/* The class icons, inlined by the host as data URIs: {"warrior": "data:..."}. */
+/*ICONS*/
+const CLASS_ICONS = window.__ICONS__ || {};
+const CLASS_NAMES = { warrior: 'Guerrier', mage: 'Mage', priest: 'Prêtre',
+                      rogue: 'Voleur' };
+
+/* A player's class: its icon when there is one, the abbreviation otherwise. */
+function classEl(tag, key, cls) {
+  if (key && CLASS_ICONS[key]) {
+    const im = el('img', 'clsicon' + (cls ? ' ' + cls : ''));
+    im.src = CLASS_ICONS[key];
+    im.alt = im.title = CLASS_NAMES[key] || tag || '';
+    return im;
+  }
+  return el('span', cls || 'cls', tag || '');
+}
+
 let STATE = {};
 let NODES = new Map();
 let READY = false;
@@ -179,7 +196,9 @@ function buildMeter(n) {
     const line = el('div', 'mline');
     line.appendChild(el('span', 'rank', r.rank));
     line.appendChild(el('span', 'who', r.name));
-    line.appendChild(el('span', 'cls', r.cls));
+    const c = el('span', 'cls');
+    c.appendChild(classEl(r.cls, r.ck));
+    line.appendChild(c);
     line.appendChild(el('span', 'num', r.dmg));
     line.appendChild(el('span', 'num', r.dps));
     line.appendChild(el('span', 'num', r.pct));
@@ -227,7 +246,7 @@ function buildDetail(n) {
     return p;
   }
   const name = el('div', 'dname', n.name);
-  if (n.cls) name.appendChild(el('span', 'cls', n.cls));
+  if (n.cls || n.ck) name.appendChild(classEl(n.cls, n.ck, 'cls'));
   p.appendChild(name);
   const stats = el('div', 'stats');
   (n.stats || []).forEach(([c, x]) => {
@@ -303,7 +322,7 @@ function rankTable(rows, rateLabel) {
     const row = el('div', 'rk' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : ''));
     row.appendChild(el('span', null, r.rank));
     const nm = el('span', 'nm', r.name);
-    if (r.cls) nm.appendChild(el('span', 'cl', r.cls));
+    if (r.cls || r.ck) nm.appendChild(classEl(r.cls, r.ck, 'cl'));
     row.appendChild(nm);
     row.appendChild(el('span', 'num', r.rate));
     row.appendChild(el('span', 'num', r.total));
@@ -340,7 +359,7 @@ function buildReport(n) {
       const m = el('div', 'mvpbox');
       m.appendChild(el('span', 'lbl', 'MVP dégâts'));
       const mn = el('div', 'mvp', '★ ' + ph.mvp.name + ' ');
-      if (ph.mvp.cls) mn.appendChild(el('small', null, ph.mvp.cls));
+      if (ph.mvp.cls || ph.mvp.ck) mn.appendChild(classEl(ph.mvp.cls, ph.mvp.ck, 'big'));
       m.appendChild(mn);
       m.appendChild(el('div', 'v', ph.mvp.v));
       podium.appendChild(m);
@@ -348,7 +367,7 @@ function buildReport(n) {
         const h = el('div', 'mvpbox heal');
         h.appendChild(el('span', 'lbl', 'MVP soins'));
         const hn = el('div', 'healer', '✚ ' + ph.healer.name + ' ');
-        if (ph.healer.cls) hn.appendChild(el('small', null, ph.healer.cls));
+        if (ph.healer.cls || ph.healer.ck) hn.appendChild(classEl(ph.healer.cls, ph.healer.ck, 'big'));
         h.appendChild(hn);
         h.appendChild(el('div', 'v', ph.healer.v));
         podium.appendChild(h);
@@ -531,10 +550,12 @@ window.applyState = function (json) {
     b.textContent = (s.link && s.link.tip) || '';
     b.className = (s.link && s.link.tip) ? 'on' : '';
   }
-  if (s.quit !== prev.quit || s.quitArmed !== prev.quitArmed) {
-    const q = $('#quit');
-    q.textContent = s.quit || 'Quitter';
-    q.className = 'btn warn' + (s.quitArmed ? ' armed' : '');
+  if (JSON.stringify(s.rift) !== JSON.stringify(prev.rift) && s.rift) {
+    const r = $('#riftclock');
+    r.className = 'card' + (s.rift.tone ? ' ' + s.rift.tone : '');
+    r.querySelector('.t').textContent = s.rift.title;
+    r.querySelector('.v').textContent = s.rift.value;
+    r.querySelector('.s').textContent = s.rift.sub || '';
   }
   if (s.toast && (!prev.toast || s.toast.n !== prev.toast.n) && s.toast.t) {
     showToast(s.toast.t);

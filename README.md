@@ -25,11 +25,15 @@ fenêtre Windows séparée.
 
 | Page | Contenu |
 |---|---|
-| **En direct** | Tableau dégâts/soins du groupe (ou de tous les joueurs), détail du joueur sélectionné (sorts, critiques, types de dégâts), durée du combat, minuteur de la prochaine faille, mode parse 60 s, fil d'événements (kills de boss, records, fins de faille) |
-| **Failles** | Toutes les failles terminées. Chaque rapport compare la phase de faille et la phase du boss : durée, DPS, HPS, MVP, classement complet des dégâts et des soins, dégâts par type. Copiable en image ou en texte. |
+| **En direct** | Tableau dégâts/soins du groupe (ou de tous les joueurs), détail du joueur sélectionné (sorts, critiques, types de dégâts), durée du combat, mode parse 60 s, fil d'événements (kills de boss, records, fins de faille) |
+| **Failles** | Toutes les failles terminées. Chaque rapport compare la phase de faille et la phase du boss : durée, DPS, HPS, MVP, classement complet des dégâts et des soins, dégâts par type. Copiable en image (au visuel de l'interface) ou en texte. |
 | **Combats** | Historique des combats terminés (option à activer) : chaque combat est enregistré avec le détail par joueur et par sort. |
 | **Réglages** | Colonnes de soins, réinitialisation au pull d'un boss, « Tous les joueurs » automatique en faille, raccourci clavier, taille de l'interface, dossiers. |
 | **Aide** | Utilisation, lancement avec Steam. |
+
+Le minuteur de faille reste visible en bas du menu, sur toutes les pages : il
+compte jusqu'à la prochaine faille (à chaque heure pile), puis les 3 minutes
+d'ouverture du portail.
 
 ### Avec ou sans le jeu
 
@@ -60,9 +64,8 @@ python meter/farever_meter.py
 
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
 
-Pour arrêter : ferme la fenêtre, utilise **Arrêter le compteur** en bas du menu
-(deux clics), ou clic droit sur l'icône Farever+ près de l'horloge → **Arrêter le
-compteur**. Farever+ se détache alors proprement du jeu.
+Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône Farever+ près de
+l'horloge → **Arrêter le compteur**. Farever+ se détache alors proprement du jeu.
 
 **Ne l'arrête pas depuis le Gestionnaire des tâches** : le processus serait tué
 avant de s'être détaché du jeu, ce qui peut déstabiliser Farever.

@@ -243,6 +243,24 @@ PARSE_LENGTH_SECS = 60
 CLASS_ABBR = {"Warrior": "Gue", "Mage": "Mag", "Priest": "Prê", "Rogue": "Vol"}
 
 
+# The class icon for a player, keyed by what the meter knows about them: the
+# game's class name ("Warrior") live, or the abbreviation saved in a rift
+# report — in French or, for reports older than the translation, in English.
+CLASS_KEYS = {"Warrior": "warrior", "Mage": "mage", "Priest": "priest",
+              "Rogue": "rogue", "Gue": "warrior", "War": "warrior",
+              "Mag": "mage", "Prê": "priest", "Pst": "priest",
+              "Vol": "rogue", "Rog": "rogue"}
+CLASS_NAMES_FR = {"warrior": "Guerrier", "mage": "Mage", "priest": "Prêtre",
+                  "rogue": "Voleur"}
+CLASS_ICON_DIR = ROOT / "assets" / "classes"
+
+
+def class_key(kind_or_tag):
+    """"warrior", "mage", "priest", "rogue" — or "" for a class this build
+    has no icon for (the abbreviation is shown instead)."""
+    return CLASS_KEYS.get(kind_or_tag or "", "")
+
+
 def _class_tag(kind):
     """(War) for Warrior. Anything unrecognised falls back to its first three
     letters rather than disappearing — a new class should look odd, not absent."""
@@ -255,12 +273,8 @@ def _class_tag(kind):
 
 
 
-# Rifts open on the hour. The countdown is just the wall clock — reading the
-# game's own world-event schedule turned out to report the running event rather
-# than the next one, and this needs no hook at all. For the first few minutes
-# past the hour the rift that just opened is the current one, so there's nothing
-# to count down to yet.
-RIFT_QUIET_MINS = 6
+# Rifts open on the hour, and the portal stays open this long.
+RIFT_PORTAL_SECS = 180
 
 # ---- palette (Farever-style, matches original meter) ----
 BG_BORDER = "#2C1A0E"
@@ -273,22 +287,8 @@ FG_TEXT = "#3D2817"
 FG_VALUE = "#1F1208"
 FG_DIM = "#7B5A3A"
 
-# ---- rift palette (matches the rifts themselves: hot magenta rim, near-black
-# maroon interior) — deliberately nothing like the rest of the overlay, so the
-# countdown reads as belonging to the game's event rather than to the meter.
-RIFT_EDGE = "#FF2E92"
-RIFT_GLOW = "#8A1048"
-RIFT_BODY = "#2C0A1E"
-RIFT_TITLE = "#FF7BC0"
-RIFT_TIME = "#FFE0F0"
-RIFT_PEAK = "#FFB3D9"       # the top of the pulse, a hotter rim
 RIFT_STYLE_SECS = 900       # ...and turn the box rift-coloured at 15
 
-# ---- rift report leaderboard ----
-# Medal colours for ranks 1-3, tuned to read on the near-black rift body —
-# true silver (#C0C0C0) goes muddy there, so it leans bluer and lighter.
-REPORT_MEDALS = ("#FFD24A", "#CDD6E0", "#D89B66")
-REPORT_HEAL = "#8AE28A"         # the healer's colour, distinct from any medal
 
 # Big mono while counting; smaller and quieter for the idle placeholder, which
 # is only ever on screen so the window can be dragged into place.
@@ -2032,10 +2032,6 @@ VERSION = "4.0.1"
 
 
 
-QUIT_LABEL = "Arrêter le compteur"
-
-
-
 def start_hotkeys(callbacks: dict, target_pid):
     """Run the keyboard hook that owns Shift+\\, on its own thread with its own
     message pump. `target_pid` may be a callable: the game can start, close
@@ -2941,7 +2937,6 @@ class App:
         self._history_note_job = None
         self._history_detail = None
         self._rift_view = None              # the rift report being read
-        self._quit_armed = False
         self._binding_now = False
         self._menu_unlock = False           # no game menu to follow any more
         self._toast = {"t": "", "n": 0}
@@ -3210,7 +3205,6 @@ class App:
         acts = {
             "set_tab": lambda p: self._set_tab(p.get("value")),
             "link_retry": self._link_clicked,
-            "quit": self._quit_clicked,
             "boot": self.menubridge.invalidate,
             "rendered": lambda p: None,
             "escape": lambda: None,
@@ -3349,9 +3343,7 @@ class App:
             "link": {"t": light or "● En jeu", "c": colour,
                      "retry": not self.game_connected(),
                      "tip": sentence},
-            "quit": ("Clique encore pour arrêter" if self._quit_armed
-                     else QUIT_LABEL),
-            "quitArmed": bool(self._quit_armed),
+            "rift": self._rift_clock(),
             "toast": self._toast,
             "tab": self._menu_tab,
             "tabs": [{"v": t, "t": APP_TAB_LABELS[t]} for t in APP_TABS],
@@ -3408,7 +3400,6 @@ class App:
             {"title": "Soins", "value": _n(heal_total) if heal_total else "—",
              "sub": (f"{_n(heal_total / duration)} HPS"
                      if duration > 0 and heal_total else "")},
-            self._rift_card(),
         ]
         if parsing:
             cards.append({"title": "Parse", "value": self._parse_text or "…",
@@ -3423,6 +3414,7 @@ class App:
             meter_rows.append({
                 "rank": i, "name": p.name, "me": bool(p.is_me),
                 "cls": _class_tag(self.world.class_of(p.name)),
+                "ck": class_key(self.world.class_of(p.name)),
                 "dmg": _n(p.total),
                 "dps": _n(p.total / duration) if duration > 0 else "—",
                 "pct": f"{(p.total / party_total * 100) if party_total else 0:.0f}%",
@@ -3479,6 +3471,7 @@ class App:
         el = sorted(fp.elements.items(), key=lambda kv: -kv[1][1])
         return {"k": "detail", "id": "detail", "name": fp.name,
                 "cls": _class_tag(self.world.class_of(fp.name)),
+                "ck": class_key(self.world.class_of(fp.name)),
                 "stats": stats,
                 "dmg": skills(fp.skills, fp.total),
                 "heal": skills(fp.heals, fp.heal_total) if self._show_heal
@@ -3488,16 +3481,20 @@ class App:
                                            if fp.total else 0),
                               "c": element_color(k)} for k, v in el[:8]]}
 
-    def _rift_card(self):
-        """The rift countdown — rifts open on the hour."""
+    def _rift_clock(self):
+        """The rift countdown shown in the sidebar. Rifts open on the hour
+        and the portal stays open RIFT_PORTAL_SECS: while it is, this counts
+        down to it closing; the rest of the hour, to the next one opening."""
         now = time.localtime()
         into = now.tm_min * 60 + now.tm_sec
         if self.ui_state.in_rift():
             return {"title": "Faille", "value": "En cours", "sub": "",
                     "tone": "rift"}
-        if into < RIFT_QUIET_MINS * 60:
-            return {"title": "Prochaine faille", "value": "Ouverte",
-                    "sub": "celle de cette heure", "tone": ""}
+        if into < RIFT_PORTAL_SECS:
+            left = RIFT_PORTAL_SECS - into
+            return {"title": "Portail ouvert",
+                    "value": f"{left // 60}:{left % 60:02d}",
+                    "sub": "avant sa fermeture", "tone": "open"}
         left = 3600 - into
         return {"title": "Prochaine faille",
                 "value": f"{left // 60:02d}:{left % 60:02d}",
@@ -3577,67 +3574,7 @@ class App:
         ]
 
     def _report_node(self, data):
-        """A saved rift report, as display-ready data for the page."""
-        def cls(p):
-            # Reports saved before the translation carry English tags.
-            c = p.get("cls") or ""
-            return OLD_CLASS_TAGS.get(c, c)
-
-        def rank(players, key, dur, total):
-            out = []
-            for i, p in enumerate(players, 1):
-                amt = float(p.get(key) or 0)
-                rate = _rate(amt, dur)
-                out.append({"rank": i, "name": p.get("name") or "?",
-                            "cls": cls(p),
-                            "rate": _n(rate) if rate else "—",
-                            "total": _n(amt),
-                            "pct": f"{(amt / total * 100) if total else 0:.0f}%"})
-            return out
-
-        phases = []
-        for ph in data.get("phases") or []:
-            dur = float(ph.get("duration") or 0)
-            total, heal = float(ph.get("total") or 0), float(ph.get("heal") or 0)
-            players = ph.get("players") or []
-            healers = sorted((p for p in players if (p.get("heal") or 0) > 0.5),
-                             key=lambda p: -p["heal"])
-            mvp = players[0] if players else None
-            phases.append({
-                "label": phase_label(ph.get("label") or "Phase"),
-                "dur": _mmss(dur),
-                "dps": _rate_text(total, dur, "DPS") or "— DPS",
-                "hps": _rate_text(heal, dur, "HPS") or "— HPS",
-                "totals": f"{_n(total)} dégâts · {_n(heal)} soins"
-                          + _overheal_note(ph),
-                "mvp": ({"name": mvp.get("name") or "?",
-                         "cls": cls(mvp),
-                         "v": _rate_text(mvp.get("total", 0), dur, "DPS")
-                         or f"{_n(mvp.get('total', 0))} dégâts"}
-                        if mvp else None),
-                "healer": ({"name": healers[0].get("name") or "?",
-                            "cls": cls(healers[0]),
-                            "v": _rate_text(healers[0]["heal"], dur, "HPS")
-                            or f"{_n(healers[0]['heal'])} soins"}
-                           if healers else None),
-                "dmg": rank(players, "total", dur, total),
-                # Everyone in the phase: those who healed nothing at the
-                # bottom, greyed, so the table always lists the whole group.
-                "heal": rank(healers, "heal", dur, heal) + [
-                    dict(r, rank=len(healers) + i, zero=True)
-                    for i, r in enumerate(rank(
-                        [p for p in players
-                         if (p.get("heal") or 0) <= 0.5], "heal", dur, heal),
-                        1)],
-                "types": [{"t": element_label(el),
-                           "pct": _pct1(amt / total * 100 if total else 0),
-                           "f": round(amt / (ph["elements"][0][1] or 1), 4),
-                           "c": element_color(el)}
-                          for el, amt in (ph.get("elements") or [])[:8]],
-            })
-        when = date_fr(time.localtime(data.get("at") or 0))
-        return {"k": "report", "id": "report", "title": "Rapport de faille",
-                "when": when, "phases": phases}
+        return report_view(data)
 
     # ---- settings
     def _page_settings(self):
@@ -4526,21 +4463,6 @@ class App:
         if q and self._menu_unlock:
             self._refocus_game()
 
-    def _quit_clicked(self):
-        """Two clicks to quit. The button sits in the same menu as the display
-        toggles, and a misclick that ends the meter mid-fight — taking the
-        encounter with it — is worth one extra click to rule out."""
-        if self._quit_armed:
-            self._quit()
-            return
-        # State only. The label follows from it in _menu_spec — the settings
-        # panel is not a widget this process owns, so there is nothing here to
-        # configure and the next push carries the change.
-        self._quit_armed = True
-        self.root.after(4000, self._disarm_quit)
-
-    def _disarm_quit(self):
-        self._quit_armed = False
 
     def _install_hotkeys(self):
         start_hotkeys({HK_RESET: self._enqueue(self._manual_reset)},
@@ -4670,14 +4592,6 @@ def _summon_label(kind):
     reduces to a plausible "Imp" — but it is a guess that happens to read well,
     and it degenerates to a raw id on every summon not named that way."""
     return _unit_names().get(kind) or _pretty_id(kind)
-
-
-def _lerp_hex(a, b, t):
-    """Blend two #rrggbb colours, t in 0..1."""
-    av = tuple(int(a[i:i + 2], 16) for i in (1, 3, 5))
-    bv = tuple(int(b[i:i + 2], 16) for i in (1, 3, 5))
-    return "#%02X%02X%02X" % tuple(
-        int(round(x + (y - x) * t)) for x, y in zip(av, bv))
 
 
 # ---------------------------------------------------------------------------
@@ -5122,52 +5036,129 @@ def render_parse_image(data, path):
     return path
 
 
-# The rift report as an image — same reasoning as the parse image: drawn from
-# the numbers rather than screenshotted from the card, so it's pixel-clean at
-# any window opacity and works with the card closed. Same two-column layout,
-# same tiering, same palette, so a paste reads as the card it came from.
-RIFT_IMG_COL_W = 350
-# The leaderboard's right-hand gutters, measured back from the column edge:
-# the share sits in the first, the total in the second, and the rate — the
-# headline — takes whatever is left before the name. Named because the rows
-# and their column heading both align to them and must not drift apart.
-RIFT_IMG_PCT_W = 40
-RIFT_IMG_TOT_W = 72
-RIFT_IMG_PAD = 20
-RIFT_IMG_GAP = 26
+def report_view(data):
+    """A saved rift report, as display-ready data for the page."""
+    def cls(p):
+        # Reports saved before the translation carry English tags.
+        c = p.get("cls") or ""
+        return OLD_CLASS_TAGS.get(c, c)
+
+    def rank(players, key, dur, total):
+        out = []
+        for i, p in enumerate(players, 1):
+            amt = float(p.get(key) or 0)
+            rate = _rate(amt, dur)
+            out.append({"rank": i, "name": p.get("name") or "?",
+                        "cls": cls(p), "ck": class_key(p.get("cls")),
+                        "rate": _n(rate) if rate else "—",
+                        "total": _n(amt),
+                        "pct": f"{(amt / total * 100) if total else 0:.0f}%"})
+        return out
+
+    phases = []
+    for ph in data.get("phases") or []:
+        dur = float(ph.get("duration") or 0)
+        total, heal = float(ph.get("total") or 0), float(ph.get("heal") or 0)
+        players = ph.get("players") or []
+        healers = sorted((p for p in players if (p.get("heal") or 0) > 0.5),
+                         key=lambda p: -p["heal"])
+        mvp = players[0] if players else None
+        phases.append({
+            "label": phase_label(ph.get("label") or "Phase"),
+            "dur": _mmss(dur),
+            "dps": _rate_text(total, dur, "DPS") or "— DPS",
+            "hps": _rate_text(heal, dur, "HPS") or "— HPS",
+            "totals": f"{_n(total)} dégâts · {_n(heal)} soins"
+                      + _overheal_note(ph),
+            "mvp": ({"name": mvp.get("name") or "?",
+                     "cls": cls(mvp), "ck": class_key(mvp.get("cls")),
+                     "v": _rate_text(mvp.get("total", 0), dur, "DPS")
+                     or f"{_n(mvp.get('total', 0))} dégâts"}
+                    if mvp else None),
+            "healer": ({"name": healers[0].get("name") or "?",
+                        "cls": cls(healers[0]),
+                        "ck": class_key(healers[0].get("cls")),
+                        "v": _rate_text(healers[0]["heal"], dur, "HPS")
+                        or f"{_n(healers[0]['heal'])} soins"}
+                       if healers else None),
+            "dmg": rank(players, "total", dur, total),
+            # Everyone in the phase: those who healed nothing at the
+            # bottom, greyed, so the table always lists the whole group.
+            "heal": rank(healers, "heal", dur, heal) + [
+                dict(r, rank=len(healers) + i, zero=True)
+                for i, r in enumerate(rank(
+                    [p for p in players
+                     if (p.get("heal") or 0) <= 0.5], "heal", dur, heal),
+                    1)],
+            "types": [{"t": element_label(el),
+                       "pct": _pct1(amt / total * 100 if total else 0),
+                       "f": round(amt / (ph["elements"][0][1] or 1), 4),
+                       "c": element_color(el)}
+                      for el, amt in (ph.get("elements") or [])[:8]],
+        })
+    when = date_fr(time.localtime(data.get("at") or 0))
+    return {"k": "report", "id": "report", "title": "Rapport de faille",
+            "when": when, "phases": phases}
+
+
+# The rift report as an image. Drawn from the same display data as the Failles
+# page (report_view), in the same palette and layout — cards per phase, framed
+# tables, every player — so a pasted image looks like the window it came from.
+# Drawn rather than screenshotted: pixel-clean, and it works with the window
+# closed (the .png is written the moment a rift ends).
+IMG_BG, IMG_PANEL, IMG_PANEL2 = "#15161C", "#1D1F28", "#242733"
+IMG_LINE, IMG_TEXT, IMG_DIM, IMG_FAINT = "#2E3240", "#E7E4DC", "#9C988F", "#6E6B65"
+IMG_ACCENT, IMG_HEAL, IMG_RIFT, IMG_PHASE = "#E2B65B", "#57C08A", "#D65DB1", "#F3C9E5"
+IMG_COL_W = 560                 # one phase card
+IMG_PAD = 24
 
 
 def render_rift_report_image(data, path=None):
-    """Draw an end-of-rift report dict as a PIL image. Returns the image;
-    also writes a PNG when `path` is given."""
+    """Draw a rift report as a PIL image; also writes a PNG when `path` is
+    given."""
     from PIL import Image, ImageDraw
 
-    ui_mvp = _parse_font(PARSE_FONT_UI, 22)
-    ui = _parse_font(PARSE_FONT_UI, 15)
-    ui_rank = _parse_font(PARSE_FONT_UI, 14)
-    ui_small = _parse_font(PARSE_FONT_UI, 11)
-    mono = _parse_font(PARSE_FONT_MONO, 13)
-    mono_small = _parse_font(PARSE_FONT_MONO, 11)
+    view = report_view(data)
+    reg = lambda size: _parse_font("segoeui.ttf", size)     # noqa: E731
+    bold = lambda size: _parse_font("segoeuib.ttf", size)   # noqa: E731
+    f_title, f_phase, f_mvp = bold(22), bold(17), bold(18)
+    f_fact_v, f_body_b, f_body = bold(19), bold(14), reg(14)
+    f_small, f_small_b, f_tiny = reg(12), bold(12), reg(11)
 
-    W = RIFT_IMG_PAD * 2 + RIFT_IMG_COL_W * 2 + RIFT_IMG_GAP
-    img = Image.new("RGB", (W, 1600), RIFT_BODY)
+    W = IMG_PAD * 3 + IMG_COL_W * 2
+    img = Image.new("RGBA", (W, 4000), IMG_BG)
+    icons = {}
+
+    def icon(key, size, faded=False):
+        """A class icon at `size` px, or None if there is none."""
+        if not key:
+            return None
+        k = (key, size, faded)
+        if k not in icons:
+            try:
+                im = Image.open(CLASS_ICON_DIR / f"{key}.png").convert("RGBA")
+                im = im.resize((size, size), Image.LANCZOS)
+                if faded:
+                    a = im.getchannel("A").point(lambda v: v * 45 // 100)
+                    im.putalpha(a)
+                icons[k] = im
+            except OSError:
+                icons[k] = None
+        return icons[k]
     d = ImageDraw.Draw(img)
 
-    d.rectangle((0, 0, W - 1, 39), fill=RIFT_GLOW)
-    d.text((RIFT_IMG_PAD, 10), "RAPPORT DE FAILLE", font=ui, fill=RIFT_TIME)
-    stamp = time.strftime("%d/%m/%Y %H:%M", time.localtime(data["at"]))
-    d.text((W - RIFT_IMG_PAD - d.textlength(stamp, font=mono_small), 14),
-           stamp, font=mono_small, fill=RIFT_PEAK)
+    def text(x, y, s, font, fill, anchor="la"):
+        d.text((x, y), str(s), font=font, fill=fill, anchor=anchor)
 
-    def heading(cx, y, text):
-        d.text((cx, y), text, font=ui_small, fill=RIFT_TITLE)
-        tw = d.textlength(text, font=ui_small)
-        d.line((cx + tw + 8, y + 7, cx + RIFT_IMG_COL_W, y + 7), fill=RIFT_GLOW)
-        return y + 22
+    def fit(s, font, width):
+        """Elide `s` to fit `width` pixels."""
+        s = str(s)
+        if d.textlength(s, font=font) <= width:
+            return s
+        while s and d.textlength(s + "…", font=font) > width:
+            s = s[:-1]
+        return s + "…"
 
-    # The card's ★ and ✚ are DRAWN here rather than typed: PIL does no font
-    # fallback, so glyphs Segoe UI Bold doesn't carry come out as tofu boxes —
-    # measured on the first render. Shapes can't be missing from a font.
     def star(x, y, r, fill):
         pts = []
         for i in range(10):
@@ -5181,153 +5172,161 @@ def render_rift_report_image(data, path=None):
         d.rectangle((x - t // 2, y - r, x + t // 2, y + r), fill=fill)
         d.rectangle((x - r, y - t // 2, x + r, y + t // 2), fill=fill)
 
-    def column(cx, ph):
-        y = 52
-        d.text((cx, y), phase_label(ph["label"]).upper(), font=ui, fill=RIFT_PEAK)
-        y += 24
-        # Rates first, totals under them — the same primary/subtext pairing
-        # the on-screen card uses, because this image IS that card to anyone
-        # it gets pasted to.
-        dps = _rate_text(ph["total"], ph["duration"], "DPS")
-        hps = _rate_text(ph["heal"], ph["duration"], "HPS")
-        d.text((cx, y), f"{_mmss(ph['duration'])}  ·  "
-               f"{dps or '— DPS'}  ·  {hps or '— HPS'}",
-               font=ui, fill=RIFT_TIME)
-        y += 20
-        d.text((cx, y), f"{_n(ph['total'])} dégâts  ·  "
-               f"{_n(ph['heal'])} soins" + _overheal_note(ph),
-               font=ui_small, fill=RIFT_TITLE)
-        y += 22
-        players = ph["players"]
-        if not players:
-            d.text((cx, y), "rien n'a été enregistré pour cette phase",
-                   font=ui_small, fill=RIFT_TITLE)
-            return y + 20
+    def table(x, y, w, rows, rate_label):
+        """A framed ranking: header band, a rule between rows. Returns the
+        y below it."""
+        row_h, head_h = 26, 24
+        cols = (("", 26, "la"), ("JOUEUR", None, "la"), (rate_label, 70, "ra"),
+                ("TOTAL", 86, "ra"), ("PART", 50, "ra"))
+        fixed = sum(c[1] for c in cols if c[1])
+        name_w = w - fixed - 20
+        h = head_h + row_h * len(rows)
+        d.rounded_rectangle((x, y, x + w, y + h), 6, fill=IMG_BG,
+                            outline=IMG_LINE)
+        d.rounded_rectangle((x + 1, y + 1, x + w - 1, y + head_h), 5,
+                            fill=IMG_PANEL2)
 
-        y = heading(cx, y, "MVP")
-        mvp = players[0]
-        star(cx + 11, y + 14, 11, REPORT_MEDALS[0])
-        d.text((cx + 28, y), _elide_name(mvp["name"]),
-               font=ui_mvp, fill=REPORT_MEDALS[0])
-        if mvp.get("cls"):
-            d.text((cx + 32 + d.textlength(_elide_name(mvp["name"]),
-                                           font=ui_mvp), y + 12),
-                   mvp["cls"], font=ui_small, fill=RIFT_TITLE)
-        y += 30
-        mvp_dps = _rate_text(mvp["total"], ph["duration"], "DPS")
-        mvp_total = f"{_n(mvp['total'])} dégâts"
-        d.text((cx + 28, y), mvp_dps or mvp_total, font=ui, fill=RIFT_TIME)
-        y += 19
-        if mvp_dps:
-            d.text((cx + 28, y), mvp_total, font=ui_small, fill=RIFT_TITLE)
-            y += 17
-        healer = max(players, key=lambda p: p["heal"])
-        if healer["heal"] > 0.5:
-            hps_txt = _rate_text(healer["heal"], ph["duration"], "HPS")
-            heal_total = f"{_n(healer['heal'])} soins"
-            who = _elide_name(healer["name"])
-            if healer.get("cls"):
-                who += f" ({healer['cls']})"
-            plus(cx + 8, y + 9, 7, REPORT_HEAL)
-            d.text((cx + 22, y), f"{who}   {hps_txt or heal_total}",
-                   font=ui_rank, fill=REPORT_HEAL)
-            y += 20
-            if hps_txt:
-                d.text((cx + 22, y),
-                       heal_total + _overheal_note(healer, "   {:.0f}% en excès"),
-                       font=ui_small, fill=RIFT_TITLE)
-                y += 17
+        def cells(yy, values, fonts, fills):
+            cx = x + 10
+            for (label, cw, anchor), v, f, fl in zip(cols, values, fonts, fills):
+                cw = cw or name_w
+                if anchor == "ra":
+                    text(cx + cw, yy, v, f, fl, "ra")
+                else:
+                    text(cx, yy, v, f, fl)
+                cx += cw
 
-        def rank_rows(y, entries, total, key):
-            for i, p in enumerate(entries[:5], 1):
-                top3 = i <= 3
-                fg = REPORT_MEDALS[i - 1] if top3 else RIFT_TITLE
-                nfont = ui_rank if top3 else ui_small
-                d.text((cx, y), str(i), font=nfont, fill=fg)
-                nm = _elide_name(p["name"])
-                d.text((cx + 18, y), nm,
-                       font=nfont, fill=RIFT_TIME if top3 else RIFT_TITLE)
-                # Drawn separately, in the dim colour, so a long name's
-                # elision can never eat the acronym.
-                if p.get("cls"):
-                    # Sat on the name's baseline, not its top: the acronym is
-                    # 11px against a 14px (or 11px) name, and hanging it from
-                    # the same y reads as a superscript.
-                    d.text((cx + 22 + d.textlength(nm, font=nfont),
-                            y + (5 if top3 else 2)),
-                           p["cls"], font=mono_small, fill=RIFT_TITLE)
-                # Three numbers in two weights: the RATE is the headline, the
-                # total it came from and the share it represents are subtext.
-                # Right-aligned to fixed gutters so the columns line up down
-                # the card however wide the numbers run.
-                amt = f"{_n(p[key])}"
-                pct = f"{p[key] / total * 100 if total else 0.0:.0f}%"
-                rate = _rate(p[key], ph["duration"])
-                rate_s = "—" if rate is None else f"{_n(rate)}"
-                d.text((cx + RIFT_IMG_COL_W
-                        - d.textlength(pct, font=mono_small), y + 3),
-                       pct, font=mono_small, fill=RIFT_TITLE)
-                d.text((cx + RIFT_IMG_COL_W - RIFT_IMG_PCT_W
-                        - d.textlength(amt, font=mono_small), y + 3),
-                       amt, font=mono_small, fill=RIFT_TITLE)
-                d.text((cx + RIFT_IMG_COL_W - RIFT_IMG_PCT_W - RIFT_IMG_TOT_W
-                        - d.textlength(rate_s, font=mono), y + 2),
-                       rate_s, font=mono, fill=RIFT_TIME)
-                y += 22 if top3 else 19
-            return y
+        cells(y + 6, [c[0] for c in cols], [f_tiny] * 5, [IMG_DIM] * 5)
+        yy = y + head_h
+        for i, r in enumerate(rows):
+            if i % 2:
+                d.rectangle((x + 1, yy, x + w - 1, yy + row_h),
+                            fill="#191B22")
+            d.line((x + 1, yy, x + w - 1, yy), fill=IMG_LINE)
+            zero, top = r.get("zero"), r["rank"] <= 3 and not r.get("zero")
+            ink = IMG_FAINT if zero else IMG_TEXT
+            nfont = f_body_b if top else f_body
+            name = fit(r["name"], nfont, name_w - 50)
+            cells(yy + 5, [r["rank"], name, r["rate"], r["total"], r["pct"]],
+                  [f_body, nfont, f_body, f_body, f_body],
+                  [IMG_FAINT if zero else IMG_DIM, ink, ink, ink, ink])
+            nx = int(x + 10 + 26 + d.textlength(name, font=nfont) + 6)
+            ic = icon(r.get("ck"), 16, zero)
+            if ic is not None:
+                img.alpha_composite(ic, (nx, yy + 5))
+            elif r.get("cls"):
+                text(nx, yy + 7, r["cls"], f_small, IMG_FAINT if zero else IMG_DIM)
+            yy += row_h
+        # The frame last, so the row fills cannot paint over its edge.
+        d.rounded_rectangle((x, y, x + w, y + h), 6, outline=IMG_LINE)
+        return y + h
 
-        def rank_header(y, rate_label):
-            """Names the three columns once. Same gutters as rank_rows, so the
-            heading sits directly over the numbers it names."""
-            for text, gutter in ((("PART"), 0),
-                                 (("TOTAL"), RIFT_IMG_PCT_W),
-                                 ((rate_label), RIFT_IMG_PCT_W + RIFT_IMG_TOT_W)):
-                d.text((cx + RIFT_IMG_COL_W - gutter
-                        - d.textlength(text, font=mono_small), y),
-                       text, font=mono_small, fill=RIFT_TITLE)
-            return y + 15
-
-        y = heading(cx, y + 6, "DÉGÂTS — TOP 5")
-        y = rank_header(y, "DPS")
-        y = rank_rows(y, players, ph["total"], "total")
-        healers = sorted((p for p in players if p["heal"] > 0.5),
-                         key=lambda p: -p["heal"])
-        y = heading(cx, y + 4, "SOINS — TOP 5")
-        if healers:
-            y = rank_header(y, "HPS")
-            y = rank_rows(y, healers, ph["heal"], "heal")
+    def phase_card(x, y, ph):
+        w = IMG_COL_W
+        pad = 18
+        ix, iw = x + pad, w - pad * 2
+        cy = y + pad
+        text(ix, cy, ph["label"].upper(), f_phase, IMG_PHASE)
+        cy += 32
+        fx = ix
+        for label, value in (("DURÉE", ph["dur"]),
+                             ("DPS", ph["dps"].replace(" DPS", "")),
+                             ("HPS", ph["hps"].replace(" HPS", ""))):
+            fw = max(110, int(d.textlength(value, font=f_fact_v)) + 26)
+            d.rounded_rectangle((fx, cy, fx + fw, cy + 52), 6,
+                                fill=IMG_PANEL2, outline=IMG_LINE)
+            text(fx + 12, cy + 7, label, f_tiny, IMG_DIM)
+            text(fx + 12, cy + 22, value, f_fact_v, IMG_TEXT)
+            fx += fw + 8
+        cy += 62
+        text(ix, cy, ph["totals"], f_small, IMG_DIM)
+        cy += 26
+        d.line((ix, cy, ix + iw, cy), fill=IMG_LINE)
+        cy += 14
+        if ph.get("mvp"):
+            boxes = [("MVP DÉGÂTS", ph["mvp"], IMG_ACCENT, star)]
+            if ph.get("healer"):
+                boxes.append(("MVP SOINS", ph["healer"], IMG_HEAL, plus))
+            bw = (iw - 10 * (len(boxes) - 1)) // len(boxes)
+            for i, (label, who, colour, mark) in enumerate(boxes):
+                bx = ix + i * (bw + 10)
+                d.rounded_rectangle((bx, cy, bx + bw, cy + 78), 6,
+                                    fill=IMG_PANEL2, outline=IMG_LINE)
+                d.rectangle((bx, cy + 1, bx + 3, cy + 77), fill=colour)
+                text(bx + 14, cy + 8, label, f_tiny, IMG_DIM)
+                mark(bx + 24, cy + 38, 9 if mark is star else 7, colour)
+                name = fit(who["name"], f_mvp, bw - 90)
+                text(bx + 40, cy + 26, name, f_mvp, colour)
+                ix2 = int(bx + 46 + d.textlength(name, font=f_mvp))
+                ic = icon(who.get("ck"), 20)
+                if ic is not None:
+                    img.alpha_composite(ic, (ix2, cy + 30))
+                elif who.get("cls"):
+                    text(ix2, cy + 32, who["cls"], f_small, IMG_DIM)
+                text(bx + 14, cy + 54, who["v"], f_body, IMG_TEXT)
+            cy += 92
         else:
-            d.text((cx, y), "aucun soin enregistré", font=ui_small,
-                   fill=RIFT_TITLE)
-            y += 19
+            text(ix, cy, "rien n'a été enregistré pour cette phase", f_body,
+                 IMG_FAINT)
+            cy += 30
 
-        y = heading(cx, y + 4, "DÉGÂTS PAR TYPE")
-        top = ph["elements"][0][1] if ph["elements"] else 0.0
-        for el, amt in ph["elements"][:8]:
-            colour = _lerp_hex(element_color(el), "#FFFFFF", 0.30)
-            d.text((cx, y), element_label(el),
-                   font=ui_small, fill=colour)
-            frac = amt / top if top else 0.0
-            bar_x = cx + 78
-            bar_w = RIFT_IMG_COL_W - 78 - 44
-            d.rectangle((bar_x, y + 4, bar_x + int(bar_w * frac), y + 11),
-                        fill=colour)
-            pct = amt / ph["total"] * 100 if ph["total"] else 0.0
-            d.text((cx + RIFT_IMG_COL_W
-                    - d.textlength(_pct1(pct), font=mono_small), y + 2),
-                   _pct1(pct), font=mono_small, fill=RIFT_TIME)
-            y += 18
-        return y
+        def heading(s):
+            nonlocal cy
+            cy += 8
+            text(ix, cy, s.upper(), f_small_b, IMG_RIFT)
+            cy += 22
 
-    bottoms = [column(RIFT_IMG_PAD, data["phases"][0]),
-               column(RIFT_IMG_PAD + RIFT_IMG_COL_W + RIFT_IMG_GAP,
-                      data["phases"][1])]
-    mid = RIFT_IMG_PAD + RIFT_IMG_COL_W + RIFT_IMG_GAP // 2
-    h = max(bottoms) + RIFT_IMG_PAD
-    d.line((mid, 52, mid, h - RIFT_IMG_PAD), fill=RIFT_GLOW)
-    img = img.crop((0, 0, W, h))
-    ImageDraw.Draw(img).rectangle((0, 0, W - 1, img.height - 1),
-                                  outline=RIFT_EDGE, width=2)
+        if ph.get("dmg"):
+            n = len(ph["dmg"])
+            heading(f"Dégâts — {n} joueur{'s' if n > 1 else ''}")
+            cy = table(ix, cy, iw, ph["dmg"], "DPS") + 10
+        heals = ph.get("heal") or []
+        n = len(heals)
+        heading("Soins" + (f" — {n} joueur{'s' if n > 1 else ''}" if n else ""))
+        if heals:
+            cy = table(ix, cy, iw, heals, "HPS") + 10
+        else:
+            text(ix, cy, "aucun soin enregistré", f_body, IMG_FAINT)
+            cy += 28
+        if ph.get("types"):
+            heading("Dégâts par type")
+            th = 14 + 24 * len(ph["types"])
+            d.rounded_rectangle((ix, cy, ix + iw, cy + th), 6, fill=IMG_BG,
+                                outline=IMG_LINE)
+            ty = cy + 9
+            for t in ph["types"]:
+                text(ix + 12, ty, t["t"], f_small, t["c"])
+                bx0, bx1 = ix + 110, ix + iw - 80
+                bw = max(4, int((bx1 - bx0) * max(0.02, t["f"])))
+                d.rounded_rectangle((bx0, ty + 4, bx0 + bw, ty + 11), 3,
+                                    fill=t["c"])
+                text(ix + iw - 12, ty, t["pct"], f_small, IMG_TEXT, "ra")
+                ty += 24
+            cy += th
+        return cy + pad
+
+    # Measure both cards on a scratch pass, so they can share one height.
+    y0 = IMG_PAD + 64
+    bottoms = []
+    for i, ph in enumerate(view["phases"][:2]):
+        bottoms.append(phase_card(IMG_PAD + i * (IMG_COL_W + IMG_PAD), y0, ph))
+    card_bottom = max(bottoms or [y0 + 40])
+
+    # Draw for real: background panel, title, then the cards over it.
+    d.rectangle((0, 0, W, 4000), fill=IMG_BG)
+    H = card_bottom + IMG_PAD
+    d.rounded_rectangle((8, 8, W - 8, H - 8), 10, fill=IMG_PANEL,
+                        outline=IMG_LINE)
+    text(IMG_PAD, IMG_PAD, view["title"], f_title, IMG_RIFT)
+    text(IMG_PAD + d.textlength(view["title"], font=f_title) + 14,
+         IMG_PAD + 6, view["when"], f_body, IMG_DIM)
+    d.line((IMG_PAD, IMG_PAD + 44, W - IMG_PAD, IMG_PAD + 44), fill=IMG_LINE)
+    for i, ph in enumerate(view["phases"][:2]):
+        x = IMG_PAD + i * (IMG_COL_W + IMG_PAD)
+        d.rounded_rectangle((x, y0, x + IMG_COL_W, card_bottom), 10,
+                            fill=IMG_BG, outline=IMG_LINE)
+        phase_card(x, y0, ph)
+    img = img.crop((0, 0, W, H)).convert("RGB")
     if path is not None:
         path.parent.mkdir(parents=True, exist_ok=True)
         img.save(path)
@@ -6198,15 +6197,6 @@ class GameLink:
         """Look for the game / reconnect now, rather than at the next poll."""
         self._retry.set()
 
-    def configure(self, **kw):
-        """Push a setting to the running hook, if there is one."""
-        sc = self.script
-        if sc is None:
-            return
-        try:
-            sc.post(dict(kw, type="config"))
-        except Exception as e:
-            print(f"[meter] couldn't configure the hook: {e}", file=sys.stderr)
 
     # -- lifecycle --------------------------------------------------------
     def set_state(self, state, detail="", pid=None):

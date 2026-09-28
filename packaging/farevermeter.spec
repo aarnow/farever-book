@@ -26,6 +26,9 @@ datas = [
     # the bug the OVER column exists to fix.
     (str(ROOT / "analysis_out" / "heal_specs.json"), "res/analysis_out"),
     (str(ROOT / "assets" / "farevermeter.ico"), "res/assets"),
+    # Class icons, built from the game's art by hltools/build_class_icons.py.
+    *[(str(f), "res/assets/classes")
+      for f in sorted((ROOT / "assets" / "classes").glob("*.png"))],
     # The settings panel's markup. Three files rather than one string constant
     # in menu_host.py, which reads and inlines them into a single document at
     # startup — so they stay editable, and there is no file:// origin to get

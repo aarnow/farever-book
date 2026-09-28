@@ -269,6 +269,9 @@ select, input[type=text] {
 .card.hot .v { color: var(--hot); }
 .card.rift { border-color: var(--rift); }
 .card.rift .v { color: var(--rift); }
+.card.open { border-color: var(--ok); }
+.card.open .v { color: var(--ok); }
+#riftclock { background: var(--bg); }
 
 /* ---- panels (meter, detail, events, report) ---------------------------------- */
 .panel {
@@ -443,3 +446,10 @@ select, input[type=text] {
 
 /* outside the live page's grid, a toolbar needs its own space below it */
 #page:not(.page-Live) > .toolbar { margin-bottom: 16px; }
+
+/* class icons, next to player names */
+.clsicon { width: 16px; height: 16px; vertical-align: -3px; }
+.clsicon.cls { margin-left: 8px; width: 18px; height: 18px; }
+.clsicon.cl { margin-left: 6px; width: 15px; height: 15px; }
+.clsicon.big { margin-left: 4px; width: 20px; height: 20px; vertical-align: -4px; }
+.rk.zero .clsicon { opacity: .45; }
