@@ -204,43 +204,6 @@ function inCombat(hero) {
 // now comes from layer.world.level in checkRift() below: the loaded level's
 // own name, read with plain pointer walks (timer-safe, unlike an HL call).
 
-// ---- the game's own window state (native UI awareness) ----
-// ui.BaseUI.displayWindow(ui, win) / removeWindow(ui, win) fire for EVERY game
-// window, so tracking them gives Python a live "which game windows are open"
-// feed — the overlay follows the game's UI (escape menu open => unlock) instead
-// of needing a hotkey. displayWindow fires TWICE per open, and several windows
-// of one class can coexist, so instances are keyed by pointer and a class is
-// only reported when its live count crosses zero.
-const winClassOf = {};    // window instance ptr -> class name
-const winOpenCount = {};  // class name -> live instance count
-
-function windowOpened(win) {
-    try {
-        if (!win || win.isNull()) return;
-        const key = win.toString();
-        if (key in winClassOf) return;              // the duplicate displayWindow
-        const nm = typeName(win);
-        if (!nm || nm.lastIndexOf("kind", 0) === 0) return;
-        winClassOf[key] = nm;
-        winOpenCount[nm] = (winOpenCount[nm] || 0) + 1;
-        if (winOpenCount[nm] === 1) send({ kind: "window", name: nm, open: 1 });
-    } catch (e) {}
-}
-
-function windowClosed(win) {
-    try {
-        if (!win || win.isNull()) return;
-        const key = win.toString();
-        const nm = winClassOf[key];
-        if (!nm) return;                            // not one we're tracking
-        delete winClassOf[key];
-        if (--winOpenCount[nm] <= 0) {
-            delete winOpenCount[nm];
-            send({ kind: "window", name: nm, open: 0 });
-        }
-    } catch (e) {}
-}
-
 // ---- rift + zone + shard detection ----
 // hero -> st.State.layer -> st.GameLayer: isRift for rifts, .world.level for
 // where you are, .serverName for WHICH SHARD you are on. Pure pointer + byte
@@ -280,8 +243,7 @@ function checkRift() {
                         out.world_map = w.add(OFF.World._isWorldMap).readU8();
                     } catch (e2) {}
                     if (!initial) {
-                        // A loading screen rebuilds the game's whole UI.
-                        resetWindows();
+                        resetBossBars();
                     }
                     send(out);
                 }
@@ -505,14 +467,11 @@ function hookBossBar(base) {
     }
 }
 
-function resetWindows() {
-    for (const nm in winOpenCount) send({ kind: "window", name: nm, open: 0 });
-    for (const k in winClassOf) delete winClassOf[k];
-    for (const k in winOpenCount) delete winOpenCount[k];
-    // A bar that was up when the agent went away must not leave the compass
-    // hidden forever. No up/down events: the pull isn't ending, we're just
-    // no longer able to see it, and a phantom "boss died" fanfare on unload
-    // would be worse than saying nothing.
+function resetBossBars() {
+    // A loading screen tears the HUD down: a bar that was up on the way out
+    // must not stay "up" in the new zone. No up/down events — the pull isn't
+    // ending, we just can't see it any more, and a phantom kill would be worse
+    // than saying nothing.
     if (Object.keys(bossBars).length) send({ kind: "bossbar", n: 0, boss: false,
                                              elite: false, up: [], down: [] });
     bossBars = {};
@@ -1181,32 +1140,6 @@ function main() {
             }
         });
     }
-    // ---- native UI awareness: stream game window open/close ----
-    const UIT = DATA.ui_targets || {};
-    const dispFi = UIT["ui.BaseUI.displayWindow"];
-    const remFi = UIT["ui.BaseUI.removeWindow"];
-    const onRemFi = UIT["ui.win.BaseWindow.onRemove"];
-    if (dispFi == null || remFi == null) {
-        log("ui_targets missing (displayWindow/removeWindow findex); game-menu "
-            + "awareness disabled — re-run hltools/build_targets.py");
-    } else {
-        // Both take (baseUI = rcx, window = rdx).
-        Interceptor.attach(base.add(dispFi * 8).readPointer(), {
-            onEnter() { windowOpened(this.context.rdx); }
-        });
-        Interceptor.attach(base.add(remFi * 8).readPointer(), {
-            onEnter() { windowClosed(this.context.rdx); }
-        });
-        if (onRemFi != null) {
-            // Safety net: a window disposed without going through removeWindow
-            // would otherwise leave the overlay stuck unlocked. (window = rcx)
-            Interceptor.attach(base.add(onRemFi * 8).readPointer(), {
-                onEnter() { windowClosed(this.context.rcx); }
-            });
-        }
-        log("game window tracking active");
-    }
-
     log("meter hook active (local hero " + (localName ? "identified" : "pending")
         + ")");
     send({ kind: "ready", ok: true });

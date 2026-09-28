@@ -1,41 +1,45 @@
-# Arrêter le compteur
+# Utiliser Farever+
 
-> Deux façons propres de l'arrêter, et une qui te causera des ennuis.
+> Une seule fenêtre, sur ton 2nd écran, qui ne touche jamais au jeu.
 
-Ces deux-là l'arrêtent proprement :
+Farever+ lit les données de combat de Farever et les affiche dans cette
+fenêtre. Rien n'est jamais dessiné dans le jeu : ton HUD reste exactement celui
+de Farever.
 
-* **Clic droit sur l'icône** près de l'horloge → **Arrêter le compteur**.
-* Ouvre le menu **Échap** du jeu et utilise **Arrêter le compteur** en bas de ce
-  panneau. Il faut cliquer une deuxième fois pour confirmer, pour qu'un clic
-  malheureux en plein combat ne coupe pas ta session.
+## Avec ou sans le jeu
 
-## Fermer Farever
+Lance Farever+ quand tu veux, avant ou après le jeu. Le voyant en haut à droite
+indique où il en est :
 
-Fermer le jeu masque l'overlay et ouvre une petite fenêtre qui demande s'il faut
-aussi quitter le compteur — un clic et c'est fini.
+* **● Hors jeu** — Farever n'est pas lancé. Les failles, l'historique des
+  combats et les réglages restent consultables.
+* **● Connexion…** — le jeu vient d'être détecté, Farever+ s'y branche.
+* **● En jeu** — les données arrivent en direct.
+* **● Échec — réessayer** — clique sur le voyant pour une nouvelle tentative.
 
-**Le laisser tourner** le garde dans la zone de notification. Attention : il ne
-peut pas se reconnecter à un jeu relancé ; relance un nouveau compteur pour ça.
+Quand tu fermes le jeu, Farever+ revient à « Hors jeu » et se reconnecte tout
+seul à la prochaine session.
 
-## Ne l'arrête pas depuis le Gestionnaire des tâches
+## Les pages
 
-Ça tue le processus avant qu'il ait pu retirer son hook et se détacher, et un
-agent à moitié attaché est ce qui déstabilise Farever au fil des relances. Les
-deux boutons ci-dessus passent par le bon chemin.
+* **En direct** — le compteur de dégâts et de soins, le détail du joueur
+  sélectionné (clique sur une ligne du compteur), le minuteur de faille et les
+  événements : kills de boss, records, fins de faille.
+* **Failles** — toutes les failles terminées, avec leur classement complet.
+* **Combats** — l'historique des combats, s'il est activé.
 
-## Alt-Tab emporte l'overlay avec lui
+## Réinitialiser en plein combat
 
-Fais Alt-Tab et tout l'overlay disparaît, puis revient quand tu recliques dans le
-jeu — pour qu'un compteur de dégâts ne reste pas flotter au-dessus de ton
-navigateur. Ce panneau aussi : le menu Échap du jeu reste ouvert derrière toi,
-donc sans ça la plus grande fenêtre de l'overlay serait la seule restée à
-l'écran.
+Le raccourci clavier (par défaut **Maj + \**) réinitialise le combat sans
+quitter le jeu des yeux. Il ne fonctionne que lorsque Farever est au premier
+plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
-L'icône près de l'horloge reste là, et c'est de toute façon par elle que tu
-arrêterais le compteur depuis l'extérieur du jeu.
+## Arrêter Farever+
 
-## Windows 11 masque les nouvelles icônes
+Ferme simplement cette fenêtre, ou utilise **Arrêter le compteur** en bas du
+menu (il faut cliquer deux fois), ou **clic droit sur l'icône** près de
+l'horloge → **Arrêter le compteur**. Dans tous les cas, Farever+ se détache
+proprement du jeu.
 
-Au premier lancement, clique sur la flèche **^** près de l'horloge et **fais
-glisser l'icône Farever+** dans la barre des tâches, pour l'avoir sous la main.
-Le compteur affiche une notification au premier lancement pour te le rappeler.
+**Ne l'arrête pas depuis le Gestionnaire des tâches** : ça tue le processus avant
+qu'il ait pu se détacher du jeu, et c'est ce qui peut déstabiliser Farever.

@@ -3,44 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Farever+ — Réglages</title>
+<title>Farever+</title>
 <style>/*CSS*/</style>
 </head>
 <body>
-<!-- Eight invisible grips around the edge. A frameless WinForms window has no
-     resize border of its own, so these are what make the panel resizable —
-     each one hands the drag to Windows via WM_NCLBUTTONDOWN. -->
-<div class="grip n"    data-edge="top"></div>
-<div class="grip s"    data-edge="bottom"></div>
-<div class="grip w"    data-edge="left"></div>
-<div class="grip e"    data-edge="right"></div>
-<div class="grip nw"   data-edge="topleft"></div>
-<div class="grip ne"   data-edge="topright"></div>
-<div class="grip sw"   data-edge="bottomleft"></div>
-<div class="grip se"   data-edge="bottomright"></div>
-
-<div id="shell">
-  <header id="titlebar">
-    <span id="title">Farever+ — Réglages</span>
+<div id="app">
+  <header id="top">
+    <span class="brand">Farever<b>+</b></span>
     <span id="version"></span>
     <span class="spacer"></span>
-    <button class="linkbtn" data-act="open_repo">GitHub</button>
+    <span id="shard"></span>
+    <button id="link" class="pill" type="button"></button>
   </header>
 
-  <!-- The old panel's top line: how to stop the meter, and where an update
-       notice lands when there is one. -->
+  <!-- Why the live modules are empty, when they are (the game is closed). -->
   <div id="banner"></div>
 
-  <div id="body">
-    <nav id="nav"></nav>
-    <main id="page"></main>
-  </div>
+  <nav id="nav"></nav>
+  <main id="page"></main>
 
-  <footer id="footer">
+  <footer id="foot">
     <button id="quit" class="btn warn" data-act="quit"></button>
-    <span class="spacer"></span>
-    <span id="shard-cap">Serveur</span>
-    <span id="shard">…</span>
   </footer>
 </div>
 
