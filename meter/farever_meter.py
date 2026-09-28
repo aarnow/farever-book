@@ -3620,17 +3620,38 @@ class App:
                                      + (f" · {group}" if group else ""),
                              "btns": [{"id": "open_dungeon_run", "t": "Voir",
                                        "p": {"file": n}}]})
-            return [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
-                        {"id": "close_dungeon_kind",
-                         "t": "‹  Tous les donjons"}]},
-                    {"k": "section", "t": name},
-                    {"k": "cards", "id": "dungeon_records", "items": cards},
-                    {"k": "gap"},
-                    {"k": "list", "id": "dungeon_runs", "grow": True,
-                     "rows": rows, "empty": "Aucun run pour ce donjon."}]
+            got = {}
+            for _n, d in mine:
+                for it in d.get("loot") or ():
+                    got[it.get("item")] = (got.get(it.get("item"), 0)
+                                           + int(it.get("count") or 1))
+            dg = next((x for x in dungeon_catalogue()
+                       if x["kind"] == kind), None)
+            out = [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
+                       {"id": "close_dungeon_kind",
+                        "t": "‹  Tous les donjons"}]},
+                   {"k": "section", "t": name},
+                   {"k": "cards", "id": "dungeon_records", "items": cards},
+                   {"k": "gap"},
+                   {"k": "list", "id": "dungeon_runs",
+                    "rows": rows, "empty": "Aucun run pour ce donjon."}]
+            if dg and dg.get("loot"):
+                out += [{"k": "section", "t": "Butin possible"},
+                        {"k": "note", "t":
+                         "D'après les données du jeu. Le coffre de fin donne "
+                         "une des armes du boss (tirée au hasard), des "
+                         "fragments d'Étincelle selon ton niveau, et une "
+                         "pièce de l'armure de la faction, dont le jeu ne "
+                         "publie pas les chances. La mort du boss peut en "
+                         "plus donner un objet rare. « Obtenu » compte ce que "
+                         "tes runs ont rapporté."},
+                        {"k": "droptable", "id": "dungeon_drops",
+                         "rows": droptable_view(dg, got)}]
+            return out
         by_kind = {}
         for _n, d in runs:
             by_kind.setdefault(d.get("kind"), []).append(d)
+        catalogue = {dg["kind"]: dg for dg in dungeon_catalogue()}
 
         def row(kind, boss):
             ds = by_kind.get(kind) or []
@@ -3647,7 +3668,21 @@ class App:
                     stats.append("records : " + ", ".join(recs))
             else:
                 stats.append("pas encore fait")
+            dg = catalogue.get(kind) or {}
+            icons = [{"img": item_icon(e["item"]),
+                      "tip": f"{item_label(e['item'])} — {_pct(e['chance'])}"}
+                     for e in dg.get("loot") or ()
+                     if e.get("src") in ("coffre", "boss")
+                     and e.get("chance") is not None and e["chance"] < 1]
+            armour = [e for e in dg.get("loot") or ()
+                      if e.get("src") == "faction"]
+            if armour:
+                icons.append({"img": item_icon(armour[0]["item"]),
+                              "n": len(armour),
+                              "tip": f"Armure de faction : {len(armour)} "
+                                     "pièces possibles"})
             return {"t": dungeon_name(kind),
+                    "icons": icons,
                     "meta": f"Boss : {_boss_label(boss)}" if boss else "",
                     "meta2": " · ".join(stats),
                     "portrait": boss or "",
@@ -4479,6 +4514,52 @@ def dungeon_catalogue():
     return _DUNGEONS
 
 
+def item_type_label(t):
+    return _fr_names("itemType").get(t) or _pretty_id(t)
+
+
+# The loot a dungeon's list row shows as icons: everything but the shards.
+LOOT_ICON_SOURCES = ("coffre", "boss", "faction")
+
+
+def _pct(chance):
+    if chance is None:
+        return "?"
+    v = chance * 100
+    return f"{v:.0f} %" if v >= 1 and abs(v - round(v)) < 0.05 \
+        else f"{v:.2g} %".replace(".", ",")
+
+
+def droptable_view(dg, got):
+    """A dungeon's possible loot as table rows, rarest first. `got`: item id
+    -> how many the saved runs of this dungeon brought back."""
+    src_label = {"coffre": "Coffre de fin", "boss": "Mort du boss",
+                 "faction": "Coffre (armure)"}
+    rows = []
+    for e in dg.get("loot") or ():
+        qty = ""
+        if e.get("qty"):
+            qty = " · ".join(
+                f"{lo}–{hi}" + (f" (niv. {a}–{b})" if a and b else "")
+                for lo, hi, a, b in e["qty"])
+        chance = e.get("chance")
+        rows.append({
+            "img": item_icon(e["item"]), "name": item_label(e["item"]),
+            "rk": (e.get("rarity") or "").lower(),
+            "type": item_type_label(e.get("type")) if e.get("type") else "",
+            "apt": e.get("apt") or [],
+            "src": src_label.get(e.get("src"), e.get("src") or ""),
+            "chance": _pct(chance) if chance is None or chance < 1
+            else "garanti",
+            "qty": qty, "got": got.get(e["item"], 0),
+            # rarest first; the faction armour (chance unknown) after the
+            # chest's pick, the guaranteed shards last
+            "_k": (chance if chance is not None else 0.75,
+                   -RARITY_ORDER.get(e.get("rarity"), -1))})
+    rows.sort(key=lambda r: r.pop("_k"))
+    return rows
+
+
 def item_label(kind):
     """An item's French name, else its prettified id."""
     return _fr_names("item").get(kind) or _pretty_id(kind)
@@ -4726,6 +4807,15 @@ def _data_is_current():
         print("[meter] boss_portraits absent — regenerating for the dungeon "
               "list.", file=sys.stderr)
         return False
+    try:
+        dgs = json.loads((ANALYSIS / "dungeons.json").read_text(
+            encoding="utf-8"))
+        if dgs and "loot" not in dgs[0]:
+            print("[meter] dungeons.json predates the loot tables — "
+                  "regenerating.", file=sys.stderr)
+            return False
+    except (OSError, ValueError):
+        pass
     if not (ANALYSIS / "dungeons.json").exists():
         print("[meter] dungeons.json absent — regenerating for the dungeon "
               "list.", file=sys.stderr)

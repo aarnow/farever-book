@@ -2,61 +2,4009 @@
 {
 "kind": "R1_POI_Dungeon_Manfish_Ruins",
 "boss": "Nepsilon",
-"region": "Z1_Region"
+"region": "Z1_Region",
+"loot": [
+{
+"item": "Halos_Totem",
+"type": "Halos",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "DA_Water",
+"type": "DualAxes",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Glider_FlyingFish_Orange",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RManfish_FigWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RManfish_AssCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RManfish_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_FigAss",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_AssCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_Cle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_FigWiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_Ass",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_Wiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_FigAss",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_AssWiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_WizCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Fig",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Ass",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Wiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_FigCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_Ass",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_Wiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RManfish_AssWiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RManfish_WizCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_FigCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_AssWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_WizCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_Boss_Ratsar",
 "boss": "Ratsar",
-"region": "Z1_Region"
+"region": "Z1_Region",
+"loot": [
+{
+"item": "Daggers_DuplicatePoison",
+"type": "Daggers",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "GS_Nova",
+"type": "GreatSword",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Glider_Bat_WhiteBlack",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RKobold_AssWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RKobold_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Fig",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_AssWiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Wiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_FigAss",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_AssCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_WizCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Fig",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_FigCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_FigWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_AssCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_WizCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_FigCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Ass",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Cle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_FigWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Ass",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Cle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_Nepsid_Boss",
 "boss": "Crabgantua",
-"region": "Z1_Region"
+"region": "Z1_Region",
+"loot": [
+{
+"item": "Shield_OrbitWater",
+"type": "Shield",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Fists_WaterUppecut",
+"type": "Fists",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Mount_Crab_Blue",
+"type": "Mount",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RManfish_FigWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RManfish_AssCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RManfish_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_FigAss",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_AssCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_Cle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_FigWiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_Ass",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_Wiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_FigAss",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_AssWiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_WizCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Fig",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Ass",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Wiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_FigCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_Ass",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_Wiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RManfish_AssWiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RManfish_WizCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_FigCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_AssWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_WizCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_AmaymonGoulp",
 "boss": "Reblochonk",
-"region": "Z1_Region"
+"region": "Z1_Region",
+"loot": [
+{
+"item": "Scepter_Flamie",
+"type": "Scepter",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Axe_Boomerang",
+"type": "Axe",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Glider_Bat_BlackWhite",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RKobold_AssWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RKobold_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Fig",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_AssWiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Wiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_FigAss",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_AssCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_WizCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Fig",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_FigCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_FigWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_AssCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_WizCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_FigCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Ass",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Cle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_FigWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Ass",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Cle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "Bee_Hive",
 "boss": "Gatsbee",
-"region": "Z1_Region"
+"region": "Z1_Region",
+"loot": [
+{
+"item": "Crescent_FlowerSpiral",
+"type": "Crescent",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Spear_Goo",
+"type": "Spear",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Glider_Butterfly_Yellow",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RBee_Fig",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RBee_AssCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RBee_WizCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_FigCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_Ass",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_WizCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_Fig",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_AssWiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_Cle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_FigCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_FigWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_FigAss",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_AssWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_Cle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RBee_AssCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RBee_Wiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_FigAss",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_AssCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_Wiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_MokshisHivetree",
 "boss": "Mokshi",
-"region": "Z1_Region"
+"region": "Z1_Region",
+"loot": [
+{
+"item": "Thrown_Seeds",
+"type": "Thrown",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Sword_Swarm",
+"type": "Sword",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Mount_Ladybug_Red",
+"type": "Mount",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RBee_Fig",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RBee_AssCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RBee_WizCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_FigCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_Ass",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_WizCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_Fig",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_AssWiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_Cle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_FigCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_FigWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_FigAss",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_AssWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_Cle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RBee_AssCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RBee_Wiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_FigAss",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_AssCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_Wiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "Z1_POI_Dungeon_ManfishAbyss",
 "boss": "SpongeBlob",
-"region": "Z2_Region"
+"region": "Z2_Region",
+"loot": [
+{
+"item": "Book_WaterOrbs",
+"type": "Book",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Bow_BigGame",
+"type": "Bow",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Glider_FlyingFish_Acid",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RManfish_FigWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RManfish_AssCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RManfish_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_FigAss",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_AssCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RManfish_Cle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_FigWiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_Ass",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RManfish_Wiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_FigAss",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_AssWiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RManfish_WizCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Fig",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Ass",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RManfish_Wiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_FigCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_Ass",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RManfish_Wiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RManfish_AssWiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RManfish_WizCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_FigCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_AssWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RManfish_WizCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_Dungeon_AbbandonedMines",
 "boss": "Golcano",
-"region": "Z2_Region"
+"region": "Z2_Region",
+"loot": [
+{
+"item": "Spear_Eruption",
+"type": "Spear",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Shield_Firebreath",
+"type": "Shield",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Glider_Dragon_Lava",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RKobold_AssWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RKobold_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Fig",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_AssWiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Wiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_FigAss",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_AssCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_WizCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Fig",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_FigCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_FigWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_AssCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_WizCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_FigCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Ass",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Cle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_FigWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Ass",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Cle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_CleodorasNest",
 "boss": "Cleodora",
-"region": "Z2_Region"
+"region": "Z2_Region",
+"loot": [
+{
+"item": "GM_MassGrab",
+"type": "GreatMace",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "DS_Z1RBee_AssWiz",
+"type": "DualSwords",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Mount_Ladybug_Purple",
+"type": "Mount",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RBee_Fig",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RBee_AssCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RBee_WizCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_FigCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_Ass",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RBee_WizCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_Fig",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_AssWiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RBee_Cle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_FigCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RBee_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_FigWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RBee_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_FigAss",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_AssWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RBee_Cle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RBee_AssCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RBee_Wiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_FigAss",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_AssCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RBee_Wiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_GorgonsHollow",
 "boss": "MunsterChuck",
-"region": "Z2_Region"
+"region": "Z2_Region",
+"loot": [
+{
+"item": "DM_Multispin",
+"type": "DualMaces",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "GA_Craft",
+"type": "GreatAxe",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Mount_Skunk_04",
+"type": "Mount",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Chest_RKobold_AssWiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RKobold_Cle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Fig",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_AssWiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RKobold_Wiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_FigAss",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_AssCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RKobold_WizCle",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Fig",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Ass",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RKobold_Wiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_FigCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_AssWiz",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RKobold_WizCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_FigWiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_AssCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RKobold_WizCle",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_FigCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Ass",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RKobold_Cle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_FigWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Ass",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RKobold_Cle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_Dungeon_CrimsonBarraks_POI_Def",
 "boss": "RobinHoof",
-"region": "Z3_Region"
+"region": "Z3_Region",
+"loot": [
+{
+"item": "Glider_Crimson01",
+"type": "GearGlider",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Fists_LightMonk",
+"type": "Fists",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Bow_BigGame",
+"type": "Bow",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Chest_RCrimson_FigCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RCrimson_Ass",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RCrimson_Wiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RCrimson_FigWiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RCrimson_AssCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RCrimson_Cle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RCrimson_Ass",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RCrimson_Wiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RCrimson_FigWiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RCrimson_AssCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RCrimson_Cle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RCrimson_FigAss",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RCrimson_AssCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RCrimson_Cle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RCrimson_Fig",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RCrimson_Ass",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RCrimson_Wiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RCrimson_FigAss",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RCrimson_AssWiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RCrimson_WizCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RCrimson_Fig",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RCrimson_AssWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RCrimson_WizCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 },
 {
 "kind": "R1_POI_CrimsonSacristy",
 "boss": "Phrixes",
-"region": "Z3_Region"
+"region": "Z3_Region",
+"loot": [
+{
+"item": "Mount_Aries_05",
+"type": "Mount",
+"rarity": "Epic",
+"apt": [],
+"src": "boss",
+"chance": 0.01,
+"qty": null
+},
+{
+"item": "Staff_Censer",
+"type": "Staff",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Mace_Benediction",
+"type": "Mace",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "coffre",
+"chance": 0.5,
+"qty": null
+},
+{
+"item": "Chest_RCrimson_FigCle",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RCrimson_Ass",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Chest_RCrimson_Wiz",
+"type": "Chest",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RCrimson_FigWiz",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RCrimson_AssCle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Legs_RCrimson_Cle",
+"type": "Legs",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RCrimson_Ass",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Feet_RCrimson_Wiz",
+"type": "Feet",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RCrimson_FigWiz",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RCrimson_AssCle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Shoulders_RCrimson_Cle",
+"type": "Shoulders",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RCrimson_FigAss",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RCrimson_AssCle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Head_RCrimson_Cle",
+"type": "Head",
+"rarity": "Rare",
+"apt": [
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RCrimson_Fig",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RCrimson_Ass",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Hands_RCrimson_Wiz",
+"type": "Hands",
+"rarity": "Rare",
+"apt": [
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RCrimson_FigAss",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RCrimson_AssWiz",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Waist_RCrimson_WizCle",
+"type": "Waist",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RCrimson_Fig",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"warrior"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RCrimson_AssWiz",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "Back_RCrimson_WizCle",
+"type": "Back",
+"rarity": "Rare",
+"apt": [
+"mage",
+"priest"
+],
+"src": "faction",
+"chance": null,
+"qty": null
+},
+{
+"item": "UpgradeRare",
+"type": "Misc",
+"rarity": "Rare",
+"apt": [],
+"src": "coffre",
+"chance": 1.0,
+"qty": [
+[
+10,
+15,
+1,
+12
+],
+[
+12,
+18,
+13,
+20
+],
+[
+15,
+22,
+21,
+25
+]
+]
+}
+]
 }
 ]

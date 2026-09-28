@@ -199,6 +199,22 @@ function buildPortraitRow(r) {
   if (r.meta) txt.appendChild(el('span', 'meta', r.meta));
   if (r.meta2) txt.appendChild(el('span', 'meta meta2', r.meta2));
   row.appendChild(txt);
+  if (r.icons && r.icons.length) {
+    const strip = el('div', 'lootstrip');
+    r.icons.forEach((ic) => {
+      const box = el('span', 'lic');
+      box.title = ic.tip || '';
+      if (ic.img) {
+        const im = document.createElement('img');
+        im.src = ic.img;
+        im.alt = '';
+        box.appendChild(im);
+      }
+      if (ic.n) box.appendChild(el('b', null, String(ic.n)));
+      strip.appendChild(box);
+    });
+    row.appendChild(strip);
+  }
   (r.btns || []).forEach((b) => {
     const btn = el('button', 'rowbtn', b.t);
     if (b.off) btn.disabled = true;
@@ -507,6 +523,7 @@ function buildNode(n) {
     case 'detail': return buildDetail(n);
     case 'events': return buildEvents(n);
     case 'report': return buildReport(n);
+    case 'droptable': return buildDropTable(n);
     default: return el('div');
   }
 }
@@ -650,6 +667,38 @@ function buildLoot(groups) {
       tbl.appendChild(r);
     });
     box.appendChild(tbl);
+  });
+  return box;
+}
+
+/* A dungeon's possible loot: icon, name (rarity colour), type, classes,
+   source, chance, quantity, how many the saved runs brought back. */
+function buildDropTable(n) {
+  const box = el('div', 'panel droptable');
+  const head = el('div', 'drow dhead');
+  ['', 'Objet', 'Type', 'Classes', 'Source', 'Chance', 'Quantité', 'Obtenu']
+    .forEach((h) => head.appendChild(el('span', null, h)));
+  box.appendChild(head);
+  (n.rows || []).forEach((r) => {
+    const row = el('div', 'drow' + (r.rk ? ' r-' + r.rk : '') + (r.got ? ' got' : ''));
+    const ic = el('span', 'ic');
+    if (r.img) {
+      const im = document.createElement('img');
+      im.src = r.img;
+      im.alt = '';
+      ic.appendChild(im);
+    }
+    row.appendChild(ic);
+    row.appendChild(el('span', 'nm', r.name));
+    row.appendChild(el('span', 'dim', r.type));
+    const cl = el('span', 'apt');
+    (r.apt || []).forEach((k) => cl.appendChild(classEl('', k)));
+    row.appendChild(cl);
+    row.appendChild(el('span', 'dim', r.src));
+    row.appendChild(el('span', 'num', r.chance));
+    row.appendChild(el('span', 'dim', r.qty));
+    row.appendChild(el('span', 'num', r.got ? '×' + r.got : '—'));
+    box.appendChild(row);
   });
   return box;
 }

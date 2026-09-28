@@ -505,3 +505,42 @@ select, input[type=text] {
 .lootrow.r-rare .nm { color: #5B8DEF; }
 .lootrow.r-epic .nm { color: #B57BEF; }
 .lootrow.r-legendary .nm { color: #F29A4A; }
+
+/* ---- dungeon list: loot icons --------------------------------------------- */
+.lootstrip { flex: 0 1 auto; display: flex; flex-wrap: wrap; gap: 6px;
+             justify-content: flex-end; max-width: 45%; }
+.lootstrip .lic { position: relative; width: 36px; height: 36px;
+                  border-radius: 6px; background: var(--panel-2);
+                  border: 1px solid var(--line); display: grid;
+                  place-items: center; }
+.lootstrip .lic img { width: 32px; height: 32px; }
+.lootstrip .lic b { position: absolute; right: -4px; bottom: -4px;
+                    background: var(--bg); border: 1px solid var(--line);
+                    border-radius: 8px; padding: 0 4px; font-size: 10px;
+                    line-height: 14px; color: var(--dim); }
+
+/* ---- dungeon page: possible loot ----------------------------------------- */
+.droptable { padding: 0; overflow: hidden; margin: 6px 0 10px; }
+.drow { display: grid; align-items: center; gap: 12px; padding: 5px 14px;
+        grid-template-columns: 34px minmax(160px, 2fr) minmax(90px, 1fr)
+                               70px minmax(120px, 1.4fr) 64px minmax(90px, 1.2fr) 56px; }
+.drow + .drow { border-top: 1px solid var(--line); }
+.drow.dhead { color: var(--dim); font-size: 10px; text-transform: uppercase;
+              letter-spacing: .5px; padding-top: 8px; padding-bottom: 8px;
+              background: var(--panel-2); }
+.drow .ic { width: 32px; height: 32px; border-radius: 6px; overflow: hidden;
+            background: var(--panel-2); border: 1px solid var(--line);
+            display: grid; place-items: center; }
+.drow .ic img { width: 30px; height: 30px; }
+.drow .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; }
+.drow .dim { color: var(--dim); font-size: 12px; }
+.drow .num { text-align: right; font-variant-numeric: tabular-nums; }
+.drow .apt { display: flex; gap: 3px; }
+.drow .apt img { width: 16px; height: 16px; }
+.drow.got .num:last-child { color: var(--ok); font-weight: 700; }
+.drow.r-common .nm { color: #C8C4BA; }
+.drow.r-uncommon .nm { color: #7BD88F; }
+.drow.r-rare .nm { color: #5B8DEF; }
+.drow.r-epic .nm { color: #B57BEF; }
+.drow.r-legendary .nm { color: #F29A4A; }

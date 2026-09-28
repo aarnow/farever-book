@@ -581,7 +581,7 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("activity", "item", "rarity", "unit", "zone")
+FR_SHEETS = ("activity", "item", "itemType", "rarity", "unit", "zone")
 
 
 def extract_fr_names(game_dir):
@@ -604,6 +604,8 @@ def extract_fr_names(game_dir):
         rows = out.setdefault(name, {})
         for row in sheet:
             node = row.find("texts.name")
+            if node is None:
+                node = row.find("texts.name.v")     # itemType: {v, plural}
             if node is None:
                 node = row.find("name")
             txt = "".join(node.itertext()).strip() if node is not None else ""
@@ -648,6 +650,12 @@ def extract_dungeons(game_dir):
     lower = {u.lower(): u for u in units}
     out, seen = [], set()
     ach = next(s for s in cdb["sheets"] if s["name"] == "ach")
+    unit_rows = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "unit"
+                 for ln in s["lines"] if isinstance(ln.get("id"), str)}
+    item_rows = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "item"
+                 for ln in s["lines"] if isinstance(ln.get("id"), str)}
+    tables = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "lootTable"
+              for ln in s["lines"] if isinstance(ln.get("id"), str)}
     for ln in ach["lines"]:
         desc = ln.get("desc") or ""
         m = re.match(r"Defeat \[(\w+)\].*::target::.*difficulty", desc)
@@ -667,7 +675,66 @@ def extract_dungeons(game_dir):
                 region = cat.split("_", 1)[1] if "_" in cat else ""
                 seen.add(ref[1])
                 out.append({"kind": ref[1], "boss": boss,
-                            "region": f"{region}_Region" if region else ""})
+                            "region": f"{region}_Region" if region else "",
+                            "loot": dungeon_loot(unit_rows.get(boss) or {},
+                                                 item_rows, tables)})
+    return out
+
+
+# Armour slots: the dungeon's faction set, which no loot table lists.
+ARMOUR_TYPES = {"Head", "Shoulders", "Chest", "Hands", "Waist", "Legs",
+                "Feet", "Back"}
+APTITUDE_CLASS = {"Fighter": "warrior", "Wizard": "mage",
+                  "Assassin": "rogue", "Cleric": "priest"}
+
+
+def dungeon_loot(boss, item_rows, tables):
+    """What the end of a dungeon can give, from the game's own data.
+
+    * The reward chest (Gameplay/Elements/Activities/BossChest.prefab, placed
+      in each dungeon with lootTable = the boss) rolls the boss's table, which
+      has the Weights flag: ONE item, chosen by weight.
+    * The boss's other table rolls on its death, each line on its own chance.
+      The unit's `bossLootTable`/`lootTable` props point at the two, but not
+      always the same way round — the Weights flag says which is which.
+    * Every dungeon activity (Gameplay/Activities/Base.prefab) gives
+      DungeonCrate: spark shards, the quantity by level.
+    * The faction's armour set: in no table, rolled by the game's code
+      (st.Player.dropFactionLoot) — so no chance is known.
+    Each entry: {item, type, rarity, apt, src, chance (0..1 or None), qty}."""
+    def entry(iid, src, chance, qty=None):
+        row = item_rows.get(iid) or {}
+        return {"item": iid, "type": row.get("type") or "",
+                "rarity": row.get("rarity") or "",
+                "apt": [APTITUDE_CLASS[a["ref"]]
+                        for a in row.get("aptitudes") or ()
+                        if a.get("ref") in APTITUDE_CLASS],
+                "src": src, "chance": chance, "qty": qty}
+
+    out = []
+    props = boss.get("props") or {}
+    for tid in (props.get("bossLootTable"), props.get("lootTable")):
+        t = tables.get(tid) or {}
+        lines = [ln for ln in t.get("loot") or () if ln.get("item")]
+        if (t.get("flags") or 0) & 1:
+            total = sum(float(ln.get("proba") or 0) for ln in lines) or 1.0
+            out += [entry(ln["item"], "coffre",
+                          float(ln.get("proba") or 0) / total) for ln in lines]
+        else:
+            out += [entry(ln["item"], "boss", float(ln.get("proba") or 0))
+                    for ln in lines]
+    faction = boss.get("faction")
+    if faction:
+        out += [entry(iid, "faction", None)
+                for iid, row in item_rows.items()
+                if row.get("faction") == faction
+                and row.get("type") in ARMOUR_TYPES]
+    crate = [ln for ln in (tables.get("DungeonCrate") or {}).get("loot") or ()
+             if ln.get("item")]
+    for iid in dict.fromkeys(ln["item"] for ln in crate):
+        out.append(entry(iid, "coffre", 1.0, [
+            [ln.get("itemMin"), ln.get("itemMax"), ln.get("minLvl"),
+             ln.get("maxLvl")] for ln in crate if ln["item"] == iid]))
     return out
 
 
