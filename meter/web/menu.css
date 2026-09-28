@@ -453,3 +453,6 @@ select, input[type=text] {
 .clsicon.cl { margin-left: 6px; width: 15px; height: 15px; }
 .clsicon.big { margin-left: 4px; width: 20px; height: 20px; vertical-align: -4px; }
 .rk.zero .clsicon { opacity: .45; }
+
+/* a dungeon run's difficulty / result / time, beside its title */
+.report .rtitle .rsub { color: var(--text); font-weight: 600; }

@@ -99,6 +99,13 @@ def main():
     # record (and so renames the class) fails loudly here instead of reading a
     # stale offset.
     kproxy = offs("hxbit.ObjProxy_OkillCount_Int_rank_Int")
+    # Dungeons. GameLayer.mainActivity is the running activity; for a dungeon
+    # it is an st.activity.Dungeon, whose globalCtx is the DungeonContext that
+    # carries the run's state, clock and death count. The difficulty lives on
+    # the group's instance lobby, not on the run.
+    dctx = offs("st.activity.DungeonContext")
+    dact = offs("st.activity.Dungeon")
+    lobby = offs("st.player.InstanceLobby")
 
     # st.Equipment extends st.Inventory, so one `content` offset serves both
     # containers. Verified rather than assumed — if the two ever diverge, the
@@ -233,7 +240,19 @@ def main():
         # stays a display decision instead of an assumption baked into the hook.
         "Interactible": {"enabled": inter["enabled"][0],
                          "isOffScreen": inter["isOffScreen"][0]},
-        "Activity": {"kind": activity["kind"][0]},
+        "Activity": {"kind": activity["kind"][0],
+                     "globalCtx": activity["globalCtx"][0],
+                     "contexts": activity["contexts"][0]},
+        "Dungeon": {"bossId": dact["bossId"][0],
+                    "bossPhaseReached": dact["bossPhaseReached"][0]},
+        "DungeonCtx": {"dungeonState": dctx["dungeonState"][0],
+                       "lastStateChanged": dctx["lastStateChanged"][0],
+                       "startActivity": dctx["startActivity"][0],
+                       "endActivity": dctx["endActivity"][0],
+                       "nbPlayerDeaths": dctx["nbPlayerDeaths"][0],
+                       "step": dctx["step"][0]},
+        "InstanceLobby": {"activityId": lobby["activityId"][0],
+                          "difficulty": lobby["difficulty"][0]},
         # Every placed world object is an ent.Element. `kind` is its id
         # ("Z1_World_Greenlands_WorldChest_60", "RedOrb_World_140") and
         # `stateId` its state machine — measured: chests read Closed or Locked,
@@ -330,7 +349,11 @@ def main():
                    "progress": player["progress"][0],
                    # The ACCOUNT-wide store — collected companions, mounts,
                    # gliders. Distinct from `progress`, which is per character.
-                   "accountProgress": player["accountProgress"][0]},
+                   "accountProgress": player["accountProgress"][0],
+                   # The activity contexts the server replicates to this
+                   # player — where a dungeon's DungeonContext lives on the
+                   # client (Activity.globalCtx reads null there).
+                   "activityCtx": player["activityCtx"][0]},
         # Collected critters (companions), measured 2026-08-07
         # (frida/critter_probe.js): Collection.pets is an hxbit proxy array of
         # plain UNIT KINDS ("Turtle_Grey", "Frog_Demon") — the same string as
@@ -345,7 +368,8 @@ def main():
         # party roster is the reason they are here.
         "ArrayProxyData": {"array": aproxy["array"][0]},
         "ArrayDyn": {"array": adyn["array"][0]},
-        "Group": {"groupId": group["groupId"][0], "players": group["players"][0]},
+        "Group": {"groupId": group["groupId"][0], "players": group["players"][0],
+                  "instanceLobbies": group["instanceLobbies"][0]},
         # The codex (hunting log), measured 2026-08-05. The
         # whole thing is replicated to the client and reachable by plain
         # pointer reads from the hero:

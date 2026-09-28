@@ -44,7 +44,6 @@ import ctypes
 import json
 import math
 import os
-import queue
 import re
 import subprocess
 import sys
@@ -100,11 +99,7 @@ SETTINGS_CACHE = _WRITABLE / ".meter_settings.json"
 # writing when it's beaten. Same home as the positions, so it survives updates.
 BEST_TIMES_CACHE = _WRITABLE / ".meter_besttimes.json"
 PARSES_DIR = _WRITABLE / "parses"   # finished-parse images land here (gitignored)
-# Every encounter the meter has finished, as data. Its own folder rather than
-# a corner of parses/: parses/ holds things you MADE to share (a screenshot, a
-# report card), and this holds what the meter recorded whether you asked for
-# it or not. Nothing in here is ever deleted by the meter — see HistoryStore.
-HISTORY_DIR = _WRITABLE / "history"
+DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 LOG_FILE = DATA_HOME / "meter.log"
 TARGET_PROCESS = "Farever.exe"
 
@@ -250,8 +245,6 @@ CLASS_KEYS = {"Warrior": "warrior", "Mage": "mage", "Priest": "priest",
               "Rogue": "rogue", "Gue": "warrior", "War": "warrior",
               "Mag": "mage", "Prê": "priest", "Pst": "priest",
               "Vol": "rogue", "Rog": "rogue"}
-CLASS_NAMES_FR = {"warrior": "Guerrier", "mage": "Mage", "priest": "Prêtre",
-                  "rogue": "Voleur"}
 CLASS_ICON_DIR = ROOT / "assets" / "classes"
 
 
@@ -353,8 +346,6 @@ MIN_W = {"meter": 404, "detail": 320, "menu": 620, "prompt": 320}
 # walk-bys out of the list, not to judge which fights were interesting.
 HISTORY_MIN_SECS = 5.0
 HISTORY_MIN_EVENTS = 5
-# Per-player skill/heal rows in a dataset's detail view.
-HISTORY_DETAIL_SKILLS = 12
 
 
 # The game's affinity vocabulary as it actually arrives off
@@ -590,61 +581,6 @@ def message_box(text, title="Farever+", flags=0x40):
 def _pretty_id(sid: str) -> str:
     """Readable fallback for skills the CDB has no display name for."""
     return sid.replace("_", " ") if sid and sid != "?" else sid
-
-
-# Backend decoration on a level id, longest first so the specific prefixes win
-# over the generic ones. Measured from the zone signals normal play produces:
-# 'POI/Z1Levels/Z1_POI_Dungeon_ManfishRuines', 'POI/Rifts/POI_Rift_01',
-# 'World/W1_Siagarta'.
-_ZONE_STRIP = re.compile(
-    r"^(?:Z\d+_)?POI_(?:Dungeon|Boss|Cave|Camp)_|^(?:Z\d+_)?POI_|^W\d+_|^Z\d+_")
-# A trailing variant number is the game's, not the player's — 'POI_Rift_01' is
-# the rift, and "Rift 01" reads like there are others you should know about.
-_ZONE_TRAILING_NUM = re.compile(r"[ _]\d+$")
-_CAMEL_SPLIT = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
-
-
-def _zone_label(sig, world_map=None):
-    """A level signature as somewhere you can name out loud.
-
-    The game's `World.name` and `World.branchName` ride along on every zone
-    message and have read back empty on every zone this build has seen (the
-    meter.log lines print them only when they are set, and none of them are),
-    so the signature itself is the honest source. `world_map` is the game's own
-    `_isWorldMap` flag — the one thing that distinguishes an overworld region
-    from a dungeon without pattern-matching the path.
-    """
-    if not sig:
-        return "Inconnu"
-    leaf = str(sig).replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
-    leaf = _ZONE_STRIP.sub("", leaf) or str(sig)
-    leaf = _CAMEL_SPLIT.sub(" ", leaf.replace("_", " ")).strip()
-    leaf = _ZONE_TRAILING_NUM.sub("", leaf).strip() or str(sig)
-    # " Overworld", not "Overworld: " — the region is what you would say first,
-    # and the qualifier is only there to distinguish it from a dungeon of the
-    # same name.
-    return f"{leaf} (monde ouvert)" if world_map else leaf
-
-
-def _dataset_name(targets, zone_sig, world_map=None):
-    """Name a finished encounter: who took the most damage, and where.
-
-    `targets` is {unit kind: damage}. The kind goes through the cdb's unit
-    sheet exactly as a boss kill does — a kind is a backend id and routinely
-    not the name on the nameplate ('Cleodora' displays as 'Queen
-    Honeyzabeth'), so naming a dataset off the raw kind would file the fight
-    under a name the player never saw.
-
-    A dataset with no named target — every hit landed on something that isn't
-    an ent.Unit, or the offsets file predates unitClasses — is named for its
-    zone alone rather than for a guess.
-    """
-    where = _zone_label(zone_sig, world_map)
-    if not targets:
-        return where
-    kind = max(targets.items(), key=lambda kv: kv[1])[0]
-    who = _unit_names().get(kind) or _pretty_id(kind)
-    return f"{who} — {where}" if who else where
 
 
 _SLUG_STRIP = re.compile(r"[^A-Za-z0-9]+")
@@ -1493,178 +1429,134 @@ class RiftRecorder:
                                     if sid in used_skills}}
 
 
-class HistoryStore:
-    """Every finished encounter, kept as data until you delete it yourself.
+class DungeonRecorder(RiftRecorder):
+    """The rift recorder's two-phase capture, for a dungeon: the exploration,
+    then the boss. Its boundaries come from the game's dungeon state rather
+    than from the boss bar — see DungeonTracker."""
 
-    The meter's primary combat store lives exactly as long as the encounter
-    does — a reset, a zone change or a boss pull throws it away and there has
-    never been anywhere for it to go. This is that somewhere: one JSON file
-    per finished encounter, named for what you were fighting and where.
+    PHASE_LABELS = ("Exploration", "Phase du boss")
 
-    Three deliberate non-features:
 
-    * Nothing here ever deletes anything. No age limit, no count limit, no
-      "tidy up" pass. A meter that prunes a folder is a meter that can prune
-      the WRONG folder — one bad path and it is deleting somebody's
-      documents — and the cost of not pruning is disk space the player can
-      see and manage in Explorer.
-    * Writes go through a worker thread. save() is called from the damage
-      hook's thread by way of PartySession's archive hook, and that thread is
-      inside the game's own call stack; it must never wait on a disk.
-    * The session id is generated once per meter launch and written into
-      every file, so which launch produced a dataset is a fact in the data
-      rather than a guess from timestamps. It carries the pid because two
-      meters can be started inside the same second (a relaunch). The browser
-      does not filter on it — it lists every session — but the id is what any
-      later grouping would have to be built on, and it costs one string per
-      file to keep.
-    """
+# The dungeon difficulty as the instance lobby stores it (measured: the value
+# followed the Normal/Difficile toggle in the lobby).
+DUNGEON_DIFFICULTIES = {0: "Normal", 1: "Difficile", 2: "Héroïque"}
+# How long a difficulty seen in a lobby is trusted for the run that follows.
+DUNGEON_LOBBY_TTL = 30 * 60
+# A run left this soon without reaching the boss is not worth keeping.
+DUNGEON_MIN_SECS = 30
 
-    VERSION = 1
 
-    def __init__(self, directory=HISTORY_DIR):
-        self.dir = Path(directory)
-        self.session = f"{time.strftime('%Y%m%d-%H%M%S')}-{os.getpid()}"
-        self._q: queue.Queue = queue.Queue()
-        self._thread = None
-        self._lock = threading.Lock()
-        # path -> (mtime, size, summary). Listing re-reads only what changed,
-        # so opening the tab on a session with hundreds of datasets costs one
-        # directory scan rather than hundreds of file reads.
-        self._summaries: dict[str, tuple] = {}
-        self._failed = False        # a write has failed; say so once, not per file
+def dungeon_name(kind):
+    """"R1_POI_Dungeon_Manfish_Ruins" -> "Manfish Ruins"."""
+    s = re.sub(r"^R\d+_POI_(Dungeon_)?", "", str(kind or ""))
+    s = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", s.replace("_", " "))
+    return " ".join(s.split()) or "Donjon"
 
-    # ---- writing ----
-    def _ensure_writer(self):
-        with self._lock:
-            if self._thread is not None and self._thread.is_alive():
-                return
-            self._thread = threading.Thread(target=self._run, daemon=True,
-                                            name="history-writer")
-            self._thread.start()
 
-    def _run(self):
-        while True:
-            entry = self._q.get()
-            if entry is None:
-                return
-            try:
-                self._write(entry)
-            except Exception as e:
-                if not self._failed:
-                    self._failed = True
-                    print(f"[meter] combat history is not being saved: {e}",
-                          file=sys.stderr)
+class DungeonTracker:
+    """Follows one dungeon run from the hook's `dungeon` messages.
 
-    def _write(self, entry):
-        self.dir.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(entry["at"]))
-        base = f"{entry['kind']}-{stamp}-{_slug(entry['name'])}"
-        path = self.dir / f"{base}.json"
-        # Two encounters can finish inside the same second — a rift's report
-        # and the reset that follows it, most obviously.
-        n = 2
-        while path.exists():
-            path = self.dir / f"{base}-{n}.json"
-            n += 1
-        path.write_text(json.dumps(entry), encoding="utf-8")
-        # The FILENAME, not the dataset name: names carry an em dash (and
-        # whatever the cdb calls a boss), and a source run's stderr is the
-        # Windows console, which is cp1252. Encoding that raises — inside the
-        # worker's try, after the file is already on disk — and the meter would
-        # report a failure for a dataset it had just saved. `path.name` is
-        # ASCII by construction, and the slug still says what it is.
-        print(f"[meter] history saved: {path.name}", file=sys.stderr)
+    Measured (a Manfish Ruins run, 2026-09-28): the active activity is an
+    st.activity.Dungeon; its state lives on the player's DungeonContext and
+    goes Explo -> BossStart -> BossPhase -> BossWin (then back to Explo); the
+    context's `end` is the instance clock at the kill, which is the run's
+    time (the clock starts at the instance's creation); `start` stays -1 on a
+    client. The difficulty exists only on the instance lobby, which vanishes
+    at launch — so the last one seen is remembered for the run that follows.
 
-    def save(self, kind, name, data, **extra):
-        """Queue one dataset. Returns immediately; the write happens on the
-        worker thread."""
-        entry = dict(extra)
-        entry.update({"v": self.VERSION, "kind": kind, "name": name,
-                      "session": self.session, "meter": VERSION,
-                      "at": data.get("at") or time.time(), "data": data})
-        self._ensure_writer()
-        self._q.put(entry)
+    Runs on the hook's thread; a finished run is handed to the app."""
 
-    # ---- reading ----
-    @staticmethod
-    def _summarise(path, entry):
-        """The one line the browser needs, without keeping the dataset in
-        memory. Totals are recomputed from a rift's phases so both kinds of
-        dataset answer the same questions."""
-        data = entry.get("data") or {}
-        kind = entry.get("kind") or "combat"
-        if kind == "rift":
-            phases = data.get("phases") or []
-            duration = sum(float(ph.get("duration") or 0.0) for ph in phases)
-            total = sum(float(ph.get("total") or 0.0) for ph in phases)
-            heal = sum(float(ph.get("heal") or 0.0) for ph in phases)
-            players = len({p.get("name") for ph in phases
-                           for p in (ph.get("players") or [])})
-        else:
-            duration = float(data.get("duration") or 0.0)
-            total = float(data.get("total") or 0.0)
-            heal = float(data.get("heal") or 0.0)
-            players = len(data.get("players") or [])
-        return {"path": str(path), "kind": kind,
-                "name": entry.get("name") or "Combat",
-                "at": float(entry.get("at") or 0.0),
-                "session": entry.get("session") or "",
-                "zone": (entry.get("zone") or {}).get("label") or "",
-                "duration": duration, "total": total, "heal": heal,
-                "players": players}
+    def __init__(self, world):
+        self.world = world
+        self.rec = DungeonRecorder()
+        self.lobbies = {}           # activity id -> (difficulty, seen at)
+        self.run = None
 
-    def entries(self):
-        """Every dataset on disk, newest first — all of them, every session.
+    def record(self, kind, ev):
+        self.rec.record(kind, ev)
 
-        There is deliberately no filter here. The session id is still written
-        into every file (it is the one thing that reliably groups a night's
-        datasets, since timestamps alone can't tell one launch from the next),
-        but hiding earlier sessions only ever meant a browser that looked
-        empty for a feature that had been recording for weeks.
+    def update(self, d):
+        now = time.time()
+        for lb in d.get("lobbies") or ():
+            if lb.get("a") is not None:
+                self.lobbies[lb["a"]] = (lb.get("d"), now)
+        in_dungeon = d.get("type") == "st.activity.Dungeon"
+        kind = d.get("kind")
+        if self.run and (not in_dungeon or kind != self.run["kind"]):
+            self._leave()
+        if not in_dungeon:
+            return
+        if self.run is None:
+            diff, seen = self.lobbies.get(kind, (None, 0))
+            if now - seen > DUNGEON_LOBBY_TTL:
+                diff = None
+            self.run = {"kind": kind, "boss": d.get("bossId") or "",
+                        "difficulty": diff, "state": None, "wipes": 0,
+                        "deaths": 0, "clock": 0.0, "done": False,
+                        "boss_seen": False}
+            self.rec.set_rift(True)
+            print(f"[dungeon] entered {kind} (difficulty "
+                  f"{DUNGEON_DIFFICULTIES.get(diff, '?')})", file=sys.stderr)
+        run = self.run
+        if isinstance(d.get("now"), (int, float)):
+            run["clock"] = float(d["now"])
+        ctx = next((c for c in d.get("playerCtx") or ()
+                    if c.get("type") == "st.activity.DungeonContext"), None)
+        if not ctx:
+            return
+        if isinstance(ctx.get("deaths"), int):
+            run["deaths"] = ctx["deaths"]
+        state = ctx.get("state")
+        if state == run["state"]:
+            return
+        print(f"[dungeon] state {run['state']} -> {state} at "
+              f"{run['clock']:.1f}s", file=sys.stderr)
+        run["state"] = state
+        if state in ("BossStart", "BossPhase") and not run["boss_seen"]:
+            run["boss_seen"] = True
+            self.rec.on_boss_pull(backlag=1.0)
+        elif state == "BossLoose":
+            run["wipes"] += 1
+        elif state == "BossWin" and not run["done"]:
+            end = ctx.get("end")
+            self._finish("victoire",
+                         end if isinstance(end, (int, float)) and end > 0
+                         else run["clock"])
 
-        A file that won't parse is skipped rather than raised: hand-edited,
-        half-written by a meter that was killed mid-save, or from a future
-        format — none of those should cost you the list."""
-        out = []
-        try:
-            paths = sorted(self.dir.glob("*.json"))
-        except OSError:
-            return out
-        fresh = {}
-        for p in paths:
-            key = str(p)
-            try:
-                st = p.stat()
-                sig = (st.st_mtime, st.st_size)
-            except OSError:
-                continue
-            cached = self._summaries.get(key)
-            if cached is not None and cached[:2] == sig:
-                summary = cached[2]
-            else:
-                try:
-                    entry = json.loads(p.read_text(encoding="utf-8"))
-                except Exception:
-                    continue
-                if not isinstance(entry, dict):
-                    continue
-                summary = self._summarise(p, entry)
-            fresh[key] = (sig[0], sig[1], summary)
-            out.append(summary)
-        self._summaries = fresh
-        out.sort(key=lambda s: -s["at"])
-        return out
+    def _leave(self):
+        run, self.run = self.run, None
+        if run["done"]:
+            return
+        if run["clock"] < DUNGEON_MIN_SECS and not run["boss_seen"]:
+            self.rec.on_zone()
+            return
+        self.run = run                  # _finish reads it
+        self._finish("échec" if run["wipes"] or run["boss_seen"] else "abandon",
+                     run["clock"])
+        self.run = None
 
-    @staticmethod
-    def load(path):
-        """One dataset in full, or None. Same tolerance as entries()."""
-        try:
-            entry = json.loads(Path(path).read_text(encoding="utf-8"))
-        except Exception as e:
-            print(f"[meter] couldn't read {path}: {e}", file=sys.stderr)
-            return None
-        return entry if isinstance(entry, dict) else None
+    def disconnect(self):
+        if self.run is not None:
+            self._leave()
+
+    def _finish(self, result, duration):
+        run = self.run
+        run["done"] = True
+        report = self.rec.on_boss_kill()
+        if report is None:
+            return
+        _stamp_report_classes(report, self.world)
+        report.update({
+            "type": "dungeon", "kind": run["kind"],
+            "name": dungeon_name(run["kind"]), "boss": run["boss"],
+            "difficulty": run["difficulty"], "result": result,
+            "duration": float(duration), "deaths": run["deaths"],
+            "wipes": run["wipes"]})
+        print(f"[dungeon] {run['kind']} {result} in {duration:.1f}s "
+              f"({run['deaths']} deaths, {run['wipes']} wipes)", file=sys.stderr)
+        ov = _OVERLAY["ref"]
+        if ov is not None:
+            ov.on_dungeon_run(report)
 
 
 # The constant every SteamID64 is built on: the individual-account block.
@@ -1771,10 +1663,6 @@ class GameUIState:
 
 
 
-
-    def zone_sig(self):
-        with self._lock:
-            return self._zone_sig
 
     def zone(self):
         """(sig, world_map) together — read as a pair because a history
@@ -2792,9 +2680,10 @@ def _wants_params(fn):
 # ---------------------------------------------------------------------------
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
-APP_TABS = ("Live", "Rifts", "History", "Settings", "Help")
+APP_TABS = ("Live", "Rifts", "Dungeons", "Settings", "Help")
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
-                  "History": "Combats", "Settings": "Réglages",
+                  "Dungeons": "Donjons",
+                  "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
 # Class tags written into reports before the interface was translated.
@@ -2803,7 +2692,7 @@ EVENTS_MAX = 40             # lines kept in the live page's event feed
 
 
 def _mmss(secs):
-    m, s = divmod(int(max(0, secs)), 60)
+    m, s = divmod(int(round(max(0, secs))), 60)
     return f"{m}:{s:02d}"
 
 
@@ -2925,18 +2814,16 @@ class App:
         self._sort_heal = False
         self._auto_reset_boss = False
         self._rift_auto_view = False
-        self._history_on = False
         self._zoom = 100                    # the window's own size, percent
 
         # ---- what the window is showing (not saved) ----
         self._menu_tab = APP_TAB_DEFAULT
         self.focus_player = None            # player picked in the meter
         self._help_open = None
-        self._history_query_text = ""
-        self._history_note_text = ""
-        self._history_note_job = None
-        self._history_detail = None
         self._rift_view = None              # the rift report being read
+        self._dungeon_kind = None           # the dungeon whose runs are listed
+        self._dungeon_view = None           # the dungeon run being read
+        self._dungeon_cache = {}            # file name -> (mtime, data)
         self._binding_now = False
         self._menu_unlock = False           # no game menu to follow any more
         self._toast = {"t": "", "n": 0}
@@ -2955,10 +2842,7 @@ class App:
         self._report_data = self._load_last_rift_report()
         self._rift_cache = {}               # rift file name -> (mtime, summary)
 
-        self._history = HistoryStore()
-        self._history_entries = []
         self._load_settings()
-        self._apply_history_setting()
         self._win_geom = self._load_window_geom()
         self._install_hotkeys()
 
@@ -2976,8 +2860,7 @@ class App:
             self.mode = data["mode"]
         for key, attr in (("show_heal", "_show_heal"), ("sort_heal", "_sort_heal"),
                           ("auto_reset_boss", "_auto_reset_boss"),
-                          ("rift_auto_view", "_rift_auto_view"),
-                          ("history_on", "_history_on")):
+                          ("rift_auto_view", "_rift_auto_view")):
             if isinstance(data.get(key), bool):
                 setattr(self, attr, data[key])
         self._sort_heal = self._sort_heal and self._show_heal
@@ -3007,7 +2890,6 @@ class App:
                 "sort_heal": bool(self._sort_heal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "rift_auto_view": bool(self._rift_auto_view),
-                "history_on": bool(self._history_on),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
             }, indent=2))
@@ -3074,8 +2956,6 @@ class App:
     def _refresh_visibility(self):
         self.menubridge.invalidate()
 
-    def _refresh_menu(self):
-        self.menubridge.invalidate()
 
     def _open_report_card(self):
         """Show _report_data — as a page of the window now, not a card over
@@ -3103,7 +2983,6 @@ class App:
         def done():
             self._report_data = report
             self._save_rift_report(report)
-            self._archive_rift_report(report)
             best = (report.get("phases") or [{}])[-1].get("players") or []
             who = f" — MVP {best[0]['name']}" if best else ""
             self._event(f"Faille terminée{who}.", "rift",
@@ -3154,11 +3033,6 @@ class App:
         self._zoom = max(50, min(200, int(pct)))
         self._save_settings()
 
-    def _copy_history(self):
-        if self._history_detail is None:
-            return
-        if copy_text_to_clipboard(self._history_text(self._history_detail)):
-            self._history_note("Copié dans le presse-papiers.", transient=True)
 
     def _open_rift_file(self, name):
         data = self._read_rift_file(name)
@@ -3167,8 +3041,15 @@ class App:
             return
         self._rift_view = data
 
+    def _shown_report(self):
+        if self._menu_tab == "Dungeons" and self._dungeon_view is not None:
+            d = self._dungeon_view
+            return dict(d, title=d.get("name") or "Donjon",
+                        sub=self._dungeon_sub(d))
+        return self._rift_view
+
     def _copy_rift_image(self):
-        data = self._rift_view
+        data = self._shown_report()
         if not data:
             return
         try:
@@ -3181,8 +3062,8 @@ class App:
                 self._toast_msg("Copié en texte.")
 
     def _copy_rift_text(self):
-        if self._rift_view and copy_text_to_clipboard(
-                self._report_text(self._rift_view)):
+        data = self._shown_report()
+        if data and copy_text_to_clipboard(self._report_text(data)):
             self._toast_msg("Texte copié dans le presse-papiers.")
 
     def _open_log_folder(self):
@@ -3197,8 +3078,6 @@ class App:
             return
         if name != "Help":
             self._help_open = None
-        if name == "History" and self._history_on:
-            self._reload_history()
         self._menu_tab = name
 
     def _menu_actions(self):
@@ -3222,18 +3101,13 @@ class App:
             "copy_rift_image": self._copy_rift_image,
             "copy_rift_text": self._copy_rift_text,
             "open_parses": self._open_parses,
-            # history
-            "toggle_history": self._toggle_history,
-            "open_history_folder": self._open_history_folder,
-            "reload_history": self._reload_history,
-            "open_dataset": lambda p: self._open_history_entry(
-                {"path": p.get("path", "")}),
-            "open_report": lambda p: self._open_history_report(
-                {"path": p.get("path", "")}),
-            "close_dataset": lambda: setattr(self, "_history_detail", None),
-            "copy_history": self._copy_history,
-            "history_query": lambda p: self._set_panel_query(
-                "_history_query_text", p.get("value", "")),
+            # dungeons
+            "open_dungeon_kind": lambda p: setattr(
+                self, "_dungeon_kind", p.get("kind")),
+            "close_dungeon_kind": lambda: setattr(self, "_dungeon_kind", None),
+            "open_dungeon_run": lambda p: self._open_dungeon_run(
+                p.get("file", "")),
+            "close_dungeon_run": lambda: setattr(self, "_dungeon_view", None),
             # settings
             "toggle_heal": self._toggle_heal,
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
@@ -3247,15 +3121,6 @@ class App:
         }
         return acts
 
-    def _open_history_report(self, summary):
-        entry = self._history.load(summary["path"])
-        data = (entry or {}).get("data") or {}
-        if not isinstance(data.get("phases"), list):
-            self._history_note("Ce combat n'est pas un rapport de faille.",
-                               transient=True)
-            return
-        self._report_data = data
-        self._open_report_card()
 
     def _panel_typing(self, on):
         pass
@@ -3352,7 +3217,7 @@ class App:
 
     def _page(self, tab):
         builder = {"Live": self._page_live, "Rifts": self._page_rifts,
-                   "History": self._page_history,
+                   "Dungeons": self._page_dungeons,
                    "Settings": self._page_settings,
                    "Help": self._page_help}.get(tab)
         try:
@@ -3576,6 +3441,176 @@ class App:
     def _report_node(self, data):
         return report_view(data)
 
+    # ---- dungeons
+    def on_dungeon_run(self, report):
+        """A dungeon run ended (won, failed or abandoned). Hook thread."""
+        def done():
+            name = self._save_dungeon_run(report)
+            best = self._dungeon_best(report["kind"], report.get("difficulty"),
+                                      exclude=name)
+            diff = DUNGEON_DIFFICULTIES.get(report.get("difficulty"), "?")
+            txt = (f"{report['name']} ({diff.lower()}) — {report['result']}"
+                   f" en {_mmss(report['duration'])}")
+            tone = "ok"
+            if report["result"] == "victoire":
+                if best is None:
+                    txt += " — premier temps enregistré"
+                elif report["duration"] < best:
+                    txt += f" — nouveau record (avant : {_mmss(best)})"
+                    tone = "best"
+                else:
+                    txt += f" — record : {_mmss(best)}"
+            else:
+                tone = ""
+            self._event(txt, tone, {"id": "open_dungeon_run", "t": "Voir",
+                                    "p": {"file": name}} if name else None)
+        self._enqueue(done)()
+
+    def _save_dungeon_run(self, report):
+        name = f"run-{time.strftime('%Y%m%d-%H%M%S')}.json"
+        try:
+            DUNGEONS_DIR.mkdir(parents=True, exist_ok=True)
+            (DUNGEONS_DIR / name).write_text(json.dumps(report),
+                                             encoding="utf-8")
+            print(f"[meter] dungeon run saved to {DUNGEONS_DIR / name}",
+                  file=sys.stderr)
+            return name
+        except OSError as e:
+            print(f"[meter] couldn't save the dungeon run: {e}",
+                  file=sys.stderr)
+            return None
+
+    def _dungeon_runs(self):
+        """Every saved run, newest first, as (file name, data). Cached by
+        modification time — the folder is re-read on every page push."""
+        try:
+            files = sorted(DUNGEONS_DIR.glob("run-*.json"), reverse=True)
+        except OSError:
+            return []
+        out = []
+        for path in files:
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                continue
+            hit = self._dungeon_cache.get(path.name)
+            if not hit or hit[0] != mtime:
+                try:
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+                if not isinstance(data.get("phases"), list):
+                    continue
+                hit = (mtime, data)
+                self._dungeon_cache[path.name] = hit
+            out.append((path.name, hit[1]))
+        return out
+
+    def _dungeon_best(self, kind, difficulty, exclude=None):
+        times = [d["duration"] for n, d in self._dungeon_runs()
+                 if n != exclude and d.get("kind") == kind
+                 and d.get("difficulty") == difficulty
+                 and d.get("result") == "victoire"]
+        return min(times) if times else None
+
+    def _open_dungeon_run(self, name):
+        name = Path(str(name)).name
+        data = next((d for n, d in self._dungeon_runs() if n == name), None)
+        if data is None:
+            self._toast_msg("Ce run de donjon est illisible.")
+            return
+        self._dungeon_kind = data.get("kind")
+        self._dungeon_view = data
+        self._menu_tab = "Dungeons"
+
+    def _dungeon_sub(self, d):
+        diff = DUNGEON_DIFFICULTIES.get(d.get("difficulty"), "difficulté ?")
+        deaths = int(d.get("deaths") or 0)
+        bits = [diff, str(d.get("result") or "?").capitalize()
+                + f" en {_mmss(d.get('duration') or 0)}",
+                f"{deaths} mort{'s' if deaths > 1 else ''}"]
+        if d.get("wipes"):
+            bits.append(f"{d['wipes']} wipe{'s' if d['wipes'] > 1 else ''}")
+        return " · ".join(bits)
+
+    def _page_dungeons(self):
+        runs = self._dungeon_runs()
+        if self._dungeon_view is not None:
+            d = self._dungeon_view
+            node = report_view(dict(d, title=d.get("name") or "Donjon"))
+            node["sub"] = self._dungeon_sub(d)
+            return [{"k": "toolbar", "id": "dungeon_tools", "btns": [
+                        {"id": "close_dungeon_run",
+                         "t": "‹  Runs de " + (d.get("name") or "ce donjon")},
+                        {"id": "copy_rift_image", "t": "Copier l'image"},
+                        {"id": "copy_rift_text", "t": "Copier le texte"}]},
+                    node]
+        if self._dungeon_kind is not None:
+            kind = self._dungeon_kind
+            mine = [(n, d) for n, d in runs if d.get("kind") == kind]
+            name = dungeon_name(kind)
+            cards = []
+            for diff, label in DUNGEON_DIFFICULTIES.items():
+                best = self._dungeon_best(kind, diff)
+                won = [d for _n, d in mine if d.get("difficulty") == diff
+                       and d.get("result") == "victoire"]
+                cards.append({"title": f"Record — {label}",
+                              "value": _mmss(best) if best else "—",
+                              "sub": f"{len(won)} victoire"
+                                     f"{'s' if len(won) > 1 else ''}",
+                              "tone": "rift" if best else ""})
+            rows = []
+            for n, d in mine:
+                best = self._dungeon_best(kind, d.get("difficulty"))
+                star = (d.get("result") == "victoire" and best is not None
+                        and abs(d["duration"] - best) < 0.05)
+                group = ", ".join(p.get("name", "?") for p in
+                                  (d["phases"][-1].get("players") or [])[:6])
+                rows.append({"t": date_fr(time.localtime(d.get("at") or 0))
+                                  + ("  ★" if star else ""),
+                             "meta": self._dungeon_sub(d)
+                                     + (f" · {group}" if group else ""),
+                             "btns": [{"id": "open_dungeon_run", "t": "Voir",
+                                       "p": {"file": n}}]})
+            return [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
+                        {"id": "close_dungeon_kind",
+                         "t": "‹  Tous les donjons"}]},
+                    {"k": "section", "t": name},
+                    {"k": "cards", "id": "dungeon_records", "items": cards},
+                    {"k": "gap"},
+                    {"k": "list", "id": "dungeon_runs", "grow": True,
+                     "rows": rows, "empty": "Aucun run pour ce donjon."}]
+        by_kind = {}
+        for _n, d in runs:
+            by_kind.setdefault(d.get("kind"), []).append(d)
+        rows = []
+        for kind, ds in sorted(by_kind.items(),
+                               key=lambda kv: -max(x.get("at", 0)
+                                                   for x in kv[1])):
+            won = sum(1 for d in ds if d.get("result") == "victoire")
+            recs = []
+            for diff, label in DUNGEON_DIFFICULTIES.items():
+                best = self._dungeon_best(kind, diff)
+                if best:
+                    recs.append(f"{label} {_mmss(best)}")
+            meta = (f"{len(ds)} run{'s' if len(ds) > 1 else ''} · {won} "
+                    f"victoire{'s' if won > 1 else ''}"
+                    + (" · records : " + ", ".join(recs) if recs else ""))
+            rows.append({"t": dungeon_name(kind), "meta": meta,
+                         "btns": [{"id": "open_dungeon_kind", "t": "Voir",
+                                   "p": {"kind": kind}}]})
+        return [
+            {"k": "section", "t": "Donjons"},
+            {"k": "note", "t": "Chaque donjon est enregistré automatiquement "
+                               "de l'entrée à la sortie : difficulté, temps "
+                               "(celui du jeu), morts, groupe et classement "
+                               "complet, en deux phases — exploration et "
+                               "boss. Les échecs et abandons sont gardés "
+                               "aussi."},
+            {"k": "list", "id": "dungeons", "grow": True, "rows": rows,
+             "empty": "Aucun donjon enregistré pour l'instant."},
+        ]
+
     # ---- settings
     def _page_settings(self):
         return [
@@ -3686,178 +3721,7 @@ class App:
         self._auto_reset_boss = not self._auto_reset_boss
         self._save_settings()
 
-    def _apply_history_setting(self):
-        """Install or remove the primary store's archive hook.
 
-        The filter goes on at the same time and stays on: it reads
-        `self.mode` when it runs, so switching party/all needs no re-wiring
-        (and switching resets the encounter anyway, so no dataset can ever
-        straddle both)."""
-        self.session.archive_hook = (self._archive_encounter
-                                     if self._history_on else None)
-        self.session.archive_filter = self._apply_mode
-
-    def _toggle_history(self):
-        self._history_on = not self._history_on
-        self._apply_history_setting()
-        self._save_settings()
-        self._refresh_menu()
-        if self._history_on:
-            self._reload_history()
-
-    def _archive_encounter(self, frozen):
-        """PartySession handing over a finished encounter.
-
-        Called on whichever thread performed the reset — the hook's thread on
-        a zone change or a boss pull, the Tk thread on a hotkey — so it does
-        no Tk work and no disk work: it stamps on the context only the overlay
-        knows (where you were, which view you were on) and queues the write.
-        """
-        sig, world_map = self.ui_state.zone()
-        name = _dataset_name(frozen.get("targets") or {}, sig, world_map)
-        self._history.save(
-            "combat", name, frozen,
-            zone={"sig": sig, "label": _zone_label(sig, world_map),
-                  "world_map": world_map},
-            # Which rows the dataset holds, not just which view was up: the
-            # mode is applied as a filter in _freeze, so a party dataset
-            # contains your group and nobody else. Recorded because the
-            # numbers can't be read honestly without it — "100%" in a party
-            # dataset means 100% of the party.
-            mode=self.mode)
-
-    def _archive_rift_report(self, report):
-        """A finished rift, into the same folder as everything else.
-
-        The report keeps going to parses/ as .json/.txt/.png — that is what
-        'Last Rift Report' reads back and what people paste into chat, and
-        this must not disturb it. What this adds is the per-skill and
-        per-element detail the card has no room for, so a rift in the history
-        list opens as a report AND as a breakdown."""
-        if not self._history_on:
-            return
-        sig, world_map = self.ui_state.zone()
-        # Named off the BOSS phase's targets when it has any: a rift's trash
-        # phase is a hundred small things and its boss phase is the one that
-        # gives the run its name. Falls back to everything seen.
-        phases = report.get("phases") or []
-        targets = {}
-        for ph in reversed(phases):        # boss phase last, so it wins
-            targets = ph.get("targets") or targets
-            if targets:
-                break
-        name = _dataset_name(targets, sig, world_map)
-        self._history.save(
-            "rift", name, report,
-            zone={"sig": sig, "label": _zone_label(sig, world_map),
-                  "world_map": world_map})
-
-    def _open_history_folder(self):
-        """Open the history folder in Explorer. Created on demand so the path
-        is a real place to click even before the first dataset lands."""
-        try:
-            self._history.dir.mkdir(parents=True, exist_ok=True)
-            os.startfile(self._history.dir)
-        except Exception as e:
-            print(f"[meter] couldn't open {self._history.dir}: {e}",
-                  file=sys.stderr)
-
-    def _history_note(self, text, transient=False):
-        """The line under the browser. Same two jobs as Social's: explain an
-        empty list, or confirm a copy that is otherwise invisible."""
-        if self._history_note_job is not None:
-            try:
-                self.root.after_cancel(self._history_note_job)
-            except Exception:
-                pass
-            self._history_note_job = None
-        # A string, not a label — the panel reading it is another process.
-        self._history_note_text = text
-        if transient:
-            def restore():
-                self._history_note_job = None
-                self._history_note(self._history_idle_note())
-            self._history_note_job = self.root.after(2500, restore)
-
-    def _history_idle_note(self):
-        if not self._history_entries:
-            return ("Rien d'enregistré pour l'instant. Un combat apparaît "
-                    f"ici une fois qu'il a duré {HISTORY_MIN_SECS:.0f} s et "
-                    f"compté {HISTORY_MIN_EVENTS} coups ou soins.")
-        return ""
-
-    def _reload_history(self):
-        """Re-read the folder. The browser does not poll: a dataset lands when
-        an encounter ends, and re-reading a folder four times a second to
-        catch that would be the most expensive thing the menu does."""
-        self._history_entries = self._history.entries()
-
-    def _open_history_entry(self, summary):
-        """Open one dataset's breakdown — the page the card has no room for."""
-        entry = self._history.load(summary["path"])
-        if entry is None:
-            self._history_note("Impossible de lire ce combat.",
-                               transient=True)
-            return
-        self._history_detail = entry
-
-    @staticmethod
-    def _merge_history_skills(table, names, limit=HISTORY_DETAIL_SKILLS):
-        """A saved per-skill table, merged by display name.
-
-        The same rule as the live breakdown's _merge_named — all weapons'
-        base "Attack" is one row — but reading the names the DATASET was
-        saved with rather than the running session's. A dataset opened from
-        another session must not be renamed by whatever this session happens
-        to have learned."""
-        merged: dict[str, list] = defaultdict(lambda: [0, 0.0, 0])
-        for sid, vals in (table or {}).items():
-            label = (names or {}).get(sid) or _pretty_id(sid)
-            m = merged[label]
-            m[0] += vals[0]; m[1] += vals[1]; m[2] += vals[2]
-        out = sorted(((label, v[1], v[0], v[2]) for label, v in merged.items()),
-                     key=lambda t: -t[1])
-        return out[:limit]
-
-    def _history_text(self, entry):
-        """The opened dataset as chat-pasteable lines."""
-        data = entry.get("data") or {}
-        names = data.get("skill_names") or {}
-        out = [f"Farever+ — {entry.get('name') or 'Combat'}"]
-        where = (entry.get("zone") or {}).get("label")
-        if where:
-            out.append(f"({where}, "
-                       + time.strftime("%Y-%m-%d %H:%M",
-                                       time.localtime(entry.get("at") or 0))
-                       + ")")
-
-        def block(label, duration, players, total, heal):
-            out.append(f"== {phase_label(label)} — {self._mmss(duration)}, "
-                       f"{_n(total)} dégâts, {_n(heal)} soins ==")
-            for p in players[:10]:
-                dmg = float(p.get("total") or 0.0)
-                pct = dmg / total * 100 if total else 0.0
-                rate = _rate_text(dmg, duration, "dps")
-                out.append(f"  {p.get('name') or '?'}: "
-                           + (f"{rate} " if rate else "")
-                           + f"({_n(dmg)}, {_pct1(pct)})")
-                for lbl, tot, n, _c in self._merge_history_skills(
-                        p.get("skills"), names, 5):
-                    out.append(f"     {lbl} : {_n(tot)} ({n} coups)")
-
-        if isinstance(data.get("phases"), list):
-            for ph in data["phases"]:
-                block(ph.get("label") or "Phase",
-                      float(ph.get("duration") or 0.0),
-                      ph.get("players") or [],
-                      float(ph.get("total") or 0.0),
-                      float(ph.get("heal") or 0.0))
-        else:
-            block("Combat", float(data.get("duration") or 0.0),
-                  data.get("players") or [],
-                  float(data.get("total") or 0.0),
-                  float(data.get("heal") or 0.0))
-        return "\n".join(out)
 
     def _save_rift_report(self, report):
         """The report into parses/, three ways: .json is the full metrics —
@@ -3912,7 +3776,8 @@ class App:
 
     def _report_text(self, data):
         """The plaintext version — chat-pasteable lines, no box drawing."""
-        out = ["Farever+ — Rapport de faille"]
+        out = ["Farever+ — " + (data.get("title") or "Rapport de faille")
+               + (f" ({data['sub']})" if data.get("sub") else "")]
         for ph in data["phases"]:
             dur = ph["duration"]
             # Rate first here too. The card, the image and this line are three
@@ -4347,85 +4212,6 @@ class App:
                 for a in rest]})
         return out
 
-    def _page_history(self):
-        """The whole tab is one opt-in and what it unlocks. Off, the page is
-        the switch and the paragraph explaining it — a folder path and an empty
-        browser for a feature that is not recording anything reads as broken
-        rather than unused."""
-        out = [
-            {"k": "section", "t": "Historique des combats"},
-            {"k": "button", "id": "toggle_history",
-             "t": self._tick(self._history_on,
-                             "Garder un historique des combats terminés")},
-            {"k": "note", "t": "Le compteur ne garde qu'un combat à la fois — "
-                               "une réinitialisation, un changement de zone "
-                               "ou le pull d'un boss l'efface. Avec cette "
-                               "option, chaque combat terminé est d'abord "
-                               "enregistré sur le disque, nommé d'après ce "
-                               "qui a pris le plus de dégâts et l'endroit."},
-        ]
-        if not self._history_on:
-            return out
-        # One dataset opened: its breakdown as text, and the way back. Text
-        # rather than a rebuilt table — the point of the page is the per-skill
-        # detail the card has no room for, and it is the same text the Copy
-        # button puts on the clipboard, so the two cannot disagree.
-        if self._history_detail is not None:
-            entry = self._history_detail
-            body = ""
-            try:
-                body = self._history_text(entry)
-            except Exception as e:
-                body = f"Impossible de lire ce combat : {e!r}"
-            return [
-                {"k": "button", "id": "close_dataset",
-                 "t": "‹  Retour à la liste"},
-                {"k": "section", "t": entry.get("name") or "Combat"},
-                {"k": "button", "id": "copy_history",
-                 "t": "Copier dans le presse-papiers"},
-                {"k": "code", "t": body},
-                {"k": "note", "t": self._history_note_text or ""},
-            ]
-        rows = []
-        for e in (self._history_entries or [])[:200]:
-            # Summaries are plain dicts off HistoryStore.entries().
-            name = e.get("name") or "Combat"
-            # A summary's `zone` is a plain label string; the LOADED entry's is
-            # a dict with a "label" in it (which is what _history_text reads).
-            # Accepting both, because assuming the dict shape here is what took
-            # the History tab — and with it the refresh loop — down.
-            z = e.get("zone")
-            where = (z.get("label") if isinstance(z, dict) else z) or ""
-            when = date_fr(time.localtime(e.get("at") or 0))
-            q = (self._history_query_text or "").strip().lower()
-            if q and q not in f"{name} {where}".lower():
-                continue
-            btns = [{"id": "open_dataset", "t": "Ouvrir",
-                     "p": {"path": e.get("path", "")}}]
-            # Only rifts have a report to re-open.
-            if e.get("kind") == "rift":
-                btns.insert(0, {"id": "open_report", "t": "Rapport",
-                                "p": {"path": e.get("path", "")}})
-            rows.append({"t": name,
-                         "meta": " · ".join(x for x in (where, when) if x),
-                         "btns": btns})
-        out += [
-            {"k": "section", "t": "Emplacement"},
-            {"k": "button", "id": "open_history_folder",
-             "t": str(self._history.dir)},
-            {"k": "note", "t": "Le compteur ne supprime jamais rien dans ce "
-                               "dossier. Fais le ménage toi-même quand tu "
-                               "veux récupérer de la place."},
-            {"k": "section", "t": "Combats enregistrés"},
-            {"k": "search", "id": "history_query",
-             "v": (self._history_query_text or ""),
-             "count": f"{len(rows)} affiché(s)"},
-            {"k": "button", "id": "reload_history", "t": "Actualiser"},
-            {"k": "list", "id": "history", "h": 300, "rows": rows,
-             "empty": "Aucun combat terminé enregistré pour l'instant."},
-            {"k": "note", "t": self._history_note_text or ""},
-        ]
-        return out
 
     @staticmethod
     def _tick(on, label):
@@ -4434,10 +4220,6 @@ class App:
         change it."""
         return ("☑  " if on else "☐  ") + label
 
-    def _set_panel_query(self, attr, text):
-        """A search box changed. Stored on the overlay rather than in a Tk
-        StringVar so the spec builder can read it back on the next tick."""
-        setattr(self, attr, text or "")
 
 
 
@@ -4643,7 +4425,10 @@ REQUIRED_RESOLVER_KEYS = ("anchors", "boss_fns", "boss_targets", "cam_targets",
 # group without that field. The hook degrades quietly when it's absent (no
 # gate, immune damage counted again), which is precisely the silent-upgrade
 # failure the rest of this comment is about.
-REQUIRED_OFFSET_KEYS = ("Activity", "ArrayObj", "BossInfo", "BossesInfo",
+REQUIRED_OFFSET_KEYS = ("DungeonCtx", "InstanceLobby", "Dungeon",
+                        "Activity.globalCtx", "Group.instanceLobbies",
+                        "Activity.contexts", "Player.activityCtx",
+                        "Activity", "ArrayObj", "BossInfo", "BossesInfo",
                         "Camera", "DamageResult.blocker", "DamageResult.effect",
                         "Element", "Entity", "Foe", "GameLayer", "Hero",
                         "Interactible", "State", "String", "Unit", "Unit.attr",
@@ -5097,7 +4882,9 @@ def report_view(data):
                       for el, amt in (ph.get("elements") or [])[:8]],
         })
     when = date_fr(time.localtime(data.get("at") or 0))
-    return {"k": "report", "id": "report", "title": "Rapport de faille",
+    return {"k": "report", "id": "report",
+            "title": data.get("title") or "Rapport de faille",
+            "sub": data.get("sub") or "",
             "when": when, "phases": phases}
 
 
@@ -5318,8 +5105,9 @@ def render_rift_report_image(data, path=None):
     d.rounded_rectangle((8, 8, W - 8, H - 8), 10, fill=IMG_PANEL,
                         outline=IMG_LINE)
     text(IMG_PAD, IMG_PAD, view["title"], f_title, IMG_RIFT)
+    after = view["when"] + (f"   ·   {view['sub']}" if view.get("sub") else "")
     text(IMG_PAD + d.textlength(view["title"], font=f_title) + 14,
-         IMG_PAD + 6, view["when"], f_body, IMG_DIM)
+         IMG_PAD + 6, after, f_body, IMG_DIM)
     d.line((IMG_PAD, IMG_PAD + 44, W - IMG_PAD, IMG_PAD + 44), fill=IMG_LINE)
     for i, ph in enumerate(view["phases"][:2]):
         x = IMG_PAD + i * (IMG_COL_W + IMG_PAD)
@@ -5708,24 +5496,28 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     except frida.ProcessNotFoundError:
         print(f"[meter] {TARGET_PROCESS} (pid {pid}) closed before attach.",
               file=sys.stderr)
-        return                      # back to waiting for the game
+        return False                # back to waiting for the game
     except frida.PermissionDeniedError:
         link.set_state(GameLink.FAILED,
                        "connexion refusée — si Farever tourne en "
                        "administrateur, lance aussi le compteur en "
                        "administrateur")
-        return
+        return False
     except Exception as e:
+        print(f"[meter] attach to pid {pid} failed: {e}", file=sys.stderr)
         # A game that is shutting down is still listed for a few seconds, and
-        # Windows refuses to start a thread in it: RtlCreateUserThread returns
-        # STATUS_PROCESS_IS_TERMINATING (0xc000010a). That is the game closing,
-        # not a failure — go back to waiting for it.
-        if "c000010a" in str(e).lower() or not link.game_alive(device, pid):
-            print(f"[meter] {TARGET_PROCESS} (pid {pid}) is closing — not "
-                  "attaching.", file=sys.stderr)
-            return
+        # Windows refuses to start a thread in it (STATUS_PROCESS_IS_TERMINATING,
+        # 0xc000010a). Only called "closing" if it really is gone shortly after:
+        # a live game refusing the attach is a failure, and must stay one.
+        for _ in range(8):
+            if not link.game_alive(device, pid):
+                print(f"[meter] {TARGET_PROCESS} (pid {pid}) closed — back to "
+                      "waiting for it.", file=sys.stderr)
+                return False
+            if STOP.wait(0.5):
+                return False
         link.set_state(GameLink.FAILED, f"connexion impossible : {e}")
-        return
+        return False
 
     # Set when the frida session dies — in practice, the game closed or
     # crashed. Fires on frida's own thread; the loop at the end waits on it.
@@ -5767,6 +5559,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     TARGET_LOG_MAX = 40
 
     heal_log_at = [0.0]
+    dungeon = DungeonTracker(world)
 
     def on_message(message, data):
         liveness["t"] = time.monotonic()   # any agent traffic counts as alive
@@ -5822,6 +5615,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             if not dropped:
                 session.record(p)
                 rift_rec.record("hit", p)
+                dungeon.record("hit", p)
         elif k == "heal":
             # The hook reports what LANDED (0 for a heal on a full-health
             # target); this fills in how big the heal itself was, before both
@@ -5829,6 +5623,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             heal_sizer.stamp(p)
             session.record_heal(p)
             rift_rec.record("heal", p)
+            dungeon.record("heal", p)
             # The formula is checked against ordinary play, not asserted: this
             # says how many heals the cdb table could size and names any skill
             # whose computed size came out below what it measurably restored.
@@ -6030,6 +5825,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                 hero_id["name"] = name
                 print("[meter] local hero "
                       + ("identified." if first else "changed."), file=sys.stderr)
+        elif k == "dungeon":
+            # The running activity and, in a dungeon, its state — see
+            # DungeonTracker for what each field was measured to mean.
+            dungeon.update(p.get("d") or {})
         elif k == "shard":
             # Every player on the layer, with their class — which is where the
             # meter's class tags come from. Sent only when the roster changed.
@@ -6130,7 +5929,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         link.set_state(GameLink.FAILED,
                        "le compteur n'a pas pu se brancher sur le jeu — ferme "
                        "complètement Farever et relance-le")
-        return
+        return False
 
     # Connected. From here the hook feeds on_message until the game closes.
     link.script = script
@@ -6156,10 +5955,13 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         ov = _OVERLAY["ref"]
         if ov is not None:
             ov.on_game_disconnected()
+        # A dungeon run cut short by the game closing is kept as abandoned.
+        dungeon.disconnect()
         # A rift that was running when the game closed is over.
         ui_state.set_rift(False)
         rift_rec.set_rift(False)
         session.set_combat({})
+    return True                     # we were connected, and now we are not
 
 
 class GameLink:
@@ -6234,8 +6036,10 @@ class GameLink:
                 return
             self.set_state(self.CONNECTING)
             try:
-                _game_session(self, device, proc, *self._args)
-                self._gone_pid = proc.pid
+                # Only a game we were actually connected to is set aside once
+                # it closes — never one whose attach merely failed.
+                if _game_session(self, device, proc, *self._args):
+                    self._gone_pid = proc.pid
             except Exception as e:
                 import traceback
                 traceback.print_exc()

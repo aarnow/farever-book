@@ -26,7 +26,10 @@ seul à la prochaine session.
   sélectionné (clique sur une ligne du compteur) et les événements : kills de
   boss, records, fins de faille.
 * **Failles** — toutes les failles terminées, avec leur classement complet.
-* **Combats** — l'historique des combats, s'il est activé.
+* **Donjons** — chaque donjon, avec l'historique de tes runs : difficulté,
+  résultat (victoire, échec, abandon), temps, morts, groupe, et le rapport
+  complet de chaque run (exploration puis boss). Les records par difficulté sont
+  marqués d'une étoile.
 
 Le minuteur de faille est toujours visible en bas du menu : il compte jusqu'à
 la prochaine faille (elles s'ouvrent à chaque heure pile), puis les 3 minutes

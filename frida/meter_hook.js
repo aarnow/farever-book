@@ -214,6 +214,138 @@ function inCombat(hero) {
 let lastRift = null;
 let lastLevel = null;
 let lastServer = null;
+// ---- dungeons ----
+// hero -> layer -> mainActivity: an st.activity.Dungeon while in one, whose
+// globalCtx is the DungeonContext (state Explo / BossStart / BossPhase /
+// BossWin / BossLoose, start and end times, death count). The difficulty is on
+// the group's instance lobby. All plain reads, timer-safe. Sent whenever any of
+// it changes, and every few seconds while in a dungeon so the clock is seen.
+let dungeonSig = null;
+let dungeonBeat = 0;
+
+function readLobbies(hero) {
+    const out = [];
+    try {
+        if (!OFF.InstanceLobby || !OFF.Group || OFF.Group.instanceLobbies == null)
+            return out;
+        const player = hero.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return out;
+        const group = player.add(OFF.Player.group).readPointer();
+        if (!group || group.isNull()) return out;
+        const proxy = group.add(OFF.Group.instanceLobbies).readPointer();
+        if (!proxy || proxy.isNull()) return out;
+        const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+        if (!dyn || dyn.isNull()) return out;
+        const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+        if (!arr || arr.isNull()) return out;
+        const n = arr.add(OFF.ArrayObj.length).readS32();
+        const data = arr.add(OFF.ArrayObj.array).readPointer();
+        for (let i = 0; i < n && i < 16; i++) {
+            const lb = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+            if (!lb || lb.isNull()) continue;
+            out.push({ a: hlStr(lb.add(OFF.InstanceLobby.activityId).readPointer()),
+                       d: lb.add(OFF.InstanceLobby.difficulty).readS32() });
+        }
+    } catch (e) {}
+    return out;
+}
+
+function dungeonCtxInfo(ctx) {
+    const out = { type: typeName(ctx) };
+    try {
+        if (out.type && out.type.indexOf("Dungeon") >= 0) {
+            const C = OFF.DungeonCtx;
+            out.state = hlStr(ctx.add(C.dungeonState).readPointer());
+            out.step = hlStr(ctx.add(C.step).readPointer());
+            out.changed = ctx.add(C.lastStateChanged).readDouble();
+            if (out.type === "st.activity.DungeonContext") {
+                out.start = ctx.add(C.startActivity).readDouble();
+                out.end = ctx.add(C.endActivity).readDouble();
+                out.deaths = ctx.add(C.nbPlayerDeaths).readS32();
+            }
+        }
+    } catch (e) { out.err = String(e); }
+    return out;
+}
+
+// Elements of an hl ArrayObj (pointer array), bounded.
+function arrayObjItems(arr, max) {
+    const out = [];
+    if (!arr || arr.isNull()) return out;
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    if (n < 0 || n > 256) return out;
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    for (let i = 0; i < n && i < max; i++) {
+        const p = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        if (p && !p.isNull()) out.push(p);
+    }
+    return out;
+}
+
+function proxyItems(proxy, max) {
+    if (!proxy || proxy.isNull()) return [];
+    const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+    if (!dyn || dyn.isNull()) return [];
+    return arrayObjItems(dyn.add(OFF.ArrayDyn.array).readPointer(), max);
+}
+
+function checkDungeon() {
+    try {
+        if (!localHero || localHero.isNull() || !OFF.DungeonCtx) return;
+        const layer = localHero.add(OFF.Hero.layer).readPointer();
+        if (!layer || layer.isNull()) return;
+        const d = {};
+        const player = localHero.add(OFF.Hero.player).readPointer();
+        if (player && !player.isNull()) {
+            d.lobbyId = hlStr(player.add(OFF.Player.lobbyId).readPointer());
+            const group = player.add(OFF.Player.group).readPointer();
+            d.group = !!(group && !group.isNull());
+            d.lobbies = readLobbies(localHero);
+            if (OFF.Player.activityCtx != null) {
+                d.playerCtx = proxyItems(
+                    player.add(OFF.Player.activityCtx).readPointer(), 8)
+                    .map(dungeonCtxInfo);
+            }
+        }
+        const act = layer.add(OFF.GameLayer.mainActivity).readPointer();
+        if (act && !act.isNull()) {
+            d.type = typeName(act);
+            d.kind = hlStr(act.add(OFF.Activity.kind).readPointer());
+            if (d.type === "st.activity.Dungeon")
+                d.bossId = hlStr(act.add(OFF.Dungeon.bossId).readPointer());
+            const g = act.add(OFF.Activity.globalCtx).readPointer();
+            if (g && !g.isNull()) d.globalCtx = dungeonCtxInfo(g);
+            if (OFF.Activity.contexts != null)
+                d.actCtx = arrayObjItems(
+                    act.add(OFF.Activity.contexts).readPointer(), 8)
+                    .map(dungeonCtxInfo);
+        }
+        d.now = serverNowOf(layer);
+        const sig = JSON.stringify(Object.assign({}, d, { now: 0 }));
+        dungeonBeat++;
+        const inDungeon = d.type === "st.activity.Dungeon";
+        if (sig !== dungeonSig || (inDungeon && dungeonBeat % 12 === 0)) {
+            dungeonSig = sig;
+            send({ kind: "dungeon", d: d });
+        }
+    } catch (e) {
+        const sig = "err:" + e;
+        if (sig !== dungeonSig) {
+            dungeonSig = sig;
+            send({ kind: "dungeon", d: { err: String(e) } });
+        }
+    }
+}
+
+function serverNowOf(layer) {
+    try {
+        if (!OFF.TimeState || OFF.GameLayer.time == null) return null;
+        const ts = layer.add(OFF.GameLayer.time).readPointer();
+        if (!ts || ts.isNull()) return null;
+        return ts.add(OFF.TimeState.serverNow).readDouble();
+    } catch (e) { return null; }
+}
+
 function checkRift() {
     try {
         if (!localHero || localHero.isNull() || !OFF.GameLayer) return;
@@ -685,6 +817,7 @@ function main() {
         }
         send({ kind: "combat", state: state });
         checkRift();
+        checkDungeon();
     }, 400);
 
     // The shard roster, on its own slow clock. A hub list of 30 people is not

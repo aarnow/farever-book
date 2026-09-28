@@ -337,6 +337,7 @@ function buildReport(n) {
   const t = el('div', 'rtitle');
   t.appendChild(el('b', null, n.title));
   t.appendChild(el('span', null, n.when));
+  if (n.sub) t.appendChild(el('span', 'rsub', n.sub));
   p.appendChild(t);
   const cols = el('div', 'phases');
   (n.phases || []).forEach((ph) => {

@@ -99,7 +99,25 @@
     "isOffScreen": 616
   },
   "Activity": {
-    "kind": 472
+    "kind": 472,
+    "globalCtx": 520,
+    "contexts": 528
+  },
+  "Dungeon": {
+    "bossId": 544,
+    "bossPhaseReached": 560
+  },
+  "DungeonCtx": {
+    "dungeonState": 240,
+    "lastStateChanged": 248,
+    "startActivity": 256,
+    "endActivity": 264,
+    "nbPlayerDeaths": 272,
+    "step": 200
+  },
+  "InstanceLobby": {
+    "activityId": 176,
+    "difficulty": 200
   },
   "Element": {
     "kind": 624,
@@ -160,7 +178,8 @@
     "uid": 184,
     "hero": 304,
     "progress": 240,
-    "accountProgress": 224
+    "accountProgress": 224,
+    "activityCtx": 296
   },
   "AccountProgress": {
     "collection": 184
@@ -176,7 +195,8 @@
   },
   "Group": {
     "groupId": 176,
-    "players": 184
+    "players": 184,
+    "instanceLobbies": 192
   },
   "Progress": {
     "unitsProgress": 168,
