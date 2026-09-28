@@ -82,11 +82,17 @@ plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 Ce fork se lance depuis les sources (Windows).
 
 ```
-pip install frida pillow pywebview
+pip install frida==17.18.0 pillow pywebview
 python meter/farever_meter.py
 ```
 
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
+
+**Frida doit être en 17.18.0.** La 17.19.0 fait planter tout processus dont
+elle se détache, donc Farever à la fermeture de Farever+ (mesuré le
+28/09/2026 sur Windows 11 build 26200 ; les versions 16.7.19 à 17.18.0 n'ont
+pas ce problème). Farever+ refuse de s'attacher avec la 17.19.0 et l'indique
+dans sa fenêtre.
 
 Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône Farever+ près de
 l'horloge → **Arrêter le compteur**. Farever+ se détache alors proprement du jeu.

@@ -9,6 +9,34 @@
 
 function log(m) { send({ kind: "log", msg: String(m) }); }
 
+// ---- leaving the game cleanly ----
+// Unloading the agent while a game thread is inside one of our hooks crashes
+// the game (measured 2026-09-28, three crash dumps: an execute violation at
+// an address that was the agent's, the agent already gone). The health hook's
+// onLeave is the sharp edge: Frida swaps that function's return address for
+// its own trampoline, so a thread still inside it returns into freed code.
+// So the host first calls shutdown(): every hook comes off and every timer
+// stops, the host waits for the game's threads to leave the trampolines, and
+// only then unloads.
+// Every repeating timer goes through every(), so shutdown() can stop them
+// all (setInterval itself is read-only in Frida's runtime).
+const TIMERS = [];
+function every(fn, ms) {
+    const t = setInterval(fn, ms);
+    TIMERS.push(t);
+    return t;
+}
+let STOPPING = false;
+rpc.exports = {
+    shutdown: function () {
+        STOPPING = true;
+        TIMERS.forEach(function (t) { clearInterval(t); });
+        Interceptor.detachAll();
+        Interceptor.flush();
+        return true;
+    }
+};
+
 function ptrPattern(addr) {
     const b = []; let v = uint64(addr.toString());
     for (let i = 0; i < 8; i++) { b.push(("0" + v.and(0xff).toNumber().toString(16)).slice(-2)); v = v.shr(8); }
@@ -1164,7 +1192,7 @@ function main() {
 
     if (!setupNameApi()) log("skill-name API unavailable; showing raw ids");
     if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");
-    setInterval(function () { codexDue = true; }, 8000);
+    every(function () { codexDue = true; }, 8000);
 
     // DATA.map_fn (Main.getMapId) is no longer resolved or called — measured
     // returning the machine hostname; the zone signal reads layer.world.level.
@@ -1176,11 +1204,11 @@ function main() {
     // changes) are deferred to the camera hook's game thread — see
     // heroRefreshDue.
     heroRefreshDue = true;
-    setInterval(function () { heroRefreshDue = true; }, 3000);
+    every(function () { heroRefreshDue = true; }, 3000);
 
     // Combat-state heartbeat: report isInCombat for the local hero and every
     // player we've seen deal damage, so Python can drive the capture timer.
-    setInterval(function () {
+    every(function () {
         const now = Date.now();
         const state = {};
         if (localHero && localName) state[localName] = inCombat(localHero);
@@ -1201,7 +1229,7 @@ function main() {
     // two seconds and usually sends nothing.
     if (OFF.Player && OFF.Player.uid != null
         && OFF.GameLayer && OFF.GameLayer.players != null) {
-        shardTimer = setInterval(sweepShard, 2000);
+        shardTimer = every(sweepShard, 2000);
     } else {
         // A stale analysis_out silently has no `uid`: readShard() returns []
         // on its first line forever and no class tags ever appear. Say so once.
@@ -1575,7 +1603,7 @@ function main() {
             while (q.length && now - q[0].t > HEAL_MATCH_MS) emitHeal(q.shift(), 0, true);
         }
 
-        setInterval(function () {
+        every(function () {
             const now = Date.now();
             for (const k in pendingHealFx) {
                 flushExpired(pendingHealFx[k], now);

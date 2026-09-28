@@ -6329,6 +6329,38 @@ def main():
         release_instance_lock()
 
 
+# Frida 17.19.0 crashes whatever process it leaves: attach then detach, no
+# script at all, and the target dies with 0xC0000005 (measured 2026-09-28 on
+# Windows 11 build 26200, against 16.7.19 / 17.2.17 / 17.10.1 / 17.18.0 that
+# all leave it running). With the game, that is closing Farever+ closing
+# Farever. The meter refuses to attach with it.
+FRIDA_CRASHING_VERSIONS = {"17.19.0"}
+FRIDA_GOOD_VERSION = "17.18.0"
+
+# How long the game's threads get to leave our hooks' trampolines, between
+# the hooks coming off and the agent being unloaded. The hooked functions are
+# short (a health write, a damage event); a second is ample.
+HOOK_DRAIN_SECS = 1.0
+
+
+def _unload_hook(script):
+    """Take the hook out of a running game without crashing it: hooks off
+    and timers stopped first (the script's shutdown()), a pause for the
+    game's threads to leave them, then the unload. Unloading straight away
+    crashed the game (see the note at the top of meter_hook.js)."""
+    try:
+        exports = getattr(script, "exports_sync", None) or script.exports
+        exports.shutdown()
+        time.sleep(HOOK_DRAIN_SECS)
+    except Exception as e:
+        print(f"[meter] hook shutdown call failed ({e}); unloading anyway",
+              file=sys.stderr)
+    try:
+        script.unload()
+    except Exception:
+        pass
+
+
 def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                   heal_sizer):
     """One connection to one running Farever: check the data files, attach,
@@ -6767,10 +6799,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         print(f"[meter] hook didn't come up (attempt {attempt}/3); "
               "cleaning up and retrying ...", file=sys.stderr)
         if script is not None:
-            try:
-                script.unload()
-            except Exception:
-                pass
+            _unload_hook(script)
             script = None
         if ready["ok"] is False:            # search concluded, table not found
             regenerate_data(hlboot, force=True)   # => refresh data and retry
@@ -6781,9 +6810,9 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         # The hook may be half-loaded, and leaving it attached is what
         # destabilises the game.
         print("[meter] connection abandoned during startup.", file=sys.stderr)
+        if script is not None and not detached.is_set():
+            _unload_hook(script)
         try:
-            if script is not None:
-                script.unload()
             fsession.detach()
         except Exception:
             pass
@@ -6817,8 +6846,8 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         if not detached.is_set():
             # We are the ones leaving (the meter is stopping): unload the hook
             # and detach properly — never leave a half-attached agent behind.
+            _unload_hook(script)
             try:
-                script.unload()
                 fsession.detach()
             except Exception:
                 pass
@@ -6896,6 +6925,17 @@ class GameLink:
             self._thread.join(timeout)
 
     def _loop(self):
+        bad = getattr(frida, "__version__", "")
+        if bad in FRIDA_CRASHING_VERSIONS:
+            print(f"[meter] frida {bad} crashes the game when it detaches "
+                  f"(measured 2026-09-28) — not attaching. Install "
+                  f"{FRIDA_GOOD_VERSION}: py -m pip install "
+                  f"frida=={FRIDA_GOOD_VERSION}", file=sys.stderr)
+            self.set_state(self.FAILED,
+                           f"Frida {bad} ferait planter le jeu à la fermeture "
+                           f"de Farever+. Installe la {FRIDA_GOOD_VERSION} : "
+                           f"py -m pip install frida=={FRIDA_GOOD_VERSION}")
+            return
         try:
             device = frida.get_local_device()
         except Exception as e:
