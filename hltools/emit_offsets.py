@@ -463,6 +463,15 @@ def main():
                   + ")")
         except Exception as e:
             print(f"[!] collection catalogue skipped ({e})")
+        try:
+            import bestiary_data
+            best = bestiary_data.build(Path(hlboot).parent, codex,
+                                       _OUT_DIR / "bestiary_img")
+            out_best = _OUT_DIR / "bestiary.json"
+            out_best.write_text(json.dumps(best, indent=0), encoding="utf-8")
+            print(f"[written] {out_best} ({len(best)} monsters)")
+        except Exception as e:
+            print(f"[!] bestiary skipped ({e})")
         dungeons = extract_dungeons(Path(hlboot).parent)
         out_dg = _OUT_DIR / "dungeons.json"
         out_dg.write_text(json.dumps(dungeons, indent=0), encoding="utf-8")

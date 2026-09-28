@@ -1,0 +1,5009 @@
+{
+"placed": [
+{
+"id": "Wolf_Z2W",
+"family": "Coyote",
+"tier": "foe",
+"zones": [
+"Z1_BelEtir_Pond",
+"Z2_Azuram_Bridge",
+"Z2_Azuram_Fields",
+"Z2_Azuram_Highland",
+"Z2_Azuram_Mound",
+"Z2_Azuram_Road",
+"Z2_Azuram_Veld",
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Bel_Etir_Region",
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Elemental_Z1W_Earth_2",
+"family": "Golem",
+"tier": "foe",
+"zones": [
+"Z1_BelEtir_Cliff",
+"Z1_BelEtir_Islets",
+"Z1_BelEtir_Piton",
+"Z1_BelEtir_Shore"
+],
+"regions": [
+"Bel_Etir_Region"
+],
+"lvl": 21
+},
+{
+"id": "Golem_Z1W_Earth_2",
+"family": "Golem",
+"tier": "foe",
+"zones": [
+"Z1_BelEtir_Cliff",
+"Z1_BelEtir_Islets",
+"Z1_BelEtir_Piton",
+"Z1_BelEtir_Shore",
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Bel_Etir_Region",
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Ulserous",
+"family": "Human",
+"tier": "elite",
+"zones": [
+"Z1_BelEtir_AltarFight"
+],
+"regions": [
+"Bel_Etir_Region"
+],
+"lvl": 13
+},
+{
+"id": "Spirit_Z2W_Claws",
+"family": "Spirit",
+"tier": "foe",
+"zones": [
+"Z1_BelEtir_Altar",
+"Z1_BelEtir_Cliff",
+"Z1_BelEtir_Islets",
+"Z1_BelEtir_NuonCave",
+"Z1_BelEtir_Ruins",
+"Z2_Krisomal_Cliff",
+"Z2_Krisomal_Hill",
+"Z2_Krisomal_Lighthouse",
+"Z2_Krisomal_North",
+"Z2_Krisomal_South"
+],
+"regions": [
+"Bel_Etir_Region",
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Bee_Z1W",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Bay",
+"Z1_Meridion_Hills"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 3
+},
+{
+"id": "Bee_Z1W_2",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Canopy",
+"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Foliage",
+"Z1_Honeywoods_Root"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Bee_Z1W_3",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Foliage",
+"Z1_Honeywoods_Isle",
+"Z1_Honeywoods_Root"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Bee_Z1W_E",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Foliage"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 12
+},
+{
+"id": "Bee_Z1W_U",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Hills"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 3
+},
+{
+"id": "FaerieBee_Z1D_Claws",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Cave"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "FaerieBee_Z1D_GreatMace",
+"family": "Bee",
+"tier": "big",
+"zones": [
+"Z1_Honeywoods_Cave"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "FaerieBee_Z1D_Spear",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Cave"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "FaerieBee_Z1W_Claws",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Canopy",
+"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Foliage",
+"Z1_Honeywoods_Root"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "FaerieBee_Z1W_Claws_E",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Isle"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 12
+},
+{
+"id": "FaerieBee_Z1W_GreatMace",
+"family": "Bee",
+"tier": "big",
+"zones": [
+"Z1_Honeywoods_Canopy",
+"Z1_Honeywoods_Foliage",
+"Z1_Honeywoods_Root"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 12
+},
+{
+"id": "FaerieBee_Z1W_GreatMace_E",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Canopy"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 13
+},
+{
+"id": "FaerieBee_Z1W_Spear",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Canopy",
+"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Foliage",
+"Z1_Honeywoods_Root"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "FaerieBee_Z1W_Spear_U",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Foliage"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 12
+},
+{
+"id": "Gatsbee",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Cave"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 12
+},
+{
+"id": "Mokshi",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Canopy"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 13
+},
+{
+"id": "Boar_Z1W",
+"family": "Boar",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Den",
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Boar_Z1W_E",
+"family": "Boar",
+"tier": "elite",
+"zones": [
+"Z1_Primevalley_Plain"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 6
+},
+{
+"id": "Crab_Z1W",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Bay",
+"Z1_Meridion_Creek",
+"Z1_Meridion_Hills",
+"Z1_Meridion_Shore"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 1
+},
+{
+"id": "Crab_Z1W_2",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Beach",
+"Z1_Meridion_Sand",
+"Z1_Meridion_Strand"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 3
+},
+{
+"id": "Crab_Z1W_3",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Primevalley_Coast",
+"Z1_Primevalley_Lookout"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Crab_Z1W_5",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Falls"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Crab_Z1W_E",
+"family": "Crab",
+"tier": "elite",
+"zones": [
+"Z1_Meridion_Bay"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 3
+},
+{
+"id": "Crab_Z1W_E_2",
+"family": "Crab",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Piton"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Crab_Z1W_E_3",
+"family": "Crab",
+"tier": "elite",
+"zones": [
+"Z1_Primevalley_Lookout"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 9
+},
+{
+"id": "Crab_Z1W_U",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hill"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Crabgantua",
+"family": "Crab",
+"tier": "elite",
+"zones": [
+"Z1_Primevalley_Coast"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "Crawler_Z1W_E",
+"family": "Crab",
+"tier": "elite",
+"zones": [
+"Z1_Enripit_Falls"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "GiantCrab_Z1W_U",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Bay"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Crimson_Z1W_Bow",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Camp"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "Crimson_Z1W_Captain_E",
+"family": "Crimson",
+"tier": "elite",
+"zones": [
+"Z1_Enripit_Camp"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Crimson_Z1W_Captain_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Camp"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Crimson_Z1W_Sword",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Camp",
+"Z1_Enripit_Plains"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "ImpDemon_Red",
+"family": "Demon",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Falls"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Elemental_Z1W_Earth",
+"family": "Golem",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Island",
+"Z1_Primevalley_Plain"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Elemental_Z1W_Earth_U",
+"family": "Golem",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Island"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "Golem_Z1W_Earth1",
+"family": "Golem",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Coast",
+"Z1_Primevalley_Island"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Golem_Z1W_Earth_E",
+"family": "Golem",
+"tier": "elite",
+"zones": [
+"Z1_Primevalley_Island"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "Kobold_Z1D_Daggers",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Meadows"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Kobold_Z1D_Mace",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Meadows"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Kobold_Z1W_Caster",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Kobold_Z1W_Caster_2",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Kobold_Z1W_Daggers",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Kobold_Z1W_Daggers_2",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Kobold_Z1W_Mace",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 6
+},
+{
+"id": "Kobold_Z1W_Mace_2",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 9
+},
+{
+"id": "Kobold_Z1W_Mace_U",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "OgreKobold_Z1D_Claws",
+"family": "Kobold",
+"tier": "big",
+"zones": [
+"Z1_Primevalley_Meadows"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "OgreKobold_Z1W_Claws",
+"family": "Kobold",
+"tier": "big",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "OgreKobold_Z1W_Claws_3",
+"family": "Kobold",
+"tier": "big",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 9
+},
+{
+"id": "OgreKobold_Z1W_Claws_U",
+"family": "Kobold",
+"tier": "big",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "OgreKobold_Z1W_E_Claws",
+"family": "Kobold",
+"tier": "elite",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 9
+},
+{
+"id": "Ratsar",
+"family": "Kobold",
+"tier": "elite",
+"zones": [
+"Z1_Enripit_Hollow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Reblochonk",
+"family": "Kobold",
+"tier": "elite",
+"zones": [
+"Z1_Primevalley_Meadows"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "Manfish_Z1D_Caster",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_POI"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 5
+},
+{
+"id": "Manfish_Z1D_Claws",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_POI"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 5
+},
+{
+"id": "Manfish_Z1D_Spear",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_POI"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 5
+},
+{
+"id": "Manfish_Z1W_Caster",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Beach",
+"Z1_Meridion_Ruins",
+"Z1_Meridion_Sand"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 4
+},
+{
+"id": "Manfish_Z1W_Claws",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Beach",
+"Z1_Meridion_Ruins",
+"Z1_Meridion_Sand"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 4
+},
+{
+"id": "Manfish_Z1W_E_Spear",
+"family": "Manfish",
+"tier": "elite",
+"zones": [
+"Z1_Meridion_Sand"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 4
+},
+{
+"id": "Manfish_Z1W_Spear",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Beach",
+"Z1_Meridion_Ruins",
+"Z1_Meridion_Sand"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 4
+},
+{
+"id": "Manfish_Z1W_U_Caster",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Beach"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 4
+},
+{
+"id": "Nepsilon",
+"family": "Manfish",
+"tier": "elite",
+"zones": [
+"Z1_Meridion_POI"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 5
+},
+{
+"id": "OgreManfish_Z1D_Claws",
+"family": "Manfish",
+"tier": "big",
+"zones": [
+"Z1_Meridion_POI"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 5
+},
+{
+"id": "OgreManfish_Z1W_Claws",
+"family": "Manfish",
+"tier": "big",
+"zones": [
+"Z1_Meridion_Ruins"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 5
+},
+{
+"id": "OgreManfish_Z1W_Claws_U",
+"family": "Manfish",
+"tier": "big",
+"zones": [
+"Z1_Primevalley_Coast"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 8
+},
+{
+"id": "Skunk_Z1W",
+"family": "Skunk",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Grove",
+"Z1_Primevalley_Col",
+"Z1_Primevalley_Hump",
+"Z1_Primevalley_Island",
+"Z1_Primevalley_Lookout",
+"Z1_Primevalley_Meadows",
+"Z1_Primevalley_Plain"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 6
+},
+{
+"id": "Skunk_Z1W_2",
+"family": "Skunk",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Crest",
+"Z1_Enripit_Falls",
+"Z1_Enripit_Fields",
+"Z1_Enripit_Plains"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Skunk_Z1W_U",
+"family": "Skunk",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Hump"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 6
+},
+{
+"id": "Slime_Z1D_U",
+"family": "Slime",
+"tier": "big",
+"zones": [
+"Z1_Honeywoods_Cave"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Slime_Z1W",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Cliff",
+"Z1_Meridion_Creek",
+"Z1_Meridion_Meadow",
+"Z1_Meridion_Strand"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 2
+},
+{
+"id": "Slime_Z1W_2",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Meadows",
+"Z1_Primevalley_Plain"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 6
+},
+{
+"id": "Slime_Z1W_4",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z1_Enripit_Hill",
+"Z1_Primevalley_Col",
+"Z1_Primevalley_Lookout"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 9
+},
+{
+"id": "Slime_Z1W_E",
+"family": "Slime",
+"tier": "elite",
+"zones": [
+"Z1_Meridion_Cliff"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 3
+},
+{
+"id": "Slime_Z1W_E_2",
+"family": "Slime",
+"tier": "elite",
+"zones": [
+"Z1_Enripit_Bridge"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Slime_Z1W_Honey",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Isle"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 10
+},
+{
+"id": "Slime_Z1W_U",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z1_Meridion_Meadow"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 2
+},
+{
+"id": "Elemental_Z1W_Underwater",
+"family": "WaterGolems",
+"tier": "foe",
+"zones": [
+"Z1_Primevalley_Coast"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 7
+},
+{
+"id": "Wolf_Z1W",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z1_Honeywoods_Den",
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Wolf_Z1W_Alpha",
+"family": "Wolf",
+"tier": "big",
+"zones": [
+"Z1_Honeywoods_Den",
+"Z1_Honeywoods_Forest",
+"Z1_Honeywoods_Grove"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 11
+},
+{
+"id": "Wolf_Z1W_E",
+"family": "Wolf",
+"tier": "elite",
+"zones": [
+"Z1_Honeywoods_Den"
+],
+"regions": [
+"Z1_Region"
+],
+"lvl": 12
+},
+{
+"id": "Bee_Z2W",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Flowers",
+"Z2_Nescent_Hive",
+"Z2_Nescent_Trunk"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Cleodora",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 20
+},
+{
+"id": "FaerieBee_Z2W_Champ_E",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 20
+},
+{
+"id": "FaerieBee_Z2W_Claws",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Flowers",
+"Z2_Nescent_Hive",
+"Z2_Nescent_Trunk"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "FaerieBee_Z2W_GreatMace",
+"family": "Bee",
+"tier": "big",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "FaerieBee_Z2W_GreatMace_E",
+"family": "Bee",
+"tier": "elite",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "FaerieBee_Z2W_GreatMace_U",
+"family": "Bee",
+"tier": "big",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "FaerieBee_Z2W_GreatMace_U_2",
+"family": "Bee",
+"tier": "big",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "FaerieBee_Z2W_Spear",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Flowers",
+"Z2_Nescent_Hive",
+"Z2_Nescent_Trunk"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "FaerieBee_Z2W_Spear_U",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "FaerieBee_Z2W_Tank",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Boar_Z2W",
+"family": "Boar",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Bridge",
+"Z2_Azuram_Fields",
+"Z2_Azuram_Highland",
+"Z2_Azuram_Mound",
+"Z2_Azuram_Road",
+"Z2_Azuram_Veld",
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Boar_Z2W_2",
+"family": "Boar",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Flowers",
+"Z2_Nescent_Pasture",
+"Z2_Nescent_Route",
+"Z2_Nescent_Wood"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Boar_Z2W_E",
+"family": "Boar",
+"tier": "elite",
+"zones": [
+"Z2_Eksod_Mount"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 20
+},
+{
+"id": "Boar_Z2W_U",
+"family": "Boar",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Bridge"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 14
+},
+{
+"id": "Wolf_Z2W_2",
+"family": "Coyote",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Flowers",
+"Z2_Nescent_Pasture",
+"Z2_Nescent_Route",
+"Z2_Nescent_Wood"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Wolf_Z2W_U",
+"family": "Coyote",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Wood"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Crab_Z2W",
+"family": "Crab",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss",
+"Z2_Krisomal_South"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 14
+},
+{
+"id": "Crab_Z2W_E",
+"family": "Crab",
+"tier": "elite",
+"zones": [
+"Z2_Krisomal_Lighthouse"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Crimson_Z2W_Beekeeper",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Azuram_Highland",
+"Z2_Azuram_Road",
+"Z2_Azuram_Veld"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Crimson_Z2W_Beekeeper2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Hive"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Crimson_Z2W_Bow",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Bridge",
+"Z2_Azuram_Road",
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Crimson_Z2W_Bow_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Crimson_Z2W_Captain_E",
+"family": "Crimson",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Veld"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Crimson_Z2W_Captain_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Road"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Crimson_Z2W_Captain_U_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Road"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Crimson_Z2W_Captain_U_3",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Crimson_Z2W_Captain_U_4",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Bridge"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Crimson_Z2W_Captain_U_6",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 20
+},
+{
+"id": "Crimson_Z2W_Monk",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Crimson_Z2W_Monk_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Crimson_Z2W_Peasant",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Bridge",
+"Z2_Azuram_Highland",
+"Z2_Azuram_Veld"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Crimson_Z2W_Peasant_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Crimson_Z2W_Peasant_E",
+"family": "Crimson",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Veld"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Crimson_Z2W_Sword",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Road",
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Crimson_Z2W_Sword_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "ImpDemon_GreyBlue",
+"family": "Demon",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_North"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Elemental_Z2W_Lava",
+"family": "FireGolems",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Elemental_Z2W_Lava_2",
+"family": "FireGolems",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Golem_Z2D_FireExplosive_2",
+"family": "FireGolems",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Golem_Z2W_FireExplosive",
+"family": "FireGolems",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Golem_Z2W_FireExplosive_2",
+"family": "FireGolems",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Golem_Z2W_FireExplosive_E",
+"family": "FireGolems",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Golem_Z2W_FireExplosive_E_2",
+"family": "FireGolems",
+"tier": "elite",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 20
+},
+{
+"id": "Golcano",
+"family": "Golem",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Golem_Z2W_E",
+"family": "Golem",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Mound"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Golem_Z2W_E_2",
+"family": "Golem",
+"tier": "elite",
+"zones": [
+"Z2_Krisomal_Cliff"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Golem_Z2W_U",
+"family": "Golem",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "SpongeBlob",
+"family": "Golem",
+"tier": "elite",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Kobold_Z2D_Caster",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 14
+},
+{
+"id": "Kobold_Z2D_Mace_2",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound_Cave"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 14
+},
+{
+"id": "Kobold_Z2W_Caster",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Kobold_Z2W_Daggers",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Kobold_Z2W_Mace",
+"family": "Kobold",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "MunsterChuck",
+"family": "Kobold",
+"tier": "elite",
+"zones": [
+"Z2_Region"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "OgreKobold_Z2W_Claws",
+"family": "Kobold",
+"tier": "big",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "OgreKobold_Z2W_GM",
+"family": "Kobold",
+"tier": "big",
+"zones": [
+"Z2_Eksod_Kobolds"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Manfish_Z2D_Caster",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Manfish_Z2D_Spear",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Manfish_Z2D_Tank",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Manfish_Z2W_Caster",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss",
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Manfish_Z2W_E_Spear_2",
+"family": "Manfish",
+"tier": "elite",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Manfish_Z2W_Spear",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss",
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Manfish_Z2W_Sword",
+"family": "Manfish",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss",
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "OgreManfish_Z2D_Claws",
+"family": "Manfish",
+"tier": "big",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "OgreManfish_Z2W_Claws",
+"family": "Manfish",
+"tier": "big",
+"zones": [
+"Z2_Krisomal_Priaire"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "OgreHuman_Z2W_Peasant",
+"family": "Ogre",
+"tier": "big",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "OgreHuman_Z2W_Peasant_E",
+"family": "Ogre",
+"tier": "elite",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Spirit_Z2W_Claws2",
+"family": "Spirit",
+"tier": "foe",
+"zones": [
+"Z2_Nescent_Abode",
+"Z2_Nescent_Thorn"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Spirit_Z2W_Claws_E",
+"family": "Spirit",
+"tier": "elite",
+"zones": [
+"Z2_Nescent_Abode"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Spirit_Z2W_Claws_E2",
+"family": "Spirit",
+"tier": "elite",
+"zones": [
+"Z2_Krisomal_South"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Sprout_Garlic_Z2W",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Fields"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Sprout_Garlic_Z2W_2",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Flying",
+"Z2_Azuram_Top"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Sprout_Onion_Z2W",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Fields"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Sprout_Onion_Z2W_2",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Flying",
+"Z2_Azuram_Top"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Sprout_Rice_Z2W",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Fields",
+"Z2_Azuram_Flying",
+"Z2_Azuram_Highland"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Sprout_Rice_Z2W_E",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Top"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Sprout_Rice_Z2W_Plantivore",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Fields"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Sprout_Rice_Z2W_Plantivore_2",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Highland"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Sprout_Rice_Z2W_Plantivore_3",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Flying"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Sprout_Rice_Z2W_Plantivore_4",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Flying"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Sprout_Rice_Z2W_Plantivore_5",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Azuram_Top"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Sprout_Rice_Z2W_Plantivore_6",
+"family": "Sprouts",
+"tier": "elite",
+"zones": [
+"Z2_Nescent_Pasture"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Sprout_Rice_Z2W_U",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Highland"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Sprout_Turnip_Z2W",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Fields"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Sprout_Turnip_Z2W_2",
+"family": "Sprouts",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Flying",
+"Z2_Azuram_Top"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 17
+},
+{
+"id": "Elemental_Z2D_Underwater",
+"family": "WaterGolems",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 16
+},
+{
+"id": "Elemental_Z2W_Underwater",
+"family": "WaterGolems",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 15
+},
+{
+"id": "Elemental_Z2W_Underwater_U",
+"family": "WaterGolems",
+"tier": "foe",
+"zones": [
+"Z2_Krisomal_Abyss"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 18
+},
+{
+"id": "Elemental_Z2W",
+"family": "WindGolems",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound",
+"Z2_Krisomal_Cliff",
+"Z2_Krisomal_Hill",
+"Z2_Krisomal_Lighthouse",
+"Z2_Krisomal_North"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 14
+},
+{
+"id": "Elemental_Z2W_2",
+"family": "WindGolems",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Eksod_Lake"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Golem_Z2W_Wind1",
+"family": "WindGolems",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Mound",
+"Z2_Krisomal_Cliff",
+"Z2_Krisomal_Hill",
+"Z2_Krisomal_Lighthouse",
+"Z2_Krisomal_North"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 14
+},
+{
+"id": "Golem_Z2W_Wind2",
+"family": "WindGolems",
+"tier": "foe",
+"zones": [
+"Z2_Eksod_Kobolds",
+"Z2_Eksod_Lake",
+"Z2_Eksod_Mount",
+"Z2_Krisomal_Hill"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 19
+},
+{
+"id": "Dog_Z2W_Azuram",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z2_Azuram_Road"
+],
+"regions": [
+"Z2_Region"
+],
+"lvl": 13
+},
+{
+"id": "Fly_Demon_Z3W",
+"family": "Bee",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3D_Bow",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3D_Captain",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3D_Captain1",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3D_Captain2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3D_GA",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3D_Sword",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3W_Bow",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Captain_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3W_Captain_U_1",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Captain_U_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Caster",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Caster_E",
+"family": "Crimson",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Crimson_Z3W_Daggers",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 20
+},
+{
+"id": "Crimson_Z3W_Daggers_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Beach",
+"Z3_CrimsonIsland_Sewers"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Daggers_E",
+"family": "Crimson",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3W_GA",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3W_GA_2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library",
+"Z3_CrimsonIsland_Prison"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_GA_E",
+"family": "Crimson",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_GA_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Pit"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3W_Monk",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Monk_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Monk_U1",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Monk_U2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3W_Peasant",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 21
+},
+{
+"id": "Crimson_Z3W_Peasant_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 18
+},
+{
+"id": "Crimson_Z3W_Sword",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Prison",
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Crimson_Z3_Fist",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library",
+"Z3_CrimsonIsland_Prison",
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Crimson_Z3_Fist_U",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Crimson_Z3_Fist_U1",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Crimson_Z3_Fist_U2",
+"family": "Crimson",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Demon_Z3W_Claws",
+"family": "Demon",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Demon_Z3W_Claws_Big",
+"family": "Demon",
+"tier": "big",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "Demon_Z3W_Claws_E",
+"family": "Demon",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "Demon_Z3W_Claws_E_1",
+"family": "Demon",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "Demon_Z3W_Spear",
+"family": "Demon",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Prison"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Demon_Z3W_Spear_Big",
+"family": "Demon",
+"tier": "big",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "FaerieDemon_Z3W_Caster",
+"family": "Demon",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "FaerieDemon_Z3W_Caster_E",
+"family": "Demon",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Prison"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "FaerieDemon_Z3W_Caster_E1",
+"family": "Demon",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "ImpDemon_Elite_Red",
+"family": "Demon",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Cathedral"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "ImpDemon_Z3W",
+"family": "Demon",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Library",
+"Z3_CrimsonIsland_Prison"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Phrixes",
+"family": "Human",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Sacristy"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "RobinHoof",
+"family": "Human",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "OgreHuman_Z3D_GM",
+"family": "Ogre",
+"tier": "big",
+"zones": [
+"Z3_CrimsonIsland_Barracks"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "OgreHuman_Z3W_Claws_U",
+"family": "Ogre",
+"tier": "big",
+"zones": [
+"Z3_CrimsonIsland_Beach"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "OgreHuman_Z3W_GM",
+"family": "Ogre",
+"tier": "big",
+"zones": [
+"Z3_CrimsonIsland_Prison",
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 21
+},
+{
+"id": "OgreHuman_Z3W_GM_E",
+"family": "Ogre",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "OgreHuman_Z3W_Peasant",
+"family": "Ogre",
+"tier": "big",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Slime_Demonic_Z3W",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Slime_Demonic_Z3W_E",
+"family": "Slime",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "Slime_Z3W",
+"family": "Slime",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Beach"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 19
+},
+{
+"id": "Spirit_Z3W_Claws",
+"family": "Spirit",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Garden",
+"Z3_CrimsonIsland_Pit"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Spirit_Z3W_Claws_E",
+"family": "Spirit",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Dog_Z3W",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 20
+},
+{
+"id": "Dog_Z3W_E",
+"family": "Wolf",
+"tier": "elite",
+"zones": [
+"Z3_CrimsonIsland_Library"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 25
+},
+{
+"id": "Dog_Z3W_RamPatrol01",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Dog_Z3W_RamPatrol02",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Dog_Z3W_RamPatrol03",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Dog_Z3W_RamPatrol04",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Dog_Z3W_RamPatrol05",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Garden"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Dog_Z3W_RamPatrol06",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "Dog_Z3W_RamPatrol07",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 24
+},
+{
+"id": "Dog_Z3W_RamPatrol08",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_South"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 23
+},
+{
+"id": "Wolf_Z3W",
+"family": "Wolf",
+"tier": "foe",
+"zones": [
+"Z3_CrimsonIsland_Pit"
+],
+"regions": [
+"Z3_Region"
+],
+"lvl": 22
+},
+{
+"id": "DemonSuperElite",
+"family": "Demon_Rift",
+"tier": "elite",
+"zones": [],
+"regions": [],
+"lvl": 25
+}
+],
+"units": {
+"Warrior": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Rogue": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Mage": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Priest": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Summon_Imp": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"DemonHunterRumi": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"DemonHunterZoey": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"DemonHunterMira": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Abigail": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"HildaLambert": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"HunterShepherd": {
+"family": "Crimson",
+"tier": "foe",
+"region": ""
+},
+"Kobold_Prisoner": {
+"family": "Kobold",
+"tier": "foe",
+"region": ""
+},
+"Kobold_Ogre_Prisoner": {
+"family": "Ogre",
+"tier": "foe",
+"region": ""
+},
+"Manfish_Prisonner": {
+"family": "Manfish",
+"tier": "foe",
+"region": ""
+},
+"Manfish_Ogre_Prisoner": {
+"family": "Ogre",
+"tier": "foe",
+"region": ""
+},
+"Bee_Prisoner": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Bee_Prisoner1": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"PunchingBag": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"PunchingBagArmor": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"PunchingBagMagicRes": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"PunchingBagInvulnerable": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"PunchingBagShield": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"Dummy_Runner": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Dummy_Support": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Dummy_FX": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"Boar_Z1W": {
+"family": "Boar",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Boar_Z2W": {
+"family": "Boar",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Boar_Z2W_2": {
+"family": "Boar",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Boar_Z2W_U": {
+"family": "Boar",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Boar_Z1W_E": {
+"family": "Boar",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Boar_Z4W_E": {
+"family": "Boar",
+"tier": "elite",
+"region": "Z4_Region"
+},
+"Boar_Z2W_E": {
+"family": "Boar",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Crocopork_Z1W": {
+"family": "Boar",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Skunk_Z1W": {
+"family": "Skunk",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Skunk_Z1W_2": {
+"family": "Skunk",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Skunk_Z1W_U": {
+"family": "Skunk",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Skunk_Z1W_FS": {
+"family": "Skunk",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Skunk_Z1W_FS_2": {
+"family": "Skunk",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Wolf_Z1W": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Wolf_Z1W_Alpha": {
+"family": "Wolf",
+"tier": "big",
+"region": "Z1_Region"
+},
+"Wolf_Z2W": {
+"family": "Coyote",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Wolf_Z2W_2": {
+"family": "Coyote",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Wolf_Z2W_U": {
+"family": "Coyote",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Wolf_Z1W_E": {
+"family": "Wolf",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Wolf_Z3W": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z2W_Azuram": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Dog_Z3W": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3D": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol01": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol02": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol03": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol04": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol05": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol06": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol07": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_RamPatrol08": {
+"family": "Wolf",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Dog_Z3W_E": {
+"family": "Wolf",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Manfish_Z1W_Claws": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1W_Claws_2": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1D_Claws": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z2W_Claws": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z1W_Spear": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1W_Spear_3": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1D_Spear": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1W_E_Spear": {
+"family": "Manfish",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Manfish_Z2W_E_Spear_2": {
+"family": "Manfish",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Manfish_Z2D_Spear": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z2W_Spear": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z2W_Sword": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z2D_Tank": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z2W_FS_Tank": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z1W_Caster": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1W_Caster_3": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1D_Caster": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1W_U_Caster": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z1W_FS": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z2D_Caster": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z2W_Caster": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z1D_FS_Healer": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Manfish_Z2D_Healer": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Manfish_Z2W_Healer": {
+"family": "Manfish",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Demon_Rift_Claws": {
+"family": "Demon_Rift",
+"tier": "foe",
+"region": "rift"
+},
+"Demon_Rift_Claws_Major": {
+"family": "Demon_Rift",
+"tier": "big",
+"region": "rift"
+},
+"Demon_Z3W_Claws": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Claws_FS": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Claws_Big": {
+"family": "Demon",
+"tier": "big",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Claws_E": {
+"family": "Demon",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Claws_E_1": {
+"family": "Demon",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Spear": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Spear_Big": {
+"family": "Demon",
+"tier": "big",
+"region": "Z3_Region"
+},
+"Demon_Z3W_Spear_E": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Demon_Rift_Spear_Major": {
+"family": "Demon_Rift",
+"tier": "big",
+"region": "rift"
+},
+"Demon_Z1_Spear_Soulstone": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Demon_Z2_Spear_Soulstone_Leg": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Demon_Z1_Claws_Soulstone": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Demon_Z2_Claws_Soulstone": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"DemonSuperElite": {
+"family": "Demon_Rift",
+"tier": "elite",
+"region": ""
+},
+"DemonSuperElite_Fairy": {
+"family": "Demon",
+"tier": "elite",
+"region": ""
+},
+"DemonSuperElite_Fairy_FalseClone": {
+"family": "Demon",
+"tier": "elite",
+"region": ""
+},
+"DemonSuperElite_Fairy_TrueClone": {
+"family": "Demon",
+"tier": "elite",
+"region": ""
+},
+"DemonSuperElite_Fairy_Guardian": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"Kobold_Z1W_Mace": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z1W_Mace_2": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z1D_Mace": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z2D_Mace_2": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Kobold_Z1W_Mace_U": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z2W_Mace": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Kobold_Z1W_Daggers": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z1W_Daggers_2": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z1D_Daggers": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z2W_Daggers": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Kobold_Z1W_Caster": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z1W_Caster_2": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Kobold_Z2W_Caster": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Kobold_Ratsar_Caster": {
+"family": "Kobold",
+"tier": "foe",
+"region": ""
+},
+"Kobold_Z2D_Caster": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Kobold_Z1D_FS_Caster": {
+"family": "Kobold",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"ImpDemon_Rift": {
+"family": "Demon_Rift",
+"tier": "foe",
+"region": "rift"
+},
+"ImpDemon_Red": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"ImpDemon_GreyBlue": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"ImpDemon_Z3W": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"ImpDemon_Z3W_FS": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"ImpDemon_Summoned": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"ImpDemon_Rift_Major": {
+"family": "Demon_Rift",
+"tier": "big",
+"region": "rift"
+},
+"ImpDemon_Elite_Red": {
+"family": "Demon",
+"tier": "elite",
+"region": ""
+},
+"ImpDemon_Z1_Soulstone": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"ImpDemon_Z2_Soulstone": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"OgreHuman_Z2W_Peasant": {
+"family": "Ogre",
+"tier": "big",
+"region": "Z2_Region"
+},
+"OgreHuman_Z2W_Peasant_E": {
+"family": "Ogre",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"OgreHuman_Z3W_Peasant": {
+"family": "Ogre",
+"tier": "big",
+"region": "Z3_Region"
+},
+"OgreHuman_Z3W_GM": {
+"family": "Ogre",
+"tier": "big",
+"region": "Z3_Region"
+},
+"OgreHuman_Z3W_GM_FS": {
+"family": "Ogre",
+"tier": "big",
+"region": "Z3_Region"
+},
+"OgreHuman_Z3D_GM": {
+"family": "Ogre",
+"tier": "big",
+"region": "Z3_Region"
+},
+"OgreHuman_Z3W_Claws_U": {
+"family": "Ogre",
+"tier": "big",
+"region": "Z3_Region"
+},
+"OgreHuman_Z3W_GM_E": {
+"family": "Ogre",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"OgreKobold_Z1W_Claws": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreKobold_Z1W_Claws_3": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreKobold_Z1W_Claws_U": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreKobold_Z1D_Claws": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreKobold_Z2D_Docker": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z2_Region"
+},
+"OgreKobold_Z1D_FS_Claws": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreKobold_Z2W_Claws": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z2_Region"
+},
+"OgreKobold_Z1W_E_Claws": {
+"family": "Kobold",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"OgreKobold_Z2W_GM": {
+"family": "Kobold",
+"tier": "big",
+"region": "Z2_Region"
+},
+"OgreManfish_Z1W_Claws": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreManfish_Z1W_Claws_U": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreManfish_Z1D_Claws": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreManfish_Z1W_FS_Claws": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z1_Region"
+},
+"OgreManfish_Z2D_Claws": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z2_Region"
+},
+"OgreManfish_Z2W_Claws_E": {
+"family": "Manfish",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"OgreManfish_Z2W_Claws": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z2_Region"
+},
+"OgreManfish_Z2W_FS_Claws": {
+"family": "Manfish",
+"tier": "big",
+"region": "Z2_Region"
+},
+"Crab_Z1W": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z1W_2": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z1W_3": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z1W_U": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z1W_5": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crawler_Z1W_E": {
+"family": "Crab",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Crab_Z1D": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z1W_FS": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z1W_FS_1": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z2D_2": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crab_Z2W": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crab_Z1W_E": {
+"family": "Crab",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Crab_Z1W_E_2": {
+"family": "Crab",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Crab_Z1W_E_3": {
+"family": "Crab",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"GiantCrab_Z1W_U": {
+"family": "Crab",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crab_Z2W_E": {
+"family": "Crab",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Bee_Z1W": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Bee_Z1W_2": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Bee_Z1W_3": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Bee_Z1D": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Bee_Z1W_U": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Bee_Z2W_U": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Bee_Z1W_E": {
+"family": "Bee",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Bee_Z1_FS": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Bee_Z2W": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Fly_Demon_Rift": {
+"family": "Demon_Rift",
+"tier": "foe",
+"region": "rift"
+},
+"Fly_Demon_Z3W": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"FaerieBee_Z1W_Claws": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1D_Claws": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1W_Claws_E": {
+"family": "Bee",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"FaerieBee_Z2W_Claws": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieBee_Z1W_Spear": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1W_Spear_U": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1D_Spear": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieBee_Z2W_Spear_U": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2W_Spear": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2_FS_Tank_2": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieBee_Z1W_GreatMace": {
+"family": "Bee",
+"tier": "big",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1D_GreatMace": {
+"family": "Bee",
+"tier": "big",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1W_GreatMace_E": {
+"family": "Bee",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"FaerieBee_Z1_FS": {
+"family": "Bee",
+"tier": "big",
+"region": "Z1_Region"
+},
+"FaerieBee_Z2W_GreatMace": {
+"family": "Bee",
+"tier": "big",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2W_GreatMace_E": {
+"family": "Bee",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2W_GreatMace_U": {
+"family": "Bee",
+"tier": "big",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2W_GreatMace_U_2": {
+"family": "Bee",
+"tier": "big",
+"region": "Z2_Region"
+},
+"FaerieBee_Z1W_Tank": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieBee_Z2W_Tank": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2W_FS_Tank": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieBee_Z2W_Champ_E": {
+"family": "Bee",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"FaerieDemon_Z3W_Caster": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"FaerieDemon_Rift_Caster": {
+"family": "Demon_Rift",
+"tier": "foe",
+"region": "rift"
+},
+"FaerieDemon_Z3W_Caster_E": {
+"family": "Demon",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"FaerieDemon_Z3W_Caster_E1": {
+"family": "Demon",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"FaerieDemon_Rift_Caster_Major": {
+"family": "Demon_Rift",
+"tier": "big",
+"region": "rift"
+},
+"FaerieDemon_Z3W_Caster_Big": {
+"family": "Demon",
+"tier": "big",
+"region": "Z3_Region"
+},
+"FaerieDemon_Z1_Soulstone_Leg": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"FaerieDemon_Z2_Soulstone": {
+"family": "Demon",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_DarkRice_Z2W": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_U": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2_FS": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Onion_Z2W": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Onion_Z2_FS": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Onion_Z2W_2": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Garlic_Z2W": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Garlic_Z2W_2": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Turnip_Z2W": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Turnip_Z2W_2": {
+"family": "Sprouts",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_E": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_Plantivore": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_Plantivore_2": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_Plantivore_3": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_Plantivore_4": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_Plantivore_5": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Sprout_Rice_Z2W_Plantivore_6": {
+"family": "Sprouts",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Elemental_Z1W_Earth": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z1W_Earth_2": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z1D_Earth": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z1_FS_Earth": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z1_FS_Earth_2": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z1W_Earth_U": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z3W_Earth_U": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Elemental_Z1W_Underwater": {
+"family": "WaterGolems",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z2D_Underwater": {
+"family": "WaterGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z1_FS_Underwater": {
+"family": "WaterGolems",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z2W_Underwater": {
+"family": "WaterGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2W_Underwater_U": {
+"family": "WaterGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2W": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2W_2": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2_FS": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2W_Lava": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z1D_Lava": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Elemental_Z2W_Lava_2": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2_FS_Lava": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Elemental_Z2_FS_Lava_2": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z1W_Earth1": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Golem_Z1W_Earth_2": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Golem_Z1_FS": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Golem_Z1_FS_2": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Golem_Z1W_Earth_E": {
+"family": "Golem",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Golem_Z1W_Earth_E_2": {
+"family": "Golem",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Golem_Z2D_FireExplosive": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2D_FireExplosive_2": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2W_FireExplosive": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2W_FireExplosive_2": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2W_FireExplosive_E": {
+"family": "FireGolems",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Golem_Z2W_FireExplosive_E_2": {
+"family": "FireGolems",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Golem_Z2_FS_FireExplosive": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2_FS_FireExplosive_2": {
+"family": "FireGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2W_Wind1": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2W_Wind2": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2_FS": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2_FS_2": {
+"family": "WindGolems",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Golem_Z2W_E": {
+"family": "Golem",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Golem_Z2W_E_2": {
+"family": "Golem",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Golem_Z2W_U": {
+"family": "Golem",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Slime_Demonic_Z3W": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Slime_Demonic_Z3W_E": {
+"family": "Slime",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Slime_Z1W": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1W_2": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1W_4": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1W_U": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1W_FS": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1W_FS_2": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z2W_FS": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Slime_Z3W": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Slime_Z1W_E": {
+"family": "Slime",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Slime_Z1W_E_2": {
+"family": "Slime",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Slime_Z1D_U": {
+"family": "Slime",
+"tier": "big",
+"region": "Z1_Region"
+},
+"Slime_Z1W_Honey": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1D_Honey": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Slime_Z1D_Honey_NoXP": {
+"family": "Slime",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Spirit_Z2W_Claws": {
+"family": "Spirit",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Spirit_Z2W_FS_Claws": {
+"family": "Spirit",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Spirit_Z2W_Claws2": {
+"family": "Spirit",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Spirit_Z3W_Claws": {
+"family": "Spirit",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Spirit_Z2W_Claws_E": {
+"family": "Spirit",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Spirit_Z2W_Claws_E2": {
+"family": "Spirit",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Spirit_Z3W_Claws_E": {
+"family": "Spirit",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Crimson_Z1W_Sword": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crimson_Z2W_Sword": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Sword_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z3W_Sword": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3D_Sword": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3_Fist": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3_Fist_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3_Fist_U1": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3_Fist_U2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Sword_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_GA": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_GA_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3D_GA": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_GA_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_GA_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Crimson_Z1W_Bow": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crimson_Z2W_Bow": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Bow_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z3W_Bow": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Bow_FS": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3D_Bow": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Daggers": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Daggers_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Daggers_FS": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Daggers_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Crimson_Z2W_Peasant": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Peasant_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Peasant_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z3W_Peasant": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z2W_Peasant_FS": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z3W_Peasant_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z1W_Captain_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z1_Region"
+},
+"Crimson_Z1W_Captain_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z1_Region"
+},
+"Crimson_Z2W_Captain_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_E_2": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_U_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_U_3": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_U_4": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_U_5": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Captain_U_6": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z3W_Captain_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Captain_U_1": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Captain_U_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3D_Captain": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3D_Captain1": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3D_Captain2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z2W_Monk": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Monk_2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Beekeeper": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z2W_Beekeeper2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z2_Region"
+},
+"Crimson_Z3W_Caster": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Caster_E": {
+"family": "Crimson",
+"tier": "elite",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Monk": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Monk_U": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Monk_U1": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Crimson_Z3W_Monk_U2": {
+"family": "Crimson",
+"tier": "foe",
+"region": "Z3_Region"
+},
+"Swarowl_Bat": {
+"family": "Swarowl",
+"tier": "foe",
+"region": ""
+},
+"ChaoticPortal": {
+"family": "Human",
+"tier": "foe",
+"region": "rift"
+},
+"ChaoticPortalPhrixes": {
+"family": "Human",
+"tier": "foe",
+"region": "rift"
+},
+"Nepsilon": {
+"family": "Manfish",
+"tier": "elite",
+"region": ""
+},
+"Reblochonk": {
+"family": "Kobold",
+"tier": "elite",
+"region": ""
+},
+"Gatsbee": {
+"family": "Bee",
+"tier": "elite",
+"region": ""
+},
+"Crabgantua": {
+"family": "Crab",
+"tier": "elite",
+"region": ""
+},
+"Crab_Crabgantua": {
+"family": "Crab",
+"tier": "foe",
+"region": ""
+},
+"MunsterChuck": {
+"family": "Kobold",
+"tier": "elite",
+"region": ""
+},
+"Mokshi": {
+"family": "Bee",
+"tier": "elite",
+"region": ""
+},
+"Bees_Mokshi": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"SpongeBlob": {
+"family": "Golem",
+"tier": "elite",
+"region": ""
+},
+"Golcano": {
+"family": "Golem",
+"tier": "elite",
+"region": ""
+},
+"Golcano_Minion": {
+"family": "Golem",
+"tier": "foe",
+"region": ""
+},
+"Phrixes": {
+"family": "Human",
+"tier": "elite",
+"region": ""
+},
+"Ulserous": {
+"family": "Human",
+"tier": "elite",
+"region": ""
+},
+"Egglektra": {
+"family": "Swarowl",
+"tier": "foe",
+"region": ""
+},
+"Cleodora": {
+"family": "Bee",
+"tier": "elite",
+"region": ""
+},
+"Cleodora_ChampionEgg": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Cleodora_Champion": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Cleodora_Champion2": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Cleodora_Champion3": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Cleodora_Feeder": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Ratsar": {
+"family": "Kobold",
+"tier": "elite",
+"region": ""
+},
+"R1KoboldBoss_Sparkling": {
+"family": "Golem",
+"tier": "foe",
+"region": ""
+},
+"RobinHoof": {
+"family": "Human",
+"tier": "elite",
+"region": ""
+},
+"RobinHoofDog01": {
+"family": "Wolf",
+"tier": "foe",
+"region": ""
+},
+"CannonHoney": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Cannon_Mokshi": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"CannonPlant": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+}
+},
+"families": [
+"Bee",
+"Boar",
+"Coyote",
+"Crab",
+"Crimson",
+"Demon",
+"Demon_Rift",
+"FireGolems",
+"Golem",
+"Human",
+"Kobold",
+"Manfish",
+"Ogre",
+"Skunk",
+"Slime",
+"Spirit",
+"Sprouts",
+"Swarowl",
+"WaterGolems",
+"WindGolems",
+"Wolf"
+]
+}

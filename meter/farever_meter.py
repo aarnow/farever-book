@@ -102,6 +102,8 @@ PARSES_DIR = _WRITABLE / "parses"   # finished-parse images land here (gitignore
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 # What the account owns (mounts, gliders, companions), as last read in game.
 COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
+# Each character's kill counts per monster (the game's codex), last read.
+CODEX_FILE = _WRITABLE / ".meter_codex.json"
 LOG_FILE = DATA_HOME / "meter.log"
 TARGET_PROCESS = "Farever.exe"
 
@@ -2714,9 +2716,11 @@ def _wants_params(fn):
 # ---------------------------------------------------------------------------
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
-APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Settings", "Help")
+APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Settings",
+            "Help")
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
+                  "Hunt": "Chasse",
                   "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
@@ -2858,6 +2862,7 @@ class App:
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_view = None           # the dungeon run being read
         self._collection_owned = None       # .meter_collection.json, loaded
+        self._codex_data = None             # .meter_codex.json, loaded
         self._dungeon_cache = {}            # file name -> (mtime, data)
         self._binding_now = False
         self._menu_unlock = False           # no game menu to follow any more
@@ -3254,6 +3259,7 @@ class App:
         builder = {"Live": self._page_live, "Rifts": self._page_rifts,
                    "Dungeons": self._page_dungeons,
                    "Collection": self._page_collection,
+                   "Hunt": self._page_hunt,
                    "Settings": self._page_settings,
                    "Help": self._page_help}.get(tab)
         try:
@@ -3524,6 +3530,54 @@ class App:
                   f"{len(owned['gliders'])} gliders, {len(owned['pets'])} "
                   "companions", file=sys.stderr)
         self._enqueue(done)()
+
+    def on_codex(self, p):
+        """A character's kill counts per monster (the game's codex), read in
+        game. Saved per character. Hook thread."""
+        hero = p.get("hero") or "?"
+        ranks = {k: v for k, v in (p.get("ranks") or {}).items()
+                 if isinstance(v, list) and len(v) == 2}
+
+        def done():
+            data = self._codex()
+            first = hero not in data.setdefault("heroes", {})
+            data["heroes"][hero] = {"ranks": ranks, "at": time.time()}
+            data["last"] = hero
+            try:
+                CODEX_FILE.write_text(json.dumps(data), encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the kill counts: {e}",
+                      file=sys.stderr)
+            if first:
+                print(f"[meter] kill counts: {hero}, {len(ranks)} monsters, "
+                      f"{sum(v[0] for v in ranks.values())} kills",
+                      file=sys.stderr)
+        self._enqueue(done)()
+
+    def _codex(self):
+        if self._codex_data is None:
+            try:
+                self._codex_data = json.loads(
+                    CODEX_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._codex_data = {}
+        return self._codex_data
+
+    def _page_hunt(self):
+        data = self._codex()
+        hero = data.get("last")
+        entry = (data.get("heroes") or {}).get(hero) or {}
+        at = entry.get("at")
+        sync = (f"Kills de {hero}, lus en jeu le "
+                f"{date_fr(time.localtime(at))}. Le compte est celui du jeu "
+                "(son Codex) : il inclut tout ce que tu as tué avant "
+                "Farever+, et se met à jour tout seul quand le jeu est "
+                "ouvert." if at else
+                "Pas encore lu : lance le jeu avec Farever+ ouvert, tes "
+                "kills se rempliront tout seuls.")
+        return [{"k": "hunt", "id": "hunt", "sync": sync,
+                 **bestiary_view(entry.get("ranks") or {},
+                                 self._collection())}]
 
     def _collection(self):
         if self._collection_owned is None:
@@ -4623,6 +4677,145 @@ def collection_view(owned):
     return {"cats": cats, "items": items}
 
 
+_BESTIARY = None
+
+
+def bestiary_catalogue():
+    """{"placed": [{id, family, tier, zones, regions, lvl}] — every monster
+    the levels place —, "units": {id: {family, tier, region}} — every monster
+    of the game —, "families": [...]}, from analysis_out/bestiary.json
+    (hltools/bestiary_data.py)."""
+    global _BESTIARY
+    if _BESTIARY is None:
+        try:
+            _BESTIARY = json.loads(
+                (ANALYSIS / "bestiary.json").read_text(encoding="utf-8"))
+        except Exception:
+            _BESTIARY = {}
+        if isinstance(_BESTIARY, list):         # before the family view
+            _BESTIARY = {"placed": _BESTIARY}
+    return _BESTIARY
+
+
+_CODEX_SETS = None
+
+
+def _codex_thresholds():
+    """tier -> the kill counts of the codex's three ranks (the game's own
+    numbers, analysis_out/codex_units.json)."""
+    global _CODEX_SETS
+    if _CODEX_SETS is None:
+        try:
+            _CODEX_SETS = json.loads((ANALYSIS / "codex_units.json")
+                                     .read_text(encoding="utf-8"))
+        except Exception:
+            _CODEX_SETS = {}
+    return _CODEX_SETS.get("thresholds") or {}
+
+
+HUNT_TIERS = {"elite": "Élite / boss", "big": "Grand", "foe": ""}
+HUNT_REGIONS = ("Z1_Region", "Z2_Region", "Z3_Region", "rift")
+
+
+def _family_label(fam):
+    if fam == "Demon_Rift":             # "Démons" too in the game's text
+        return "Démons des failles"
+    if fam == "Human":                  # the game has no French name for it
+        return "Humains"
+    return (_fr_names("unitType").get(fam) or _pretty_id(fam)) if fam else ""
+
+
+def _family_drops(owned):
+    """family -> the collectibles every monster of that family can drop
+    (its unitType loot table), each {id, name, chance, own}."""
+    out = defaultdict(list)
+    for cat in ("mounts", "gliders"):
+        mine = set(owned.get(cat) or ())
+        for e in collection_catalogue().get(cat) or ():
+            for s in e.get("src") or ():
+                if s.get("k") == "family" and s.get("chance"):
+                    out[s["id"]].append({"id": e["id"],
+                                         "name": item_label(e["id"]),
+                                         "chance": s["chance"],
+                                         "own": e["id"] in mine})
+    return out
+
+
+def bestiary_view(ranks, owned=None):
+    """The hunting log's data: regions, every monster with its name, family,
+    kills and codex rank, and every family with its total and the
+    collectibles its loot table can give. Monsters the codex holds but the
+    levels don't place (rift waves, invasions, summons) are listed too."""
+    thresholds = _codex_thresholds()
+    cat = bestiary_catalogue()
+    every = cat.get("units") or {}
+    rows, known = [], set()
+    for e in cat.get("placed") or ():
+        known.add(e["id"])
+        rows.append(e)
+    for uid in ranks:
+        if uid in known or uid.startswith("TODO") or uid == "Dummy":
+            continue
+        meta = every.get(uid) or {}
+        rows.append({"id": uid, "family": meta.get("family") or "",
+                     "tier": meta.get("tier") or "foe",
+                     "regions": [meta["region"]] if meta.get("region")
+                     else [], "zones": []})
+    regions = []
+    for r in HUNT_REGIONS + ("",):
+        n = sum(1 for e in rows if (e.get("regions") or [""])[0] == r)
+        if n:
+            regions.append({"v": r or "other",
+                            "t": "Failles et invasions" if r == "rift"
+                            else _fr_names("zone").get(r) or "Autres"
+                            if r else "Autres", "n": n})
+    items = []
+    for e in rows:
+        kills, rank = (ranks.get(e["id"]) or [0, 0])[:2]
+        steps = thresholds.get(e.get("tier") or "foe") or []
+        nxt = next((t for t in steps if t > kills), None)
+        fam = e.get("family") or ""
+        reg = (e.get("regions") or [""])[0]
+        items.append({
+            "id": e["id"], "name": _unit_label(e["id"]),
+            "fam": _family_label(fam), "famId": fam,
+            "reg": reg if reg in HUNT_REGIONS else "other",
+            "zones": ", ".join(_zone_label(z) for z in e.get("zones") or ()
+                               [:4]),
+            "tier": HUNT_TIERS.get(e.get("tier"), ""),
+            "kills": int(kills), "rank": int(rank),
+            "max": len(steps) or 3,
+            "next": nxt})
+    drops = _family_drops(owned or {})
+    fams = {}
+    for it in items:
+        f = it["famId"]
+        if not f:
+            continue
+        a = fams.setdefault(f, {"id": f, "name": it["fam"], "kills": 0,
+                                "species": 0, "hunted": 0, "drops": [],
+                                "top": (-1, "")})
+        a["top"] = max(a["top"], (it["kills"], it["id"]))
+        a["kills"] += it["kills"]
+        a["species"] += 1
+        a["hunted"] += 1 if it["kills"] else 0
+    for f, a in fams.items():
+        # the family's own picture, else its most hunted species'
+        a["img"] = (f"family_{f}"
+                    if (ANALYSIS / "bestiary_img" / f"family_{f}.webp")
+                    .exists() else a["top"][1])
+        del a["top"]
+        for d in drops.get(f, ()):
+            p, k = d["chance"], a["kills"]
+            a["drops"].append(dict(
+                d, pct=_pct(p), odds=f"1 chance sur {_n(round(1 / p))}",
+                # the chance of having seen it drop by now, at this rate
+                had=_pct(1 - (1 - p) ** k) if k else ""))
+    return {"regions": regions, "items": items,
+            "families": sorted(fams.values(), key=lambda a: -a["kills"]),
+            "total": sum(i["kills"] for i in items)}
+
+
 _UNIT_NAMES = None
 
 
@@ -5011,6 +5204,19 @@ def _data_is_current():
     # heal_specs.json arrived when healing started counting overheal — without
     # it a heal that restores nothing cannot be sized, which is the whole
     # feature. Same upgrade trap as the two above.
+    try:
+        best = json.loads((ANALYSIS / "bestiary.json").read_text(
+            encoding="utf-8"))
+        if isinstance(best, list):
+            print("[meter] bestiary.json predates the family view — "
+                  "regenerating.", file=sys.stderr)
+            return False
+    except (OSError, ValueError):
+        pass
+    if not (ANALYSIS / "bestiary.json").exists():
+        print("[meter] bestiary.json absent — regenerating for the hunting "
+              "log.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "collection.json").exists():
         print("[meter] collection.json absent — regenerating for the "
               "Collection tab.", file=sys.stderr)
@@ -6349,6 +6555,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_collection(p)
+        elif k == "codex":
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_codex(p)
         elif k == "dungeon":
             # The running activity and, in a dungeon, its state — see
             # DungeonTracker for what each field was measured to mean.

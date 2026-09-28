@@ -51,3 +51,5 @@ analysis_out/item_icons/
 analysis_out/boss_portraits/
 analysis_out/collection_img/
 .meter_collection.json
+analysis_out/bestiary_img/
+.meter_codex.json

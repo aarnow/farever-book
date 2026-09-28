@@ -246,19 +246,21 @@ class AppWindow:
                 os._exit(0)
 
     def _send_collection_images(self):
-        """The collection's pictures, handed over once the page is up, in
-        batches: inlined, they took the page past WebView2's 2 MB limit on
-        an HTML string, and the window came up blank."""
+        """The collection's and the bestiary's pictures, handed over once the
+        page is up, in batches: inlined, they took the page past WebView2's
+        2 MB limit on an HTML string, and the window came up blank."""
         self._images_sent = True
-        imgs = list(_collection_images().items())
-        for i in range(0, len(imgs), 40):
-            chunk = json.dumps(dict(imgs[i:i + 40]))
-            try:
-                self.window.evaluate_js(
-                    f"window.addCollImages({json.dumps(chunk)})")
-            except Exception as e:
-                _log(f"collection images push failed: {e!r}")
-                return
+        for ns, folder in (("coll", "collection_img"),
+                           ("best", "bestiary_img")):
+            imgs = list(_analysis_images(folder).items())
+            for i in range(0, len(imgs), 40):
+                chunk = json.dumps(dict(imgs[i:i + 40]))
+                try:
+                    self.window.evaluate_js(
+                        f"window.addImages('{ns}', {json.dumps(chunk)})")
+                except Exception as e:
+                    _log(f"{ns} images push failed: {e!r}")
+                    break
 
     def _push(self, data):
         """Hand one state object to the page — as a JSON string argument,
@@ -315,12 +317,12 @@ def _document():
     return html
 
 
-def _collection_images():
-    """{"Mount_Wolf_01": data URI, ...}: the collection's pictures, extracted
-    from the game into analysis_out/collection_img/ — inlined once, here."""
+def _analysis_images(name):
+    """{"Mount_Wolf_01": data URI, ...}: the .webp pictures extracted from the
+    game into analysis_out/<name>/ (collection, bestiary)."""
     import base64
     folder = Path(os.environ.get("FAREVER_ANALYSIS")
-                  or HERE.parent / "analysis_out") / "collection_img"
+                  or HERE.parent / "analysis_out") / name
     out = {}
     try:
         files = sorted(folder.glob("*.webp"))

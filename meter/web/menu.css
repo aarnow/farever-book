@@ -641,3 +641,70 @@ select, input[type=text] {
 .colldetail .srcs { margin: 0; padding-left: 18px; }
 .colldetail .srcs li { margin: 4px 0; }
 .colldetail .none { color: var(--faint); margin: 0; }
+
+/* ---- hunting log ------------------------------------------------------------ */
+.hunt .cards { margin-bottom: 14px; }
+.huntregs { display: flex; flex-wrap: wrap; gap: 6px; }
+.huntregs .chip { border: 1px solid var(--line); background: var(--panel);
+                  color: var(--dim); border-radius: 14px; padding: 4px 12px;
+                  font: inherit; font-size: 12px; cursor: pointer; }
+.huntregs .chip.on { color: var(--text); border-color: var(--accent); }
+.huntgrid { display: grid; gap: 8px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.hitem { display: flex; gap: 12px; align-items: center; background: var(--panel);
+         border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.hitem .pic { position: relative; width: 64px; height: 64px; flex: none;
+              border-radius: 6px; overflow: hidden; background: #121318;
+              display: grid; place-items: center; }
+.hitem .pic img { width: 100%; height: 100%; object-fit: cover;
+                  filter: grayscale(1) brightness(.5); }
+.hitem.seen .pic img { filter: none; }
+.hitem .tier { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9px;
+               text-align: center; background: rgba(0,0,0,.65); color: var(--accent);
+               text-transform: uppercase; letter-spacing: .3px; }
+.hitem .hb { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.hitem .nm { font-weight: 600; white-space: nowrap; overflow: hidden;
+             text-overflow: ellipsis; }
+.hitem .fam { color: var(--faint); font-size: 11px; }
+.hitem .kills { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
+.hitem .kills b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.hitem:not(.seen) .kills b { color: var(--faint); }
+.hitem .kills span { color: var(--dim); font-size: 11px; }
+.hitem .pips { display: flex; align-items: center; gap: 4px; }
+.hitem .pips i { width: 8px; height: 8px; border-radius: 50%;
+                 background: var(--panel-2); border: 1px solid var(--line); }
+.hitem .pips i.on { background: var(--accent); border-color: var(--accent); }
+.hitem .pips span { color: var(--faint); font-size: 11px; margin-left: 4px; }
+.hitem.done { border-color: #5E4B22; }
+.hitem.done .pips span { color: var(--accent); }
+
+.huntview { display: inline-flex; margin: 0 0 12px; }
+.huntview button { padding: 7px 16px; }
+.famgrid { display: grid; gap: 10px;
+           grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.famcard { background: var(--panel); border: 1px solid var(--line);
+           border-radius: 10px; padding: 10px 12px; }
+.famcard .ftop { display: flex; gap: 12px; align-items: center; }
+.famcard .pic { width: 64px; height: 64px; flex: none; border-radius: 8px;
+                overflow: hidden; background: #121318; display: grid;
+                place-items: center; }
+.famcard .pic img { width: 100%; height: 100%; object-fit: cover;
+                    filter: grayscale(1) brightness(.5); }
+.famcard.seen .pic img { filter: none; }
+.famcard .ft { display: flex; flex-direction: column; min-width: 0; }
+.famcard .nm { font-size: 14px; }
+.famcard .kills { display: flex; align-items: baseline; gap: 5px; }
+.famcard .kills b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.famcard .kills span, .famcard .fam { color: var(--dim); font-size: 11px; }
+.fdrop { display: flex; align-items: center; gap: 10px; margin-top: 10px;
+         padding-top: 8px; border-top: 1px solid var(--line); }
+.fdrop .ic { width: 36px; height: 36px; flex: none; border-radius: 6px;
+             background: #121318; border: 1px solid var(--line); overflow: hidden; }
+.fdrop .ic img { width: 100%; height: 100%; object-fit: contain;
+                 filter: grayscale(1) brightness(.6); }
+.fdrop.own .ic img { filter: none; }
+.fdrop .dt { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.fdrop .dn { font-weight: 600; color: #B57BEF; font-size: 12px; }
+.fdrop .do { color: var(--faint); font-size: 11px; }
+.fdrop .dh { color: var(--dim); font-size: 11px; text-align: right; max-width: 110px; }
+.fdrop.own .dh { color: var(--heal); font-weight: 700; }

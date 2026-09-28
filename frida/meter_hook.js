@@ -420,6 +420,7 @@ function hookGameTick(base) {
         Interceptor.attach(base.add(fi * 8).readPointer(), {
             onEnter: function () {
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
+                if (codexDue && hbKeys) { codexDue = false; refreshCodex(); }
             }
         });
     } catch (e) {
@@ -823,6 +824,83 @@ function checkCollection() {
     } catch (e) {}
 }
 
+// ---- the codex: the game's own kill count per monster ----
+// Restored from the original (measured 2026-08-05). The per-character store
+// is replicated, so it is pointer reads plus the game's native map calls:
+//
+//   Hero.player -> Player.progress -> Progress.unitsProgress (hxbit.MapData)
+//     -> MapData.map (a virtual; hl_vvirtual.value @8 is the real StringMap)
+//     -> StringMap.h -> $std.hbkeys / $std.hbget(h, utf16(unitKind))
+//     -> { killCount, rank }
+//
+// killCount is a LIFETIME total per monster kind, still climbing after the
+// codex entry is mastered. hbkeys/hbget ALLOCATE, so this runs on the game
+// thread only (the camera hook), on a slow clock.
+let hbGet = null, hbKeys = null;
+let codexDue = true;
+let codexSig = null;
+
+function setupCodexApi(base) {
+    const N = DATA.map_natives || {};
+    try {
+        if (N.hbget != null)
+            hbGet = new NativeFunction(base.add(N.hbget * 8).readPointer(),
+                                       "pointer", ["pointer", "pointer"]);
+        if (N.hbkeys != null)
+            hbKeys = new NativeFunction(base.add(N.hbkeys * 8).readPointer(),
+                                        "pointer", ["pointer"]);
+        return hbGet !== null && hbKeys !== null;
+    } catch (e) { return false; }
+}
+
+function unitsProgressMap() {
+    try {
+        if (!localHero || localHero.isNull() || !OFF.Progress
+            || OFF.Player.progress == null) return null;
+        const player = localHero.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return null;
+        const prog = player.add(OFF.Player.progress).readPointer();
+        if (!prog || prog.isNull()) return null;
+        const md = prog.add(OFF.Progress.unitsProgress).readPointer();
+        if (!md || md.isNull()) return null;
+        const v = md.add(OFF.MapData.map).readPointer();
+        if (!v || v.isNull()) return null;
+        const inner = v.readPointer().readU32() === 15
+            ? v.add(OFF.MapData.value).readPointer() : v;
+        if (!inner || inner.isNull()) return null;
+        const h = inner.add(OFF.StringMap.h).readPointer();
+        return (h && !h.isNull()) ? h : null;
+    } catch (e) { return null; }
+}
+
+// GAME THREAD ONLY.
+function refreshCodex() {
+    const h = unitsProgressMap();
+    if (!h || !hbKeys || !hbGet) return;
+    try {
+        const keys = hbKeys(h);
+        if (!keys || keys.isNull()) return;
+        // hl_varray: { t@0, at@8, size@16, pad@20 }, elements from +24.
+        const n = keys.add(16).readS32();
+        if (n < 0 || n > 20000) return;
+        const out = {};
+        for (let i = 0; i < n; i++) {
+            const kb = keys.add(24 + i * 8).readPointer();
+            if (!kb || kb.isNull()) continue;
+            const id = kb.readUtf16String();
+            if (!id) continue;
+            const v = hbGet(h, kb);
+            if (!v || v.isNull()) continue;
+            out[id] = [v.add(OFF.CodexProxy.count).readS32(),
+                       v.add(OFF.CodexProxy.rank).readS32()];
+        }
+        const sig = localName + JSON.stringify(out);
+        if (sig === codexSig) return;
+        codexSig = sig;
+        send({ kind: "codex", hero: localName, ranks: out });
+    } catch (e) {}
+}
+
 function resetBossBars() {
     // A loading screen tears the HUD down: a bar that was up on the way out
     // must not stay "up" in the new zone. No up/down events — the pull isn't
@@ -1019,6 +1097,8 @@ function main() {
     if (!base) { log("!! HL functions_ptrs table not found"); send({ kind: "ready", ok: false }); return; }
 
     if (!setupNameApi()) log("skill-name API unavailable; showing raw ids");
+    if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");
+    setInterval(function () { codexDue = true; }, 8000);
 
     // DATA.map_fn (Main.getMapId) is no longer resolved or called — measured
     // returning the machine hostname; the zone signal reads layer.world.level.
