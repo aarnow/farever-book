@@ -56,3 +56,4 @@ analysis_out/bestiary_img/
 analysis_out/map_tiles/
 .meter_elements.json
 analysis_out/skill_img/
+.meter_itemcodex.json

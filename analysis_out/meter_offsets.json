@@ -187,7 +187,8 @@
   "Collection": {
     "pets": 168,
     "mounts": 136,
-    "gliders": 128
+    "gliders": 128,
+    "gears": 160
   },
   "ArrayProxyData": {
     "array": 40
@@ -285,5 +286,9 @@
     "upgradeLevel": 156,
     "slots": 160,
     "effects": 176
+  },
+  "ItemProxy": {
+    "itemCount": 20,
+    "rank": 24
   }
 }

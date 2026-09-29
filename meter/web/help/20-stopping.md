@@ -32,9 +32,12 @@ seul à la prochaine session.
   contenu du coffre de fin. Les records par difficulté sont
   marqués d'une étoile.
 
-* **Collection** — tes montures, planeurs et compagnons. Farever+ la lit
-  tout seul quand le jeu est ouvert et la garde pour la consulter jeu fermé.
-  Clique sur un élément pour savoir comment l'obtenir.
+* **Collection** — tes montures, planeurs et compagnons, les apparences
+  d'équipement (armures, filtrables par emplacement) et les objets du
+  Codex (composants, minerais, tissus, cuirs) avec combien tu en as obtenu et
+  leur rang. Farever+ la lit tout seul quand le jeu est ouvert et la garde
+  pour la consulter jeu fermé. Clique sur un élément pour savoir comment
+  l'obtenir (butin, factions, récolte, fabrication, démontage…).
 
 * **Chasse** — ton tableau de chasse : combien de fois ton personnage a tué
   chaque monstre, d'après le Codex du jeu, et le rang atteint.

@@ -104,6 +104,8 @@ DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
 # Each character's kill counts per monster (the game's codex), last read.
 CODEX_FILE = _WRITABLE / ".meter_codex.json"
+# Each character's item codex (item -> [count, rank]), last read.
+ITEM_CODEX_FILE = _WRITABLE / ".meter_itemcodex.json"
 # Each character's world elements (chests, orbs, obelisks...) -> state.
 ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 LOG_FILE = DATA_HOME / "meter.log"
@@ -2868,6 +2870,8 @@ class App:
         self._collection_owned = None       # .meter_collection.json, loaded
         self._codex_data = None             # .meter_codex.json, loaded
         self._elements_logged = False
+        self._item_codex_logged = False
+        self._item_codex_cache = (None, {})
         self._roster = []                   # players around, from the hook
         self._roster_at = 0.0
         self._profiles = None               # profiles analysed this session
@@ -3535,7 +3539,7 @@ class App:
             print(f"[meter] collection element types: {p['types']}",
                   file=sys.stderr)
         owned = {k: sorted(set(p.get(k) or ()))
-                 for k in ("mounts", "gliders", "pets")}
+                 for k in ("mounts", "gliders", "pets", "gears")}
 
         def done():
             owned["at"] = time.time()
@@ -3548,7 +3552,40 @@ class App:
                       file=sys.stderr)
             print(f"[meter] collection: {len(owned['mounts'])} mounts, "
                   f"{len(owned['gliders'])} gliders, {len(owned['pets'])} "
-                  "companions", file=sys.stderr)
+                  f"companions, {len(owned['gears'])} gear appearances "
+                  f"(e.g. {owned['gears'][:3]})", file=sys.stderr)
+        self._enqueue(done)()
+
+    def on_item_codex(self, p):
+        """A character's item codex (item -> [count, rank]), read in game.
+        Saved per character. Hook thread. The first read of a session logs
+        what it holds, by item type — the catalogue is built on that."""
+        hero = p.get("hero") or "?"
+        items = {k: v for k, v in (p.get("items") or {}).items()
+                 if isinstance(v, list) and len(v) == 2}
+
+        def done():
+            try:
+                data = json.loads(ITEM_CODEX_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                data = {}
+            data.setdefault("heroes", {})[hero] = {"items": items,
+                                                   "at": time.time()}
+            data["last"] = hero
+            try:
+                ITEM_CODEX_FILE.write_text(json.dumps(data), encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the item codex: {e}",
+                      file=sys.stderr)
+            if not self._item_codex_logged:
+                self._item_codex_logged = True
+                by_type = defaultdict(int)
+                for iid in items:
+                    by_type[item_type(iid) or "?"] += 1
+                print(f"[meter] item codex: {hero}, {len(items)} items "
+                      f"(other value type: {p.get('other')}); by type: "
+                      f"{dict(sorted(by_type.items(), key=lambda kv: -kv[1]))}",
+                      file=sys.stderr)
         self._enqueue(done)()
 
     def on_codex(self, p):
@@ -3722,8 +3759,25 @@ class App:
                 "à jour toute seule quand le jeu est ouvert."
                 if at else "Pas encore lue : lance le jeu avec Farever+ "
                            "ouvert, ta collection se remplira toute seule.")
+        codex = self._item_codex()
+        entry = (codex.get("heroes") or {}).get(codex.get("last")) or {}
         return [{"k": "collection", "id": "collection",
-                 "sync": sync, **collection_view(owned)}]
+                 "sync": sync, **collection_view(owned,
+                                                 entry.get("items") or {})}]
+
+    def _item_codex(self):
+        try:
+            path = ITEM_CODEX_FILE
+            mtime = path.stat().st_mtime
+        except OSError:
+            return {}
+        if self._item_codex_cache[0] != mtime:
+            try:
+                self._item_codex_cache = (mtime, json.loads(
+                    path.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                return {}
+        return self._item_codex_cache[1]
 
     def on_dungeon_loot(self, name, loot):
         """Loot that arrived after the run was saved (the reward chest):
@@ -4671,7 +4725,43 @@ def collection_catalogue():
 
 COLLECTION_CATS = (("mounts", "Montures", "monture"),
                    ("gliders", "Planeurs", "planeur"),
-                   ("pets", "Compagnons", "compagnon"))
+                   ("pets", "Compagnons", "compagnon"),
+                   ("gears", "Équipements", "équipement"),
+                   ("items", "Objets", "objet"))
+# the armour appearances: slots in the game's order, and the aptitudes
+GEAR_SLOTS = (("Head", "Tête"), ("Shoulders", "Épaules"), ("Chest", "Torse"),
+              ("Hands", "Mains"), ("Waist", "Taille"), ("Legs", "Jambes"),
+              ("Feet", "Pieds"), ("Back", "Dos"))
+# a piece's aptitudes -> the classes that wear it (unit.props.aptitudes:
+# Warrior Fighter, Rogue Assassin, Mage Wizard, Priest Cleric); none = all
+APTITUDE_CLASSES = {"Fighter": "warrior", "Assassin": "rogue",
+                    "Wizard": "mage", "Cleric": "priest"}
+GEAR_CLASSES = ("warrior", "mage", "rogue", "priest")
+FACTION_ACTS = (("WorldElite", "élite", "élites"),
+                ("FightStone", "pierre de combat", "pierres de combat"),
+                ("ChestOrb", "orbe à coffre", "orbes à coffre"),
+                ("WorldCamp", "camp", "camps"),
+                ("TimerCollectRun", "course", "courses"),
+                ("Ascension", "ascension", "ascensions"))
+# the item codex's rank steps (codex_units.json "item": 1, 5, 25, 50)
+ITEM_RANKS = 4
+
+
+_CODEX_ITEMS = None
+
+
+def codex_items_catalogue():
+    """[{id, rarity, type, src, uses}]: the items the game's item codex
+    counts (crafting components, ores, cloth, leather), from
+    analysis_out/codex_items.json (hltools/codex_items.py)."""
+    global _CODEX_ITEMS
+    if _CODEX_ITEMS is None:
+        try:
+            _CODEX_ITEMS = json.loads(
+                (ANALYSIS / "codex_items.json").read_text(encoding="utf-8"))
+        except Exception:
+            _CODEX_ITEMS = []
+    return _CODEX_ITEMS
 CLASS_LABELS = {"warrior": "Guerrier", "mage": "Mage", "rogue": "Voleur",
                 "priest": "Prêtre"}
 CHEST_LABELS = {"VaultChest": "Coffre-fort", "WorldChest": "Coffre",
@@ -4739,7 +4829,54 @@ def _source_text(s, bosses):
         return f"Succès « {name} »" + (f" : {desc}" if desc and desc != name
                                         else "")
     if k == "starter":
-        return (f"Planeur de départ du {CLASS_LABELS.get(s.get('cls'), '?')}")
+        what = "Équipement" if s.get("gear") else "Planeur"
+        return f"{what} de départ du {CLASS_LABELS.get(s.get('cls'), '?')}"
+    if k == "world":
+        lvl = s.get("lvl") or 1
+        return (f"Butin aléatoire du monde (ennemis, coffres, activités) "
+                f"de niveau {max(1, lvl - 1)} à {lvl + 2}")
+    if k == "faction":
+        f = s.get("f")
+        info = (collection_catalogue().get("factions") or {}).get(f) or {}
+        name = _fr_names("unitType").get(f) or _pretty_id(f)
+        dgs = [_fr_names("activity").get(a) or _pretty_id(a)
+               for a in info.get("dungeons") or ()]
+        acts = [f"{n} {one if n == 1 else many}"
+                for key, one, many in FACTION_ACTS
+                for n in [(info.get("acts") or {}).get(key)] if n]
+        n = info.get("chests") or 0
+        lines = [f"Butin de la faction {name} : 20 % par activité"
+                 + (", 5 % par coffre" if n else "")]
+        if dgs:
+            lines.append("Donjons : " + ", ".join(dgs))
+        if acts:
+            lines.append("Activités du monde : " + ", ".join(acts))
+        if n:
+            lines.append(f"Coffres de la faction : {n}")
+        return "\n".join(lines)
+    if k == "gather":
+        name = _fr_names("gatherable").get(s.get("id")) or _pretty_id(
+            s.get("id"))
+        return f"Récolte : {name}{pct}"
+    if k == "craft":
+        job = _fr_names("job").get(s.get("job")) or _pretty_id(s.get("job"))
+        inputs = " + ".join(f"{n} × {item_label(i)}"
+                            for i, n in s.get("input") or ())
+        made = f" (×{s['n']})" if (s.get("n") or 1) > 1 else ""
+        return (f"Fabrication{made} : {job} niv. {s.get('lvl') or 1}"
+                + (f" — {inputs}" if inputs else ""))
+    if k == "scrap":
+        what = "objet rare" if s.get("id") == "Scrap_Rare" else "objet"
+        return f"Recyclage d'un {what} à la station d'Étincelle{pct}"
+    if k == "combine":
+        return "Combinaison : " + " + ".join(
+            f"{n} × {item_label(i)}" for i, n in s.get("from") or ())
+    if k == "salvage":
+        lo, hi = (s.get("lvl") or [1, 25])[:2]
+        rar = s.get("rarity")
+        what = (f"d'un équipement {rarity_label(rar).lower()}" if rar
+                else "d'un équipement")
+        return f"Démontage {what} de niveau {lo} à {hi}"
     if k == "spawn":
         zones = ", ".join(_zone_label(z) for z in s.get("zones") or ())
         where = "en faille" if s.get("rift") else (zones or "dans le monde")
@@ -4763,10 +4900,16 @@ def _spark_units():
     return _SPARK
 
 
-def collection_view(owned):
+def collection_view(owned, item_codex=None):
     """The Collection page's data: categories with counts, every item with
-    its name, rarity, whether it is owned, description and sources."""
-    cat = collection_catalogue()
+    its name, rarity, whether it is owned, description and sources — and
+    for the "items" category (the game's item codex) each one's count and
+    rank."""
+    cat = dict(collection_catalogue())
+    item_codex = item_codex or {}
+    cat["items"] = codex_items_catalogue()
+    owned = dict(owned, items=[k for k, v in item_codex.items()
+                               if v and v[0] > 0])
     bosses = {d.get("boss"): d.get("kind") for d in dungeon_catalogue()}
     cats, items = [], []
     for key, label, one in COLLECTION_CATS:
@@ -4793,15 +4936,32 @@ def collection_view(owned):
                                               if z not in spawns[key2]["zones"]]
                 else:
                     srcs.append(s)
+            count, rank = (item_codex.get(iid) or [0, 0])[:2] \
+                if key == "items" else (None, None)
             items.append({
                 "id": iid, "c": key, "own": iid in mine,
+                "count": count, "rank": rank,
+                "rmax": ITEM_RANKS if key == "items" else None,
+                "uses": e.get("uses") if key == "items" else None,
                 "name": _unit_label(iid) if pet else item_label(iid),
                 "rk": "legendary" if spark else rar.lower(),
                 "rar": "Étincelle" if spark else
                        (rarity_label(rar) if rar else ""),
                 "desc": _fr_ref(_fr_desc("item").get(iid)) if not pet else "",
-                "src": [_source_text(s, bosses) for s in srcs]})
-    return {"cats": cats, "items": items}
+                "sl": e.get("slot"),
+                "slot": dict(GEAR_SLOTS).get(e.get("slot")),
+                "cls": [APTITUDE_CLASSES[a] for a in e.get("apt") or ()
+                        if a in APTITUDE_CLASSES],
+                "apt": (", ".join(CLASS_LABELS[APTITUDE_CLASSES[a]]
+                                  for a in e.get("apt") or ()
+                                  if a in APTITUDE_CLASSES)
+                        or "toutes") if key == "gears" else "",
+                "lvl": e.get("lvl"),
+                "src": [line for s in srcs
+                        for line in _source_text(s, bosses).split("\n")]})
+    return {"cats": cats, "items": items,
+            "slots": [{"v": v, "t": t} for v, t in GEAR_SLOTS],
+            "classes": [{"v": c, "t": CLASS_LABELS[c]} for c in GEAR_CLASSES]}
 
 
 _BESTIARY = None
@@ -5692,6 +5852,10 @@ def _data_is_current():
             return False
     except (OSError, ValueError):
         pass
+    if not (ANALYSIS / "codex_items.json").exists():
+        print("[meter] codex_items.json absent — regenerating for the item "
+              "collection.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "augments.json").exists():
         print("[meter] augments.json absent — regenerating for the gear "
               "augments.", file=sys.stderr)
@@ -5712,7 +5876,12 @@ def _data_is_current():
         print("[meter] bestiary.json absent — regenerating for the hunting "
               "log.", file=sys.stderr)
         return False
-    if not (ANALYSIS / "collection.json").exists():
+    try:
+        has_gears = "gears" in json.loads(
+            (ANALYSIS / "collection.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        has_gears = False
+    if not has_gears:
         print("[meter] collection.json absent — regenerating for the "
               "Collection tab.", file=sys.stderr)
         return False
@@ -7169,6 +7338,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_codex(p)
+        elif k == "itemcodex":
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_item_codex(p)
         elif k in ("roster", "profile"):
             ov = _OVERLAY["ref"]
             if ov is not None:

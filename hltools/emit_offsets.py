@@ -369,7 +369,8 @@ def main():
         "AccountProgress": {"collection": acct["collection"][0]},
         # mounts / gliders: the same proxy arrays, of item kinds.
         "Collection": {"pets": coll["pets"][0], "mounts": coll["mounts"][0],
-                       "gliders": coll["gliders"][0]},
+                       "gliders": coll["gliders"][0],
+                       "gears": coll["gears"][0]},
         # hxbit wraps a replicated array in a proxy: Group.players is an
         # ArrayProxyData whose ArrayDyn wraps an ArrayObj. Two hops, and the
         # party roster is the reason they are here.
@@ -407,6 +408,9 @@ def main():
                             "arsenals", "prayerSequence")},
         # the talent map's values ({rank}) and the arsenal map's ({skills})
         "RankProxy": {"rank": offs("hxbit.ObjProxy_Orank_Int")["rank"][0]},
+        # Progress.itemProgress's values: the item codex (count, rank)
+        "ItemProxy": {k: offs("hxbit.ObjProxy_OitemCount_Int_rank_Int")[k][0]
+                      for k in ("itemCount", "rank")},
         "SkillsProxy": {"skills": offs(
             "hxbit.ObjProxy_Oskills_Arr_Data_SkillKind")["skills"][0]},
         "Skill": {"kind": skill["kind"][0]},
@@ -505,6 +509,16 @@ def main():
                   f"({len(tal['trees'])} trees, {len(tal['runes'])} runes)")
         except Exception as e:
             print(f"[!] talent trees skipped ({e})")
+        try:
+            import codex_items
+            ci = codex_items.build(Path(hlboot).parent,
+                                   _OUT_DIR / "collection_img")
+            (_OUT_DIR / "codex_items.json").write_text(
+                json.dumps(ci, indent=0), encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'codex_items.json'} "
+                  f"({len(ci)} items)")
+        except Exception as e:
+            print(f"[!] item codex catalogue skipped ({e})")
         try:
             import bestiary_data
             best = bestiary_data.build(Path(hlboot).parent, codex,
@@ -663,8 +677,9 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("ach", "activity", "attribute", "item", "itemType", "rarity",
-             "skill", "unit", "unitType", "zone")
+FR_SHEETS = ("ach", "activity", "attribute", "gatherable", "item",
+             "itemType", "job", "rarity", "skill", "unit", "unitType",
+             "zone")
 # Sheets whose French descriptions the app shows (the collection's details).
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc")}
 

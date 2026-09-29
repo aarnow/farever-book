@@ -2626,6 +2626,35 @@
 "WaterGolems": "Golems d'eau",
 "Kobold": "Kobolds"
 },
+"job": {
+"Mining": "Mineur",
+"Herbalism": "Herboriste",
+"Fishing": "Pêcheur",
+"Archeology": "Archéologue",
+"Blacksmith": "Forgeron",
+"Alchemist": "Alchimiste",
+"Outfitter": "Couturier",
+"Jeweller": "Joaillier",
+"Cook": "Cuisinier",
+"Enchanter": "Enchanteur"
+},
+"gatherable": {
+"Ore_Copper_Small": "Amas de cuivre",
+"Ore_Copper_Large": "Filon de cuivre",
+"Ore_Iron_Small": "Amas de fer",
+"Ore_Iron_Big": "Filon de fer",
+"Ore_Tin_Small": "Amas d'étain",
+"Ore_Tin_Large": "Filon d'étain",
+"Tungstene": "Gisement de tungstène",
+"Madrigold_Small": "Pousse de galantula",
+"Madrigold_Large": "Buisson de galantula",
+"Lavendula_Small": "Pousse de lavendula",
+"Lavendula_Large": "Buisson de lavendula",
+"AncientThyme_Small": "Pousse de thym ancien",
+"AncientThyme_Large": "Buisson de thym ancien",
+"Zealotus_Small": "Pousse de zélotus",
+"Zealotus_Large": "Buisson de zélotus"
+},
 "activity": {
 "Rift": "Faille",
 "R1_POI_Nepsid_Boss": "Gorge de Crabgantua",

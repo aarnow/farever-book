@@ -846,7 +846,9 @@ function checkCollection() {
         const msg = { kind: "collection",
                       mounts: readCollList(coll, C.mounts, types, "mounts"),
                       gliders: readCollList(coll, C.gliders, types, "gliders"),
-                      pets: readCollList(coll, C.pets, types, "pets") };
+                      pets: readCollList(coll, C.pets, types, "pets"),
+                      // the armour appearances (null on older offsets)
+                      gears: readCollList(coll, C.gears, types, "gears") };
         if (msg.mounts === null || msg.gliders === null || msg.pets === null)
             return;
         const sig = JSON.stringify(msg);
@@ -906,6 +908,39 @@ function unitsProgressMap() {
     } catch (e) { return null; }
 }
 
+// The item codex: Progress.itemProgress, item id -> {itemCount, rank} —
+// the same route as the monsters' (a StringMap of hxbit proxies). A value of
+// another type is reported by its class name, once, for the log.
+let itemCodexSig = null;
+
+// GAME THREAD ONLY.
+function refreshItemCodex() {
+    if (!OFF.ItemProxy || OFF.Progress.itemProgress == null) return;
+    const h = progressMap("itemProgress");
+    if (!h || !hbKeys || !hbGet) return;
+    const out = {};
+    let other = null;
+    const keys = hbKeys(h);
+    if (!keys || keys.isNull()) return;
+    const n = keys.add(16).readS32();
+    for (let i = 0; i < n && i < 5000; i++) {
+        const kb = keys.add(24 + i * 8).readPointer();
+        if (!kb || kb.isNull()) continue;
+        const id = kb.readUtf16String();
+        const v = hbGet(h, kb);
+        if (!id || !v || v.isNull()) continue;
+        const t = typeName(v);
+        if (t === "hxbit.ObjProxy_OitemCount_Int_rank_Int")
+            out[id] = [v.add(OFF.ItemProxy.itemCount).readS32(),
+                       v.add(OFF.ItemProxy.rank).readS32()];
+        else if (other === null) other = t;
+    }
+    const sig = localName + JSON.stringify(out);
+    if (sig === itemCodexSig) return;
+    itemCodexSig = sig;
+    send({ kind: "itemcodex", hero: localName, items: out, other: other });
+}
+
 // GAME THREAD ONLY.
 function refreshCodex() {
     const h = unitsProgressMap();
@@ -928,9 +963,11 @@ function refreshCodex() {
                        v.add(OFF.CodexProxy.rank).readS32()];
         }
         const sig = localName + JSON.stringify(out);
-        if (sig === codexSig) return;
-        codexSig = sig;
-        send({ kind: "codex", hero: localName, ranks: out });
+        if (sig !== codexSig) {
+            codexSig = sig;
+            send({ kind: "codex", hero: localName, ranks: out });
+        }
+        refreshItemCodex();
     } catch (e) {}
 }
 

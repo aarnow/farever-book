@@ -825,7 +825,8 @@
 "src": [
 {
 "k": "starter",
-"cls": "rogue"
+"cls": "rogue",
+"gear": false
 }
 ]
 },
@@ -835,7 +836,8 @@
 "src": [
 {
 "k": "starter",
-"cls": "warrior"
+"cls": "warrior",
+"gear": false
 }
 ]
 },
@@ -895,7 +897,8 @@
 "src": [
 {
 "k": "starter",
-"cls": "mage"
+"cls": "mage",
+"gear": false
 }
 ]
 },
@@ -905,7 +908,8 @@
 "src": [
 {
 "k": "starter",
-"cls": "priest"
+"cls": "priest",
+"gear": false
 }
 ]
 },
@@ -1569,6 +1573,6998 @@
 "chance": 1.0
 }
 ]
+}
+],
+"gears": [
+{
+"id": "Chest_C_BaseClothes",
+"rarity": "Common",
+"src": [],
+"slot": "Chest",
+"apt": [],
+"lvl": null
+},
+{
+"id": "Chest_Starter_Fig",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "warrior",
+"gear": true
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": 1
+},
+{
+"id": "Chest_Z1U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": 2
+},
+{
+"id": "Chest_Z1U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": 8
+},
+{
+"id": "Chest_RBee_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Chest_RCrimson_Fig_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 5,
+"n": 1,
+"input": [
+[
+"BronzeIngot",
+18
+],
+[
+"Ramgold",
+8
+]
+]
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": 20
+},
+{
+"id": "Chest_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Chest_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Chest_RKobold_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"CopperIngot",
+10
+],
+[
+"Fang_Z1",
+20
+],
+[
+"FragmentOfEarth",
+1
+]
+]
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 6
+},
+{
+"id": "Chest_Z1U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 4
+},
+{
+"id": "Chest_Z1U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Chest_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Chest_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Chest_RManfish_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z1U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Chest_Z1U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Chest_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Chest_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Chest_RCrimson_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z1U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Chest_Z1U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Chest_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Chest_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Chest_RDemon_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Chest",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Chest_Starter_Ass",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "rogue",
+"gear": true
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Chest_RCrimson_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z1U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": 2
+},
+{
+"id": "Chest_Z1U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": 8
+},
+{
+"id": "Chest_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Chest_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Chest_RDemon_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Chest_RKobold_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Chest_RBee_AssWiz_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"TannedLeather",
+15
+],
+[
+"GlossyChitin",
+12
+],
+[
+"SoftFur",
+5
+],
+[
+"FragmentOfNature",
+2
+]
+]
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 15
+},
+{
+"id": "Chest_Z1U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Chest_Z1U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Chest_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Chest_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Chest_RManfish_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z1U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Chest_Z1U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Chest_RBee_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Chest_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Chest",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Chest_Starter_Wiz",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "mage",
+"gear": true
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Chest_Z1U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard"
+],
+"lvl": 2
+},
+{
+"id": "Chest_Z1U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard"
+],
+"lvl": 8
+},
+{
+"id": "Chest_RCrimson_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Chest_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Chest_RCrimson_WizCle_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 5,
+"n": 1,
+"input": [
+[
+"Cloth_Z1",
+20
+],
+[
+"SoftFur",
+6
+],
+[
+"Ramgold",
+8
+]
+]
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 20
+},
+{
+"id": "Chest_Z1U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Chest_Z1U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Chest_RBee_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Chest_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Chest_RDemon_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Chest",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Chest_Starter_Cle",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "priest",
+"gear": true
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Chest_RManfish_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Chest_RKobold_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Chest_Z1U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": 2
+},
+{
+"id": "Chest_Z1U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": 8
+},
+{
+"id": "Chest_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Chest_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Chest",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Legs_Starter_Fig",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "warrior",
+"gear": true
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter"
+],
+"lvl": 1
+},
+{
+"id": "Legs_RKobold_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter"
+],
+"lvl": 2
+},
+{
+"id": "Legs_Z1U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter"
+],
+"lvl": 8
+},
+{
+"id": "Legs_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Legs_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Legs_RManfish_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 4
+},
+{
+"id": "Legs_Z1U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Legs_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Legs_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Legs_RDemon_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Legs_RCrimson_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Legs_Z1U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Legs_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Legs_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Legs_Z1U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Legs_Z1U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Legs_RBee_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Legs_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Legs",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Legs_Starter_Ass",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "rogue",
+"gear": true
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Legs_Z1U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin"
+],
+"lvl": 2
+},
+{
+"id": "Legs_Z1U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin"
+],
+"lvl": 8
+},
+{
+"id": "Legs_RBee_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Legs_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Legs_RKobold_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Legs_Z1U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Legs_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Legs_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Legs_RDemon_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Legs_RManfish_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Legs_RCrimson_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Legs_Z1U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Legs_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Legs_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Legs",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Legs_Starter_Wiz",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "mage",
+"gear": true
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Legs_RKobold_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": 2
+},
+{
+"id": "Legs_Z1U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": 8
+},
+{
+"id": "Legs_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Legs_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Legs_RDemon_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Legs_Z1U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Legs_Z1U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Legs_RBee_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Legs_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Legs",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Legs_Starter_Cle",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "priest",
+"gear": true
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Legs_RManfish_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Legs_RCrimson_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Legs_Z1U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": 2
+},
+{
+"id": "Legs_Z1U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": 8
+},
+{
+"id": "Legs_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Legs_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Legs",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Feet_Starter_Fig",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "warrior",
+"gear": true
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": 1
+},
+{
+"id": "Feet_Z1U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": 2
+},
+{
+"id": "Feet_Z1U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": 8
+},
+{
+"id": "Feet_RBee_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Feet_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Feet_RDemon_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter"
+],
+"lvl": 1
+},
+{
+"id": "Feet_RKobold_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z1U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 4
+},
+{
+"id": "Feet_Z1U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Feet_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Feet_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Feet_RManfish_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z1U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Feet_Z1U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Feet_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Feet_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Feet_RCrimson_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 5,
+"n": 1,
+"input": [
+[
+"BronzeIngot",
+12
+],
+[
+"Ramgold",
+5
+]
+]
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 20
+},
+{
+"id": "Feet_RKobold_FigCle_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"BronzeIngot",
+8
+],
+[
+"Fang_Z1",
+15
+],
+[
+"KoboldMetal",
+5
+],
+[
+"FragmentOfEarth",
+2
+]
+]
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 15
+},
+{
+"id": "Feet_Z1U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Feet_Z1U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Feet_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 17
+}
+],
+"slot": "Feet",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 17
+},
+{
+"id": "Feet_Starter_Ass",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "rogue",
+"gear": true
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Feet_RManfish_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Feet_RCrimson_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z1U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": 2
+},
+{
+"id": "Feet_Z1U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": 8
+},
+{
+"id": "Feet_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Feet_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Feet_Z1U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Feet_Z1U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Feet_RBee_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Feet_RManfish_AssWiz_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"TannedLeather",
+8
+],
+[
+"Fin_Z1",
+15
+],
+[
+"FragmentOfWater",
+1
+]
+]
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 6
+},
+{
+"id": "Feet_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Feet_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Feet_RKobold_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z1U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Feet_Z1U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Feet_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Feet_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Feet_RDemon_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Feet",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Feet_Starter_Wiz",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "mage",
+"gear": true
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Feet_RManfish_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Feet_RCrimson_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z1U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": 2
+},
+{
+"id": "Feet_Z1U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": 8
+},
+{
+"id": "Feet_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Feet_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Feet_RKobold_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Feet_RBee_WizCle_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"Cloth_Z1",
+12
+],
+[
+"SoftFur",
+3
+],
+[
+"GlossyChitin",
+10
+],
+[
+"FragmentOfNature",
+2
+]
+]
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 15
+},
+{
+"id": "Feet_Z1U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Feet_Z1U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Feet_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Feet_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Feet_RDemon_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Feet",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Feet_Starter_Cle",
+"rarity": "Common",
+"src": [
+{
+"k": "starter",
+"cls": "priest",
+"gear": true
+}
+],
+"slot": "Feet",
+"apt": [
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Feet_Z1U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Feet",
+"apt": [
+"Cleric"
+],
+"lvl": 2
+},
+{
+"id": "Feet_Z1U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Feet",
+"apt": [
+"Cleric"
+],
+"lvl": 8
+},
+{
+"id": "Feet_RBee_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Feet",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Feet_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Feet",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Feet_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Feet",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Shoulders_RKobold_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Shoulders_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Shoulders_RDemon_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter"
+],
+"lvl": 1
+},
+{
+"id": "Shoulders_RManfish_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Shoulders_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Shoulders_RCrimson_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Shoulders_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Shoulders_RBee_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Shoulders_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Shoulders_RKobold_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_RBee_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_RDemon_Ass_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 6,
+"n": 1,
+"input": [
+[
+"TannedLeather",
+18
+],
+[
+"SoftFur",
+4
+],
+[
+"VeiledWing",
+10
+],
+[
+"FragmentOfChaos",
+2
+]
+]
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin"
+],
+"lvl": 25
+},
+{
+"id": "Shoulders_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Shoulders_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Shoulders_RManfish_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Shoulders_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Shoulders_RDemon_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Shoulders_RCrimson_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Shoulders_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Shoulders_RKobold_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_RBee_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Shoulders_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Shoulders_RManfish_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Shoulders_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Shoulders_RCrimson_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Shoulders_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Shoulders_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Shoulders_RDemon_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Shoulders",
+"apt": [
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Head_RManfish_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Head_RDemon_Fig_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 6,
+"n": 1,
+"input": [
+[
+"BronzeIngot",
+18
+],
+[
+"DemonicHorn",
+16
+],
+[
+"FragmentOfChaos",
+2
+]
+]
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter"
+],
+"lvl": 25
+},
+{
+"id": "Head_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Head_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Head_RCrimson_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Head_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Head_RBee_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Head_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Head_RDemon_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Head_RKobold_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Head_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Head",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Head_RManfish_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Head_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Head_RKobold_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Head_RBee_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Head_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Head_RCrimson_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Head_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Head_RDemon_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Head",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Head_RManfish_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Head_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Head_RDemon_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Head_RKobold_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Head_RBee_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Head_RDemon_Craft_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 6,
+"n": 1,
+"input": [
+[
+"Cloth_Z1",
+18
+],
+[
+"SoftFur",
+4
+],
+[
+"TailSlice",
+16
+],
+[
+"FragmentOfChaos",
+2
+]
+]
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 25
+},
+{
+"id": "Head_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Head_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Head",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Head_RCrimson_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Head",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Head_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Head",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Head_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Head",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Head_Shop",
+"rarity": "Epic",
+"src": [],
+"slot": "Head",
+"apt": [],
+"lvl": null
+},
+{
+"id": "Hands_RCrimson_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter"
+],
+"lvl": 2
+},
+{
+"id": "Hands_Z1U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter"
+],
+"lvl": 8
+},
+{
+"id": "Hands_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Hands_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Hands_Z1U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 4
+},
+{
+"id": "Hands_Z1U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Hands_RBee_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Hands_RManfish_FigAss_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"CopperIngot",
+15
+],
+[
+"Fin_Z1",
+20
+],
+[
+"FragmentOfWater",
+1
+],
+[
+"Pearl",
+1
+]
+]
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Hands_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Hands_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Hands_RDemon_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Hands_RKobold_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Hands_Z1U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Hands_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Hands_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Hands_RManfish_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Hands_Z1U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Hands_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Hands_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Hands",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Hands_RManfish_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Hands_RCrimson_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin"
+],
+"lvl": 2
+},
+{
+"id": "Hands_Z1U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin"
+],
+"lvl": 8
+},
+{
+"id": "Hands_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Hands_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Hands_Z1U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Hands_Z1U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Hands_RBee_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Hands_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Hands_RDemon_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Hands_RKobold_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Hands_Z1U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Hands_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Hands_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Hands",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Hands_RManfish_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Hands_RCrimson_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard"
+],
+"lvl": 2
+},
+{
+"id": "Hands_Z1U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard"
+],
+"lvl": 8
+},
+{
+"id": "Hands_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Hands_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Hands_RKobold_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Hands_Z1U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Hands_Z1U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Hands_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Hands_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Hands_RDemon_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Hands",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Hands_Z1U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Hands",
+"apt": [
+"Cleric"
+],
+"lvl": 2
+},
+{
+"id": "Hands_Z1U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Hands",
+"apt": [
+"Cleric"
+],
+"lvl": 8
+},
+{
+"id": "Hands_RBee_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Hands",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Hands_RKobold_Cle_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"LinenBolt",
+8
+],
+[
+"Fang_Z1",
+15
+],
+[
+"FragmentOfEarth",
+1
+]
+]
+}
+],
+"slot": "Hands",
+"apt": [
+"Cleric"
+],
+"lvl": 6
+},
+{
+"id": "Hands_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Hands",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Hands_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Hands",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Waist_RManfish_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"CopperIngot",
+8
+],
+[
+"Fin_Z1",
+15
+],
+[
+"FragmentOfWater",
+1
+]
+]
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter"
+],
+"lvl": 6
+},
+{
+"id": "Waist_Z1U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter"
+],
+"lvl": 2
+},
+{
+"id": "Waist_Z1U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter"
+],
+"lvl": 8
+},
+{
+"id": "Waist_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Waist_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Waist_RCrimson_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Waist_Z1U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 4
+},
+{
+"id": "Waist_Z1U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Waist_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Waist_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Waist_Z1U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Waist_Z1U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Waist_RBee_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"BronzeIngot",
+8
+],
+[
+"Wing_Z1",
+15
+],
+[
+"GlossyChitin",
+5
+],
+[
+"FragmentOfNature",
+2
+]
+]
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 15
+},
+{
+"id": "Waist_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 17
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 17
+},
+{
+"id": "Waist_RKobold_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Waist_Z1U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Waist_Z1U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Waist_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Waist_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Waist_RDemon_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Waist",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Waist_RKobold_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Waist_Z1U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin"
+],
+"lvl": 2
+},
+{
+"id": "Waist_Z1U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin"
+],
+"lvl": 8
+},
+{
+"id": "Waist_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Waist_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Waist_RManfish_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Waist_RCrimson_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Waist_Z1U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Waist_Z1U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Waist_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Waist_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Waist_Z1U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Waist_Z1U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Waist_RBee_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Waist_RKobold_AssCle_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"TannedLeather",
+12
+],
+[
+"SoftFur",
+2
+],
+[
+"Fang_Z1",
+10
+],
+[
+"FragmentOfEarth",
+2
+]
+]
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Waist_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Waist_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Waist_RDemon_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Waist",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Waist_Z1U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard"
+],
+"lvl": 2
+},
+{
+"id": "Waist_Z1U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard"
+],
+"lvl": 8
+},
+{
+"id": "Waist_RBee_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Waist_RManfish_Wiz_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"LinenBolt",
+12
+],
+[
+"Fin_Z1",
+20
+],
+[
+"FragmentOfWater",
+2
+]
+]
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Waist_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Waist_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Waist_RManfish_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Waist_RCrimson_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Waist_Z1U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Waist_Z1U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Waist_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Waist_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Waist",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Waist_RKobold_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Waist",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Waist_Z1U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Waist",
+"apt": [
+"Cleric"
+],
+"lvl": 2
+},
+{
+"id": "Waist_Z1U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Waist",
+"apt": [
+"Cleric"
+],
+"lvl": 8
+},
+{
+"id": "Waist_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Waist",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Waist_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Waist",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Waist_RDemon_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Waist",
+"apt": [
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Back_RCrimson_Fig",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter"
+],
+"lvl": null
+},
+{
+"id": "Back_Z1U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter"
+],
+"lvl": 2
+},
+{
+"id": "Back_Z1U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter"
+],
+"lvl": 8
+},
+{
+"id": "Back_Z2U1_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter"
+],
+"lvl": 13
+},
+{
+"id": "Back_Z2U2_Fig",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter"
+],
+"lvl": 18
+},
+{
+"id": "Back_Z1U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 4
+},
+{
+"id": "Back_Z1U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 10
+},
+{
+"id": "Back_RBee_FigAss",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Back_Z2U1_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 14
+},
+{
+"id": "Back_Z2U2_FigAss",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Assassin"
+],
+"lvl": 19
+},
+{
+"id": "Back_RKobold_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Back_RBee_FigWiz_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"CopperIngot",
+12
+],
+[
+"SoftFur",
+3
+],
+[
+"Wing_Z1",
+20
+],
+[
+"FragmentOfNature",
+2
+]
+]
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Back_Z1U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Back_Z1U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Back_Z2U1_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Back_Z2U2_FigWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Back_RDemon_FigWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Wizard"
+],
+"lvl": 1
+},
+{
+"id": "Back_RManfish_FigCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Back_Z1U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Back_Z1U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Back_Z2U1_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Back_Z2U2_FigCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Back",
+"apt": [
+"Fighter",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Back_RKobold_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin"
+],
+"lvl": null
+},
+{
+"id": "Back_Z1U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin"
+],
+"lvl": 2
+},
+{
+"id": "Back_Z1U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin"
+],
+"lvl": 8
+},
+{
+"id": "Back_Z2U1_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin"
+],
+"lvl": 13
+},
+{
+"id": "Back_Z2U2_Ass",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin"
+],
+"lvl": 18
+},
+{
+"id": "Back_RDemon_Ass",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin"
+],
+"lvl": 1
+},
+{
+"id": "Back_RManfish_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Back_RCrimson_AssWiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Back_Z1U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 4
+},
+{
+"id": "Back_Z1U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 10
+},
+{
+"id": "Back_Z2U1_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 14
+},
+{
+"id": "Back_Z2U2_AssWiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Wizard"
+],
+"lvl": 19
+},
+{
+"id": "Back_Z1U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Back_Z1U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Back_RBee_AssCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Back_RCrimson_AssCle_Craft",
+"rarity": "Rare",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 5,
+"n": 1,
+"input": [
+[
+"TannedLeather",
+15
+],
+[
+"SoftFur",
+4
+],
+[
+"Ramgold",
+4
+]
+]
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 20
+},
+{
+"id": "Back_Z2U1_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Back_Z2U2_AssCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Back",
+"apt": [
+"Assassin",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Back_Z1U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard"
+],
+"lvl": 2
+},
+{
+"id": "Back_Z1U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard"
+],
+"lvl": 8
+},
+{
+"id": "Back_RBee_Wiz",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Bee"
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard"
+],
+"lvl": null
+},
+{
+"id": "Back_Z2U1_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard"
+],
+"lvl": 13
+},
+{
+"id": "Back_Z2U2_Wiz",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard"
+],
+"lvl": 18
+},
+{
+"id": "Back_RManfish_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Manfish"
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Back_RCrimson_WizCle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Crimson"
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Back_Z1U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 4
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 4
+},
+{
+"id": "Back_Z1U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 10
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 10
+},
+{
+"id": "Back_Z2U1_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 14
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 14
+},
+{
+"id": "Back_Z2U2_WizCle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 19
+}
+],
+"slot": "Back",
+"apt": [
+"Wizard",
+"Cleric"
+],
+"lvl": 19
+},
+{
+"id": "Back_RKobold_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Kobold"
+}
+],
+"slot": "Back",
+"apt": [
+"Cleric"
+],
+"lvl": null
+},
+{
+"id": "Back_Z1U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 2
+}
+],
+"slot": "Back",
+"apt": [
+"Cleric"
+],
+"lvl": 2
+},
+{
+"id": "Back_Z1U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 8
+}
+],
+"slot": "Back",
+"apt": [
+"Cleric"
+],
+"lvl": 8
+},
+{
+"id": "Back_Z2U1_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 13
+}
+],
+"slot": "Back",
+"apt": [
+"Cleric"
+],
+"lvl": 13
+},
+{
+"id": "Back_Z2U2_Cle",
+"rarity": "Uncommon",
+"src": [
+{
+"k": "world",
+"lvl": 18
+}
+],
+"slot": "Back",
+"apt": [
+"Cleric"
+],
+"lvl": 18
+},
+{
+"id": "Back_RDemon_Cle",
+"rarity": "Rare",
+"src": [
+{
+"k": "faction",
+"f": "Demon"
+}
+],
+"slot": "Back",
+"apt": [
+"Cleric"
+],
+"lvl": 1
+},
+{
+"id": "Back_Shop",
+"rarity": "Epic",
+"src": [],
+"slot": "Back",
+"apt": [],
+"lvl": null
 }
 ],
 "pets": [
@@ -2668,5 +9664,77 @@
 }
 ]
 }
-]
+],
+"factions": {
+"Bee": {
+"dungeons": [
+"Bee_Hive",
+"R1_POI_CleodorasNest",
+"R1_POI_MokshisHivetree"
+],
+"acts": {
+"Ascension": 1,
+"ChestOrb": 1,
+"FightStone": 4,
+"TimerCollectRun": 2,
+"WorldCamp": 1,
+"WorldElite": 4
+},
+"chests": 10
+},
+"Crimson": {
+"dungeons": [
+"R1_POI_CrimsonSacristy",
+"R1_POI_Dungeon_CrimsonBarraks_POI_Def"
+],
+"acts": {
+"Ascension": 1,
+"ChestOrb": 4,
+"FightStone": 3,
+"TimerCollectRun": 3,
+"WorldCamp": 3,
+"WorldElite": 8
+},
+"chests": 21
+},
+"Demon": {
+"dungeons": [],
+"acts": {
+"ChestOrb": 1,
+"FightStone": 1,
+"WorldElite": 7
+},
+"chests": 1
+},
+"Kobold": {
+"dungeons": [
+"R1_POI_AmaymonGoulp",
+"R1_POI_Boss_Ratsar",
+"R1_POI_Dungeon_AbbandonedMines",
+"R1_POI_GorgonsHollow"
+],
+"acts": {
+"FightStone": 3,
+"WorldCamp": 1,
+"WorldElite": 6
+},
+"chests": 6
+},
+"Manfish": {
+"dungeons": [
+"R1_POI_Dungeon_Manfish_Ruins",
+"R1_POI_Nepsid_Boss",
+"Z1_POI_Dungeon_ManfishAbyss",
+"Z1_POI_Dungeon_ManfishGeyser"
+],
+"acts": {
+"ChestOrb": 2,
+"FightStone": 2,
+"TimerCollectRun": 1,
+"WorldCamp": 1,
+"WorldElite": 2
+},
+"chests": 4
+}
+}
 }

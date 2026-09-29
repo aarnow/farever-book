@@ -1,4 +1,5 @@
-"""The collection catalogue: every mount, glider and companion in the game,
+"""The collection catalogue: every mount, glider, companion and armour
+appearance in the game,
 with how each is obtained — for the app's Collection tab.
 
 Everything comes from the game's own files:
@@ -24,6 +25,14 @@ import hbson
 import pak_extract
 
 CATEGORIES = (("mounts", "Mount"), ("gliders", "GearGlider"))
+# itemType.flags: AppearanceCollection — the armour pieces the game's
+# appearance collection (Collection.gears) counts
+APPEARANCE_FLAG = 32
+# item.flags: WorldLoot — dropped at random around its level, anywhere
+WORLD_LOOT_FLAG = 2
+# the factions whose gear their activities and chests give
+# (constant Loot_FactionDropRate: Activity 20 %, Element 5 %, Foes 0)
+FACTIONS = ("Bee", "Crimson", "Demon", "Kobold", "Manfish")
 IMG_PX = 128
 CLASS_UNITS = {"Warrior": "warrior", "Mage": "mage", "Rogue": "rogue",
                "Priest": "priest"}
@@ -83,7 +92,20 @@ def build(game_dir, img_dir=None):
     tables, groups = rows("lootTable"), rows("unitGroup")
     wanted = {cat: [iid for iid, r in items.items() if r.get("type") == t]
               for cat, t in CATEGORIES}
+    itypes = rows("itemType")
+
+    def appearance(t):
+        seen = set()
+        while t in itypes and t not in seen:
+            seen.add(t)
+            if (itypes[t].get("flags") or 0) & APPEARANCE_FLAG:
+                return True
+            t = itypes[t].get("inherit")
+        return False
+    wanted["gears"] = [iid for iid, r in items.items()
+                       if appearance(r.get("type"))]
     collectible = {iid for ids in wanted.values() for iid in ids}
+    gear_set = set(wanted["gears"])
     # A capturable companion has a name; the unnamed Critter units are
     # scenery (YellowRabbits).
     critters = [uid for uid, r in units.items() if r.get("type") == "Critter"
@@ -109,7 +131,8 @@ def build(game_dir, img_dir=None):
         if uid in CLASS_UNITS:
             for iid in collectible:
                 if f'"{iid}"' in json.dumps(r):
-                    add(iid, {"k": "starter", "cls": CLASS_UNITS[uid]})
+                    add(iid, {"k": "starter", "cls": CLASS_UNITS[uid],
+                              "gear": iid in gear_set})
 
     # -- achievements. A tier ("collect 25 mounts") has no name or text of
     # its own: they are its parent's, with the tier's target value.
@@ -128,11 +151,20 @@ def build(game_dir, img_dir=None):
 
     # -- the levels: merchants, chests, critter spawners
     group_zones = defaultdict(set)
+    fac_acts = defaultdict(dict)        # faction -> {activity id: kind}
+    fac_chests = defaultdict(set)       # faction -> {chest id}
 
     def walk(o, zone):
         if isinstance(o, dict):
             props = o.get("props") if isinstance(o.get("props"), dict) else {}
             zone = props.get("zoneBaked") or o.get("zoneBaked") or zone
+            fac = props.get("faction") or o.get("faction")
+            oid = o.get("id")
+            if fac in FACTIONS and isinstance(oid, str):
+                if o.get("$cdbtype") == "activity":
+                    fac_acts[fac][oid] = o.get("inherit") or "?"
+                elif o.get("$cdbtype") == "element" and "Chest" in oid:
+                    fac_chests[fac].add(oid)
             if isinstance(props.get("shop"), list):
                 npc = ((props.get("npc") or {}).get("unit")
                        if isinstance(props.get("npc"), dict) else None)
@@ -183,6 +215,14 @@ def build(game_dir, img_dir=None):
             for u in users:
                 add(iid, dict(u, chance=round(p, 6)))
 
+    # -- recipes that make a collectible (crafted armour)
+    for r in sheets["craft"].get("lines") or ():
+        if r.get("item") in collectible:
+            add(r["item"], {"k": "craft", "job": r.get("job"),
+                            "lvl": r.get("level"), "n": r.get("count") or 1,
+                            "input": [[i.get("item"), i.get("count") or 1]
+                                      for i in r.get("input") or ()]})
+
     # -- critters: their spawn groups, by weight, and where those stand
     for gid, g in groups.items():
         comp = g.get("composition") or []
@@ -197,13 +237,36 @@ def build(game_dir, img_dir=None):
                               "chance": round(float(c.get("weight") or 0)
                                               / total, 4)})
 
+    # -- armour generated rather than listed: a faction's pieces come from
+    # its activities and chests, the WorldLoot ones from anything around
+    # their level
+    for iid in wanted["gears"]:
+        row = items[iid]
+        if row.get("faction") in FACTIONS:
+            add(iid, {"k": "faction", "f": row["faction"]})
+        elif (row.get("flags") or 0) & WORLD_LOOT_FLAG:
+            add(iid, {"k": "world", "lvl": row.get("level") or 1})
+
     def entry(iid, row):
-        return {"id": iid, "rarity": row.get("rarity") or "",
-                "src": src.get(iid, [])}
+        e = {"id": iid, "rarity": row.get("rarity") or "",
+             "src": src.get(iid, [])}
+        if iid in gear_set:
+            e["slot"] = row.get("type")
+            e["apt"] = [a.get("ref") for a in row.get("aptitudes") or ()
+                        if a.get("ref")]
+            e["lvl"] = row.get("level")
+        return e
 
     out = {cat: [entry(i, items[i]) for i in ids]
            for cat, ids in wanted.items()}
     out["pets"] = [entry(u, units[u]) for u in critters]
+    out["factions"] = {
+        f: {"dungeons": sorted(a for a, k in fac_acts[f].items()
+                               if k == "Dungeon"),
+            "acts": {k: sum(1 for v in fac_acts[f].values() if v == k)
+                     for k in sorted(set(fac_acts[f].values()) - {"Dungeon"})},
+            "chests": len(fac_chests[f])}
+        for f in FACTIONS}
 
     if img_dir is not None:
         _images(game_dir, img_dir,

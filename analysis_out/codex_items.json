@@ -1,0 +1,2383 @@
+[
+{
+"id": "CopperOre",
+"rarity": "Common",
+"type": "Ore",
+"src": [
+{
+"k": "family",
+"id": "Golem",
+"chance": 0.1
+},
+{
+"k": "family",
+"id": "FireGolems",
+"chance": 0.1
+},
+{
+"k": "family",
+"id": "WindGolems",
+"chance": 0.1
+},
+{
+"k": "family",
+"id": "WaterGolems",
+"chance": 0.1
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.18
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 1.0
+},
+{
+"k": "salvage",
+"lvl": [
+1,
+13
+],
+"rarity": null
+}
+],
+"uses": 4
+},
+{
+"id": "CopperIngot",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"CopperOre",
+5
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 5
+},
+{
+"id": "TinOre",
+"rarity": "Common",
+"type": "Ore",
+"src": [
+{
+"k": "family",
+"id": "Golem",
+"chance": 0.0375
+},
+{
+"k": "family",
+"id": "FireGolems",
+"chance": 0.0375
+},
+{
+"k": "family",
+"id": "WindGolems",
+"chance": 0.0375
+},
+{
+"k": "family",
+"id": "WaterGolems",
+"chance": 0.0375
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.0675
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 1.0
+},
+{
+"k": "salvage",
+"lvl": [
+14,
+25
+],
+"rarity": null
+}
+],
+"uses": 2
+},
+{
+"id": "BronzeIngot",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 3,
+"n": 2,
+"input": [
+[
+"TinOre",
+5
+],
+[
+"CopperIngot",
+1
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 6
+},
+{
+"id": "TungsteneOre",
+"rarity": "Rare",
+"type": "Ore",
+"src": [
+{
+"k": "family",
+"id": "Golem",
+"chance": 0.0125
+},
+{
+"k": "family",
+"id": "FireGolems",
+"chance": 0.0125
+},
+{
+"k": "family",
+"id": "WindGolems",
+"chance": 0.0125
+},
+{
+"k": "family",
+"id": "WaterGolems",
+"chance": 0.0125
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.0225
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 1.0
+}
+],
+"uses": 3
+},
+{
+"id": "TungsteneIngot",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"TungsteneOre",
+5
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 1
+},
+{
+"id": "Alloy_Z1",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Blacksmith",
+"lvl": 4,
+"n": 1,
+"input": [
+[
+"BronzeIngot",
+1
+],
+[
+"Stone_Ore_Z1",
+3
+],
+[
+"TungsteneIngot",
+1
+]
+]
+}
+],
+"uses": 7
+},
+{
+"id": "Alloy_Z2",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [],
+"uses": 0
+},
+{
+"id": "IronOre",
+"rarity": "Common",
+"type": "Ore",
+"src": [],
+"uses": 0
+},
+{
+"id": "IronIngot",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [],
+"uses": 0
+},
+{
+"id": "Coal",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Golem",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "FireGolems",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "WindGolems",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "WaterGolems",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.09
+}
+],
+"uses": 2
+},
+{
+"id": "SteelIngot",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [],
+"uses": 0
+},
+{
+"id": "CopperSetting",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"CopperOre",
+10
+]
+]
+}
+],
+"uses": 12
+},
+{
+"id": "Rock_Z1",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Golem",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "FireGolems",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "WindGolems",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "WaterGolems",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.09
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.3
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.3
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.3
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.3
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.4
+}
+],
+"uses": 5
+},
+{
+"id": "CutStone",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"Rock_Z1",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 5
+},
+{
+"id": "Stone_Ore_Z1",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.15
+}
+],
+"uses": 20
+},
+{
+"id": "Pearl",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.08
+},
+{
+"k": "family",
+"id": "Crab",
+"chance": 0.06
+}
+],
+"uses": 4
+},
+{
+"id": "Amber",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.000833
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.013333
+}
+],
+"uses": 4
+},
+{
+"id": "Beryl",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.000833
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.013333
+}
+],
+"uses": 4
+},
+{
+"id": "Malachite",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.001667
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.000417
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.001667
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.001667
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.006667
+}
+],
+"uses": 2
+},
+{
+"id": "Agate",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.000833
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.013333
+}
+],
+"uses": 3
+},
+{
+"id": "Ruby",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.000833
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.003333
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.003333
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.006667
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.013333
+}
+],
+"uses": 3
+},
+{
+"id": "CutAmber",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"Amber",
+1
+],
+[
+"CutStone",
+3
+]
+]
+}
+],
+"uses": 4
+},
+{
+"id": "CutBeryl",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"Beryl",
+1
+],
+[
+"CutStone",
+3
+]
+]
+}
+],
+"uses": 3
+},
+{
+"id": "CutMalachite",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"Malachite",
+1
+],
+[
+"CutStone",
+3
+]
+]
+}
+],
+"uses": 0
+},
+{
+"id": "CutAgate",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 4,
+"n": 1,
+"input": [
+[
+"Agate",
+1
+],
+[
+"CutStone",
+3
+]
+]
+}
+],
+"uses": 4
+},
+{
+"id": "CutRuby",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Jeweller",
+"lvl": 4,
+"n": 1,
+"input": [
+[
+"Ruby",
+1
+],
+[
+"CutStone",
+3
+]
+]
+}
+],
+"uses": 3
+},
+{
+"id": "HunterSauce",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Cook",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Blood_Z1",
+5
+],
+[
+"Fang_Z1",
+1
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 9
+},
+{
+"id": "FishermanSauce",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Cook",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Blood_Z1",
+5
+],
+[
+"CrabMeat_Z1",
+1
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 7
+},
+{
+"id": "SkoverDriedHerbs",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Cook",
+"lvl": 2,
+"n": 1,
+"input": [
+[
+"MadrigoldPetal",
+3
+],
+[
+"LavendulaPetal",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 9
+},
+{
+"id": "MadrigoldPetal",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "gather",
+"id": "Madrigold_Small",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "Madrigold_Large",
+"chance": 1.0
+}
+],
+"uses": 11
+},
+{
+"id": "LavendulaPetal",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "gather",
+"id": "Lavendula_Small",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "Lavendula_Large",
+"chance": 1.0
+}
+],
+"uses": 11
+},
+{
+"id": "AncientThymePetal",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "gather",
+"id": "AncientThyme_Small",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "AncientThyme_Large",
+"chance": 1.0
+}
+],
+"uses": 1
+},
+{
+"id": "ZealotusPetal",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "gather",
+"id": "Zealotus_Small",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "Zealotus_Large",
+"chance": 1.0
+}
+],
+"uses": 1
+},
+{
+"id": "FreshFlowerPowder",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"MadrigoldPetal",
+2
+],
+[
+"LavendulaPetal",
+2
+],
+[
+"AncientThymePetal",
+2
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 16
+},
+{
+"id": "StrangeSpores",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "gather",
+"id": "Madrigold_Small",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Madrigold_Large",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Lavendula_Small",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Lavendula_Large",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "AncientThyme_Small",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "AncientThyme_Large",
+"chance": 0.08
+},
+{
+"k": "gather",
+"id": "Zealotus_Small",
+"chance": 0.15
+},
+{
+"k": "gather",
+"id": "Zealotus_Large",
+"chance": 0.15
+}
+],
+"uses": 25
+},
+{
+"id": "AlchemistEssence_Z1",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"FreshFlowerPowder",
+1
+],
+[
+"ZealotusPetal",
+1
+],
+[
+"StrangeSpores",
+1
+]
+]
+}
+],
+"uses": 4
+},
+{
+"id": "Cloth_Z1",
+"rarity": "Common",
+"type": "Cloth",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.25
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.0625
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.25
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.25
+},
+{
+"k": "salvage",
+"lvl": [
+1,
+25
+],
+"rarity": null
+}
+],
+"uses": 4
+},
+{
+"id": "Leather_Z1",
+"rarity": "Common",
+"type": "Leather",
+"src": [
+{
+"k": "family",
+"id": "Wolf",
+"chance": 0.254545
+},
+{
+"k": "family",
+"id": "Boar",
+"chance": 0.254545
+},
+{
+"k": "family",
+"id": "Skunk",
+"chance": 0.254545
+},
+{
+"k": "family",
+"id": "Coyote",
+"chance": 0.254545
+},
+{
+"k": "salvage",
+"lvl": [
+1,
+25
+],
+"rarity": null
+}
+],
+"uses": 2
+},
+{
+"id": "LinenBolt",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Cloth_Z1",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 5
+},
+{
+"id": "TannedLeather",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Leather_Z1",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 8
+},
+{
+"id": "SoftFur",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Wolf",
+"chance": 0.047727
+},
+{
+"k": "family",
+"id": "Boar",
+"chance": 0.047727
+},
+{
+"k": "family",
+"id": "Skunk",
+"chance": 0.047727
+},
+{
+"k": "family",
+"id": "Coyote",
+"chance": 0.047727
+}
+],
+"uses": 10
+},
+{
+"id": "HideboundWeave",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Outfitter",
+"lvl": 4,
+"n": 1,
+"input": [
+[
+"SoftFur",
+2
+],
+[
+"TannedLeather",
+1
+],
+[
+"LinenBolt",
+1
+]
+]
+}
+],
+"uses": 7
+},
+{
+"id": "Paper_Z1",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [],
+"uses": 10
+},
+{
+"id": "Residues_Z1",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "salvage",
+"lvl": [
+1,
+25
+],
+"rarity": "Uncommon"
+}
+],
+"uses": 2
+},
+{
+"id": "Particle_Z1",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "scrap",
+"id": "Scrap",
+"chance": 0.25
+},
+{
+"k": "scrap",
+"id": "Scrap_Rare",
+"chance": 1.0
+}
+],
+"uses": 11
+},
+{
+"id": "BrightVoidOrb",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Enchanter",
+"lvl": 5,
+"n": 1,
+"input": [
+[
+"Particle_Z1",
+20
+],
+[
+"SpiritHeart_Z2",
+10
+]
+]
+}
+],
+"uses": 5
+},
+{
+"id": "Fragments_Z1",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "salvage",
+"lvl": [
+1,
+25
+],
+"rarity": "Rare"
+}
+],
+"uses": 2
+},
+{
+"id": "EnchantPowder_Z1",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Enchanter",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Residues_Z1",
+5
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 29
+},
+{
+"id": "EnchantConcentrate_Z1",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Enchanter",
+"lvl": 5,
+"n": 1,
+"input": [
+[
+"EnchantPowder_Z1",
+1
+],
+[
+"Fragments_Z1",
+5
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 5
+},
+{
+"id": "EnchantPaper_Z1",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Enchanter",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Paper_Z1",
+1
+],
+[
+"Fragments_Z1",
+3
+]
+]
+}
+],
+"uses": 25
+},
+{
+"id": "Crystal_Z2",
+"rarity": "Epic",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "salvage",
+"lvl": [
+1,
+25
+],
+"rarity": "Epic"
+}
+],
+"uses": 0
+},
+{
+"id": "Essence_Z2",
+"rarity": "Legendary",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "salvage",
+"lvl": [
+1,
+25
+],
+"rarity": "Legendary"
+}
+],
+"uses": 0
+},
+{
+"id": "Fang_Z1",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Wolf",
+"chance": 0.35
+},
+{
+"k": "family",
+"id": "Skunk",
+"chance": 0.35
+},
+{
+"k": "family",
+"id": "Coyote",
+"chance": 0.35
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.3
+}
+],
+"uses": 9
+},
+{
+"id": "KoboldMetal",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.2
+}
+],
+"uses": 2
+},
+{
+"id": "Fin_Z1",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.35
+}
+],
+"uses": 10
+},
+{
+"id": "NepsidScale",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.2
+}
+],
+"uses": 3
+},
+{
+"id": "ChippedTusk",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Boar",
+"chance": 0.2
+}
+],
+"uses": 1
+},
+{
+"id": "Eye_Z1",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crab",
+"chance": 0.12
+}
+],
+"uses": 3
+},
+{
+"id": "Wing_Z1",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Bee",
+"chance": 0.35
+},
+{
+"k": "family",
+"id": "Swarowl",
+"chance": 0.35
+}
+],
+"uses": 5
+},
+{
+"id": "GlossyChitin",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Bee",
+"chance": 0.2
+},
+{
+"k": "family",
+"id": "Swarowl",
+"chance": 0.2
+}
+],
+"uses": 6
+},
+{
+"id": "Blood_Z1",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.15
+},
+{
+"k": "family",
+"id": "Slime",
+"chance": 0.0375
+},
+{
+"k": "family",
+"id": "Wolf",
+"chance": 0.2
+},
+{
+"k": "family",
+"id": "Boar",
+"chance": 0.2
+},
+{
+"k": "family",
+"id": "Skunk",
+"chance": 0.2
+},
+{
+"k": "family",
+"id": "Coyote",
+"chance": 0.2
+},
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.15
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.15
+}
+],
+"uses": 7
+},
+{
+"id": "SpiritHeart_Z2",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Spirit",
+"chance": 0.35
+}
+],
+"uses": 3
+},
+{
+"id": "Ramgold",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Crimson",
+"chance": 0.1
+}
+],
+"uses": 16
+},
+{
+"id": "DemonicHorn",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Demon",
+"chance": 0.175
+},
+{
+"k": "family",
+"id": "Demon_Rift",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.175
+}
+],
+"uses": 7
+},
+{
+"id": "TailSlice",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Demon",
+"chance": 0.175
+},
+{
+"k": "family",
+"id": "Demon_Rift",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.175
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.175
+}
+],
+"uses": 4
+},
+{
+"id": "VeiledWing",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Demon",
+"chance": 0.2
+},
+{
+"k": "family",
+"id": "Demon_Rift",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.2
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.2
+}
+],
+"uses": 6
+},
+{
+"id": "FiendishEye",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Demon",
+"chance": 0.1
+},
+{
+"k": "family",
+"id": "Demon_Rift",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.1
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.1
+}
+],
+"uses": 10
+},
+{
+"id": "PrismaticFragment",
+"rarity": "Rare",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"FragmentOfFire",
+1
+],
+[
+"FragmentOfEarth",
+1
+],
+[
+"FragmentOfNature",
+1
+],
+[
+"FragmentOfAir",
+1
+],
+[
+"FragmentOfWater",
+1
+],
+[
+"Ramgold",
+5
+]
+]
+}
+],
+"uses": 3
+},
+{
+"id": "MoteOfFire",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "FireGolems",
+"chance": 0.25
+},
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"Coal",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 0
+},
+{
+"id": "FragmentOfFire",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "combine",
+"from": [
+[
+"MoteOfFire",
+5
+]
+]
+}
+],
+"uses": 2
+},
+{
+"id": "MoteOfWater",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Manfish",
+"chance": 0.08
+},
+{
+"k": "family",
+"id": "Crab",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "WaterGolems",
+"chance": 0.25
+},
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Fin_Z1",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 0
+},
+{
+"id": "FragmentOfWater",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "combine",
+"from": [
+[
+"MoteOfWater",
+5
+]
+]
+}
+],
+"uses": 11
+},
+{
+"id": "MoteOfAir",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "WindGolems",
+"chance": 0.25
+},
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 3,
+"n": 1,
+"input": [
+[
+"GlossyChitin",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 0
+},
+{
+"id": "FragmentOfAir",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "combine",
+"from": [
+[
+"MoteOfAir",
+5
+]
+]
+}
+],
+"uses": 2
+},
+{
+"id": "MoteOfEarth",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Golem",
+"chance": 0.25
+},
+{
+"k": "family",
+"id": "Kobold",
+"chance": 0.08
+},
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Rock_Z1",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 0
+},
+{
+"id": "FragmentOfEarth",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "combine",
+"from": [
+[
+"MoteOfEarth",
+5
+]
+]
+}
+],
+"uses": 14
+},
+{
+"id": "MoteOfNature",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Bee",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "Swarowl",
+"chance": 0.05
+},
+{
+"k": "family",
+"id": "Sprouts",
+"chance": 0.1
+},
+{
+"k": "craft",
+"job": "Alchemist",
+"lvl": 1,
+"n": 1,
+"input": [
+[
+"Blood_Z1",
+3
+],
+[
+"SparkSample",
+1
+]
+]
+}
+],
+"uses": 0
+},
+{
+"id": "FragmentOfNature",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "combine",
+"from": [
+[
+"MoteOfNature",
+5
+]
+]
+}
+],
+"uses": 9
+},
+{
+"id": "MoteOfChaos",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "family",
+"id": "Demon",
+"chance": 0.08
+},
+{
+"k": "family",
+"id": "Demon_Rift",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Spear_Soulstone",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "Demon_Z1_Claws_Soulstone",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z1_Soulstone",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Spear_Soulstone_Leg",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "Demon_Z2_Claws_Soulstone",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "ImpDemon_Z2_Soulstone",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z2_Soulstone",
+"chance": 0.08
+},
+{
+"k": "unit",
+"id": "FaerieDemon_Z1_Soulstone_Leg",
+"chance": 0.08
+}
+],
+"uses": 0
+},
+{
+"id": "FragmentOfChaos",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "combine",
+"from": [
+[
+"MoteOfChaos",
+5
+]
+]
+}
+],
+"uses": 11
+},
+{
+"id": "SparkSample",
+"rarity": "Uncommon",
+"type": "CraftingComponent",
+"src": [
+{
+"k": "scrap",
+"id": "Scrap",
+"chance": 0.25
+},
+{
+"k": "scrap",
+"id": "Scrap_Rare",
+"chance": 1.0
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Small",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Ore_Copper_Large",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Small",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Ore_Tin_Large",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Tungstene",
+"chance": 0.3
+},
+{
+"k": "gather",
+"id": "Madrigold_Small",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Madrigold_Large",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Lavendula_Small",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Lavendula_Large",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "AncientThyme_Small",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "AncientThyme_Large",
+"chance": 0.25
+},
+{
+"k": "gather",
+"id": "Zealotus_Small",
+"chance": 0.3
+},
+{
+"k": "gather",
+"id": "Zealotus_Large",
+"chance": 0.3
+}
+],
+"uses": 22
+},
+{
+"id": "Vial",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [],
+"uses": 24
+},
+{
+"id": "SimpleCauldron",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [],
+"uses": 1
+},
+{
+"id": "SilverTray",
+"rarity": "Common",
+"type": "CraftingComponent",
+"src": [],
+"uses": 1
+}
+]
