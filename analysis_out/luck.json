@@ -1,0 +1,36 @@
+{
+"Luck_LegendaryWeapon": {
+"status": "Luck_LegendaryWeapon_Status",
+"increment": 0.005,
+"max": 0.25,
+"base": 0.01
+},
+"Luck_Mount": {
+"status": "Luck_Mount_Status",
+"increment": 0.001,
+"max": 0.05,
+"base": 0.01,
+"itemType": "Mount"
+},
+"Luck_Glider": {
+"status": "Luck_Glider_Status",
+"increment": 0.001,
+"max": 0.05,
+"base": 0.01,
+"itemType": "GearGlider"
+},
+"Luck_RareMaterial": {
+"status": "Luck_RareMaterial_Status",
+"increment": 0,
+"max": 0.05,
+"base": 0.05,
+"itemType": "CraftingComponent",
+"minRarity": "Rare"
+},
+"Luck_PrismaticGear": {
+"status": "Luck_PrismaticGear_Status",
+"increment": 0,
+"max": 0.05,
+"base": 0.05
+}
+}

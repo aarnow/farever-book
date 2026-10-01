@@ -3693,6 +3693,9 @@ class App:
             name = prof.get("n")
             if not name:
                 return
+            print(f"[meter] profile {name}: luck statuses "
+                  f"{prof.get('luckStatuses')} (now {prof.get('now')})",
+                  file=sys.stderr)
             # kept for this session only: profiles are never written to disk
             self._profiles_data()[name] = prof
             self._char_sel = name
@@ -5350,8 +5353,9 @@ def character_view(roster, profiles, sel, waiting, live):
         for slot in prof.get("equip") or ():
             if not slot:
                 continue
-            kind, rar, lvl, upg, gslots, effects, infu, istat = (
-                list(slot) + [None] * 8)[:8]
+            kind, rar, lvl, upg, gslots, effects, infu, istat, iflags = (
+                list(slot) + [None] * 9)[:9]
+            prism = _item_flag(iflags, "Prismatic")
             rar = rar or item_rarity(kind) or ""
             t = item_type(kind)
             extras = [_augment_view(g) for g in gslots or ()
@@ -5367,7 +5371,8 @@ def character_view(roster, profiles, sel, waiting, live):
                      "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None,
                      "up": upg if isinstance(upg, int) and upg > 0 else 0,
                      "extras": extras,
-                     "inf": _gear_infusion(kind, infu, istat)}
+                     "prism": prism,
+                     "inf": _gear_infusion(kind, infu, istat, prism)}
             (other if t in NOT_GEAR else gear).append(entry)
         view["open"] = {
             "n": prof.get("n"), "lvl": prof.get("lvl"),
@@ -5391,8 +5396,91 @@ def character_view(roster, profiles, sel, waiting, live):
                                    or t.endswith("_P"))],
             "raw": {k: prof.get(k) for k in ("arsenals", "prayers",
                                               "secondary")},
-            "infusions": _infusion_sets(gear)}
+            "infusions": _infusion_sets(gear),
+            "luck": _profile_luck(prof),
+            "stats": _profile_stats(prof)}
     return view
+
+
+# The loot luck counters (analysis_out/luck.json), in display order.
+LUCK_LABELS = (("Luck_Mount", "Monture"), ("Luck_Glider", "Planeur"),
+               ("Luck_LegendaryWeapon", "Arme légendaire"),
+               ("Luck_RareMaterial", "Matériau rare"),
+               ("Luck_PrismaticGear", "Équipement prismatique"))
+# Progress.counters shown as statistics (the rest are internal flags).
+STAT_LABELS = (("Rift_NbCompleted", "Failles terminées"),
+               ("Rift_NbGatesClosed", "Portails de faille fermés"),
+               ("Rift_NbGatesClosed_InOneRift",
+                "Record de portails fermés en une faille"),
+               ("Gold_TotalEarned", "Or gagné"),
+               ("Gold_TotalEarned_FromActivity", "Or gagné en activités"),
+               ("Scrap_NbItemsScrapped", "Objets recyclés"),
+               ("CraftPoint_TotalEarned", "Points d'artisanat gagnés"),
+               ("CraftPoint_TotalSpent", "Points d'artisanat dépensés"),
+               ("Jobs_NbLearnt", "Métiers appris"))
+_LUCK = None
+
+
+def luck_data():
+    global _LUCK
+    if _LUCK is None:
+        try:
+            _LUCK = json.loads((ANALYSIS / "luck.json").read_text(
+                encoding="utf-8"))
+        except Exception:
+            _LUCK = {}
+    return _LUCK
+
+
+def _pct2(v):
+    return f"{v * 100:.1f}".rstrip("0").rstrip(".").replace(".", ",") + " %"
+
+
+def _profile_luck(prof):
+    """Each loot luck counter: the count the game keeps, the bonus it gives
+    (base + count * increment, capped), how many more steps to the cap, and
+    whether the Soulwell status that carries it is on (time left). None when
+    the counters are not readable (another player: not replicated)."""
+    counters = prof.get("counters")
+    if not isinstance(counters, dict):
+        return None
+    now = prof.get("now")
+    active = {}
+    for k, start, dur, stop in prof.get("luckStatuses") or ():
+        end = stop if stop and stop > 0 else (
+            start + dur if start is not None and dur and dur > 0 else None)
+        left = end - now if end is not None and isinstance(
+            now, (int, float)) else None
+        active[k] = left if left is None or left > 0 else 0
+    out = []
+    for cid, label in LUCK_LABELS:
+        p = luck_data().get(cid)
+        if not p:
+            continue
+        n = counters.get(cid) or 0
+        n = n if isinstance(n, (int, float)) else 0
+        base, inc, cap = p.get("base") or 0, p.get("increment") or 0,             p.get("max") or 0
+        bonus = min(cap, base + n * inc) if cap else base + n * inc
+        steps = (max(0, math.ceil(round((cap - base) / inc, 6)) - int(n))
+                 if inc else 0)
+        st = p.get("status")
+        out.append({"t": label, "n": int(n), "bonus": _pct2(bonus),
+                    "cap": _pct2(cap), "full": bonus >= cap,
+                    "grows": bool(inc), "inc": _pct2(inc),
+                    "steps": steps,
+                    "on": st in active,
+                    "left": (round(active[st] / 60)
+                             if st in active and active[st] is not None
+                             else None)})
+    return out
+
+
+def _profile_stats(prof):
+    counters = prof.get("counters")
+    if not isinstance(counters, dict):
+        return None
+    return [{"t": label, "v": counters[k]} for k, label in STAT_LABELS
+            if isinstance(counters.get(k), (int, float))]
 
 
 _INFUSIONS = None
@@ -5426,9 +5514,34 @@ def _infusion_id(raw):
     return raw
 
 
-def _gear_infusion(kind, raw, stat):
+_OFFSETS = None
+
+
+def _offsets():
+    """analysis_out/meter_offsets.json, read once."""
+    global _OFFSETS
+    if _OFFSETS is None:
+        try:
+            _OFFSETS = json.loads(
+                (ANALYSIS / "meter_offsets.json").read_text(encoding="utf-8"))
+        except Exception:
+            _OFFSETS = {}
+    return _OFFSETS
+
+
+def _item_flag(bits, name):
+    """Whether an item copy carries one st.ItemFlag (bit index from
+    meter_offsets.json's ItemFlag, read off the bytecode)."""
+    idx = (_offsets().get("ItemFlag") or {}).get(name)
+    return isinstance(bits, int) and idx is not None and bool(
+        (bits >> idx) & 1)
+
+
+def _gear_infusion(kind, raw, stat, prism=False):
     """One gear piece's infusion: name, bonus stat, and whether the bonus
-    applies (the piece's faction must be the infusion's)."""
+    applies (the piece's faction must be the infusion's — or the piece is
+    prismatic: constant Item_PrismaticChance, "infusion bonus active
+    regardless of faction")."""
     sid = _infusion_id(raw)
     if not sid:
         return None
@@ -5439,7 +5552,7 @@ def _gear_infusion(kind, raw, stat):
             "fac": _fr_names("unitType").get(fac) or _pretty_id(fac or ""),
             "bonus": (_fr_names("attribute").get(stat) or _pretty_id(stat))
             if stat else "",
-            "on": bool(fac) and mine == fac}
+            "on": prism or (bool(fac) and mine == fac)}
 
 
 def _infusion_sets(gear):
@@ -6001,6 +6114,10 @@ def _data_is_current():
     if not (ANALYSIS / "names_fr.json").exists():
         print("[meter] names_fr.json absent — regenerating for the French "
               "names (dungeons, items, bosses).", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "luck.json").exists():
+        print("[meter] luck.json absent — regenerating for the luck "
+              "counters.", file=sys.stderr)
         return False
     if not (ANALYSIS / "infusions.json").exists():
         print("[meter] infusions.json absent — regenerating for the gear "

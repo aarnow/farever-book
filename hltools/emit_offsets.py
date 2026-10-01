@@ -207,7 +207,15 @@ def main():
         # move, so a uid-diff alone reports a re-equip as a fresh pickup. It is
         # emitted because it is still the only per-slot discriminator; the
         # pickup rule guards on `kind` as well.
-        "Item": {"kind": item["kind"][0], "uid": item["__uid"][0]},
+        "Item": {"kind": item["kind"][0], "uid": item["__uid"][0],
+                 # the copy's flags (st.ItemFlag: Flawless, Prismatic), an
+                 # hxbit.EnumFlagsData whose `value` holds the bits
+                 "flags": item["flags"][0]},
+        "EnumFlagsData": {"value": offs("hxbit.EnumFlagsData")["value"][0]},
+        # st.ItemFlag constructor -> bit, by name
+        "ItemFlag": next({(c[0] if isinstance(c, tuple) else c.name): i
+                          for i, c in enumerate(t.constructs)}
+                         for t in code.types if t.name == "st.ItemFlag"),
         # `rarity` is declared ONLY on st.item.Weapon (hierarchy:
         # st.Item -> st.item.Gear -> st.item.Armor / st.item.Weapon). Reading
         # it at any other class is past the end of the object. Live values are
@@ -335,6 +343,7 @@ def main():
         "Status": {"kind": status["kind"][0],
                    "stacks": status["stacks"][0],
                    "startTime": status["startTime"][0],
+                   "stopTime": status["stopTime"][0],
                    "duration": status["duration"][0],
                    "refreshDuration": status["refreshDuration"][0],
                    "originItem": status["originItem"][0],
@@ -410,7 +419,10 @@ def main():
                      "itemProgress": progress["itemProgress"][0],
                      # element id -> ProgressState (discovered, completed):
                      # the world's chests, orbs, obelisks... per character
-                     "elements": progress["elements"][0]},
+                     "elements": progress["elements"][0],
+                     # counter id -> value (a plain StringMap): the loot
+                     # luck counters (counter sheet, Luck_*) among them
+                     "counters": progress["counters"][0]},
         "MapData": {"map": mapdata["map"][0], "value": 8},
         # Progress.elements' value (measured 2026-09-28): `completed` is when
         # the element was completed — a chest opened, an orb picked up, an
@@ -583,6 +595,10 @@ def main():
         (_OUT_DIR / "augments.json").write_text(json.dumps(aug, indent=0),
                                                 encoding="utf-8")
         print(f"[written] {_OUT_DIR / 'augments.json'} ({len(aug)} augments)")
+        luck = extract_luck(Path(hlboot).parent)
+        (_OUT_DIR / "luck.json").write_text(json.dumps(luck, indent=0),
+                                            encoding="utf-8")
+        print(f"[written] {_OUT_DIR / 'luck.json'} ({len(luck)} counters)")
         types = extract_item_types(Path(hlboot).parent)
         (_OUT_DIR / "item_types.json").write_text(json.dumps(types, indent=0),
                                                   encoding="utf-8")
@@ -758,6 +774,19 @@ def extract_fr_names(game_dir):
                 if mt:
                     rows[m.tag] = mt
     return out
+
+
+def extract_luck(game_dir):
+    """The loot luck counters (counter sheet, rows with luckParams): {id:
+    {status, base, increment, max, itemType, minRarity}}. A character's
+    Progress.counters holds each one's count; the bonus is base + count *
+    increment, capped at max, tied to the status the Soulwell grants."""
+    import pak_extract
+    cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
+                                            "data.cdb"))
+    sheet = next(s for s in cdb["sheets"] if s["name"] == "counter")
+    return {ln["id"]: ln["luckParams"] for ln in sheet["lines"]
+            if isinstance(ln.get("id"), str) and ln.get("luckParams")}
 
 
 def extract_item_types(game_dir):

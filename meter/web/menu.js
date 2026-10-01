@@ -1632,7 +1632,7 @@ function buildCharacter(n) {
       r.appendChild(gi);
       const gt = el('div', 'gt');
       gt.appendChild(el('b', 'nm', g.name));
-      gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : ''].filter(Boolean).join(' · ')));
+      gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
       if (g.up) gt.appendChild(el('span', 'stars', '◆'.repeat(g.up)));
       (g.extras || []).forEach((x2) => {
         const line = el('span', 'gx ' + x2.k);
@@ -1656,6 +1656,48 @@ function buildCharacter(n) {
     });
     if (!(o.gear || []).length) gear.appendChild(el('div', 'empty', 'Aucun équipement lu.'));
     main.appendChild(gear);
+
+    if (!o.luck && !o.me) {
+      main.appendChild(el('div', 'sub2', 'Chance de butin et statistiques'));
+      main.appendChild(el('p', 'note', 'Le jeu ne transmet ces compteurs que pour ton propre '
+        + 'personnage : analyse-toi pour les voir.'));
+    }
+    if (o.luck) {
+      main.appendChild(el('div', 'sub2', 'Chance de butin'));
+      main.appendChild(el('p', 'note', 'Les compteurs de chance du jeu. Le bonus est lié à '
+        + 'l’offrande correspondante du Puits des âmes.'));
+      const lk = el('div', 'lucklist');
+      o.luck.forEach((l) => {
+        const row = el('div', 'luckrow' + (l.on ? ' on' : ''));
+        const t = el('div', 'lt');
+        t.appendChild(el('b', null, l.t));
+        t.appendChild(el('span', null, l.grows
+          ? 'Compteur ' + l.n + ' · +' + l.inc + ' par cran · '
+            + (l.full ? 'plafond atteint' : l.steps + ' cran' + (l.steps > 1 ? 's' : '') + ' avant le plafond')
+          : 'Bonus fixe'));
+        row.appendChild(t);
+        const v = el('div', 'lv');
+        v.appendChild(el('b', null, '+' + l.bonus));
+        v.appendChild(el('span', null, 'sur ' + l.cap + ' max'));
+        row.appendChild(v);
+        row.appendChild(el('span', 'lst' + (l.on ? ' on' : ''), l.on
+          ? 'Offrande active' + (l.left != null ? ' · ' + l.left + ' min' : '')
+          : 'Pas d’offrande'));
+        lk.appendChild(row);
+      });
+      main.appendChild(lk);
+    }
+    if ((o.stats || []).length) {
+      main.appendChild(el('div', 'sub2', 'Statistiques'));
+      const st = el('div', 'cards statcards');
+      o.stats.forEach((s) => {
+        const c = el('div', 'card');
+        c.appendChild(el('div', 't', s.t));
+        c.appendChild(el('div', 'v', fmtN(s.v)));
+        st.appendChild(c);
+      });
+      main.appendChild(st);
+    }
 
     if ((o.infusions || []).length) {
       main.appendChild(el('div', 'sub2', 'Imprégnations'));

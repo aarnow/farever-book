@@ -1157,8 +1157,14 @@ function equipSlots(loadout) {
         const inf = slot ? itemInfo(slot.item) : null;
         if (!inf) { out.push(null); continue; }
         // [kind, rarity, level, upgradeLevel, slots, effects, infusion,
-        //  infusion bonus stat]
-        const row = [inf.kind, inf.rarity, inf.level, null, [], [], null, null];
+        //  infusion bonus stat, item flags (st.ItemFlag bits)]
+        const row = [inf.kind, inf.rarity, inf.level, null, [], [], null, null, 0];
+        if (OFF.Item.flags != null && OFF.EnumFlagsData) {
+            try {
+                const fl = slot.item.add(OFF.Item.flags).readPointer();
+                if (fl && !fl.isNull()) row[8] = fl.add(OFF.EnumFlagsData.value).readS32();
+            } catch (e) {}
+        }
         const G = OFF.Gear;
         if (G && inf.cls !== "st.Item") {
             const it = slot.item;
@@ -1178,9 +1184,66 @@ function equipSlots(loadout) {
     return out;
 }
 
+// A hero's Progress.counters (a plain StringMap: loot luck counters, rift
+// and gold totals...), each value as a number when it is a boxed Int /
+// Float, else its type — or why the map could not be read. Only the local
+// hero's is replicated (measured 2026-10-01). GAME THREAD ONLY.
+function countersOf(h) {
+    try {
+        if (OFF.Progress.counters == null) return "no offset";
+        const player = h.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return "no player";
+        const prog = player.add(OFF.Player.progress).readPointer();
+        if (!prog || prog.isNull()) return "no progress";
+        const m = prog.add(OFF.Progress.counters).readPointer();
+        if (!m || m.isNull()) return "no counters map";
+        const out = {};
+        mapEntries(m.add(OFF.StringMap.h).readPointer(), 200).forEach(function (kv) {
+            const v = kv[1];
+            if (!v || v.isNull()) { out[kv[0]] = null; return; }
+            const kind = v.readPointer().readU32();
+            out[kv[0]] = kind === 3 ? v.add(8).readS32()
+                : kind === 6 ? v.add(8).readDouble()
+                : kind === 5 ? v.add(8).readFloat()
+                : "<" + kind + " " + (typeName(v) || "?") + ">";
+        });
+        return out;
+    } catch (e) { return "error " + e; }
+}
+
+// A unit's statuses whose kind starts with one of `prefixes`:
+// [[kind, startTime, duration, stopTime], ...] (the game's clock).
+function statusesOf(u, prefixes) {
+    const out = [];
+    try {
+        const proxy = u.add(OFF.Unit.statuses).readPointer();
+        if (!proxy || proxy.isNull()) return out;
+        const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+        const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+        const n = arr.add(OFF.ArrayObj.length).readS32();
+        const data = arr.add(OFF.ArrayObj.array).readPointer();
+        const S = OFF.Status;
+        for (let i = 0; i < n && i < 200; i++) {
+            const p = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+            if (!p || p.isNull() || p.add(S.removed).readU8()) continue;
+            const k = hlStr(p.add(S.kind).readPointer());
+            if (!k || !prefixes.some(function (x) { return k.indexOf(x) === 0; }))
+                continue;
+            out.push([k, p.add(S.startTime).readDouble(),
+                      p.add(S.duration).readDouble(),
+                      S.stopTime != null ? p.add(S.stopTime).readDouble() : null]);
+        }
+    } catch (e) {}
+    return out;
+}
+
 function profileOf(h) {
     const H = OFF.Hero, D = OFF.HeroDetail, S = OFF.Specialization;
     const r = {};
+    r.counters = countersOf(h);
+    // the Soulwell's luck statuses, and the clock to time them by
+    r.luckStatuses = statusesOf(h, ["Luck_", "Riftstalkers"]);
+    try { r.now = serverNowOf(h.add(OFF.Hero.layer).readPointer()); } catch (e) {}
     try { r.k = hlStr(h.add(H.kind).readPointer()); } catch (e) {}
     try { r.lvl = h.add(H.level).readS32(); } catch (e) {}
     try {

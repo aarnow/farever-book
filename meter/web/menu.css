@@ -987,3 +987,17 @@ select, input[type=text] {
 .infucard .tier.on { color: var(--text); opacity: 1; }
 .infucard .tier .tn { flex: none; color: #8bc34a; }
 .infucard .tier:not(.on) .tn { color: var(--dim); }
+
+/* Character: loot luck and statistics */
+.lucklist { display: flex; flex-direction: column; gap: 6px; }
+.luckrow { display: flex; align-items: center; gap: 14px; padding: 8px 12px; border: 1px solid var(--line);
+           border-radius: 8px; background: var(--panel); }
+.luckrow.on { border-color: #8e5bd6; }
+.luckrow .lt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.luckrow .lt span { font-size: 12px; color: var(--dim); }
+.luckrow .lv { display: flex; flex-direction: column; align-items: flex-end; }
+.luckrow .lv b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.luckrow .lv span { font-size: 11px; color: var(--dim); }
+.luckrow .lst { width: 150px; text-align: right; font-size: 12px; color: var(--dim); }
+.luckrow .lst.on { color: #b98cf0; font-weight: 700; }
+.statcards { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }

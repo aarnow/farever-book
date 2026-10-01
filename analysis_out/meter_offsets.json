@@ -60,7 +60,8 @@
   },
   "Item": {
     "kind": 120,
-    "uid": 32
+    "uid": 32,
+    "flags": 136
   },
   "Weapon": {
     "rarity": 184,
@@ -146,7 +147,8 @@
     "duration": 336,
     "refreshDuration": 456,
     "originItem": 256,
-    "removed": 8
+    "removed": 8,
+    "stopTime": 200
   },
   "Foe": {
     "summonOwner": 1264,
@@ -204,7 +206,8 @@
   "Progress": {
     "unitsProgress": 176,
     "itemProgress": 184,
-    "elements": 160
+    "elements": 160,
+    "counters": 136
   },
   "MapData": {
     "map": 40,
@@ -292,5 +295,12 @@
   "Texts": {
     "name_vidx": 1,
     "desc_vidx": 0
+  },
+  "EnumFlagsData": {
+    "value": 40
+  },
+  "ItemFlag": {
+    "Flawless": 0,
+    "Prismatic": 1
   }
 }
