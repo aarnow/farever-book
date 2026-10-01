@@ -3982,15 +3982,22 @@ class App:
             if dg and dg.get("loot"):
                 out += [{"k": "section", "t": "Butin possible"},
                         {"k": "note", "t":
-                         "D'après les données du jeu. Le coffre de fin donne "
-                         "une des armes du boss (tirée au hasard), des "
-                         "fragments d'Étincelle selon ton niveau, et une "
-                         "pièce de l'armure de la faction, rare ou épique, "
-                         "dont le jeu ne publie pas les chances. La mort du "
-                         "boss peut en plus donner un objet rare et, en "
-                         "Héroïque, donne toujours le patron d'imprégnation "
-                         "du donjon. « Obtenu » compte ce que tes runs ont "
-                         "rapporté."},
+                         "D'après les données et le code du jeu. Le coffre "
+                         "de fin donne une des armes du boss (tirée au "
+                         "hasard) et des fragments d'Étincelle selon ton "
+                         "niveau. Chaque joueur reçoit aussi une pièce "
+                         "d'armure de la faction, garantie : en Normal et "
+                         "Difficile une rare, tirée à parts égales parmi "
+                         "celles que sa classe peut porter (les 2 dernières "
+                         "reçues sont écartées) ; en Héroïque une épique, "
+                         "parmi celles du boss pour sa classe. À 3 joueurs "
+                         "une pièce de plus est donnée au hasard, 2 à 4 "
+                         "joueurs. Chaque pièce a 10 % de chances d'être "
+                         "prismatique (15 % avec l'offrande du Puits des "
+                         "âmes). La mort du boss peut en plus donner un objet "
+                         "rare et, en Héroïque, donne toujours le patron "
+                         "d'imprégnation du donjon. « Obtenu » compte ce que "
+                         "tes runs ont rapporté."},
                         {"k": "droptable", "id": "dungeon_drops",
                          "rows": droptable_view(dg, got)}]
             return out
@@ -4027,15 +4034,17 @@ class App:
                                  if e.get("diff") else "")}
                       for e in dg.get("loot") or ()
                       if e.get("type") == "InfusionPattern"]
-            for rar, label in (("Rare", "rare"), ("Epic", "épique")):
+            for src, label in (("faction", "rare (Normal, Difficile)"),
+                               ("heroic", "épique (Héroïque)")):
                 armour = [e for e in dg.get("loot") or ()
-                          if e.get("src") == "faction"
-                          and e.get("rarity") == rar]
+                          if e.get("src") == src]
                 if armour:
                     icons.append({"img": item_icon(armour[0]["item"]),
                                   "n": len(armour),
                                   "tip": f"Armure de faction {label} : "
-                                         f"{len(armour)} pièces possibles"})
+                                         f"{len(armour)} pièces, une garantie "
+                                         "par joueur parmi celles de sa "
+                                         "classe"})
             return {"t": dungeon_name(kind),
                     "icons": icons,
                     "meta": f"Boss : {_boss_label(boss)}" if boss else "",
@@ -6043,7 +6052,9 @@ def droptable_view(dg, got):
     """A dungeon's possible loot as table rows, rarest first. `got`: item id
     -> how many the saved runs of this dungeon brought back."""
     src_label = {"coffre": "Coffre de fin", "boss": "Mort du boss",
-                 "faction": "Coffre (armure)"}
+                 "faction": "Armure (Normal, Difficile)",
+                 "heroic": "Armure (Héroïque)"}
+    pools = dg.get("pools") or {}
     rows = []
     for e in dg.get("loot") or ():
         qty = ""
@@ -6052,16 +6063,30 @@ def droptable_view(dg, got):
                 f"{lo}–{hi}" + (f" (niv. {a}–{b})" if a and b else "")
                 for lo, hi, a, b in e["qty"])
         chance = e.get("chance")
+        per_class = None
+        if e.get("src") in pools:
+            # one piece per player, evenly among his class's: 1 / pool
+            ps = sorted({1 / pools[e["src"]][c]
+                         for c in (e.get("apt") or pools[e["src"]])
+                         if pools[e["src"]].get(c)})
+            if ps:
+                chance = ps[-1]
+                per_class = ps
         rows.append({
             "img": item_icon(e["item"]), "name": item_label(e["item"]),
             "rk": (e.get("rarity") or "").lower(),
             "type": item_type_label(e.get("type")) if e.get("type") else "",
             "apt": e.get("apt") or [],
             "src": src_label.get(e.get("src"), e.get("src") or ""),
-            "chance": (_pct(chance) if chance is None or chance < 1
-                       else "garanti")
-            + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'], '?')}"
-               if e.get("diff") else ""),
+            # per run; a range when the piece fits classes with different
+            # pools ("8,3–9,1 %")
+            "chance": ((_pct(per_class[0]).replace(" %", "") + "–"
+                        + _pct(per_class[-1])
+                        if per_class and len(per_class) > 1 else
+                        _pct(chance) if chance is None or chance < 1
+                        else "garanti")
+                       + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'], '?')}"
+                          if e.get("diff") and not per_class else "")),
             "qty": qty, "got": got.get(e["item"], 0),
             # rarest first; the faction armour (chance unknown) after the
             # chest's pick, the guaranteed shards last
@@ -6079,8 +6104,17 @@ def _fr_desc(sheet):
 
 
 def item_label(kind):
-    """An item's French name, else its prettified id."""
-    return _fr_names("item").get(kind) or _pretty_id(kind)
+    """An item's French name, else its prettified id. An infusion pattern's
+    name is a template ("Infusion: ::ref_skill::"): it is named after its
+    infusion."""
+    name = _fr_names("item").get(kind)
+    if (not name or "::" in name) and str(kind).startswith(
+            "InfusionPattern_"):
+        inf = next((e for e in (infusion_data().get("infusions") or {})
+                    .values() if e.get("pattern") == kind), None)
+        if inf:
+            return f"Patron d'imprégnation : {inf.get('name')}"
+    return name or _pretty_id(kind)
 
 
 RARITY_FR = {"Common": "Ordinaire", "Uncommon": "Peu ordinaire",

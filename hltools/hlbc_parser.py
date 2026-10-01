@@ -246,7 +246,9 @@ class HLCode:
             ti = r.index()
             findex = r.index()
             self.natives.append(Native(lib, name, ti, findex))
-        # Stop here — functions/constants intentionally not parsed.
+        # Stop here — functions/constants are not parsed (hlbc_code.py
+        # reads them on demand, from this offset).
+        self.functions_offset = r.p
         return self
 
     # ---- convenience views ----

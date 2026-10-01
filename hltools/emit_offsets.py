@@ -880,6 +880,8 @@ def extract_dungeons(game_dir):
                  for ln in s["lines"] if isinstance(ln.get("id"), str)}
     tables = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "lootTable"
               for ln in s["lines"] if isinstance(ln.get("id"), str)}
+    itypes = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "itemType"
+              for ln in s["lines"] if isinstance(ln.get("id"), str)}
     for ln in ach["lines"]:
         desc = ln.get("desc") or ""
         m = re.match(r"Defeat \[(\w+)\].*::target::.*difficulty", desc)
@@ -900,8 +902,8 @@ def extract_dungeons(game_dir):
                 seen.add(ref[1])
                 out.append({"kind": ref[1], "boss": boss,
                             "region": f"{region}_Region" if region else "",
-                            "loot": dungeon_loot(unit_rows.get(boss) or {},
-                                                 item_rows, tables)})
+                            **dungeon_loot(unit_rows.get(boss) or {},
+                                           item_rows, tables, itypes)})
     return out
 
 
@@ -912,7 +914,7 @@ APTITUDE_CLASS = {"Fighter": "warrior", "Wizard": "mage",
                   "Assassin": "rogue", "Cleric": "priest"}
 
 
-def dungeon_loot(boss, item_rows, tables):
+def dungeon_loot(boss, item_rows, tables, itypes=None):
     """What the end of a dungeon can give, from the game's own data.
 
     * The reward chest (Gameplay/Elements/Activities/BossChest.prefab, placed
@@ -923,8 +925,15 @@ def dungeon_loot(boss, item_rows, tables):
       always the same way round — the Weights flag says which is which.
     * Every dungeon activity (Gameplay/Activities/Base.prefab) gives
       DungeonCrate: spark shards, the quantity by level.
-    * The faction's armour set: in no table, rolled by the game's code
-      (st.Player.dropFactionLoot) — so no chance is known.
+    * The faction's armour, by the game's code (read from hlboot.dat with
+      hltools/hlbc_code.py, 2026-10-01 — st.activity.DungeonContext.
+      dropBossLoot): in Normal / Hard every player gets ONE piece for sure
+      (dropFactionLoot, chance 1.0), drawn evenly among the faction's Rare
+      non-weapon gear his class can wear (HItem.getFactionLootTable, flags
+      WithAffinity + BLP_LootLog: the last 2 pieces received are left out);
+      in Heroic that is replaced by the boss's heroicLootTable (Epic pieces,
+      one drawn among the class's), and a boss without one gives no armour.
+      "pools": {mode: {class: pieces eligible}}.
     A line can require a difficulty (conditions.difficulty.min: since the
     2026-09-30 patch the bosses' infusion pattern, Heroic only): `diff`.
     Each entry: {item, type, rarity, apt, src, chance (0..1 or None), qty,
@@ -957,19 +966,45 @@ def dungeon_loot(boss, item_rows, tables):
             out += [entry(ln["item"], "boss", float(ln.get("proba") or 0),
                           diff=min_diff(ln))
                     for ln in lines]
+    itypes = itypes or {}
+
+    def is_weapon(t):
+        seen = set()
+        while t in itypes and t not in seen:
+            seen.add(t)
+            if t == "Weapon":
+                return True
+            t = itypes[t].get("inherit")
+        return False
+
+    def pool(ids):
+        # a piece with no aptitude fits every class (HItem.hasUnitAptitude)
+        return {c: sum(1 for i in ids
+                       if not entry(i, "", None)["apt"]
+                       or c in entry(i, "", None)["apt"])
+                for c in APTITUDE_CLASS.values()}
+
     faction = boss.get("faction")
+    pools = {}
     if faction:
-        out += [entry(iid, "faction", None)
-                for iid, row in item_rows.items()
+        rare = [iid for iid, row in item_rows.items()
                 if row.get("faction") == faction
-                and row.get("type") in ARMOUR_TYPES]
+                and row.get("rarity") == "Rare"
+                and not is_weapon(row.get("type"))]
+        out += [entry(iid, "faction", None) for iid in rare]
+        pools["faction"] = pool(rare)
+    heroic = (tables.get(props.get("heroicLootTable")) or {}).get("loot") or []
+    epic = [ln["item"] for ln in heroic if ln.get("item")]
+    if epic:
+        out += [entry(iid, "heroic", None, diff=2) for iid in epic]
+        pools["heroic"] = pool(epic)
     crate = [ln for ln in (tables.get("DungeonCrate") or {}).get("loot") or ()
              if ln.get("item")]
     for iid in dict.fromkeys(ln["item"] for ln in crate):
         out.append(entry(iid, "coffre", 1.0, [
             [ln.get("itemMin"), ln.get("itemMax"), ln.get("minLvl"),
              ln.get("maxLvl")] for ln in crate if ln["item"] == iid]))
-    return out
+    return {"loot": out, "pools": pools}
 
 
 BOSS_PORTRAIT_PX = 192
