@@ -1,5 +1,5 @@
 """
-farever_meter.py — Farever+ party damage meter (memory-reading edition).
+farever_meter.py — Farever France party damage meter (memory-reading edition).
 
 Attaches to Farever via Frida, injects meter_hook.js (which hooks the game's
 own ent.Unit.onInflictDamage and ent.Unit.playHitHealFX and streams every
@@ -552,7 +552,7 @@ def request_stop():
         ov.request_quit()
 
 
-def message_box(text, title="Farever+", flags=0x40):
+def message_box(text, title="Farever France", flags=0x40):
     """A dialog is the only way to reach a user who has no console. Used for
     the failures that stop the meter starting at all — anything softer belongs
     in the log."""
@@ -1957,7 +1957,7 @@ def bind_label(bind=None):
 # Bump this on every release, and tag the repo with the same string — it's the
 # left-hand side of the comparison below, so a release that forgets it tells
 # everyone they're out of date forever.
-VERSION = "4.0.1"
+VERSION = "1.0.0"
 
 
 
@@ -2213,7 +2213,7 @@ class TrayIcon:
     and they're delivered to the thread that created the window, so it needs a
     pump of its own rather than sharing Tk's."""
 
-    def __init__(self, on_quit, tip="Farever+"):
+    def __init__(self, on_quit, tip="Farever France"):
         self.on_quit = on_quit
         self.tip = tip
         self.hwnd = None
@@ -2286,7 +2286,7 @@ class TrayIcon:
     def _menu(self):
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
-        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Afficher Farever+")
+        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Afficher Farever France")
         u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des parses")
         u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Ouvrir le dossier du journal")
         u.AppendMenuW(m, MF_SEPARATOR, 0, None)
@@ -2411,7 +2411,7 @@ class TrayIcon:
             if not u.RegisterClassW(ctypes.byref(cls)):
                 raise OSError(ctypes.get_last_error())
             u.CreateWindowExW.restype = wintypes.HWND
-            self.hwnd = u.CreateWindowExW(0, "FareverMeterTray", "Farever+ tray",
+            self.hwnd = u.CreateWindowExW(0, "FareverMeterTray", "Farever France tray",
                                           0, 0, 0, 0, 0, None, None,
                                           cls.hInstance, None)
             if not self.hwnd:
@@ -2424,7 +2424,7 @@ class TrayIcon:
             self._ready.set()
             return
         print("[meter] tray icon active.", file=sys.stderr)
-        self._balloon("Farever+ est lancé",
+        self._balloon("Farever France est lancé",
                       "Clic droit sur cette icône pour l'arrêter. Si elle est "
                       "masquée, clique sur la flèche ^ près de l'horloge et "
                       "fais-la glisser dans la barre des tâches.")
@@ -3056,7 +3056,7 @@ class App:
             "Combat abandonné — compteur vidé.", ""))()
 
     def open_settings_from_tray(self):
-        """The tray's "Afficher Farever+": bring the window to the front."""
+        """The tray's "Afficher Farever France": bring the window to the front."""
         self.menubridge.send({"t": "show"})
 
     def _tick_rift(self):
@@ -3212,9 +3212,9 @@ class App:
         that turns the session into what the window shows."""
         self.menubridge.start(self._win_geom)
         if self.menubridge.proc is None:
-            message_box("La fenêtre de Farever+ n'a pas pu s'ouvrir "
+            message_box("La fenêtre de Farever France n'a pas pu s'ouvrir "
                         "(WebView2 ou pywebview manquant ?).\n\nLe détail est "
-                        f"dans :\n{LOG_FILE}", "Farever+ — erreur", 0x10)
+                        f"dans :\n{LOG_FILE}", "Farever France — erreur", 0x10)
             return
         last = 0.0
         while not self._stopping:
@@ -3630,7 +3630,7 @@ class App:
         states = ((els.get("heroes") or {}).get(hero) or {}).get("states")
         sync = (f"Succès du compte et progression de {hero}, lus en jeu le "
                 f"{date_fr(time.localtime(at))}." if at else
-                "Pas encore lus : lance le jeu avec Farever+ ouvert.")
+                "Pas encore lus : lance le jeu avec Farever France ouvert.")
         return [{"k": "achievements", "id": "achievements", "sync": sync,
                  **achievements_view(data.get("account") or {},
                                      entry.get("counters") or {},
@@ -3748,9 +3748,9 @@ class App:
         sync = (f"Kills de {hero}, lus en jeu le "
                 f"{date_fr(time.localtime(at))}. Le compte est celui du jeu "
                 "(son Codex) : il inclut tout ce que tu as tué avant "
-                "Farever+, et se met à jour tout seul quand le jeu est "
+                "Farever France, et se met à jour tout seul quand le jeu est "
                 "ouvert." if at else
-                "Pas encore lu : lance le jeu avec Farever+ ouvert, tes "
+                "Pas encore lu : lance le jeu avec Farever France ouvert, tes "
                 "kills se rempliront tout seuls.")
         return [{"k": "hunt", "id": "hunt", "sync": sync,
                  **bestiary_view(entry.get("ranks") or {},
@@ -3821,7 +3821,7 @@ class App:
         at = entry.get("at")
         sync = (f"Progression de {hero}, lue en jeu le "
                 f"{date_fr(time.localtime(at))}." if at else
-                "Progression pas encore lue : lance le jeu avec Farever+ "
+                "Progression pas encore lue : lance le jeu avec Farever France "
                 "ouvert.")
         return [{"k": "map", "id": "map", "sync": sync,
                  **map_view(entry.get("states") if at else None)}]
@@ -3840,7 +3840,7 @@ class App:
         at = owned.get("at")
         sync = (f"Lue en jeu le {date_fr(time.localtime(at))}. Elle se met "
                 "à jour toute seule quand le jeu est ouvert."
-                if at else "Pas encore lue : lance le jeu avec Farever+ "
+                if at else "Pas encore lue : lance le jeu avec Farever France "
                            "ouvert, ta collection se remplira toute seule.")
         codex = self._item_codex()
         entry = (codex.get("heroes") or {}).get(codex.get("last")) or {}
@@ -4273,7 +4273,7 @@ class App:
 
     def _report_text(self, data):
         """The plaintext version — chat-pasteable lines, no box drawing."""
-        out = ["Farever+ — " + (data.get("title") or "Rapport de faille")
+        out = ["Farever France — " + (data.get("title") or "Rapport de faille")
                + (f" ({data['sub']})" if data.get("sub") else "")]
         for ph in data["phases"]:
             dur = ph["duration"]
@@ -4388,7 +4388,7 @@ class App:
                                       for k, v in el[:6]),
             }
         return {
-            "title": f"Farever+ — Parse de {PARSE_LENGTH_SECS} s",
+            "title": f"Farever France — Parse de {PARSE_LENGTH_SECS} s",
             "when": time.strftime("%d/%m/%Y %H:%M"),
             "duration": duration,
             "mode": "GROUPE" if self.mode == "party" else "TOUS LES JOUEURS",
@@ -5841,7 +5841,7 @@ def rift_rewards_view(counters, luck_until):
     d = rift_rewards_data()
     if not d:
         return [{"k": "note", "t": "Données des failles absentes : relance "
-                                   "Farever+ avec le jeu ouvert pour les "
+                                   "Farever France avec le jeu ouvert pour les "
                                    "générer."}]
     level = counters.get("HeroLevel") if isinstance(
         counters.get("HeroLevel"), (int, float)) else 25
@@ -7675,7 +7675,7 @@ def main():
 # Frida 17.19.0 crashes whatever process it leaves: attach then detach, no
 # script at all, and the target dies with 0xC0000005 (measured 2026-09-28 on
 # Windows 11 build 26200, against 16.7.19 / 17.2.17 / 17.10.1 / 17.18.0 that
-# all leave it running). With the game, that is closing Farever+ closing
+# all leave it running). With the game, that is closing Farever France closing
 # Farever. The meter refuses to attach with it.
 FRIDA_CRASHING_VERSIONS = {"17.19.0"}
 FRIDA_GOOD_VERSION = "17.18.0"
@@ -8191,7 +8191,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     # Connected. From here the hook feeds on_message until the game closes.
     link.script = script
     link.set_state(GameLink.CONNECTED, pid=pid)
-    print("[*] connected — everything shows in the Farever+ window; the "
+    print("[*] connected — everything shows in the Farever France window; the "
           "reset hotkey is set in Réglages.", file=sys.stderr)
     try:
         while not STOP.is_set() and not detached.wait(0.5):
@@ -8288,7 +8288,7 @@ class GameLink:
                   f"frida=={FRIDA_GOOD_VERSION}", file=sys.stderr)
             self.set_state(self.FAILED,
                            f"Frida {bad} ferait planter le jeu à la fermeture "
-                           f"de Farever+. Installe la {FRIDA_GOOD_VERSION} : "
+                           f"de Farever France. Installe la {FRIDA_GOOD_VERSION} : "
                            f"py -m pip install frida=={FRIDA_GOOD_VERSION}")
             return
         try:
@@ -8413,7 +8413,7 @@ def _cli():
         # instead of exiting silently, which would look like nothing happened.
         if not HAS_CONSOLE and e.code not in (0, None):
             print(f"[meter] {e.code}", file=sys.stderr)
-            message_box(e.code, "Farever+ — démarrage impossible", 0x10)
+            message_box(e.code, "Farever France — démarrage impossible", 0x10)
         raise
     except Exception:
         import traceback
@@ -8423,7 +8423,7 @@ def _cli():
                 "Le compteur a rencontré une erreur inattendue et s'est "
                 "arrêté.\n\n"
                 f"Le détail est dans :\n{LOG_FILE}",
-                "Farever+ — erreur", 0x10)
+                "Farever France — erreur", 0x10)
         raise
 
 

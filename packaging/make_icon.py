@@ -1,12 +1,8 @@
 """Draw assets/farevermeter.ico — the tray, executable and installer icon.
 
-Generated rather than committed as an opaque binary: the palette is the meter's
-own, so if the overlay is ever re-skinned the icon can follow by editing three
-constants here instead of by opening an image editor.
-
-Each size is drawn at its own resolution rather than downscaled from one big
-one. The mark is three bars, and at 16x16 a bar is two pixels tall — scaling
-those down from 256 turns them to mush.
+Generated rather than committed as an opaque binary: it is the window's own
+emblem (the Farever France shield), so a re-skin can follow by editing the
+colour constants here instead of by opening an image editor.
 
     py packaging/make_icon.py
 """
@@ -16,37 +12,58 @@ from PIL import Image, ImageDraw
 
 OUT = Path(__file__).resolve().parent.parent / "assets" / "farevermeter.ico"
 
-# Straight out of farever_meter.py: the header teal, the border brown, and the
-# damage/healing bar colours.
-BORDER = "#2C1A0E"
-HEADER = "#54A4A9"
-BARS = ("#F2E1CB", "#5279B5", "#5E9C4A")
+# The window's emblem (menu.css .emblem): a gold-rimmed shield, an indigo
+# field, a gold star.
+GOLD_HI, GOLD_LO = (246, 212, 106), (185, 138, 34)
+FIELD_HI, FIELD_LO = (62, 58, 114), (30, 28, 54)
+STAR = (251, 224, 138)
 
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 
+def _shield(w, h, inset=0.0):
+    """The shield's outline in a w x h box, shrunk by `inset` pixels."""
+    pts = [(0.5, 0), (1, 0.14), (1, 0.62), (0.5, 1), (0, 0.62), (0, 0.14)]
+    cx, cy = w / 2, h / 2
+    sx, sy = (w - 2 * inset) / w, (h - 2 * inset) / h
+    return [(cx + (x * w - cx) * sx, cy + (y * h - cy) * sy) for x, y in pts]
+
+
+def _gradient(size, top, bottom):
+    g = Image.new("RGBA", (size, size))
+    d = ImageDraw.Draw(g)
+    for y in range(size):
+        t = y / max(1, size - 1)
+        d.line([(0, y), (size, y)], fill=tuple(
+            round(a + (b - a) * t) for a, b in zip(top, bottom)) + (255,))
+    return g
+
+
 def draw(size: int) -> Image.Image:
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    edge = max(1, round(size / 16))
+    # drawn 4x then reduced: the shield's slanted edges stay smooth
+    big = size * 4
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    w, h = big * 0.86, big * 0.96
+    ox, oy = (big - w) / 2, (big - h) / 2
 
-    d.rounded_rectangle((0, 0, size - 1, size - 1), radius=round(size * 0.22),
-                        fill=HEADER, outline=BORDER, width=edge)
+    def placed(pts):
+        return [(ox + x, oy + y) for x, y in pts]
 
-    # Three left-aligned bars of descending length — a damage meter at a glance,
-    # and still legible when Windows renders it 16 pixels wide.
-    pad = round(size * 0.22)
-    inner = size - pad * 2
-    bar_h = max(1, round(size * 0.13))
-    gap = max(1, round(size * 0.09))
-    total = bar_h * 3 + gap * 2
-    y = (size - total) / 2
-    for frac, colour in zip((1.0, 0.68, 0.4), BARS):
-        w = max(2, round(inner * frac))
-        d.rectangle((pad, round(y), pad + w - 1, round(y) + bar_h - 1),
-                    fill=colour)
-        y += bar_h + gap
-    return img
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).polygon(placed(_shield(w, h)), fill=255)
+    img.paste(_gradient(big, GOLD_HI, GOLD_LO), (0, 0), mask)
+    rim = max(big * 0.075, 4)
+    mask2 = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask2).polygon(placed(_shield(w, h, rim)), fill=255)
+    img.paste(_gradient(big, FIELD_HI, FIELD_LO), (0, 0), mask2)
+    # the star
+    import math
+    cx, cy, r = big / 2, oy + h * 0.44, big * 0.25
+    star = [(cx + (r if i % 2 == 0 else r * 0.42) * math.sin(math.pi * i / 5),
+             cy - (r if i % 2 == 0 else r * 0.42) * math.cos(math.pi * i / 5))
+            for i in range(10)]
+    ImageDraw.Draw(img).polygon(star, fill=STAR + (255,))
+    return img.resize((size, size), Image.LANCZOS)
 
 
 def main():

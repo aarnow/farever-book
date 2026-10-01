@@ -1,4 +1,4 @@
-"""The Farever+ window: a WebView2 application window in its own process.
+"""The Farever France window: a WebView2 application window in its own process.
 
 WHY A SECOND PROCESS
 --------------------
@@ -170,7 +170,7 @@ class AppWindow:
         self._want = geom
         self._last_geom = None
         self.window = webview.create_window(
-            "Farever+",
+            "Farever France",
             html=_document(),
             width=int(geom.get("w") or DEFAULT_W),
             height=int(geom.get("h") or DEFAULT_H),
@@ -218,7 +218,7 @@ class AppWindow:
         self.pipe.send({"t": "geom", "x": x, "y": y, "w": w, "h": h})
 
     def _on_closing(self):
-        """Closing the window is quitting Farever+: the meter unloads its
+        """Closing the window is quitting Farever France: the meter unloads its
         hook and stops. The window closes right away either way."""
         if not self._closing:
             self._closing = True

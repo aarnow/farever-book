@@ -1,23 +1,23 @@
-# Utiliser Farever+
+# Utiliser Farever France
 
 > Une seule fenêtre, sur ton 2nd écran, qui ne touche jamais au jeu.
 
-Farever+ lit les données de combat de Farever et les affiche dans cette
+Farever France lit les données de combat de Farever et les affiche dans cette
 fenêtre. Rien n'est jamais dessiné dans le jeu : ton HUD reste exactement celui
 de Farever.
 
 ## Avec ou sans le jeu
 
-Lance Farever+ quand tu veux, avant ou après le jeu. Le voyant en haut à droite
+Lance Farever France quand tu veux, avant ou après le jeu. Le voyant en haut à droite
 indique où il en est :
 
 * **● Hors jeu** — Farever n'est pas lancé. Les failles, l'historique des
   combats et les réglages restent consultables.
-* **● Connexion…** — le jeu vient d'être détecté, Farever+ s'y branche.
+* **● Connexion…** — le jeu vient d'être détecté, Farever France s'y branche.
 * **● En jeu** — les données arrivent en direct.
 * **● Échec — réessayer** — clique sur le voyant pour une nouvelle tentative.
 
-Quand tu fermes le jeu, Farever+ revient à « Hors jeu » et se reconnecte tout
+Quand tu fermes le jeu, Farever France revient à « Hors jeu » et se reconnecte tout
 seul à la prochaine session.
 
 ## Les pages
@@ -35,7 +35,7 @@ seul à la prochaine session.
 * **Collection** — tes montures, planeurs et compagnons, les apparences
   d'équipement (armures, filtrables par emplacement) et les objets du
   Codex (composants, minerais, tissus, cuirs) avec combien tu en as obtenu et
-  leur rang. Farever+ la lit tout seul quand le jeu est ouvert et la garde
+  leur rang. Farever France la lit tout seul quand le jeu est ouvert et la garde
   pour la consulter jeu fermé. Clique sur un élément pour savoir comment
   l'obtenir (butin, factions, récolte, fabrication, démontage…).
 
@@ -56,11 +56,11 @@ Le raccourci clavier (par défaut **Maj + \**) réinitialise le combat sans
 quitter le jeu des yeux. Il ne fonctionne que lorsque Farever est au premier
 plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
-## Arrêter Farever+
+## Arrêter Farever France
 
 Ferme simplement cette fenêtre (la croix en haut à droite), ou fais **clic droit
 sur l'icône** près de l'horloge → **Arrêter le compteur**. Dans les deux cas,
-Farever+ se détache proprement du jeu.
+Farever France se détache proprement du jeu.
 
 **Ne l'arrête pas depuis le Gestionnaire des tâches** : ça tue le processus avant
 qu'il ait pu se détacher du jeu, et c'est ce qui peut déstabiliser Farever.

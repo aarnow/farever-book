@@ -1,8 +1,8 @@
-"""Create the "Farever+" shortcut on the Desktop and in the Start menu.
+"""Create the "Farever France" shortcut on the Desktop and in the Start menu.
 
 It starts the app through pythonw.exe — the same Python, without a console
 window (the app then logs to %LOCALAPPDATA%\\FareverMeter\\meter.log). Run by
-"Installer Farever+.cmd"; safe to run again, it only rewrites the shortcuts."""
+"Installer Farever France.cmd"; safe to run again, it only rewrites the shortcuts."""
 import subprocess
 import sys
 from pathlib import Path
@@ -24,18 +24,21 @@ def main():
         "$s = New-Object -ComObject WScript.Shell; "
         "foreach ($dir in @([Environment]::GetFolderPath('Desktop'), "
         "[Environment]::GetFolderPath('Programs'))) { "
-        "$l = $s.CreateShortcut((Join-Path $dir 'Farever+.lnk')); "
+        # the shortcut's name before the app was renamed (Farever+)
+        "Remove-Item -LiteralPath (Join-Path $dir 'Farever+.lnk') "
+        "-ErrorAction SilentlyContinue; "
+        "$l = $s.CreateShortcut((Join-Path $dir 'Farever France.lnk')); "
         f"$l.TargetPath = {ps(pyw)}; "
         f"$l.Arguments = {ps(chr(34) + str(script) + chr(34))}; "
         f"$l.WorkingDirectory = {ps(ROOT)}; "
         f"$l.IconLocation = {ps(icon)}; "
-        "$l.Description = 'Farever+ : compteur et suivi pour Farever'; "
-        "$l.Save(); Write-Output (Join-Path $dir 'Farever+.lnk') }")
+        "$l.Description = 'Farever France : compteur et suivi pour Farever'; "
+        "$l.Save(); Write-Output (Join-Path $dir 'Farever France.lnk') }")
     r = subprocess.run(["powershell", "-NoProfile", "-Command", cmd],
                        capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit(f"La création des raccourcis a échoué :\n{r.stderr}")
-    for line in r.stdout.split():
+    for line in r.stdout.splitlines():
         print(f"  {line}")
 
 

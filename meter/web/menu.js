@@ -1,4 +1,4 @@
-/* The Farever+ window's renderer.
+/* The Farever France window's renderer.
  *
  * This file knows how to draw a NODE, not a page. The meter sends a
  * declarative spec — a flat list of nodes for the current page — a few times
@@ -1035,15 +1035,24 @@ function renderAch(box, n) {
 
   const list = el('div', 'achlist');
   shown.forEach((it) => {
-    const card = el('div', 'achcard' + (it.done ? ' done' : ''));
-    const top = el('div', 'atop');
-    const t = el('div', 'at');
-    t.appendChild(el('b', 'nm', it.name));
-    if (it.subT) t.appendChild(el('span', 'sub', it.subT));
-    top.appendChild(t);
-    top.appendChild(el('span', 'apts', it.done ? '✓' : '+' + it.pts + ' pts'));
-    card.appendChild(top);
-    if (it.desc) card.appendChild(el('p', 'ad', it.desc));
+    // a guild-mission card: a coloured band with the category's crest, the
+    // body, then the points and the reward in dark wells
+    const card = el('div', 'achcard cat-' + it.c + (it.done ? ' done' : ''));
+    const band = el('div', 'aband');
+    const crest = el('span', 'crest');
+    const src = (window.__COLL__ || {})['achcat_' + it.c];
+    if (src) {
+      const im = document.createElement('img');
+      im.src = src;
+      im.alt = '';
+      crest.appendChild(im);
+    }
+    band.appendChild(crest);
+    band.appendChild(el('b', 'nm', it.name));
+    card.appendChild(band);
+    const body = el('div', 'abody');
+    if (it.subT) body.appendChild(el('span', 'sub', it.subT));
+    if (it.desc) body.appendChild(el('p', 'ad', it.desc));
     if (it.need != null && !it.done) {
       const pr = el('div', 'aprog');
       const bar = el('div', 'abar');
@@ -1051,17 +1060,17 @@ function renderAch(box, n) {
       fill.style.width = Math.round((it.pct || 0) * 100) + '%';
       bar.appendChild(fill);
       pr.appendChild(bar);
-      pr.appendChild(el('span', null, fmtN(Math.floor(it.have)) + ' / ' + fmtN(it.need)));
-      card.appendChild(pr);
+      pr.appendChild(el('span', null, 'Progression : ' + fmtN(Math.floor(it.have)) + ' / ' + fmtN(it.need)));
+      body.appendChild(pr);
     }
+    card.appendChild(body);
     const foot = el('div', 'afoot');
-    if ((it.tiers || []).length > 1) {
-      const pips = el('span', 'apips');
-      it.tiers.forEach((tr) => pips.appendChild(el('i', tr.ok ? 'on' : '')));
-      foot.appendChild(pips);
-    }
+    const pts = el('span', 'well pts');
+    pts.appendChild(el('b', null, String(it.pts)));
+    pts.appendChild(el('i', 'star', '★'));
+    foot.appendChild(pts);
     (it.rewards || []).forEach((r) => {
-      const rw = el('span', 'arew');
+      const rw = el('span', 'well arew');
       if (r.img) {
         const im = document.createElement('img');
         im.src = r.img;
@@ -1071,8 +1080,14 @@ function renderAch(box, n) {
       rw.appendChild(el('span', null, r.name));
       foot.appendChild(rw);
     });
-    if (it.when) foot.appendChild(el('span', 'awhen', 'Obtenu le ' + it.when));
-    if (foot.childNodes.length) card.appendChild(foot);
+    foot.appendChild(el('span', 'spacer'));
+    if ((it.tiers || []).length > 1) {
+      const pips = el('span', 'apips');
+      it.tiers.forEach((tr) => pips.appendChild(el('i', tr.ok ? 'on' : '')));
+      foot.appendChild(pips);
+    }
+    if (it.done) foot.appendChild(el('span', 'adone', '✓' + (it.when ? ' ' + it.when : '')));
+    card.appendChild(foot);
     list.appendChild(card);
   });
   if (!shown.length) list.appendChild(el('div', 'empty', 'Rien à afficher.'));

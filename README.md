@@ -1,4 +1,4 @@
-# Farever+ (fork en français, hors jeu)
+# Farever France (fork en français, hors jeu)
 
 > **Ce dépôt est un fork personnel de [Farever+](https://github.com/brudrbear/FareverMeter)**,
 > le compteur de dégâts pour **Farever** créé par **Brudr**. Tout le travail de
@@ -32,15 +32,15 @@ Autrement dit : pendant l'accès anticipé, le studio ne met pas en avant les
 add-ons, mais tolère leur usage personnel. C'est le cadre de ce fork : usage
 personnel, sans diffusion. Cette tolérance peut évoluer, à surveiller.
 
-Pour être exact sur ce que fait Farever+ dans le jeu : il ne modifie aucune
+Pour être exact sur ce que fait Farever France dans le jeu : il ne modifie aucune
 donnée et n'envoie rien sur le réseau, mais Frida s'injecte dans le processus
 du jeu et dévie quelques fonctions en mémoire pour être prévenu des coups et
 des soins. En cas de plantage à signaler aux développeurs, reproduis-le sans
-Farever+ avant de l'envoyer.
+Farever France avant de l'envoyer.
 
-## Ce que fait Farever+
+## Ce que fait Farever France
 
-Farever+ lit en mémoire les données de combat de Farever (sorts, éléments,
+Farever France lit en mémoire les données de combat de Farever (sorts, éléments,
 critiques, kills, soins) pour tous les joueurs proches, et les affiche dans une
 fenêtre Windows séparée.
 
@@ -50,7 +50,7 @@ fenêtre Windows séparée.
 | **Failles** | Toutes les failles terminées. Chaque rapport compare la phase de faille et la phase du boss : durée, DPS, HPS, MVP, classement complet des dégâts et des soins, dégâts par type. Copiable en image (au visuel de l'interface) ou en texte. |
 | **Donjons** | Chaque donjon est enregistré automatiquement : difficulté (lue dans le lobby), résultat (victoire, échec, abandon), temps du run (l'horloge du jeu), morts, groupe, un rapport en deux phases (exploration puis boss) comme pour les failles, et le butin ramassé (dont le coffre de fin). Noms des donjons, objets et boss en français, tirés du jeu. Records par donjon et par difficulté. |
 | **Collection** | Montures, planeurs, compagnons, apparences d'équipement (par emplacement) et objets du Codex (nombre obtenu et rang) : ta collection est lue en jeu et gardée hors jeu. Compteurs par catégorie, recherche, filtres (tous, manquants, obtenus) et, pour chaque élément, comment l'obtenir d'après les données du jeu (butin et chances, marchands, coffres, succès, zones de capture et taux d'apparition, butin de faction, récolte, recettes de fabrication, démontage). |
-| **Chasse** | Tableau de chasse : le nombre de kills de ton personnage pour chaque monstre, lu dans le Codex du jeu (il inclut donc tout ce que tu as tué avant Farever+), avec le rang du Codex. Filtres par région, recherche, tri. |
+| **Chasse** | Tableau de chasse : le nombre de kills de ton personnage pour chaque monstre, lu dans le Codex du jeu (il inclut donc tout ce que tu as tué avant Farever France), avec le rang du Codex. Filtres par région, recherche, tri. |
 | **Carte** | La carte de Siagarta (les tuiles de la minimap du jeu), déplaçable et zoomable, avec les points de complétion : coffres du monde, de chambre forte et de recette, orbes rouges, obélisques et points de réapparition. Filtres par catégorie et par région, compteurs, détail au clic. |
 | **Personnage** | Les joueurs autour de toi et, sur demande, le profil d'un joueur : classe, niveau, équipement (améliorations, cadeaux, formules, sceaux et gemmes posés, avec leurs effets ; imprégnations et effets de set actifs à 2 / 4 / 6 pièces), barre de sorts, arbre de talents et runes. Les profils ne sont gardés que pendant la session. |
 | **Réglages** | Colonnes de soins, réinitialisation au pull d'un boss, « Tous les joueurs » automatique en faille, raccourci clavier, taille de l'interface, dossiers. |
@@ -62,7 +62,7 @@ d'ouverture du portail.
 
 ### Avec ou sans le jeu
 
-Farever+ s'ouvre à tout moment. Il détecte Farever tout seul, s'y connecte, et
+Farever France s'ouvre à tout moment. Il détecte Farever tout seul, s'y connecte, et
 s'y reconnecte après une fermeture du jeu. Le voyant en haut à droite indique
 l'état :
 
@@ -82,8 +82,8 @@ plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
 Ce fork se lance depuis les sources (Windows). Il faut
 [Python](https://www.python.org/downloads/), puis un double-clic sur
-**`Installer Farever+.cmd`** : il installe les modules (dans les bonnes
-versions) et crée le raccourci **Farever+** sur le Bureau et dans le menu
+**`Installer Farever France.cmd`** : il installe les modules (dans les bonnes
+versions) et crée le raccourci **Farever France** sur le Bureau et dans le menu
 Démarrer. Le raccourci lance l'application sans fenêtre de console ; son
 journal est alors dans `%LOCALAPPDATA%\FareverMeter\meter.log` (bouton du
 journal dans les Réglages). Le script peut être relancé sans risque, par
@@ -96,19 +96,19 @@ pip install frida==17.18.0 pillow pywebview
 python meter/farever_meter.py
 ```
 
-Au premier lancement avec le jeu, Farever+ extrait ses données du jeu
+Au premier lancement avec le jeu, Farever France extrait ses données du jeu
 (images, carte, catalogues) : une à deux minutes.
 
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
 
 **Frida doit être en 17.18.0.** La 17.19.0 fait planter tout processus dont
-elle se détache, donc Farever à la fermeture de Farever+ (mesuré le
+elle se détache, donc Farever à la fermeture de Farever France (mesuré le
 28/09/2026 sur Windows 11 build 26200 ; les versions 16.7.19 à 17.18.0 n'ont
-pas ce problème). Farever+ refuse de s'attacher avec la 17.19.0 et l'indique
+pas ce problème). Farever France refuse de s'attacher avec la 17.19.0 et l'indique
 dans sa fenêtre.
 
-Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône Farever+ près de
-l'horloge → **Arrêter le compteur**. Farever+ se détache alors proprement du jeu.
+Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône Farever France près de
+l'horloge → **Arrêter le compteur**. Farever France se détache alors proprement du jeu.
 
 **Ne l'arrête pas depuis le Gestionnaire des tâches** : le processus serait tué
 avant de s'être détaché du jeu, ce qui peut déstabiliser Farever.
@@ -132,7 +132,7 @@ Rien n'est jamais supprimé de `parses/` ni de `donjons/` : fais le ménage toi-
 ## Après une mise à jour de Farever
 
 Les index de fonctions et les positions des champs changent d'une version du jeu
-à l'autre. Au lancement, Farever+ compare le `hlboot.dat` du jeu en cours avec
+à l'autre. Au lancement, Farever France compare le `hlboot.dat` du jeu en cours avec
 celui qui a servi à générer `analysis_out/`, et **régénère les données tout seul**
 si besoin (quelques secondes). Si Farever est installé à un endroit inhabituel,
 indique le chemin complet de `hlboot.dat` dans la variable d'environnement
@@ -192,7 +192,7 @@ packaging/     scripts de construction d'un exécutable (projet d'origine, non
 * Les rapports enregistrés avant la traduction gardent quelques libellés en
   anglais dans leurs fichiers ; l'affichage les traduit.
 * L'appartenance au groupe se fait par nom de joueur.
-* Si deux copies de Farever tournent en même temps, Farever+ se connecte à la
+* Si deux copies de Farever tournent en même temps, Farever France se connecte à la
   première.
 * Le suivi des morts en phase de boss est en attente d'une mise à jour du jeu
   (état « à terre »).

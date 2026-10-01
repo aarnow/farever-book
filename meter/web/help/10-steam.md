@@ -14,11 +14,11 @@ cmd /c start "" "C:\Users\TOI\AppData\Local\Programs\FareverMeter\FareverMeter.e
 
 Remplace `TOI` par ton nom d'utilisateur Windows.
 
-Pour avoir le chemin exact sans le taper : cherche **Farever+ Meter** dans le
+Pour avoir le chemin exact sans le taper : cherche **Farever France Meter** dans le
 menu Démarrer, clic droit → **Plus** → **Ouvrir l'emplacement du fichier**, puis
 clic droit sur le raccourci → **Propriétés** et copie le champ **Cible**.
 
-Désormais, lancer Farever depuis Steam démarre d'abord Farever+, puis le jeu.
+Désormais, lancer Farever depuis Steam démarre d'abord Farever France, puis le jeu.
 
 ## Pourquoi cette forme
 
@@ -36,7 +36,7 @@ pas le cas des recettes qui lancent aussi le jeu avec `start`.
 
 ## Deux choses à savoir
 
-* **Quand le jeu se ferme, Farever+ reste ouvert** et repasse à « Hors jeu » :
+* **Quand le jeu se ferme, Farever France reste ouvert** et repasse à « Hors jeu » :
   tu peux relire tes failles et tes combats, et il se reconnecte tout seul à la
   prochaine session.
 * **Si tu lances Farever hors de Steam** — depuis un raccourci sur le bureau,

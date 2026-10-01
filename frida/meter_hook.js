@@ -1,4 +1,4 @@
-// meter_hook.js — persistent hook feeding the Farever+ party meter.
+// meter_hook.js — persistent hook feeding the Farever France party meter.
 // Resolves the HL functions_ptrs table, identifies the local hero via
 // ui.Console.getMyHero(), hooks ent.Unit.onInflictDamage, and streams EVERY
 // player's (ent.Hero dealer) damage instance to Python as {kind:'hit', ...},
