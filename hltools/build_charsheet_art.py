@@ -4,8 +4,6 @@ Maintainer tool, not part of the meter: run it when the game's UI art
 changes, and the meter ships the result in assets/charsheet/ (inlined in the
 page by menu_host, nothing loaded at runtime).
 
-    UI/Character/classBanners.png     540x512, one 128 px band per class
-                                      (warrior, mage, rogue, priest)
     UI/icons/gear_slots.png           54 px cells: an empty slot's outline
     UI/icons/atlas_characterSheet_statsIcons_28PX.png
                                       28 px cells: the attributes' icons
@@ -27,7 +25,6 @@ from gamepath import find_hlboot
 
 OUT = Path(__file__).resolve().parent.parent / "assets" / "charsheet"
 
-BANNERS = ("warrior", "mage", "rogue", "priest")
 # gear_slots.png, row by row (54 px cells)
 SLOT_CELLS = {"Chest": (0, 0), "Hands": (1, 0), "Waist": (2, 0),
               "Legs": (3, 0), "Feet": (4, 0), "Back": (5, 0), "Head": (6, 0),
@@ -47,10 +44,6 @@ def main():
         return Image.open(io.BytesIO(pak_extract.read_entry(pak, name))) \
                     .convert("RGBA")
 
-    banners = img("UI/Character/classBanners.png")
-    for i, key in enumerate(BANNERS):
-        band = banners.crop((0, i * 128, banners.width, (i + 1) * 128))
-        band.save(OUT / f"banner_{key}.webp", quality=82)
     slots = img("UI/icons/gear_slots.png")
     for name, (cx, cy) in SLOT_CELLS.items():
         slots.crop((cx * 54, cy * 54, cx * 54 + 54, cy * 54 + 54)) \

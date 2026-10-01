@@ -1493,7 +1493,7 @@ body.maxed .grip { display: none; }
 .section .count { margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 12px;
                   background: var(--panel-2); border: 1px solid var(--line); color: var(--accent); }
 .charsheet { margin: 6px 0 4px; }
-.sheet { display: grid; grid-template-columns: 190px minmax(330px, 1fr) 250px; gap: 12px; align-items: stretch; }
+.sheet { display: grid; grid-template-columns: 225px minmax(330px, 1fr) 250px; gap: 12px; align-items: stretch; }
 .spanel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .sptitle { font-family: var(--font-head); font-size: 15px; letter-spacing: .6px; color: #fff;
            padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
@@ -1567,3 +1567,23 @@ body.maxed .grip { display: none; }
 .gear .stars { display: inline-flex; gap: 2px; align-items: center; }
 .gear .stars .pip { width: 16px; height: 16px; }
 .shero.detail .gear .stars .pip { width: 22px; height: 22px; }
+/* a gear piece's attributes, computed as the game does */
+.gear .gstats { display: flex; flex-direction: column; gap: 3px; margin: 4px 0 2px; }
+.gear .gstats .gil { color: var(--dim); font-size: 11px; }
+.gear .gstat { display: flex; justify-content: space-between; gap: 14px; font-size: 13px; }
+.gear .gstat b { color: #A6E37A; }
+.shero.detail .gear .gstats { width: 100%; padding: 8px 12px; border-radius: 8px; background: var(--bg-2); }
+.shero.detail .gear .gstats .gil { text-align: center; margin-bottom: 2px; }
+/* the sheet's derived attributes */
+.sattrs .sptitle.sub { margin-top: 14px; font-size: 13px; }
+.sattrs .attr.sec { padding: 4px 8px; margin-bottom: 4px; }
+.sattrs .attr.sec .an { font-size: 12px; }
+.sattrs .attr.sec .av { color: #fff; font-size: 13px; text-align: right; }
+.sattrs .attr .av small { color: var(--dim); font-size: 10px; font-weight: 400; }
+.sattrs .attr:not(.sec) .av { color: #fff; }
+.gear .gstats .geff { color: #F08A6E; font-size: 12px; text-align: center; margin-bottom: 2px; }
+/* Inspecter: the gear packed close together, the sheet as tall as its gear */
+.sheet { align-items: start; }
+.sdoll { gap: 8px; }
+.scol { justify-content: space-between; gap: 6px; }
+.shero { min-height: 0; height: calc((6 * 58px + 5 * 6px) * 1.3); }

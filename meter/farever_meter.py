@@ -3843,7 +3843,8 @@ class App:
                   f"{[(i, s[0]) for i, s in enumerate(prof.get('equip') or []) if s]}"
                   f"; arsenals {prof.get('arsenals')}; weapon skills "
                   f"{prof.get('weaponSkills')}; secondary "
-                  f"{prof.get('secondary')}", file=sys.stderr)
+                  f"{prof.get('secondary')}; statuses "
+                  f"{prof.get('statuses')}", file=sys.stderr)
             # kept for this session only: profiles are never written to disk
             self._profiles_data()[name] = prof
             self._char_sel = name
@@ -5423,7 +5424,31 @@ AUGMENT_KIND = {"AugmentDemon": "gift", "AugmentDemonSigil": "sigil",
                 "AugmentJeweller": "gem"}
 
 
-def _augment_view(aid):
+def _augments_data():
+    global _AUGMENTS
+    if _AUGMENTS is None:
+        try:
+            _AUGMENTS = json.loads(
+                (ANALYSIS / "augments.json").read_text(encoding="utf-8"))
+        except Exception:
+            _AUGMENTS = {}
+    return _AUGMENTS
+
+
+def _scaled(val, factor):
+    """A stat on a piece worn in a weakening slot, as the game's tooltip
+    shows it ($HText.makeAfxDescTextsComparisons): ceil(val * factor)."""
+    return val if factor == 1 else math.ceil(val * factor)
+
+
+def slot_factor(slot):
+    """The share of its stats a piece keeps in an equipment slot (EQUIP_SLOTS
+    name): 0.4 for the arsenal's weapon, 1 elsewhere."""
+    return ((gear_stats_data().get("slotFactors") or {})
+            .get(f"Slot_{slot}") or 1)
+
+
+def _augment_view(aid, factor=1):
     """One augment set into a gear: its name and what it does — the attribute
     bonuses and maluses, or the skill it grants (a formula's enchantment, a
     sigil's talent). Corrupted gifts all share one name, so the effect is
@@ -5440,6 +5465,7 @@ def _augment_view(aid):
     fx = []
     for atb, val in a.get("a") or ():
         name = _fr_names("attribute").get(atb) or _pretty_id(atb)
+        val = _scaled(val, factor)
         sign = "+" if val > 0 else "\u2212"
         fx.append(f"{name} {sign}{abs(val):g}")
     name = item_label(aid)
@@ -5640,7 +5666,9 @@ def character_view(roster, profiles, sel, waiting, live):
             prism = _item_flag(iflags, "Prismatic")
             rar = rar or item_rarity(kind) or ""
             t = item_type(kind)
-            extras = [_augment_view(g) for g in gslots or ()
+            cell = EQUIP_SLOTS[idx] if idx < len(EQUIP_SLOTS) else None
+            fac = slot_factor(cell) if cell else 1
+            extras = [_augment_view(g, fac) for g in gslots or ()
                       if g and not str(g).startswith("[")]
             for e in effects or ():
                 if e and not str(e).startswith("["):
@@ -5656,6 +5684,22 @@ def character_view(roster, profiles, sel, waiting, live):
                      "prism": prism,
                      "inf": _gear_infusion(kind, infu, istat, prism),
                      "t": t}
+            st = gear_stats(kind, rar, lvl, upg, gslots, iflags)
+            inf = entry["inf"]
+            if st and inf and istat:
+                bonus = infusion_bonus(kind, rar, st[0], istat)
+                if bonus:
+                    inf["val"] = _scaled(bonus, fac)
+            if st:
+                entry["il"] = st[0]
+                entry["stats"] = [{"k": k, "t": n, "v": _scaled(v, fac)}
+                                  for k, n, v in st[1]]
+            entry["augs"] = [[(atb, _scaled(val, fac)) for atb, val in
+                              (_augments_data().get(g) or {}).get("a") or ()]
+                             for g in gslots or ()
+                             if g and not str(g).startswith("[")]
+            if fac != 1:
+                entry["eff"] = round(fac * 100)
             (other if t in NOT_GEAR else gear).append(entry)
             if t not in NOT_GEAR:
                 cells.append((idx, entry))
@@ -5665,6 +5709,7 @@ def character_view(roster, profiles, sel, waiting, live):
             "ck": class_key(prof.get("k")), "me": bool(prof.get("me")),
             "when": date_fr(time.localtime(prof.get("at") or 0)),
             "gear": gear, "other": other, "sheet": _sheet(prof, cells),
+            "atbs": _hero_sheet(prof, gear),
             "tree": _talent_tree(
                 prof.get("k"),
                 prof["talents"] if isinstance(prof.get("talents"), dict)
@@ -6206,6 +6251,346 @@ def _item_flag(bits, name):
         (bits >> idx) & 1)
 
 
+# ---- gear stats: the game's own computation (hltools/gear_stats_data.py) --
+_GEAR_STATS = None
+STAT_GROUP_KEYS = ("primary", "vitality", "armor", "ratings")
+# shown first, in the character sheet's order; the ratings after
+GEAR_STAT_ORDER = ("Armor", "Vitality", "Strength", "Dexterity", "Faith",
+                   "Intellect")
+
+
+def gear_stats_data():
+    global _GEAR_STATS
+    if _GEAR_STATS is None:
+        try:
+            _GEAR_STATS = json.loads((ANALYSIS / "gear_stats.json").read_text(
+                encoding="utf-8"))
+        except Exception:
+            _GEAR_STATS = {}
+    return _GEAR_STATS
+
+
+def _hx_round(v):
+    """Haxe's Math.round: half up, also for negatives."""
+    return math.floor(v + 0.5)
+
+
+def _atb_level_scaling(d, index, level, start, end, reduction=-1.0):
+    """$HAttributes.getAtbLevelScaling."""
+    c = d["consts"]
+    if index in (23, 24):                       # Armor, MagicArmor
+        if index == 24 or reduction < 0:
+            return 0.0
+        a, b = c["resist"][0], c["resist"][1]
+        return (-a * reduction - b * level * reduction) / (reduction - 1)
+    if start < 1e-10 or end == 0:
+        return 0.0
+    step = (end / start) ** (1.0 / (c["earlyMax"] - 1))
+    return start * step ** (level - 1)
+
+
+def _item_ilevel(d, it, rarity, glevel):
+    """$HItem.getILevel: the definition's iLevel, else its required level
+    * 10 + the rarity's bonus. The copy's level (Gear.level) and rarity
+    (Weapon.rarity) are what count: measured 2026-10-01 on Amon Arès
+    (Mace_Benediction, Rare level 20 in the data; the copy Legendary level
+    25, 5 upgrades, a corrupted gift set) — iLevel 250 + 70 + 50 + 10 = 380
+    gives the tooltip's Vitalité 75, Force 29, Foi 29, Ferveur 110."""
+    # A fixed iLevel holds for a copy at the definition's level only: scaled
+    # loot is defined at level 1 / iLevel 1 and takes the level it dropped
+    # at (Cape déchirâme, Back_RDemon_Cle, a level 25 copy: iLevel 260 gives
+    # the tooltip's Armure 50, Vitalité 6, Foi 6, Perforation magique 16).
+    if it.get("il") is not None and (not glevel or glevel == it.get("lvl")):
+        return int(it["il"])
+    lvl = glevel or it.get("lvl") or 1
+    return int(lvl) * 10 + int((d["rarities"].get(rarity) or {}).get("il")
+                               or 0)
+
+
+def _compute_atb_scaling(d, it, rarity, ilevel, group, armor_red,
+                         divide=True):
+    """$HItem.computeAtbScaling(def, iLevel, group, divide, armorRed)."""
+    c = d["consts"]
+    level = ilevel * 0.1
+    first = group[0]
+    ratio = _atb_level_scaling(d, 0, level, c["bounds"][0], c["bounds"][1])
+    key = first["src"] or first["end"]
+    start = sum(x["s"] for x in group) / len(group)
+    end = sum(x["e"] for x in group) / len(group)
+    index = (d["attributes"].get(key) or {}).get("i", -1)
+    v = _atb_level_scaling(d, index, level, start, end, armor_red)
+    if not first["gearOnly"]:
+        v *= ratio
+    if divide:
+        v /= max(1, len(it["apt"]))
+    if _hx_round(v) <= 0:
+        return 0.0
+    gname = STAT_GROUP_KEYS[first["g"]] if first["g"] < 4 else None
+    t = d["types"].get(it.get("type")) or {}
+    mul = (t.get("ratio") or {}).get(gname) or 0.0
+    over = (t.get("rarities") or {}).get(rarity)
+    if over is not None and gname in ("primary", "vitality") \
+            and over.get(gname) is not None:
+        mul = over[gname]
+    return v * mul
+
+
+def _generate_affixes(d, it, rarity, ilevel):
+    """$HItem.generateItemAffixes -> [(attribute, value)]."""
+    apts = [d["aptitudes"][a] for a in it["apt"] if a in d["aptitudes"]]
+    if not apts:
+        return []
+    rar_i = (d["rarities"].get(rarity) or {}).get("i", 0)
+    n = len(it["apt"])
+    lines = []
+    for a in apts:                      # $HItem.getItemExpectedScalings
+        for x in a["scalings"]:
+            if rarity == "Uncommon":
+                if x["g"] == 1 and n > 1:
+                    continue
+                if x["g"] == 0 and n == 1:
+                    continue
+            mr = x.get("minRarity")
+            if mr and rar_i < (d["rarities"].get(mr) or {}).get("i", 0):
+                continue
+            if x.get("factions") and it.get("fac") not in x["factions"]:
+                continue
+            lines.append(x)
+    armor_red = sum(a["armorReduction"] for a in apts) / n
+    groups = {}
+    for x in lines:
+        groups.setdefault(x["end"], []).append(x)
+    out = []
+    for end_atb, group in groups.items():
+        v = _compute_atb_scaling(d, it, rarity, ilevel, group, armor_red)
+        acc = {}
+        for x in group:
+            k = x["src"] or x["end"]
+            acc[k] = acc.get(k, 0.0) + v
+        for k, val in acc.items():
+            if val == 0:
+                continue
+            if k != end_atb:
+                sc = (d["attributes"].get(end_atb) or {}).get("scale", {})
+                if not sc.get(k):
+                    continue            # the game logs an error and skips
+                val /= sc[k]
+            out.append((k, _hx_round(val)))
+    return out
+
+
+def infusion_bonus(kind, rarity, ilevel, stat):
+    """st.item.Gear.getInfusionBonusAffix: the infusion's bonus stat on a
+    piece — the InfusionBonus aptitude's line for that stat, scaled like
+    the piece's own (not divided by its aptitudes), times
+    Item_InfusionBonusRatio, rounded. 0 when unknown."""
+    d = gear_stats_data()
+    it = (d.get("items") or {}).get(kind)
+    apt = (d.get("aptitudes") or {}).get("InfusionBonus") or {}
+    group = [x for x in apt.get("scalings") or () if x["end"] == stat]
+    if not it or not group or not ilevel:
+        return 0
+    v = _compute_atb_scaling(d, it, rarity, ilevel, group, -1.0,
+                             divide=False)
+    return _hx_round((d["consts"].get("infusionBonus") or 0) * v)
+
+
+def gear_stats(kind, rarity, glevel, upgrade, slots, flags):
+    """A gear copy's attributes as the game computes them (st.Item.
+    getItemAffixes): (iLevel, [(attribute id, French name, value)]), or None
+    when the piece has no stats in the game's data."""
+    d = gear_stats_data()
+    it = (d.get("items") or {}).get(kind)
+    if not it:
+        return None
+    rarity = rarity or it.get("rar")
+    glevel = glevel if isinstance(glevel, int) and glevel > 0 else None
+    base = _item_ilevel(d, it, rarity, glevel)
+    il = base
+    if _item_flag(flags, "Flawless"):
+        il += _hx_round(d["consts"]["flawlessIL"])
+    if isinstance(upgrade, int) and upgrade > 0:
+        il += _hx_round(upgrade * d["consts"]["upgradeIL"])
+    for aug in slots or ():
+        a = (d["items"].get(aug) or {}) if isinstance(aug, str) else {}
+        il += int(a.get("il") or 0)
+    if il == base and it.get("fixed"):
+        affixes = [(x["atb"], x["v"]) for x in it["fixed"] if x["atb"]]
+    else:
+        affixes = _generate_affixes(d, it, rarity, il)
+    total = {}
+    for k, v in affixes:
+        total[k] = total.get(k, 0) + v
+    names = _fr_names("attribute")
+    order = {k: i for i, k in enumerate(GEAR_STAT_ORDER)}
+    rows = sorted(((k, names.get(k) or _pretty_id(k), v)
+                   for k, v in total.items() if v),
+                  key=lambda r: (order.get(r[0], 99), r[1]))
+    return il, rows
+
+
+# The character sheet's attributes, as the game derives them (ent.Unit.
+# getAtbScaling): the class base at the hero's level, plus the gear, then
+# each derived attribute from its sources.
+ATB_PERCENT, ATB_MOVESPEED = 4, 256           # attribute flags
+HERO_PRIMARY = ("Vitality", "Strength", "Dexterity", "Faith", "Intellect")
+# the game's "Plus de stats" list, in its order (BlockMitigation left out:
+# it comes from the shield, which the data here doesn't say)
+HERO_SECONDARY = ("CritChance", "CritDamage", "ArmorPenetration",
+                  "SpellPenetration", "Fervor", "DodgeChance",
+                  "MagicMastery", "PhysicalMastery", "Armor", "MaxHealth",
+                  "HealthRegen")
+
+
+def hero_attributes(cls, level, gear_totals, effects=None):
+    """{attribute: value} for a hero of class `cls` at `level` wearing gear
+    worth `gear_totals` ({attribute: flat value}), under `effects`
+    ({attribute: [flat, share, factor]}: statuses, passives, talents —
+    (value + flat) * (1 + share) * factor). None without the data."""
+    effects = effects or {}
+    d = gear_stats_data()
+    base = (d.get("heroes") or {}).get(cls)
+    atbs = d.get("attributes") or {}
+    if not base or not level:
+        return None
+    memo = {}
+
+    def own(k):
+        b = base.get(k)
+        if isinstance(b, list):
+            v = _atb_level_scaling(d, (atbs.get(k) or {}).get("i", -1),
+                                   level, b[0], b[1])
+        else:
+            v = b or 0
+        return v + (gear_totals.get(k) or 0) + (effects.get(k) or (0,))[0]
+
+    def kfac(k):
+        f = (atbs.get(k) or {}).get("flags") or 0
+        m = 0.01 if f & ATB_PERCENT else 1.0
+        return m                        # MoveSpeed scaling: not on the sheet
+
+    def total(k, depth=0):
+        if k in memo:
+            return memo[k]
+        v = own(k)
+        if depth < 6:
+            for src, scale, op in (atbs.get(k) or {}).get("ops") or ():
+                sv = total(src, depth + 1)
+                kind = op[0] if op else 0
+                if kind == 0:
+                    v += scale * sv
+                elif kind == 1:
+                    v += (1 - 1 / (1 + sv * kfac(src) * scale)) / kfac(k)
+                elif kind == 2 and len(op) >= 4:
+                    ref = _atb_level_scaling(d, (atbs.get(src) or {}).get(
+                        "i", -1), level, op[1], op[2])
+                    if ref:
+                        v += sv / ref * op[3]
+        e = effects.get(k)
+        if e:
+            v = v * (1 + e[1]) * e[2]
+        memo[k] = v
+        return v
+
+    return {k: total(k) for k in HERO_PRIMARY + HERO_SECONDARY}
+
+
+def _hero_sheet(prof, gear):
+    """The sheet's attributes: the primaries, then the derived ones, each
+    {t, v} ready to show; armour with the damage it stops at this level."""
+    totals = {}
+    for g in gear:
+        for x in g.get("stats") or ():
+            totals[x["k"]] = totals.get(x["k"], 0) + x["v"]
+        for a in g.get("augs") or ():
+            for atb, val in a:
+                totals[atb] = totals.get(atb, 0) + val
+    for g in gear:
+        inf = g.get("inf")
+        if inf and inf.get("on") and inf.get("val") and inf.get("statId"):
+            k = inf["statId"]
+            totals[k] = totals.get(k, 0) + inf["val"]
+    lvl = prof.get("lvl") if isinstance(prof.get("lvl"), int) else None
+    effects, counted = _hero_effects(prof, gear)
+    vals = hero_attributes(prof.get("k"), lvl, totals, effects)
+    if vals is None:
+        return None
+    d = gear_stats_data()
+    names = _fr_names("attribute")
+    atbs = d.get("attributes") or {}
+
+    def row(k):
+        v = vals[k]
+        pct = bool((atbs.get(k) or {}).get("flags", 0) & ATB_PERCENT)
+        if pct:
+            txt = f"{v:.1f}".rstrip("0").rstrip(".").replace(".", ",") + " %"
+        elif k == "HealthRegen":
+            txt = f"{v:.1f}".replace(".", ",")
+        else:
+            txt = _n(round(v))
+        out = {"k": k, "t": names.get(k) or _pretty_id(k), "v": txt}
+        if k == "Armor" and lvl:
+            a, b = d["consts"]["resist"][0], d["consts"]["resist"][1]
+            red = v / (v + a + b * lvl) if v > 0 else 0
+            out["sub"] = f"\u2212{red * 100:.2f}".replace(".", ",") + " %"
+        return out
+    return {"primary": [row(k) for k in HERO_PRIMARY],
+            "secondary": [row(k) for k in HERO_SECONDARY],
+            "effects": counted}
+
+
+def _hero_effects(prof, gear):
+    """The attribute effects on the hero: its active statuses, its passives
+    and talents, its infusion passives (rank: one per two pieces).
+    -> ({attribute: [flat, share, factor]}, [names of what counted])."""
+    aff = gear_stats_data().get("skillAffixes") or {}
+    masteries = set(prof.get("masteries") or ())
+    talents = prof.get("talents") if isinstance(prof.get("talents"),
+                                                dict) else {}
+    ranks = {}
+    for sid in prof.get("statuses") or ():
+        ranks.setdefault(sid, 1)
+    for sid in prof.get("skills") or ():
+        if sid in aff:
+            ranks.setdefault(sid, int(talents.get(sid) or 1))
+    for sid, r in talents.items():
+        if sid in aff:
+            ranks[sid] = max(ranks.get(sid, 0), int(r or 1))
+    pieces = {}
+    for g in gear:
+        inf = g.get("inf")
+        if inf:
+            pieces[inf["id"]] = pieces.get(inf["id"], 0) + 1
+    for sid, n in pieces.items():
+        if sid in aff and n >= 2:
+            ranks[sid] = max(ranks.get(sid, 0), n // 2)
+    out, counted = {}, []
+    for sid, rank in ranks.items():
+        used = False
+        for ref, atb, val, conds in aff.get(sid) or ():
+            if not isinstance(val, (int, float)):
+                continue
+            if set(conds) - {"mastery", "minRank"}:
+                continue                # a condition the sheet can't judge
+            if conds.get("mastery") and conds["mastery"] not in masteries:
+                continue
+            if conds.get("minRank") and rank < conds["minRank"]:
+                continue
+            e = out.setdefault(atb, [0.0, 0.0, 1.0])
+            if ref == "TAttribute_Flat":
+                e[0] += val
+            elif ref == "TAttribute_ARatio":
+                e[1] += val
+            elif ref in ("TAttribute_MRatio", "TAttribute_MRatioMin"):
+                e[2] *= val
+            else:
+                continue
+            used = True
+        if used:
+            counted.append(_skill_label(sid))
+    return out, sorted(set(counted))
+
+
 def _gear_infusion(kind, raw, stat, prism=False):
     """One gear piece's infusion: name, bonus stat, and whether the bonus
     applies (the piece's faction must be the infusion's — or the piece is
@@ -6221,6 +6606,7 @@ def _gear_infusion(kind, raw, stat, prism=False):
             "fac": faction_label(fac),
             "bonus": (_fr_names("attribute").get(stat) or _pretty_id(stat))
             if stat else "",
+            "statId": stat or None,
             "on": prism or (bool(fac) and mine == fac)}
 
 
@@ -6844,7 +7230,7 @@ def forget_loaded_data():
     """Drop every table loaded from analysis_out/, so the next use reads the
     files a regenerate just wrote (Réparer)."""
     g = globals()
-    for name in ("_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
+    for name in ("_GEAR_STATS", "_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
         g[name] = None
 
 

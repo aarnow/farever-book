@@ -2041,7 +2041,7 @@ function buildCharacter(n) {
 let CHAR_PICK = null;           // [player, slot] of the piece shown in detail
 const SHEET_ART = window.__SHEET__ || {};
 const ATTRS = [['Vitality', 'Vitalité'], ['Strength', 'Force'], ['Dexterity', 'Dextérité'],
-               ['Faith', 'Foi'], ['Intelligence', 'Intelligence']];
+               ['Faith', 'Foi'], ['Intelligence', 'Intelligence']];  // stat_ art keys
 
 function artImg(key, cls) {
   const im = el('img', cls || null);
@@ -2057,16 +2057,31 @@ function charSheet(o) {
 
   const attrs = el('div', 'spanel sattrs');
   attrs.appendChild(el('div', 'sptitle', 'Attributs'));
+  const av = o.atbs || null;
+  const pv = {};
+  ((av && av.primary) || []).forEach((x) => { pv[x.k] = x.v; });
   ATTRS.forEach(([k, label]) => {
     const r = el('div', 'attr');
     const ic = el('span', 'aic');
     if (SHEET_ART['stat_' + k]) ic.appendChild(artImg('stat_' + k));
     r.appendChild(ic);
     r.appendChild(el('span', 'an', label));
-    r.appendChild(el('b', 'av', '—'));
+    r.appendChild(el('b', 'av', pv[k === 'Intelligence' ? 'Intellect' : k] || '—'));
     attrs.appendChild(r);
   });
-  attrs.appendChild(el('p', 'anote', 'Le jeu ne transmet pas les attributs : ils viendront plus tard.'));
+  if (av && (av.secondary || []).length) {
+    attrs.appendChild(el('div', 'sptitle sub', 'Plus de stats'));
+    av.secondary.forEach((x) => {
+      const r = el('div', 'attr sec');
+      r.appendChild(el('span', 'an', x.t));
+      const v = el('b', 'av', x.v);
+      if (x.sub) v.appendChild(el('small', null, ' (' + x.sub + ')'));
+      r.appendChild(v);
+      attrs.appendChild(r);
+    });
+  } else {
+    attrs.appendChild(el('p', 'anote', 'Attributs indisponibles pour ce profil.'));
+  }
   wrap.appendChild(attrs);
 
   const pick = CHAR_PICK && CHAR_PICK[0] === o.n ? CHAR_PICK[1] : null;
@@ -2113,7 +2128,6 @@ function charSheet(o) {
     hero.appendChild(x);
     hero.appendChild(gearRow(picked));
   } else {
-    if (SHEET_ART['banner_' + o.ck]) hero.appendChild(artImg('banner_' + o.ck, 'hban'));
     const hid = el('div', 'hid');
     if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
     hid.appendChild(el('b', 'hn', o.n));
@@ -2177,6 +2191,18 @@ function gearRow(g) {
     }
     gt.appendChild(pips);
   }
+  if ((g.stats || []).length) {
+    const st = el('div', 'gstats');
+    if (g.il) st.appendChild(el('span', 'gil', 'Niveau d’objet ' + g.il));
+    if (g.eff) st.appendChild(el('span', 'geff', 'Efficacité des stats de l’arsenal : ' + g.eff + ' %'));
+    g.stats.forEach((x) => {
+      const r = el('div', 'gstat');
+      r.appendChild(el('span', null, x.t));
+      r.appendChild(el('b', null, '+' + fmtN(x.v)));
+      st.appendChild(r);
+    });
+    gt.appendChild(st);
+  }
   (g.extras || []).forEach((x2) => {
     const line = el('span', 'gx ' + x2.k);
     line.appendChild(el('b', null, x2.name));
@@ -2190,7 +2216,8 @@ function gearRow(g) {
     gt.appendChild(line);
     if (g.inf.bonus) {
       gt.appendChild(el('span', 'gx infb' + (g.inf.on ? '' : ' off'),
-        'Bonus (' + g.inf.fac + ') : ' + g.inf.bonus + (g.inf.on ? '' : ' — inactif, faction différente')));
+        'Bonus (' + g.inf.fac + ') : ' + g.inf.bonus + (g.inf.val ? ' +' + g.inf.val : '')
+        + (g.inf.on ? '' : ' — inactif, faction différente')));
     }
   }
   r.appendChild(gt);

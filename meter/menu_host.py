@@ -429,7 +429,7 @@ def _boss_portraits():
 
 
 def _sheet_art():
-    """{"banner_warrior": data URI, "slot_Head": ..., "stat_Faith": ...}:
+    """{"slot_Head": data URI, "upgrade_pip": ..., "stat_Faith": ...}:
     the character sheet's art, cut from the game's UI into
     assets/charsheet/ by hltools/build_charsheet_art.py."""
     import base64

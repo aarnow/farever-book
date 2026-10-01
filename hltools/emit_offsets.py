@@ -567,6 +567,16 @@ def main():
         except Exception as e:
             print(f"[!] infusions skipped ({e})")
         try:
+            import gear_stats_data
+            gs = gear_stats_data.build(Path(hlboot).parent)
+            (_OUT_DIR / "gear_stats.json").write_text(
+                json.dumps(gs, ensure_ascii=False, separators=(",", ":")),
+                encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'gear_stats.json'} "
+                  f"({len(gs['items'])} items)")
+        except Exception as e:
+            print(f"[!] gear stats skipped ({e})")
+        try:
             import codex_items
             ci = codex_items.build(Path(hlboot).parent,
                                    _OUT_DIR / "collection_img")

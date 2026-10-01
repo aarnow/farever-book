@@ -1299,6 +1299,8 @@ function profileOf(h) {
     r.counters = countersOf(h);
     // the Soulwell's luck statuses, and the clock to time them by
     r.luckStatuses = statusesOf(h, ["Luck_", "Riftstalkers"]);
+    // every status on the hero: the sheet applies their attribute effects
+    r.statuses = statusesOf(h, [""]).map(function (s) { return s[0]; });
     try { r.now = serverNowOf(h.add(OFF.Hero.layer).readPointer()); } catch (e) {}
     try { r.k = hlStr(h.add(H.kind).readPointer()); } catch (e) {}
     try { r.lvl = h.add(H.level).readS32(); } catch (e) {}
