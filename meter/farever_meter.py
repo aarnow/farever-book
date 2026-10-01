@@ -113,6 +113,8 @@ ACH_FILE = _WRITABLE / ".meter_achievements.json"
 ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 LOG_FILE = DATA_HOME / "meter.log"
 TARGET_PROCESS = "Farever.exe"
+# Farever's Steam app id: the Play button launches it with steam://rungameid
+FAREVER_STEAM_APPID = 3672400
 
 # One meter at a time. The lock deliberately lives OUTSIDE the project folder:
 # copies of this script run from different directories have to find each other,
@@ -2869,6 +2871,7 @@ class App:
         self.focus_player = None            # player picked in the meter
         self._help_open = None
         self._rift_view = None              # the rift report being read
+        self._launching_until = 0           # Play was clicked: until then
         self._rift_rewards = False          # the rift rewards page is open
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_view = None           # the dungeon run being read
@@ -3146,6 +3149,7 @@ class App:
         acts = {
             "set_tab": lambda p: self._set_tab(p.get("value")),
             "link_retry": self._link_clicked,
+            "launch_game": self._launch_game,
             "boot": self.menubridge.invalidate,
             "rendered": lambda p: None,
             "escape": lambda: None,
@@ -3270,14 +3274,11 @@ class App:
 
     # ------------------------------------------------------------------ spec
     def _spec(self):
-        light, colour, sentence = self._link_status_text()
         return {
             "version": VERSION,
             "zoom": int(self._zoom),
             "shard": self.ui_state.server() or "",
-            "link": {"t": light or "● En jeu", "c": colour,
-                     "retry": not self.game_connected(),
-                     "tip": sentence},
+            "link": self._link_spec(),
             "rift": self._rift_clock(),
             "toast": self._toast,
             "tab": self._menu_tab,
@@ -4774,24 +4775,39 @@ class App:
             self._stop_parse()
         self._refresh_visibility()
 
-    def _link_status_text(self):
-        """(light text, colour, sentence for the settings panel)."""
+    def _link_spec(self):
+        """The title band's game state: "play" (Farever is not running: a
+        button that launches it), "launching" (just asked Steam), then
+        "connecting", "ingame" or "failed"."""
         if self.link is None:
-            return "", FG_HEADER, ""
+            return {"state": "ingame", "t": "En jeu"}
         state, detail, _pid = self.link.status()
         if state == GameLink.CONNECTED:
-            return "● En jeu", "#7BD88F", ""
+            self._launching_until = 0
+            return {"state": "ingame", "t": "En jeu"}
         if state == GameLink.CONNECTING:
-            return ("● Connexion…", "#F2C14E",
-                    "Connexion à Farever en cours…")
+            return {"state": "connecting", "t": "Connexion…",
+                    "tip": "au jeu en cours"}
         if state == GameLink.FAILED:
-            return ("● Échec — réessayer", "#F2665E",
-                    f"Connexion à Farever impossible : {detail}. Clique sur "
-                    "le voyant du compteur pour réessayer.")
-        return ("● Hors jeu", "#B8B0A2",
-                "Farever n'est pas lancé. L'historique et les rapports "
-                "restent consultables ; les données en direct reviennent dès "
-                "que tu lances le jeu.")
+            return {"state": "failed",
+                    "tip": f"Connexion à Farever impossible : {detail}"}
+        if time.time() < self._launching_until:
+            return {"state": "launching", "t": "Lancement…",
+                    "tip": "Farever démarre"}
+        return {"state": "play", "tip": "Lancer Farever (via Steam)"}
+
+    def _launch_game(self):
+        """Launch Farever through Steam (it handles the login and updates),
+        then look for it straight away."""
+        try:
+            os.startfile(f"steam://rungameid/{FAREVER_STEAM_APPID}")
+        except OSError as e:
+            self._toast_msg(f"Impossible de lancer Farever : {e}")
+            return
+        self._launching_until = time.time() + 120
+        if self.link is not None:
+            self.link.retry()
+        self.menubridge.invalidate()
 
     def _link_clicked(self):
         if self.link is not None and not self.game_connected():

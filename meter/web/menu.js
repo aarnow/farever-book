@@ -612,6 +612,35 @@ function renderTabs(tabs, active) {
   if (icons.childNodes.length) nav.appendChild(icons);
 }
 
+/* The game's state in the title band: Play (launches Farever through
+   Steam), launching, connecting, "En jeu" over the server, or retry. */
+function renderLink(l, shard) {
+  const box = $('#link');
+  box.textContent = '';
+  box.className = 'link-' + (l.state || 'play');
+  if (l.state === 'play' || l.state === 'failed') {
+    const b = el('button', 'playbtn' + (l.state === 'failed' ? ' retry' : ''));
+    b.type = 'button';
+    if (l.state === 'play') {
+      const tri = el('i', 'tri');
+      b.appendChild(tri);
+    }
+    b.appendChild(el('span', null, l.state === 'play' ? 'Jouer' : 'Réessayer'));
+    if (l.tip) b.title = l.tip;
+    b.addEventListener('click', () => notify(l.state === 'play' ? 'launch_game' : 'link_retry', {}));
+    box.appendChild(b);
+    return;
+  }
+  const st = el('div', 'gamestate');
+  const top = el('div', 'gs');
+  top.appendChild(el('i', 'dot'));
+  top.appendChild(el('b', null, l.t || ''));
+  st.appendChild(top);
+  if (l.state === 'ingame' && shard) st.appendChild(el('span', 'srv', 'Serveur ' + shard));
+  else if (l.tip) st.appendChild(el('span', 'srv', l.tip));
+  box.appendChild(st);
+}
+
 /* ---- the state push ----------------------------------------------------- */
 /* Called by the host with a JSON *string*: the state carries player names,
    and interpolating those into a script expression would break the page the
@@ -628,18 +657,8 @@ window.applyState = function (json) {
 
   if (s.zoom !== prev.zoom) setZoom(s.zoom);
   if (s.version !== prev.version) $('#version').textContent = 'v' + s.version;
-  if (s.shard !== prev.shard) {
-    $('#shard').textContent = s.shard ? 'Serveur : ' + s.shard : '';
-  }
-  if (JSON.stringify(s.link) !== JSON.stringify(prev.link)) {
-    const l = $('#link');
-    l.textContent = (s.link && s.link.t) || '';
-    l.style.color = (s.link && s.link.c) || '';
-    l.className = 'pill' + (s.link && s.link.retry ? ' retry' : '');
-    l.title = (s.link && s.link.retry) ? 'Cliquer pour chercher le jeu maintenant' : '';
-    const b = $('#banner');
-    b.textContent = (s.link && s.link.tip) || '';
-    b.className = (s.link && s.link.tip) ? 'on' : '';
+  if (JSON.stringify([s.link, s.shard]) !== JSON.stringify([prev.link, prev.shard])) {
+    renderLink(s.link || {}, s.shard);
   }
   if (JSON.stringify(s.rift) !== JSON.stringify(prev.rift) && s.rift) {
     const r = $('#riftclock');
@@ -669,9 +688,6 @@ function boot() {
   READY = true;
   document.querySelectorAll('[data-act]').forEach((b) => {
     b.addEventListener('click', () => notify(b.dataset.act, {}));
-  });
-  $('#link').addEventListener('click', () => {
-    if (STATE.link && STATE.link.retry) notify('link_retry', {});
   });
   notify('boot', {});
 }
