@@ -220,7 +220,7 @@
 "role": "Soutien",
 "name": "Lien maudit",
 "pattern": "InfusionPattern_Nightling_Support",
-"t2": "Appliquer un effet d'état à un allié crée un lien spirituel entre vous. Vous subissez X des dégâts qu'il subit et vous le soignez d'autant.",
+"t2": "Appliquer un effet d'état à un allié crée un lien spirituel entre vous. Vous subissez 20 % des dégâts qu'il subit et vous le soignez d'autant.",
 "t4": [
 [
 "MagicMastery",

@@ -1851,11 +1851,13 @@ function charClass(p) {
 function buildCharacter(n) {
   const box = el('div', 'charpage');
   const side = el('div', 'charside');
-  side.appendChild(el('div', 'section', 'Joueurs à proximité'));
+  const sh = el('div', 'section', 'Joueurs sur le serveur');
+  if (n.live) sh.appendChild(el('span', 'count', String(n.count || 0)));
+  side.appendChild(sh);
   if (!n.live) {
-    side.appendChild(el('p', 'note', 'Lance le jeu pour voir les joueurs autour de toi.'));
+    side.appendChild(el('p', 'note', 'Lance le jeu pour voir les joueurs du serveur.'));
   } else if (!(n.near || []).length) {
-    side.appendChild(el('p', 'note', 'Personne à proximité.'));
+    side.appendChild(el('p', 'note', 'Personne sur le serveur.'));
   }
   const near = el('div', 'charlist');
   (n.near || []).forEach((p) => {
@@ -1913,44 +1915,7 @@ function buildCharacter(n) {
     head.appendChild(x);
     main.appendChild(head);
 
-    main.appendChild(el('div', 'sub2', 'Équipement'));
-    const gear = el('div', 'gearlist');
-    (o.gear || []).forEach((g) => {
-      const r = el('div', 'gear' + (g.rk ? ' r-' + g.rk : ''));
-      const gi = el('span', 'gi');
-      if (g.img) {
-        const im = document.createElement('img');
-        im.src = g.img;
-        im.alt = '';
-        gi.appendChild(im);
-      }
-      r.appendChild(gi);
-      const gt = el('div', 'gt');
-      gt.appendChild(el('b', 'nm', g.name));
-      gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
-      if (g.up) gt.appendChild(el('span', 'stars', '◆'.repeat(g.up)));
-      (g.extras || []).forEach((x2) => {
-        const line = el('span', 'gx ' + x2.k);
-        line.appendChild(el('b', null, x2.name));
-        if (x2.fx) line.appendChild(document.createTextNode(' : ' + x2.fx));
-        gt.appendChild(line);
-      });
-      if (g.inf) {
-        const line = el('span', 'gx infu');
-        line.appendChild(el('b', null, 'Imprégnation'));
-        line.appendChild(document.createTextNode(' : ' + g.inf.name));
-        gt.appendChild(line);
-        if (g.inf.bonus) {
-          const b = el('span', 'gx infb' + (g.inf.on ? '' : ' off'),
-            'Bonus (' + g.inf.fac + ') : ' + g.inf.bonus + (g.inf.on ? '' : ' — inactif, faction différente'));
-          gt.appendChild(b);
-        }
-      }
-      r.appendChild(gt);
-      gear.appendChild(r);
-    });
-    if (!(o.gear || []).length) gear.appendChild(el('div', 'empty', 'Aucun équipement lu.'));
-    main.appendChild(gear);
+    main.appendChild(charSheet(o));
 
     if (!o.luck && !o.me) {
       main.appendChild(el('div', 'sub2', 'Chance de butin et statistiques'));
@@ -2068,6 +2033,157 @@ function buildCharacter(n) {
   }
   box.appendChild(main);
   return box;
+}
+
+/* The character sheet, laid out like the game's: the attributes, the gear
+   in two columns around the hero, the weapons with their skills. A click on
+   a piece shows what it carries underneath. */
+let CHAR_PICK = null;           // [player, slot] of the piece shown in detail
+const SHEET_ART = window.__SHEET__ || {};
+const ATTRS = [['Vitality', 'Vitalité'], ['Strength', 'Force'], ['Dexterity', 'Dextérité'],
+               ['Faith', 'Foi'], ['Intelligence', 'Intelligence']];
+
+function artImg(key, cls) {
+  const im = el('img', cls || null);
+  im.src = SHEET_ART[key];
+  im.alt = '';
+  return im;
+}
+
+function charSheet(o) {
+  const sh = o.sheet || { left: [], right: [], weapons: [], arsenal: null };
+  const box = el('div', 'charsheet');
+  const wrap = el('div', 'sheet');
+
+  const attrs = el('div', 'spanel sattrs');
+  attrs.appendChild(el('div', 'sptitle', 'Attributs'));
+  ATTRS.forEach(([k, label]) => {
+    const r = el('div', 'attr');
+    const ic = el('span', 'aic');
+    if (SHEET_ART['stat_' + k]) ic.appendChild(artImg('stat_' + k));
+    r.appendChild(ic);
+    r.appendChild(el('span', 'an', label));
+    r.appendChild(el('b', 'av', '—'));
+    attrs.appendChild(r);
+  });
+  attrs.appendChild(el('p', 'anote', 'Le jeu ne transmet pas les attributs : ils viendront plus tard.'));
+  wrap.appendChild(attrs);
+
+  const pick = CHAR_PICK && CHAR_PICK[0] === o.n ? CHAR_PICK[1] : null;
+  const slotEl = (c, key) => {
+    const g = c.g;
+    const b = el('button', 'slot' + (g ? ' r-' + (g.rk || 'common') : ' empty')
+      + (pick === key ? ' on' : ''));
+    b.type = 'button';
+    b.title = g ? g.name + (g.rar ? ' (' + g.rar + ')' : '') : c.label + ' : vide';
+    if (g && g.img) {
+      const im = el('img');
+      im.src = g.img;
+      im.alt = '';
+      b.appendChild(im);
+    } else if (!g && SHEET_ART['slot_' + c.icon]) {
+      b.appendChild(artImg('slot_' + c.icon, 'ghost'));
+    }
+    if (g && g.prism) b.appendChild(el('i', 'prism', '✦'));
+    if (g && g.up) b.appendChild(el('i', 'up', '+' + g.up));
+    if (g) b.addEventListener('click', () => {
+      CHAR_PICK = pick === key ? null : [o.n, key];
+      box.replaceWith(charSheet(o));
+    });
+    return b;
+  };
+
+  const doll = el('div', 'spanel sdoll');
+  const colL = el('div', 'scol');
+  (sh.left || []).forEach((c) => colL.appendChild(slotEl(c, c.slot)));
+  const colR = el('div', 'scol');
+  (sh.right || []).forEach((c) => colR.appendChild(slotEl(c, c.slot)));
+  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : ''));
+  if (SHEET_ART['banner_' + o.ck]) hero.appendChild(artImg('banner_' + o.ck, 'hban'));
+  const hid = el('div', 'hid');
+  if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
+  hid.appendChild(el('b', 'hn', o.n));
+  hid.appendChild(el('span', 'hl', o.cls + ' · niveau ' + (o.lvl || '?')));
+  hero.appendChild(hid);
+  doll.appendChild(colL);
+  doll.appendChild(hero);
+  doll.appendChild(colR);
+  wrap.appendChild(doll);
+
+  const arms = el('div', 'spanel sarms');
+  const weaponCard = (w, key) => {
+    const c = el('div', 'wcard');
+    const top = el('div', 'wtop');
+    top.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, key));
+    const t = el('div', 'wt');
+    t.appendChild(el('b', null, w.label));
+    t.appendChild(el('span', null, w.g ? w.g.name : 'vide'));
+    top.appendChild(t);
+    c.appendChild(top);
+    if ((w.skills || []).length) {
+      const sk = el('div', 'wsk');
+      w.skills.forEach((x) => sk.appendChild(skillIcon(x)));
+      c.appendChild(sk);
+    }
+    return c;
+  };
+  arms.appendChild(el('div', 'sptitle', 'Armes'));
+  (sh.weapons || []).forEach((w, i) => arms.appendChild(weaponCard(w, 'w' + i)));
+  if (sh.arsenal) {
+    arms.appendChild(el('div', 'sptitle', 'Arsenal'));
+    arms.appendChild(weaponCard(sh.arsenal, 'ars'));
+  }
+  wrap.appendChild(arms);
+  box.appendChild(wrap);
+
+  // the picked piece, in full
+  const all = {};
+  (sh.left || []).concat(sh.right || []).forEach((c) => { all[c.slot] = c.g; });
+  (sh.weapons || []).forEach((w, i) => { all['w' + i] = w.g; });
+  if (sh.arsenal) all.ars = sh.arsenal.g;
+  const g = pick ? all[pick] : null;
+  if (g) {
+    const d = el('div', 'gearlist one');
+    d.appendChild(gearRow(g));
+    box.appendChild(d);
+  } else {
+    box.appendChild(el('p', 'note sheethint', 'Clique sur une pièce d’équipement pour voir son détail (augmentations, imprégnation…).'));
+  }
+  return box;
+}
+
+function gearRow(g) {
+  const r = el('div', 'gear' + (g.rk ? ' r-' + g.rk : ''));
+  const gi = el('span', 'gi');
+  if (g.img) {
+    const im = document.createElement('img');
+    im.src = g.img;
+    im.alt = '';
+    gi.appendChild(im);
+  }
+  r.appendChild(gi);
+  const gt = el('div', 'gt');
+  gt.appendChild(el('b', 'nm', g.name));
+  gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
+  if (g.up) gt.appendChild(el('span', 'stars', '◆'.repeat(g.up)));
+  (g.extras || []).forEach((x2) => {
+    const line = el('span', 'gx ' + x2.k);
+    line.appendChild(el('b', null, x2.name));
+    if (x2.fx) line.appendChild(document.createTextNode(' : ' + x2.fx));
+    gt.appendChild(line);
+  });
+  if (g.inf) {
+    const line = el('span', 'gx infu');
+    line.appendChild(el('b', null, 'Imprégnation'));
+    line.appendChild(document.createTextNode(' : ' + g.inf.name));
+    gt.appendChild(line);
+    if (g.inf.bonus) {
+      gt.appendChild(el('span', 'gx infb' + (g.inf.on ? '' : ' off'),
+        'Bonus (' + g.inf.fac + ') : ' + g.inf.bonus + (g.inf.on ? '' : ' — inactif, faction différente')));
+    }
+  }
+  r.appendChild(gt);
+  return r;
 }
 
 function skillIcon(sk, size) {

@@ -20,6 +20,7 @@ import re
 import struct
 from pathlib import Path
 
+import imgcache
 import pak_extract
 from collection_data import _levels
 
@@ -128,6 +129,7 @@ def _tiles(game_dir, out_dir):
                 continue
             f.seek(off + e.pos)
             im = Image.open(io.BytesIO(f.read(e.size))).convert("RGB")
-            im.resize((TILE_PX, TILE_PX), Image.LANCZOS).save(
-                Path(out_dir) / f"{tx}_{ty}.webp", quality=78, method=6)
+            imgcache.save(im.resize((TILE_PX, TILE_PX), Image.LANCZOS),
+                          Path(out_dir) / f"{tx}_{ty}.webp", quality=78,
+                          method=6)
     return found

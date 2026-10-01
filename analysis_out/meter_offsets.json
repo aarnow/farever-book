@@ -63,6 +63,13 @@
     "uid": 32,
     "flags": 136
   },
+  "EnumFlagsData": {
+    "value": 40
+  },
+  "ItemFlag": {
+    "Flawless": 0,
+    "Prismatic": 1
+  },
   "Weapon": {
     "rarity": 184,
     "level": 152
@@ -144,11 +151,11 @@
     "kind": 184,
     "stacks": 464,
     "startTime": 192,
+    "stopTime": 200,
     "duration": 336,
     "refreshDuration": 456,
     "originItem": 256,
-    "removed": 8,
-    "stopTime": 200
+    "removed": 8
   },
   "Foe": {
     "summonOwner": 1264,
@@ -297,12 +304,5 @@
   "Texts": {
     "name_vidx": 1,
     "desc_vidx": 0
-  },
-  "EnumFlagsData": {
-    "value": 40
-  },
-  "ItemFlag": {
-    "Flawless": 0,
-    "Prismatic": 1
   }
 }

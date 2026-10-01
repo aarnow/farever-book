@@ -22,6 +22,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import hbson
+import imgcache
 import pak_extract
 
 CATEGORIES = (("mounts", "Mount"), ("gliders", "GearGlider"))
@@ -326,4 +327,4 @@ def _images(game_dir, out_dir, gfx):
                 continue
             tile = img.crop((x, y, x + n, y + n)).resize((IMG_PX, IMG_PX),
                                                          Image.LANCZOS)
-            tile.save(out_dir / f"{iid}.webp", quality=82, method=6)
+            imgcache.save(tile, out_dir / f"{iid}.webp", quality=82, method=6)

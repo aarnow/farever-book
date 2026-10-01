@@ -378,6 +378,7 @@ def _document():
             .replace("/*ICONS*/",
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
                      "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
+                     + ";window.__SHEET__ = " + json.dumps(_sheet_art())
                      + ";"))
     # WebView2 shows nothing at all for an HTML string over 2 MB.
     if len(html.encode("utf-8")) > 1_800_000:
@@ -424,6 +425,24 @@ def _boss_portraits():
                               + base64.b64encode(path.read_bytes()).decode())
         except OSError:
             continue
+    return out
+
+
+def _sheet_art():
+    """{"banner_warrior": data URI, "slot_Head": ..., "stat_Faith": ...}:
+    the character sheet's art, cut from the game's UI into
+    assets/charsheet/ by hltools/build_charsheet_art.py."""
+    import base64
+    out = {}
+    try:
+        files = sorted((ICON_DIR.parent / "charsheet").iterdir())
+    except OSError:
+        return out
+    mime = {".png": "image/png", ".webp": "image/webp"}
+    for path in files:
+        if path.suffix in mime:
+            out[path.stem] = (f"data:{mime[path.suffix]};base64,"
+                              + base64.b64encode(path.read_bytes()).decode())
     return out
 
 

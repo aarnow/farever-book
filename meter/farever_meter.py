@@ -2754,7 +2754,7 @@ APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
                   "Hunt": "Chasse", "Map": "Carte",
                   "Achievements": "Succès",
-                  "Character": "Personnage",
+                  "Character": "Inspecter",
                   "Settings": "Réglages",
                   "Help": "Aide"}
 APP_TAB_DEFAULT = "Live"
@@ -2894,6 +2894,8 @@ class App:
         self._help_open = None
         self._rift_view = None              # the rift report being read
         self._launching_until = 0           # Play was clicked: until then
+        self._repairing = False             # Réparer is running
+        self._repair_note = None            # (ok, text) once it has run
         self._rift_rewards = False          # the rift rewards page is open
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_view = None           # the dungeon run being read
@@ -3160,6 +3162,46 @@ class App:
         except Exception as e:
             print(f"[meter] couldn't open {DATA_HOME}: {e}", file=sys.stderr)
 
+    def _repair(self):
+        """Réparer (Aide): what a game patch needs, by hand — read the game's
+        data again from scratch, forget everything loaded from the old files,
+        and reconnect with a hook built from the new ones. No restart: the
+        hook's source and every table are re-read when they are next used."""
+        if self._repairing:
+            return
+        self._repairing = True
+        self._repair_note = None
+        self.menubridge.invalidate()
+
+        def work():
+            ok = False
+            try:
+                pid = self.link.status()[2] if self.link is not None else None
+                hlboot = locate_hlboot(pid) if pid else None
+                print("[meter] repair: regenerating the game data ...",
+                      file=sys.stderr)
+                ok = regenerate_data(hlboot, force=True)
+                forget_loaded_data()
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"[meter] repair failed: {e}", file=sys.stderr)
+
+            def done():
+                self._repairing = False
+                self._repair_note = (
+                    (True, "Données du jeu relues. Reconnexion au jeu en "
+                           "cours si Farever est ouvert.")
+                    if ok else
+                    (False, "La relecture des données a échoué : le détail "
+                            "est dans le journal (Réglages › Ouvrir le "
+                            "dossier du journal)."))
+                if ok and self.link is not None:
+                    self.link.reconnect()
+                self.menubridge.invalidate()
+            self._enqueue(done)()
+        threading.Thread(target=work, daemon=True, name="repair").start()
+
     def _set_tab(self, name):
         if name not in APP_TABS:
             return
@@ -3214,6 +3256,7 @@ class App:
             # help
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),
             "help_close": lambda: setattr(self, "_help_open", None),
+            "repair_data": self._repair,
         }
         return acts
 
@@ -3796,9 +3839,11 @@ class App:
             name = prof.get("n")
             if not name:
                 return
-            print(f"[meter] profile {name}: luck statuses "
-                  f"{prof.get('luckStatuses')} (now {prof.get('now')})",
-                  file=sys.stderr)
+            print(f"[meter] profile {name}: equipment "
+                  f"{[(i, s[0]) for i, s in enumerate(prof.get('equip') or []) if s]}"
+                  f"; arsenals {prof.get('arsenals')}; weapon skills "
+                  f"{prof.get('weaponSkills')}; secondary "
+                  f"{prof.get('secondary')}", file=sys.stderr)
             # kept for this session only: profiles are never written to disk
             self._profiles_data()[name] = prof
             self._char_sel = name
@@ -4709,8 +4754,8 @@ class App:
                           "t": "‹  Tous les sujets d'aide"},
                          {"k": "section", "t": art["title"]}]
                         + art["blocks"])
-        # ...or the index.
-        seen, out = set(), []
+        # ...or the index, the repair first.
+        seen, out = set(), self._repair_nodes()
         for heading, ids in HELP_GROUPS:
             rows = [a for a in arts if a["id"] in ids]
             if not rows:
@@ -4732,6 +4777,24 @@ class App:
                 for a in rest]})
         return out
 
+
+    def _repair_nodes(self):
+        out = [{"k": "section", "t": "Après une mise à jour du jeu"},
+               {"k": "note",
+                "t": "Farever France relit les données du jeu tout seul quand "
+                     "Farever change. Si une page reste vide ou que la "
+                     "connexion échoue après une mise à jour, Réparer refait "
+                     "cette lecture depuis zéro puis se reconnecte au jeu, "
+                     "sans relancer l'application. Compte quelques secondes "
+                     "(plusieurs minutes la toute première fois)."},
+               {"k": "button", "id": "repair_data",
+                "t": "Réparation en cours…" if self._repairing
+                     else "Réparer",
+                "tone": "disabled" if self._repairing else None}]
+        if self._repair_note and not self._repairing:
+            ok, text = self._repair_note
+            out.append({"k": "note", "warn": not ok, "t": text})
+        return out
 
     @staticmethod
     def _tick(on, label):
@@ -4807,7 +4870,10 @@ class App:
         if state == GameLink.CONNECTED:
             self._launching_until = 0
             return {"state": "ingame", "t": "En jeu"}
-        if state == GameLink.CONNECTING:
+        if state == GameLink.CONNECTING or self._repairing:
+            if REGENERATING.is_set():
+                return {"state": "connecting", "t": "Mise à jour…",
+                        "tip": "relecture des données du jeu"}
             return {"state": "connecting", "t": "Connexion…",
                     "tip": "au jeu en cours"}
         if state == GameLink.FAILED:
@@ -5465,6 +5531,84 @@ def _runes_view(runes):
             for sid, rs in by_skill.items()]
 
 
+# The equipment container's cells, in order: data.cdb's Slot_* lines
+# (itemType, after the item types). Weapon2 is the arsenal's weapon.
+EQUIP_SLOTS = ("Weapon1", "Weapon2", "OffhandWeapon", "Head", "Neck",
+               "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet",
+               "FingerLeft", "Trinket", "FingerRight")
+# what can sit in each, by item type (weapons: anything else that is gear)
+SLOT_TYPES = {"Head": {"Head"}, "Neck": {"GearNeck"},
+              "Shoulders": {"Shoulders"}, "Chest": {"Chest"},
+              "Back": {"Back"}, "Hands": {"Hands"}, "Waist": {"Waist"},
+              "Legs": {"Legs"}, "Feet": {"Feet"},
+              "FingerLeft": {"GearFinger"}, "FingerRight": {"GearFinger"},
+              "Trinket": {"GearTrinket"}}
+# the character sheet as the game lays it out: two columns around the hero
+SHEET_LEFT = (("Head", "Tête"), ("Neck", "Cou"), ("Shoulders", "Épaules"),
+              ("Chest", "Torse"), ("Back", "Dos"), ("FingerLeft", "Anneau"))
+SHEET_RIGHT = (("Hands", "Mains"), ("Waist", "Taille"), ("Legs", "Jambes"),
+               ("Feet", "Pieds"), ("Trinket", "Babiole"),
+               ("FingerRight", "Anneau"))
+SLOT_ICON = {"FingerLeft": "Finger", "FingerRight": "Finger"}
+_SLOT_WARNED = set()
+
+
+def _equip_by_slot(entries):
+    """[(cell index, gear entry)] -> {slot: entry}. The cell says the slot;
+    an item that can't sit there (the order changed in a patch) is placed by
+    its type instead, and said once in the log."""
+    out, loose = {}, []
+    for i, g in entries:
+        slot = EQUIP_SLOTS[i] if i < len(EQUIP_SLOTS) else None
+        ok = slot is not None and (
+            g["t"] in SLOT_TYPES[slot] if slot in SLOT_TYPES
+            else not any(g["t"] in v for v in SLOT_TYPES.values()))
+        if ok and slot not in out:
+            out[slot] = g
+        else:
+            loose.append(g)
+    for g in loose:
+        key = (g["t"], g["id"])
+        if key not in _SLOT_WARNED:
+            _SLOT_WARNED.add(key)
+            print(f"[meter] equipment: {g['id']} ({g['t']}) not in its "
+                  "expected cell — placed by type", file=sys.stderr)
+        for slot in EQUIP_SLOTS:
+            fits = (g["t"] in SLOT_TYPES[slot] if slot in SLOT_TYPES
+                    else not any(g["t"] in v for v in SLOT_TYPES.values()))
+            if fits and slot not in out:
+                out[slot] = g
+                break
+    return out
+
+
+def _weapon_skills(prof, kind, t):
+    """The skills chosen for a weapon (Specialization.arsenals, keyed by the
+    weapon's item kind or its type)."""
+    ars = prof.get("arsenals") or {}
+    got = ars.get(kind) or ars.get(t) or []
+    return [{"id": s, "name": _skill_label(s)} for s in got if s]
+
+
+def _sheet(prof, entries):
+    """The character sheet: the gear around the hero, the weapons with
+    their skills."""
+    by = _equip_by_slot(entries)
+    def cell(slot, label):
+        g = by.get(slot)
+        return {"slot": slot, "label": label,
+                "icon": SLOT_ICON.get(slot, slot), "g": g}
+    def weapon(slot, label):
+        g = by.get(slot)
+        return {"label": label, "g": g,
+                "skills": _weapon_skills(prof, g["id"], g["t"]) if g else []}
+    return {"left": [cell(*s) for s in SHEET_LEFT],
+            "right": [cell(*s) for s in SHEET_RIGHT],
+            "weapons": [weapon("Weapon1", "Main principale"),
+                        weapon("OffhandWeapon", "Main secondaire")],
+            "arsenal": weapon("Weapon2", "Arme de rechange")}
+
+
 def character_view(roster, profiles, sel, waiting, live):
     """The Character tab: the players around (to analyse), the profiles
     already built, and the open one."""
@@ -5483,12 +5627,12 @@ def character_view(roster, profiles, sel, waiting, live):
               "when": date_fr(time.localtime(p.get("at") or 0))}
              for n, p in sorted(profiles.items(),
                                 key=lambda kv: -(kv[1].get("at") or 0))]
-    view = {"near": near, "saved": saved, "live": live, "open": None}
+    view = {"near": near, "count": len(near), "saved": saved, "live": live,
+            "open": None}
     prof = profiles.get(sel) if sel else None
     if prof:
-        gear, other = [], []
-        skills = set(prof.get("skills") or ())
-        for slot in prof.get("equip") or ():
+        gear, other, cells = [], [], []
+        for idx, slot in enumerate(prof.get("equip") or ()):
             if not slot:
                 continue
             kind, rar, lvl, upg, gslots, effects, infu, istat, iflags = (
@@ -5510,14 +5654,17 @@ def character_view(roster, profiles, sel, waiting, live):
                      "up": upg if isinstance(upg, int) and upg > 0 else 0,
                      "extras": extras,
                      "prism": prism,
-                     "inf": _gear_infusion(kind, infu, istat, prism)}
+                     "inf": _gear_infusion(kind, infu, istat, prism),
+                     "t": t}
             (other if t in NOT_GEAR else gear).append(entry)
+            if t not in NOT_GEAR:
+                cells.append((idx, entry))
         view["open"] = {
             "n": prof.get("n"), "lvl": prof.get("lvl"),
             "cls": CLASS_FR.get(prof.get("k"), prof.get("k") or ""),
             "ck": class_key(prof.get("k")), "me": bool(prof.get("me")),
             "when": date_fr(time.localtime(prof.get("at") or 0)),
-            "gear": gear, "other": other,
+            "gear": gear, "other": other, "sheet": _sheet(prof, cells),
             "tree": _talent_tree(
                 prof.get("k"),
                 prof["talents"] if isinstance(prof.get("talents"), dict)
@@ -6416,6 +6563,9 @@ def build_script_source():
 
 
 DATA_STAMP = ANALYSIS / ".data_stamp.json"
+# Set while regenerate_data runs: the title band says the game's data is
+# being re-read, rather than a bare "Connexion…" for a minute.
+REGENERATING = threading.Event()
 
 # Top-level keys the current hook needs out of the two generated files. Data
 # generated by older tools predates some of these, and the hlboot.dat stamp
@@ -6690,6 +6840,14 @@ def _data_is_current():
     return True
 
 
+def forget_loaded_data():
+    """Drop every table loaded from analysis_out/, so the next use reads the
+    files a regenerate just wrote (Réparer)."""
+    g = globals()
+    for name in ("_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
+        g[name] = None
+
+
 def regenerate_data(hlboot=None, force=False):
     """Re-run the target/offset generators against the given hlboot.dat (or the
     tools' own auto-detect when None). Self-heals the shipped JSONs after a
@@ -6740,6 +6898,14 @@ def regenerate_data(hlboot=None, force=False):
     # them at the writable copy instead. Harmless from source, where the two
     # paths are already the same.
     env = dict(os.environ, FAREVER_ANALYSIS_OUT=str(ANALYSIS))
+    REGENERATING.set()
+    try:
+        return _run_generators(tools, hlboot, env, stamp)
+    finally:
+        REGENERATING.clear()
+
+
+def _run_generators(tools, hlboot, env, stamp):
     for t in tools:
         print(f"[meter] regenerating {t.name} for this build ...", file=sys.stderr)
         # Frozen there is no python.exe to hand a script to, and sys.executable
@@ -8248,7 +8414,8 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     print("[*] connected — everything shows in the Farever France window; the "
           "reset hotkey is set in Réglages.", file=sys.stderr)
     try:
-        while not STOP.is_set() and not detached.wait(0.5):
+        while (not STOP.is_set() and not detached.wait(0.5)
+               and not link._reconnect.is_set()):
             pass
     finally:
         link.script = None
@@ -8293,6 +8460,7 @@ class GameLink:
         self._lock = threading.Lock()
         self._state, self._detail, self._pid = self.CLOSED, "", None
         self._retry = threading.Event()
+        self._reconnect = threading.Event()
         self._thread = None
         self.script = None
         # The game we were last connected to. Once it closes it stays in the
@@ -8307,6 +8475,12 @@ class GameLink:
 
     def retry(self):
         """Look for the game / reconnect now, rather than at the next poll."""
+        self._retry.set()
+
+    def reconnect(self):
+        """Unload the hook and attach again (Réparer: the data it was built
+        from has changed). Waiting or failed: just look for the game now."""
+        self._reconnect.set()
         self._retry.set()
 
 
@@ -8355,14 +8529,17 @@ class GameLink:
             proc = self._wait_for_game(device)
             if proc is None:
                 return
+            self._reconnect.clear()
             self.set_state(self.CONNECTING)
             if not self._wait_booted(device, proc.pid):
                 continue                    # closed while starting, or STOP
             try:
                 # Only a game we were actually connected to is set aside once
                 # it closes — never one whose attach merely failed.
-                if _game_session(self, device, proc, *self._args):
+                if (_game_session(self, device, proc, *self._args)
+                        and not self._reconnect.is_set()):
                     self._gone_pid = proc.pid
+                self._reconnect.clear()
             except Exception as e:
                 import traceback
                 traceback.print_exc()

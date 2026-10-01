@@ -14,6 +14,7 @@ import struct
 from collections import defaultdict
 from pathlib import Path
 
+import imgcache
 import pak_extract
 from collection_data import _levels
 
@@ -139,6 +140,6 @@ def _images(game_dir, out_dir, gfx):
             if x + n > img.width or y + n > img.height:
                 n = min(img.width, img.height)
                 x = y = 0
-            img.crop((x, y, x + n, y + n)).resize(
-                (IMG_PX, IMG_PX), Image.LANCZOS).save(
+            imgcache.save(img.crop((x, y, x + n, y + n)).resize(
+                (IMG_PX, IMG_PX), Image.LANCZOS),
                 out_dir / f"{uid}.webp", quality=80, method=6)

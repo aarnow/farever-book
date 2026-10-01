@@ -10,6 +10,7 @@ import json
 import struct
 from pathlib import Path
 
+import imgcache
 import pak_extract
 
 CLASSES = ("Warrior", "Mage", "Rogue", "Priest")
@@ -86,6 +87,6 @@ def _icons(game_dir, out_dir, gfx):
             x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
             if x + w > img.width or y + h > img.height:
                 continue
-            img.crop((x, y, x + w, y + h)).resize(
-                (IMG_PX, IMG_PX), Image.LANCZOS).save(
+            imgcache.save(img.crop((x, y, x + w, y + h)).resize(
+                (IMG_PX, IMG_PX), Image.LANCZOS),
                 out_dir / f"{sid}.webp", quality=82, method=6)
