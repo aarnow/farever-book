@@ -567,20 +567,49 @@ function renderPage(nodes) {
   NODES = next;
 }
 
+/* The app's own tabs (Réglages, Aide) are icons on the right of the band,
+   named on hover. Built as elements, never as markup. */
+const TAB_ICONS = {
+  Settings: 'M19.14 12.94c.04-.31.06-.63.06-.94 0-.32-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.07.63-.07.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z',
+  Help: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z',
+};
+
+function svgIcon(d) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', d);
+  svg.appendChild(path);
+  return svg;
+}
+
 function renderTabs(tabs, active) {
   const nav = $('#nav');
   const sig = JSON.stringify([tabs, active]);
   if (nav.dataset.sig === sig) return;
   nav.dataset.sig = sig;
   nav.textContent = '';
+  const icons = el('div', 'navicons');
   tabs.forEach((tab) => {
     const t = typeof tab === 'string' ? tab : tab.v;
     const label = typeof tab === 'string' ? tab : tab.t;
-    if (tab.sep) nav.appendChild(el('div', 'navsep'));
-    const b = el('button', t === active ? 'active' : '', label);
+    let b;
+    if (TAB_ICONS[t]) {
+      b = el('button', 'navicon' + (t === active ? ' active' : ''));
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.appendChild(svgIcon(TAB_ICONS[t]));
+      icons.appendChild(b);
+    } else {
+      b = el('button', t === active ? 'active' : '', label);
+      nav.appendChild(b);
+    }
+    b.type = 'button';
     b.addEventListener('click', () => notify('set_tab', { value: t }));
-    nav.appendChild(b);
   });
+  if (icons.childNodes.length) nav.appendChild(icons);
 }
 
 /* ---- the state push ----------------------------------------------------- */
