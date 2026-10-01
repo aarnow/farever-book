@@ -98,7 +98,36 @@ SETTINGS_CACHE = _WRITABLE / ".meter_settings.json"
 # settings file is rewritten on every toggled checkbox — a record only needs
 # writing when it's beaten. Same home as the positions, so it survives updates.
 BEST_TIMES_CACHE = _WRITABLE / ".meter_besttimes.json"
-PARSES_DIR = _WRITABLE / "parses"   # finished-parse images land here (gitignored)
+# The rift reports (.json data, .txt, .png), in a folder of their own
+# (gitignored). They used to share parses/ with the parse images, which are
+# no longer saved: _move_rift_reports() moves what is left there.
+RIFTS_DIR = _WRITABLE / "failles"
+OLD_PARSES_DIR = _WRITABLE / "parses"
+
+
+def _move_rift_reports():
+    """Once: the rift reports out of the old shared parses/ folder into
+    failles/, the parse images (no longer saved) deleted, and parses/ removed
+    when nothing else is left in it."""
+    if not OLD_PARSES_DIR.is_dir():
+        return
+    try:
+        RIFTS_DIR.mkdir(parents=True, exist_ok=True)
+        moved = dropped = 0
+        for f in list(OLD_PARSES_DIR.iterdir()):
+            if f.name.startswith("rift-") and f.suffix in (".json", ".txt",
+                                                           ".png"):
+                f.replace(RIFTS_DIR / f.name)
+                moved += 1
+            elif f.name.startswith("parse-") and f.suffix == ".png":
+                f.unlink()
+                dropped += 1
+        if not any(OLD_PARSES_DIR.iterdir()):
+            OLD_PARSES_DIR.rmdir()
+        print(f"[meter] {moved} rift report file(s) moved to {RIFTS_DIR}, "
+              f"{dropped} parse image(s) deleted", file=sys.stderr)
+    except OSError as e:
+        print(f"[meter] couldn't tidy {OLD_PARSES_DIR}: {e}", file=sys.stderr)
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 # What the account owns (mounts, gliders, companions), as last read in game.
 COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
@@ -2311,7 +2340,7 @@ class TrayIcon:
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
         u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Afficher Farever France")
-        u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des parses")
+        u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des failles")
         u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Ouvrir le dossier du journal")
         u.AppendMenuW(m, MF_SEPARATOR, 0, None)
         u.AppendMenuW(m, MF_STRING, TRAY_QUIT, "Arrêter le compteur")
@@ -2343,10 +2372,10 @@ class TrayIcon:
                 print(f"[tray] couldn't open {DATA_HOME}: {e}", file=sys.stderr)
         elif cmd == TRAY_PARSES:
             try:
-                PARSES_DIR.mkdir(parents=True, exist_ok=True)
-                os.startfile(PARSES_DIR)
+                RIFTS_DIR.mkdir(parents=True, exist_ok=True)
+                os.startfile(RIFTS_DIR)
             except Exception as e:
-                print(f"[tray] couldn't open {PARSES_DIR}: {e}", file=sys.stderr)
+                print(f"[tray] couldn't open {RIFTS_DIR}: {e}", file=sys.stderr)
 
     @staticmethod
     def _prototypes():
@@ -3536,7 +3565,7 @@ class App:
     # ---- rifts
     def _rift_files(self):
         try:
-            return sorted(PARSES_DIR.glob("rift-*.json"), reverse=True)
+            return sorted(RIFTS_DIR.glob("rift-*.json"), reverse=True)
         except OSError:
             return []
 
@@ -3582,7 +3611,7 @@ class App:
             stem = name[:-len(".json")]
             for ext in (".json", ".txt", ".png"):
                 try:
-                    (PARSES_DIR / (stem + ext)).unlink()
+                    (RIFTS_DIR / (stem + ext)).unlink()
                     gone += ext == ".json"
                 except FileNotFoundError:
                     pass
@@ -3612,7 +3641,7 @@ class App:
     def _read_rift_file(self, name):
         name = Path(str(name)).name              # never a path from the page
         try:
-            data = json.loads((PARSES_DIR / name).read_text(encoding="utf-8"))
+            data = json.loads((RIFTS_DIR / name).read_text(encoding="utf-8"))
         except Exception:
             return None
         if not isinstance(data, dict) or not isinstance(data.get("phases"), list):
@@ -4354,7 +4383,7 @@ class App:
                    "min": 50, "max": 200, "step": 5, "unit": "%"}},
             {"k": "section", "t": "Fichiers"},
             {"k": "button", "id": "open_parses",
-             "t": "Dossier des parses et rapports"},
+             "t": "Dossier des rapports de faille"},
             {"k": "button", "id": "open_log", "t": "Dossier du journal"},
         ]
 
@@ -4434,7 +4463,7 @@ class App:
 
 
     def _save_rift_report(self, report):
-        """The report into parses/, three ways: .json is the full metrics —
+        """The report into failles/, three ways: .json is the full metrics —
         the file _load_last_rift_report reads back, which is what lets 'Last
         Rift Report' survive a meter restart; .txt is the chat-pasteable
         lines; .png is the shareable image. Same folder, same lifecycle as
@@ -4442,18 +4471,18 @@ class App:
         Pillow costs the picture, not the data."""
         base = f"rift-{time.strftime('%Y%m%d-%H%M%S')}"
         try:
-            PARSES_DIR.mkdir(parents=True, exist_ok=True)
-            (PARSES_DIR / f"{base}.json").write_text(json.dumps(report),
+            RIFTS_DIR.mkdir(parents=True, exist_ok=True)
+            (RIFTS_DIR / f"{base}.json").write_text(json.dumps(report),
                                                      encoding="utf-8")
-            (PARSES_DIR / f"{base}.txt").write_text(self._report_text(report),
+            (RIFTS_DIR / f"{base}.txt").write_text(self._report_text(report),
                                                     encoding="utf-8")
-            print(f"[meter] rift report saved to {PARSES_DIR / base}.json/.txt",
+            print(f"[meter] rift report saved to {RIFTS_DIR / base}.json/.txt",
                   file=sys.stderr)
         except Exception as e:
             print(f"[meter] couldn't save the rift report: {e}",
                   file=sys.stderr)
         try:
-            render_rift_report_image(report, PARSES_DIR / f"{base}.png")
+            render_rift_report_image(report, RIFTS_DIR / f"{base}.png")
         except Exception as e:
             print(f"[meter] couldn't render the rift report image: {e}",
                   file=sys.stderr)
@@ -4466,7 +4495,7 @@ class App:
         so newest is just last. Validated for shape, not trusted: a truncated
         or hand-edited file costs the button, never the meter."""
         try:
-            files = sorted(PARSES_DIR.glob("rift-*.json"))
+            files = sorted(RIFTS_DIR.glob("rift-*.json"))
             if not files:
                 return None
             data = json.loads(files[-1].read_text(encoding="utf-8"))
@@ -4563,82 +4592,21 @@ class App:
     def _finish_parse(self):
         """Nothing to switch off: the session's capture window has already
         elapsed, which stops both new data and the duration clock. This just
-        moves the UI into its 'sample is sitting there to be read' state, and
-        writes the result out before anything can clear it."""
+        moves the UI into its 'sample is sitting there to be read' state
+        (nothing is saved: the result is read on screen)."""
         self._parse_state = "done"
         self._set_parse_banner(f"PARSE TERMINÉ  {PARSE_LENGTH_SECS} s",
                                fill=BG_HEADER_UNLOCKED)
-        self._save_parse_image()
-
-    def _parse_snapshot(self):
-        """Everything the image needs, as plain data — same rows, same focus and
-        the same merged skill tables the overlay is displaying."""
-        duration, _ = self.session.current()
-        rows = self._apply_mode(self.session.snapshot()[2])
-        party_total = sum(p.total for p in rows)
-        focus_name = self._resolve_focus(rows)
-        fp = next((p for p in rows if p.name == focus_name), None)
-
-        focus = None
-        if fp is not None:
-            fdps = fp.total / duration if duration > 0 else 0.0
-            crit_pct = (fp.crits / fp.hits * 100) if fp.hits else 0.0
-            stats = [f"{_n(fp.total)} dégâts", f"{fdps:.0f} DPS",
-                     f"{fp.hits} coups", f"{crit_pct:.0f} % critiques",
-                     f"{_n(fp.heal_total)} soins"]
-            if fp.heal_total > 0.5:
-                stats.append(f"{fp.overheal_pct:.0f} % de soin en excès")
-            if fp.kills:
-                stats.append(f"{fp.kills} kills")
-            el = sorted(fp.elements.items(), key=lambda kv: -kv[1][1])
-            focus = {
-                "name": fp.name,
-                "total": fp.total,
-                "heal": fp.heal_total,
-                "stats": " · ".join(stats),
-                "skills": self._merge_named(fp.skills),
-                "heals": self._merge_named(fp.heals),
-                "elements": "  ".join(f"{element_label(k)}:{int(v[1])}"
-                                      for k, v in el[:6]),
-            }
-        return {
-            "title": f"Farever France — Parse de {PARSE_LENGTH_SECS} s",
-            "when": time.strftime("%d/%m/%Y %H:%M"),
-            "duration": duration,
-            "mode": "GROUPE" if self.mode == "party" else "TOUS LES JOUEURS",
-            "rows": [{
-                "name": p.name, "total": p.total, "heal": p.heal_total,
-                "heal_self": p.heal_self, "overheal": p.overheal_pct,
-                "dps": p.total / duration if duration > 0 else 0.0,
-                "pct": (p.total / party_total * 100) if party_total else 0.0,
-                "is_me": p.is_me,
-            } for p in rows],
-            "focus": focus,
-        }
 
     def _open_parses(self):
-        """Open the parse folder in Explorer. Created on demand, so the button
-        does something sensible before the first parse has ever been saved
-        rather than failing on a folder that doesn't exist yet."""
+        """Open the rift reports' folder in Explorer. Created on demand, so
+        the button does something sensible before the first rift has been
+        saved rather than failing on a folder that doesn't exist yet."""
         try:
-            PARSES_DIR.mkdir(parents=True, exist_ok=True)
-            os.startfile(PARSES_DIR)
+            RIFTS_DIR.mkdir(parents=True, exist_ok=True)
+            os.startfile(RIFTS_DIR)
         except Exception as e:
-            print(f"[meter] couldn't open {PARSES_DIR}: {e}", file=sys.stderr)
-
-    def _save_parse_image(self):
-        """Write the finished parse to parses/. Never fatal: a missing Pillow or
-        an unwritable folder costs you the picture, not the parse that's sitting
-        on screen."""
-        try:
-            name = f"parse-{time.strftime('%Y%m%d-%H%M%S')}.png"
-            out = render_parse_image(self._parse_snapshot(), PARSES_DIR / name)
-            print(f"[meter] parse saved to {out}", file=sys.stderr)
-        except ImportError:
-            print("[meter] parse image skipped — Pillow isn't installed "
-                  "(pip install pillow).", file=sys.stderr)
-        except Exception as e:
-            print(f"[meter] couldn't save the parse image: {e}", file=sys.stderr)
+            print(f"[meter] couldn't open {RIFTS_DIR}: {e}", file=sys.stderr)
 
     def _stop_parse(self):
         """Back to live metering — which clears the sample. Resuming capture
@@ -7529,123 +7497,6 @@ def _parse_font(name, size):
     return ImageFont.load_default()
 
 
-def render_parse_image(data, path):
-    """Draw a finished parse to `path` as a PNG. `data` is the plain dict built
-    by Overlay._parse_snapshot — no Tk or session access from in here."""
-    from PIL import Image, ImageDraw
-
-    ui = _parse_font(PARSE_FONT_UI, 15)
-    ui_small = _parse_font(PARSE_FONT_UI, 11)
-    mono = _parse_font(PARSE_FONT_MONO, 14)
-    mono_small = _parse_font(PARSE_FONT_MONO, 12)
-
-    pad, bar_h, line_h, row_gap = 12, 6, 19, 6
-    x0, x1 = 12, PARSE_IMG_W - 13
-    rows, focus = data["rows"], data["focus"]
-
-    # Drawn onto a canvas that's certainly tall enough and cropped to the ink at
-    # the end — cheaper to get right than keeping a height formula in step with
-    # the layout below, and it can't clip a long skill list.
-    img = Image.new("RGB", (PARSE_IMG_W, 2000), BG_BODY)
-    d = ImageDraw.Draw(img)
-
-    d.rectangle((0, 0, PARSE_IMG_W - 1, 35), fill=BG_HEADER)
-    d.text((x0, 9), data["title"], font=ui, fill=FG_HEADER)
-    stamp = f"{data['when']}   {data['duration']:.0f}s"
-    d.text((x1 - d.textlength(stamp, font=mono_small), 13), stamp,
-           font=mono_small, fill=FG_HEADER)
-    y = 36 + pad
-
-    def bar(x, y, w, frac, colour, thick, self_frac=0.0):
-        """One bar, optionally split: `self_frac` of the SAME scale as `frac`
-        is drawn from the left edge in the self-heal parchment, over the top of
-        full-length bar — same trick as the live overlay, so the two can't
-        disagree about where the join is."""
-        d.rectangle((x, y, x + w, y + thick - 1), fill=BG_BAR_TRACK)
-        filled = int(w * min(1.0, max(0.0, frac)))
-        if filled > 0:
-            d.rectangle((x, y, x + filled, y + thick - 1), fill=colour)
-        selfw = int(w * min(min(1.0, max(0.0, self_frac)),
-                            min(1.0, max(0.0, frac))))
-        if selfw > 0:
-            d.rectangle((x, y, x + selfw, y + thick - 1), fill=SELF_HEAL_BAR)
-
-    d.text((x0, y), f"{data['mode']}   ({len(rows)})", font=ui_small, fill=ACCENT)
-    y += 18
-    d.text((x0, y),
-           f"  #  {'NOM':<12}{'DÉGÂTS':>9} {'DPS':>6} {'%':>4}"
-           f"{'SOINS':>9}{'EXCÈS':>6}",
-           font=mono, fill=FG_DIM)
-    y += line_h
-
-    top_dmg = max((r["total"] for r in rows), default=0.0) or 1.0
-    top_heal = max((r["heal"] for r in rows), default=0.0) or 1.0
-    for i, r in enumerate(rows, 1):
-        me = "*" if r["is_me"] else " "
-        over = (f"{r.get('overheal', 0.0):>5.0f}%" if r["heal"] > 0.5
-                else " " * 6)
-        d.text((x0, y), f"  {i}.{me}{r['name'][:12]:<12}{int(r['total']):>9} "
-                        f"{r['dps']:>6.0f} {r['pct']:>3.0f}%"
-                        f"{int(r['heal']):>9}{over}",
-               font=mono, fill=FG_VALUE if r["is_me"] else FG_TEXT)
-        y += line_h
-        bar(x0, y, x1 - x0, r["total"] / top_dmg, DMG_BAR, bar_h)
-        y += bar_h
-        bar(x0, y, x1 - x0, r["heal"] / top_heal, HEAL_BAR, bar_h,
-            self_frac=r.get("heal_self", 0.0) / top_heal)
-        y += bar_h + row_gap
-
-    if focus:
-        y += 6
-        d.line((x0, y, x1, y), fill=BG_BAR_TRACK)
-        y += 10
-        d.text((x0, y), f"DÉTAIL — {focus['name']}", font=ui, fill=FG_TEXT)
-        y += 24
-        d.text((x0, y), focus["stats"], font=mono_small, fill=FG_DIM)
-        y += line_h + 4
-
-        # Damage left, healing right — each column's bars scale to that column's
-        # own biggest entry, exactly like the live breakdown.
-        colw = (x1 - x0 - 18) // 2
-        columns = ((x0, "DÉGÂTS", focus["skills"], DMG_BAR, focus["total"]),
-                   (x0 + colw + 18, "SOINS", focus["heals"], HEAL_BAR,
-                    focus["heal"]))
-        for cx, title, _entries, _colour, _denom in columns:
-            d.text((cx, y), title, font=ui_small, fill=ACCENT)
-        y += 16
-        col_bottom = y
-        for cx, _title, entries, colour, denom in columns:
-            # Same denominator and same line format as SkillColumn.show: the %
-            # is of the player's overall total, not of the listed rows.
-            scale = max((e[1] for e in entries), default=0.0) or 1.0
-            cy = y
-            for label, amount, hits, _crits, slf in entries:
-                pct = (amount / denom * 100) if denom else 0.0
-                d.text((cx, cy),
-                       f"{label[:16]:<16}{int(amount):>8} {pct:>3.0f}% {hits:>3}×",
-                       font=mono_small, fill=FG_TEXT)
-                cy += line_h
-                frac = amount / scale
-                bar(cx, cy, colw, frac, colour, 4,
-                    self_frac=frac * (slf / amount) if amount > 0 else 0.0)
-                cy += 4 + 3
-            col_bottom = max(col_bottom, cy)
-        y = col_bottom
-
-        if focus["elements"]:
-            y += 4
-            d.text((x0, y), focus["elements"], font=mono_small, fill=FG_DIM)
-            y += line_h
-
-    img = img.crop((0, 0, PARSE_IMG_W, y + pad))
-    # Border last, so it frames the cropped height rather than the scratch one.
-    ImageDraw.Draw(img).rectangle((0, 0, PARSE_IMG_W - 1, img.height - 1),
-                                 outline=BG_BORDER, width=2)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(path)
-    return path
-
-
 def report_view(data):
     """A saved rift report, as display-ready data for the page."""
     def cls(p):
@@ -8385,6 +8236,7 @@ def main():
           f"(display at {display_scale():.2f}x)", file=sys.stderr)
     seed_analysis()
     claim_single_instance()
+    _move_rift_reports()        # after claiming: one instance tidies
     # Only after claiming: before it, the flag on disk may still be the one
     # aimed at the instance we just displaced.
     watch_for_quit_request()
