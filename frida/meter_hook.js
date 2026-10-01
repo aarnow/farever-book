@@ -73,16 +73,23 @@ function isTableAt(base, resolved) {
     return n > 0;
 }
 
-// Fast path: libhl keeps its loaded-modules registry in a static (module.c's
-// cur_modules), and the hl_module struct it reaches holds functions_ptrs — so
-// a pointer walk seeded from the writable (statics) sections of libhl.dll and
-// the host exe reaches the table in 0–2 hops with no heap scanning:
-//     static -> hl_module** -> hl_module -> functions_ptrs
+// Fast path: the loaded module (hl_module) holding functions_ptrs is reached
+// from the statics of the host exe or libhl.dll in a couple of hops, so a
+// pointer walk seeded from their writable sections finds the table with no
+// heap scanning:
+//     static -> ... -> hl_module -> functions_ptrs
 // No struct layout is assumed: every private-rw pointer reachable within two
 // hops is simply *tested* against the anchors via isTableAt.
+//
+// Each module is walked on its own, the exe first, with its own node cap.
+// Measured 2026-10-02 (after the 10-01 maintenance): the table sits at
+// Farever.exe+178888 -> +16 -> +32, found after 92 nodes from the exe's 12
+// seeds — but walking both modules' seeds together, libhl's 1,571 seeds
+// reached 31,868 nodes by the second hop, past the old shared cap of 30,000,
+// and the walk gave up just short of it: a 70 s memory scan every launch.
 function findTableFast(resolved) {
     if (!resolved.length) return null;
-    const t0 = Date.now(), BUDGET_MS = 4000, MAX_NODES = 30000, EXPAND = 64;
+    const t0 = Date.now(), BUDGET_MS = 8000, MAX_NODES = 60000, EXPAND = 64;
     const heap = Process.enumerateRanges("rw-").filter(r => !r.file)
         .sort((a, b) => a.base.compare(b.base));
     if (!heap.length) return null;
@@ -99,16 +106,14 @@ function findTableFast(resolved) {
         }
         return false;
     }
-    // Seeds: every 8-aligned qword in the statics of libhl.dll / the exe that
-    // points into private rw- memory.
-    let frontier = [];
-    const mods = [Process.findModuleByName("libhl.dll"), Process.enumerateModules()[0]];
-    for (const m of mods) {
-        if (!m) continue;
-        let secs; try { secs = m.enumerateRanges("rw-"); } catch (e) { continue; }
+    // Seeds: every 8-aligned qword in a module's statics that points into
+    // private rw- memory.
+    function seedsOf(m) {
+        const out = [];
+        let secs; try { secs = m.enumerateRanges("rw-"); } catch (e) { return out; }
         for (const sec of secs) {
             const CH = 65536;
-            for (let off = 0; off < sec.size && frontier.length < 50000; off += CH) {
+            for (let off = 0; off < sec.size && out.length < 50000; off += CH) {
                 const n = Math.min(CH, sec.size - off);
                 let buf; try { buf = sec.base.add(off).readByteArray(n); } catch (e) { continue; }
                 const dv = new DataView(buf);
@@ -116,28 +121,38 @@ function findTableFast(resolved) {
                     const l = dv.getUint32(i, true), h = dv.getUint32(i + 4, true);
                     if ((l === 0 && h === 0) || (l & 7)) continue;
                     const v = ptr(h).shl(32).or(l);
-                    if (inHeap(v)) frontier.push(v);
+                    if (inHeap(v)) out.push(v);
                 }
             }
         }
+        return out;
     }
-    const seen = new Set();
-    for (let depth = 0; depth <= 2 && frontier.length; depth++) {
-        const next = [];
-        for (const p of frontier) {
-            const k = p.toString();
-            if (seen.has(k)) continue;
-            seen.add(k);
-            if (seen.size > MAX_NODES || Date.now() - t0 > BUDGET_MS) return null;
-            if (isTableAt(p, resolved)) return p;
-            if (depth === 2) continue;
-            for (let i = 0; i < EXPAND; i++) {
-                let v; try { v = p.add(i * 8).readPointer(); } catch (e) { break; }
-                if (v.and(7).toInt32() === 0 && inHeap(v)) next.push(v);
+    const mods = [Process.enumerateModules()[0], Process.findModuleByName("libhl.dll")];
+    const tried = [];
+    for (const m of mods) {
+        if (!m) continue;
+        let frontier = seedsOf(m);
+        const seen = new Set();
+        let gaveUp = false;
+        for (let depth = 0; depth <= 2 && frontier.length && !gaveUp; depth++) {
+            const next = [];
+            for (const p of frontier) {
+                const k = p.toString();
+                if (seen.has(k)) continue;
+                seen.add(k);
+                if (seen.size > MAX_NODES || Date.now() - t0 > BUDGET_MS) { gaveUp = true; break; }
+                if (isTableAt(p, resolved)) return p;
+                if (depth === 2) continue;
+                for (let i = 0; i < EXPAND; i++) {
+                    let v; try { v = p.add(i * 8).readPointer(); } catch (e) { break; }
+                    if (v.and(7).toInt32() === 0 && inHeap(v)) next.push(v);
+                }
             }
+            frontier = next;
         }
-        frontier = next;
+        tried.push(m.name + ": " + seen.size + " nodes" + (gaveUp ? " (cap reached)" : ""));
     }
+    log("statics walk: " + tried.join(", ") + ", " + (Date.now() - t0) + " ms");
     return null;
 }
 
@@ -455,7 +470,7 @@ function hookGameTick(base) {
         Interceptor.attach(base.add(fi * 8).readPointer(), {
             onEnter: function () {
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
-                if (rosterDue || analyzeWanted !== null) characterTick();
+                if (rosterDue || analyzeWanted !== null || selfDue) characterTick();
                 if (codexDue && hbKeys) {
                     codexDue = false;
                     refreshCodex();
@@ -1388,9 +1403,23 @@ function layerPlayers() {
     return out;
 }
 
+// The local hero's loot luck and statistics, for the live page: read on
+// their own every minute, no analysis needed (only the local hero's
+// counters are replicated anyway).
+let selfDue = true;
+
 // GAME THREAD ONLY.
 function characterTick() {
     if (!localHero || localHero.isNull() || !OFF.HeroDetail) return;
+    if (selfDue) {
+        selfDue = false;
+        try {
+            const me = { counters: countersOf(localHero),
+                         luckStatuses: statusesOf(localHero, ["Luck_", "Riftstalkers"]) };
+            try { me.now = serverNowOf(localHero.add(OFF.Hero.layer).readPointer()); } catch (e) {}
+            send({ kind: "selfprofile", profile: me });
+        } catch (e) { log("self profile failed: " + e); }
+    }
     try {
         const players = layerPlayers();
         if (rosterDue) {
@@ -1629,6 +1658,7 @@ function main() {
     if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");
     every(function () { codexDue = true; }, 8000);
     every(function () { rosterDue = true; }, 5000);
+    every(function () { selfDue = true; }, 60000);
     listenAnalyze();
 
     // DATA.map_fn (Main.getMapId) is no longer resolved or called — measured

@@ -2895,6 +2895,7 @@ class App:
         self._rift_view = None              # the rift report being read
         self._launching_until = 0           # Play was clicked: until then
         self._repairing = False             # Réparer is running
+        self._self_prof = None              # own luck counters (hook, 1 min)
         self._repair_note = None            # (ok, text) once it has run
         self._rift_rewards = False          # the rift rewards page is open
         self._dungeon_kind = None           # the dungeon whose runs are listed
@@ -3344,6 +3345,8 @@ class App:
             "zoom": int(self._zoom),
             "shard": self.ui_state.server() or "",
             "link": self._link_spec(),
+            "linksteps": (self.link.steps_view() if self.link is not None
+                          else []),
             "rift": self._rift_clock(),
             "toast": self._toast,
             "tab": self._menu_tab,
@@ -3351,6 +3354,11 @@ class App:
             "tabs": [{"v": t, "t": APP_TAB_LABELS[t],
                       "sep": t == APP_TABS_APP_FIRST} for t in APP_TABS],
             "page": self._page(self._menu_tab),
+            # the events window (title band button), always up to date
+            "events": [{"when": time.strftime("%H:%M",
+                                              time.localtime(e["at"])),
+                        "t": e["t"], "tone": e["tone"], "btn": e["btn"]}
+                       for e in self._events],
         }
 
     def _page(self, tab):
@@ -3442,11 +3450,15 @@ class App:
                               "Lance Farever : le compteur se remplit dès le "
                               "premier combat.")})
         out.append(self._detail_node(rows, duration, focus))
-        out.append({"k": "events", "id": "events",
-                    "rows": [{"when": time.strftime("%H:%M",
-                                                    time.localtime(e["at"])),
-                              "t": e["t"], "tone": e["tone"],
-                              "btn": e["btn"]} for e in self._events]})
+        me = self._self_prof if online else None
+        out.append({"k": "luck", "id": "live_luck",
+                    "rows": _profile_luck(me) if me else None,
+                    "empty": ("Lecture des compteurs…" if online else
+                              "Lance Farever pour voir ta chance de butin.")})
+        stats = _profile_stats(me) if me else None
+        if stats:
+            out.append({"k": "statcards", "id": "live_stats",
+                        "items": stats})
         return out
 
     def _detail_node(self, rows, duration, focus):
@@ -3827,6 +3839,9 @@ class App:
         """The players around (roster) or one player's profile, from the
         hook. Hook thread."""
         def done():
+            if p.get("kind") == "selfprofile":
+                self._self_prof = dict(p.get("profile") or {}, at=time.time())
+                return
             if p.get("kind") == "roster":
                 self._roster = p.get("players") or []
                 self._roster_at = time.time()
@@ -5726,9 +5741,7 @@ def character_view(roster, profiles, sel, waiting, live):
                                    or t.endswith("_P"))],
             "raw": {k: prof.get(k) for k in ("arsenals", "prayers",
                                               "secondary")},
-            "infusions": _infusion_sets(gear),
-            "luck": _profile_luck(prof),
-            "stats": _profile_stats(prof)}
+            "infusions": _infusion_sets(gear)}
     return view
 
 
@@ -7234,7 +7247,7 @@ def forget_loaded_data():
         g[name] = None
 
 
-def regenerate_data(hlboot=None, force=False):
+def regenerate_data(hlboot=None, force=False, on_step=None):
     """Re-run the target/offset generators against the given hlboot.dat (or the
     tools' own auto-detect when None). Self-heals the shipped JSONs after a
     Farever patch. Skips the multi-second reparse when the same hlboot.dat is
@@ -7286,14 +7299,18 @@ def regenerate_data(hlboot=None, force=False):
     env = dict(os.environ, FAREVER_ANALYSIS_OUT=str(ANALYSIS))
     REGENERATING.set()
     try:
-        return _run_generators(tools, hlboot, env, stamp)
+        return _run_generators(tools, hlboot, env, stamp, on_step)
     finally:
         REGENERATING.clear()
 
 
-def _run_generators(tools, hlboot, env, stamp):
+def _run_generators(tools, hlboot, env, stamp, on_step=None):
+    labels = {"build_targets.py": "cibles du code",
+              "emit_offsets.py": "structures, images et tables"}
     for t in tools:
         print(f"[meter] regenerating {t.name} for this build ...", file=sys.stderr)
+        if on_step:
+            on_step(labels.get(t.name, t.name))
         # Frozen there is no python.exe to hand a script to, and sys.executable
         # is this program — so it re-invokes itself in tool mode instead.
         cmd = ([sys.executable, TOOL_FLAG, t.name] if FROZEN
@@ -8306,15 +8323,20 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     # hooking: hlboot.dat is taken from the attached process's own install
     # directory, so a version/install mismatch — the usual cause of a slow or
     # failed table search — is impossible. Skipped when the file is unchanged.
+    link.step("data", "run", "comparaison avec la version installée")
     hlboot = locate_hlboot(pid)
     if hlboot is None:
         print("[meter] using the shipped data files as-is (couldn't locate "
               "hlboot.dat to verify them).", file=sys.stderr)
     else:
         print(f"[*] game data: {hlboot}", file=sys.stderr)
-        regenerate_data(hlboot)   # best-effort; falls back to existing files
+        # best-effort; falls back to existing files
+        regenerate_data(hlboot, on_step=lambda t: link.step(
+            "data", detail=f"mise à jour du jeu détectée : relecture ({t})"))
+    link.step("data", "ok", "à jour")
 
     print(f"[*] attaching to {TARGET_PROCESS} (pid {pid}) ...", file=sys.stderr)
+    link.step("attach", "run", "recherche du jeu en cours d'utilisation")
     try:
         fsession = device.attach(pid)
     except frida.ProcessNotFoundError:
@@ -8353,11 +8375,13 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
               file=sys.stderr)
         detached.set()
     fsession.on("detached", on_detached)
+    link.step("attach", "ok", "")
 
     ready = {"ok": None, "early": False}
     ready_evt = threading.Event()
     liveness = {"t": time.monotonic(), "printed": 0.0}
     hero_id = {"name": None}           # last local hero, to keep the log quiet
+    zone_seen = [False]                # the first zone report came in
     nullified: dict = {}               # mitigated-hit shapes seen, see below
     nullified_at = [0.0]               # last time they were reported
     boss_fight_on = [False]            # a boss fight is under way, see below
@@ -8597,6 +8621,9 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                               for k in ("name", "branch", "world_map")
                               if p.get(k) is not None)
             if p.get("initial"):
+                zone_seen[0] = True
+                link.step("zone", "ok", _zone_label(
+                    str(p.get("sig") or "").split("/")[-1]))
                 ui_state.set_zone(p.get("sig"), p.get("world_map"))
                 print(f"[meter] zone identified ({p.get('sig')!r}"
                       + (f"; {extra}" if extra else "") + ")",
@@ -8632,6 +8659,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             # loading screen is not a thing, and when there IS one the zone
             # handler has already done the resetting.
             ui_state.set_server(p.get("name"))
+            if p.get("initial"):
+                link.step("zone", detail=" · ".join(
+                    x for x in (link.steps_detail("zone"),
+                                f"serveur {p.get('name')}") if x))
             print(f"[meter] shard {'identified' if p.get('initial') else 'change'}"
                   f" ({p.get('name')!r})", file=sys.stderr)
         elif k == "hero":
@@ -8646,6 +8677,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             world.set_hero(name, p.get("party"))
             if name and name != hero_id["name"]:
                 first = hero_id["name"] is None
+                link.step("hero", "ok", name)
                 hero_id["name"] = name
                 print("[meter] local hero "
                       + ("identified." if first else "changed."), file=sys.stderr)
@@ -8667,7 +8699,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_achievements(p)
-        elif k in ("roster", "profile"):
+        elif k in ("roster", "profile", "selfprofile"):
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_character(p)
@@ -8685,7 +8717,16 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             world.set_shard(p.get("list") or [])
         elif k == "log":
             print("[hook]", p.get("msg"), file=sys.stderr)
+            msg = str(p.get("msg") or "")
+            if "functions_ptrs via" in msg:
+                link.step("scan", "ok", "fonctions trouvées")
+                link.step("hook", "run", "mise en place des modules")
+            elif "memory scan" in msg:
+                link.step("scan", detail="balayage de la mémoire du jeu")
         elif k == "progress":
+            if p.get("total"):
+                link.step("scan", detail=f"balayage de la mémoire : "
+                          f"{p.get('done')} / {p.get('total')} régions")
             now = time.monotonic()
             if now - liveness["printed"] > 5.0:     # throttle the status line
                 liveness["printed"] = now
@@ -8693,6 +8734,9 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                       f"({p.get('done')}/{p.get('total')} regions)",
                       file=sys.stderr)
         elif k == "ready":
+            if p.get("ok"):
+                link.step("scan", "ok", "fonctions trouvées")
+                link.step("hook", "ok", "")
             ready["ok"] = p.get("ok")
             ready["early"] = bool(p.get("early"))
             print(f"[meter] hook ready ok={p.get('ok')}"
@@ -8740,6 +8784,9 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         ready["ok"] = None
         ready["early"] = False
         ready_evt.clear()
+        link.step("scan", "run", "recherche de la table des fonctions"
+                  + (f" — tentative {attempt}/3" if attempt > 1 else ""))
+        link.step("hook", "wait", "")
         liveness["t"] = time.monotonic()
         try:
             script = load_hook()
@@ -8754,6 +8801,8 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             _unload_hook(script)
             script = None
             attempt -= 1
+            link.step("scan", detail="le jeu n'a pas fini de charger — "
+                                     "nouvel essai dans 4 s")
             if STOP.wait(4.0):
                 break
             continue
@@ -8763,6 +8812,8 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             _unload_hook(script)
             script = None
         if ready["ok"] is False and not ready["early"]:   # table not found
+            link.step("scan", detail="introuvable — relecture des données "
+                                     "du jeu puis nouvel essai")
             regenerate_data(hlboot, force=True)   # => refresh data and retry
         time.sleep(1.0)
 
@@ -8789,6 +8840,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             fsession.detach()
         except Exception:
             pass
+        link.step("scan", "fail", "échec après 3 tentatives")
         link.set_state(GameLink.FAILED,
                        "le compteur n'a pas pu se brancher sur le jeu — ferme "
                        "complètement Farever et relance-le")
@@ -8796,6 +8848,11 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
 
     # Connected. From here the hook feeds on_message until the game closes.
     link.script = script
+    link.step("hook", "ok", "")
+    if hero_id["name"] is None:
+        link.step("hero", "run", "en attente de ton personnage en jeu")
+    if not zone_seen[0]:
+        link.step("zone", "run", "en attente")
     link.set_state(GameLink.CONNECTED, pid=pid)
     print("[*] connected — everything shows in the Farever France window; the "
           "reset hotkey is set in Réglages.", file=sys.stderr)
@@ -8839,6 +8896,15 @@ class GameLink:
 
     CLOSED, CONNECTING, CONNECTED, FAILED = (
         "closed", "connecting", "connected", "failed")
+    # The connection, step by step, for the window the game state opens:
+    # what is being done right now, and since when.
+    STEPS = (("boot", "Démarrage du jeu"),
+             ("data", "Vérification des données du jeu"),
+             ("attach", "Connexion à Farever"),
+             ("scan", "Recherche des fonctions du jeu"),
+             ("hook", "Installation des modules"),
+             ("hero", "Identification du personnage"),
+             ("zone", "Zone et serveur"))
     POLL_SECS = 2.0          # how often a closed game is looked for
 
     def __init__(self, session, ui_state, world, rift_rec, heal_sizer):
@@ -8847,6 +8913,7 @@ class GameLink:
         self._state, self._detail, self._pid = self.CLOSED, "", None
         self._retry = threading.Event()
         self._reconnect = threading.Event()
+        self._steps = {}
         self._thread = None
         self.script = None
         # The game we were last connected to. Once it closes it stays in the
@@ -8862,6 +8929,49 @@ class GameLink:
     def retry(self):
         """Look for the game / reconnect now, rather than at the next poll."""
         self._retry.set()
+
+    def steps_reset(self):
+        with self._lock:
+            self._steps = {}
+
+    def step(self, key, state=None, detail=None):
+        """One step's state ("run", "ok", "fail") and/or what it is doing.
+        A step that starts running is timed from then."""
+        now = time.time()
+        with self._lock:
+            st = self._steps.setdefault(key, {"state": "wait", "detail": "",
+                                              "t0": None, "t1": None})
+            if state and state != st["state"]:
+                if state == "run":
+                    st["t0"], st["t1"] = now, None
+                elif st["t0"] is None:
+                    st["t0"] = st["t1"] = now
+                else:
+                    st["t1"] = now
+                st["state"] = state
+            if detail is not None:
+                st["detail"] = detail
+        ov = _OVERLAY["ref"]
+        if ov is not None:
+            ov.on_link_changed()
+
+    def steps_detail(self, key):
+        with self._lock:
+            return (self._steps.get(key) or {}).get("detail") or ""
+
+    def steps_view(self):
+        now = time.time()
+        with self._lock:
+            out = []
+            for key, label in self.STEPS:
+                st = self._steps.get(key) or {}
+                t0, t1 = st.get("t0"), st.get("t1")
+                secs = ((t1 or now) - t0) if t0 else None
+                out.append({"t": label, "s": st.get("state") or "wait",
+                            "d": st.get("detail") or "",
+                            "secs": _mmss(secs) if secs is not None
+                            and secs >= 1 else ""})
+            return out
 
     def reconnect(self):
         """Unload the hook and attach again (Réparer: the data it was built
@@ -8916,6 +9026,7 @@ class GameLink:
             if proc is None:
                 return
             self._reconnect.clear()
+            self.steps_reset()
             self.set_state(self.CONNECTING)
             if not self._wait_booted(device, proc.pid):
                 continue                    # closed while starting, or STOP
@@ -8978,12 +9089,19 @@ class GameLink:
     def _wait_booted(self, device, pid):
         """True once the game looks booted; False if it closes or we stop."""
         said = False
+        self.step("boot", "run", "Farever est lancé")
         while not STOP.is_set():
             age = _process_age(pid)
             if age is None or age >= self.BOOT_MAX_SECS:
+                self.step("boot", "ok", "")
                 return True
             if age >= self.BOOT_MIN_SECS and _window_rect_of_pid(pid):
+                self.step("boot", "ok", "")
                 return True
+            self.step(detail=("le jeu finit de démarrer"
+                              if _window_rect_of_pid(pid)
+                              else "en attente de la fenêtre du jeu"),
+                      key="boot")
             if not self.game_alive(device, pid):
                 return False
             if not said:

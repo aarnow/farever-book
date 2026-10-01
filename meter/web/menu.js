@@ -321,6 +321,189 @@ function buildDetail(n) {
   return p;
 }
 
+/* The local hero's loot luck counters (read by the hook every minute). */
+function buildLuck(n) {
+  const box = el('div', 'luckbox');
+  box.appendChild(el('div', 'sub2', 'Chance de butin'));
+  if (!n.rows) {
+    box.appendChild(el('p', 'note', n.empty || ''));
+    return box;
+  }
+  box.appendChild(el('p', 'note', 'Les compteurs de chance du jeu. Le bonus est lié à '
+    + 'l’offrande correspondante du Puits des âmes.'));
+  const lk = el('div', 'lucklist');
+  n.rows.forEach((l) => {
+    const row = el('div', 'luckrow' + (l.on ? ' on' : ''));
+    const t = el('div', 'lt');
+    t.appendChild(el('b', null, l.t));
+    t.appendChild(el('span', null, l.grows
+      ? 'Compteur ' + l.n + ' · +' + l.inc + ' par cran · '
+        + (l.full ? 'plafond atteint' : l.steps + ' cran' + (l.steps > 1 ? 's' : '') + ' avant le plafond')
+      : 'Bonus fixe'));
+    row.appendChild(t);
+    const v = el('div', 'lv');
+    v.appendChild(el('b', null, '+' + l.bonus));
+    v.appendChild(el('span', null, 'sur ' + l.cap + ' max'));
+    row.appendChild(v);
+    row.appendChild(el('span', 'lst' + (l.on ? ' on' : ''), l.on
+      ? 'Offrande active' + (l.left != null ? ' · ' + l.left + ' min' : '')
+      : 'Pas d’offrande'));
+    lk.appendChild(row);
+  });
+  box.appendChild(lk);
+  return box;
+}
+
+/* The local hero's statistics (Progress.counters). */
+function buildStatCards(n) {
+  const box = el('div', 'statbox');
+  box.appendChild(el('div', 'sub2', 'Statistiques'));
+  const st = el('div', 'cards statcards');
+  (n.items || []).forEach((x) => {
+    const c = el('div', 'card');
+    c.appendChild(el('div', 't', x.t));
+    c.appendChild(el('div', 'v', fmtN(x.v)));
+    st.appendChild(c);
+  });
+  box.appendChild(st);
+  return box;
+}
+
+/* ---- the events window ---------------------------------------------------
+   Opened from the title band's journal button; follows every state push
+   while open. Unseen events are counted on the button. */
+let EVENTS_OPEN = false;
+let EVENTS_SEEN = null;         // how many events there were when last seen
+
+function eventsButton() {
+  const b = el('button', 'navicon evbtn' + (EVENTS_OPEN ? ' active' : ''));
+  b.type = 'button';
+  b.title = 'Événements';
+  b.setAttribute('aria-label', 'Événements');
+  b.appendChild(svgIcon(JOURNAL_ICON));
+  b.addEventListener('click', () => toggleEvents(!EVENTS_OPEN));
+  return b;
+}
+
+function updateEventsBadge() {
+  const b = document.querySelector('#appbtns .evbtn');
+  if (!b) return;
+  const n = (STATE.events || []).length;
+  if (EVENTS_SEEN === null) EVENTS_SEEN = n;      // what was there at start
+  if (EVENTS_OPEN) EVENTS_SEEN = n;
+  let badge = b.querySelector('.badge');
+  const unseen = Math.max(0, n - EVENTS_SEEN);
+  if (!unseen) { if (badge) badge.remove(); return; }
+  if (!badge) { badge = el('span', 'badge'); b.appendChild(badge); }
+  badge.textContent = unseen > 9 ? '9+' : String(unseen);
+}
+
+function toggleEvents(open) {
+  EVENTS_OPEN = open;
+  let m = $('#evmodal');
+  if (!open) {
+    if (m) m.remove();
+  } else if (!m) {
+    m = el('div', 'modalback');
+    m.id = 'evmodal';
+    m.addEventListener('mousedown', (e) => { if (e.target === m) toggleEvents(false); });
+    document.body.appendChild(m);
+  }
+  const b = document.querySelector('#appbtns .evbtn');
+  if (b) b.classList.toggle('active', open);
+  renderEvents();
+  updateEventsBadge();
+}
+
+function renderEvents() {
+  const m = $('#evmodal');
+  if (!m) return;
+  const rows = STATE.events || [];
+  const sig = JSON.stringify(rows);
+  if (m.dataset.sig === sig) return;
+  m.dataset.sig = sig;
+  m.textContent = '';
+  const box = el('div', 'modal');
+  const x = el('button', 'hclose', '×');
+  x.type = 'button';
+  x.title = 'Fermer';
+  x.addEventListener('click', () => toggleEvents(false));
+  box.appendChild(x);
+  const p = buildEvents({ rows: rows.map((r) => r.btn ? Object.assign({}, r, {
+    btn: Object.assign({}, r.btn, { close: true }) }) : r) });
+  box.appendChild(p);
+  m.appendChild(box);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (EVENTS_OPEN) toggleEvents(false);
+  if (LINK_OPEN) toggleLinkSteps(false);
+});
+
+/* ---- the connection window: what the link is doing, step by step ------- */
+let LINK_OPEN = false;
+const STEP_MARK = { ok: '✓', fail: '✕', run: '', wait: '' };
+
+function toggleLinkSteps(open) {
+  LINK_OPEN = open;
+  let m = $('#linkmodal');
+  if (!open) {
+    if (m) m.remove();
+    return;
+  }
+  if (!m) {
+    m = el('div', 'modalback');
+    m.id = 'linkmodal';
+    m.addEventListener('mousedown', (e) => { if (e.target === m) toggleLinkSteps(false); });
+    document.body.appendChild(m);
+  }
+  renderLinkSteps();
+}
+
+function renderLinkSteps() {
+  const m = $('#linkmodal');
+  if (!m) return;
+  const steps = STATE.linksteps || [];
+  const l = STATE.link || {};
+  const sig = JSON.stringify([steps, l]);
+  if (m.dataset.sig === sig) return;
+  m.dataset.sig = sig;
+  m.textContent = '';
+  const box = el('div', 'modal linkmodal');
+  const x = el('button', 'hclose', '×');
+  x.type = 'button';
+  x.title = 'Fermer';
+  x.addEventListener('click', () => toggleLinkSteps(false));
+  box.appendChild(x);
+  const head = el('div', 'phead');
+  head.appendChild(el('h3', null, 'Connexion au jeu'));
+  box.appendChild(head);
+  const body = el('div', 'stepbody');
+  const started = steps.some((st) => st.s !== 'wait');
+  if (!started) {
+    body.appendChild(el('p', 'note', l.state === 'play' || l.state === 'launching'
+      ? 'Farever n’est pas encore détecté : la connexion commencera dès son lancement.'
+      : 'Aucune connexion en cours.'));
+  }
+  const list = el('ol', 'steps');
+  steps.forEach((st) => {
+    const li = el('li', 'step s-' + st.s);
+    const mk = el('span', 'stmk', STEP_MARK[st.s] || '');
+    li.appendChild(mk);
+    const t = el('div', 'st');
+    t.appendChild(el('b', null, st.t));
+    if (st.d) t.appendChild(el('span', null, st.d));
+    li.appendChild(t);
+    li.appendChild(el('span', 'secs', st.secs || ''));
+    list.appendChild(li);
+  });
+  body.appendChild(list);
+  if (l.state === 'failed' && l.tip) body.appendChild(el('p', 'note warn', l.tip));
+  box.appendChild(body);
+  m.appendChild(box);
+}
+
 function buildEvents(n) {
   const p = el('div', 'panel events');
   const head = el('div', 'phead');
@@ -347,7 +530,10 @@ function buildEvents(n) {
     row.appendChild(el('span', 'txt', r.t));
     if (r.btn) {
       const b = el('button', 'rowbtn', r.btn.t);
-      b.addEventListener('click', () => notify(r.btn.id, r.btn.p || {}));
+      b.addEventListener('click', () => {
+        notify(r.btn.id, r.btn.p || {});
+        if (r.btn.close) toggleEvents(false);
+      });
       row.appendChild(b);
     }
     list.appendChild(row);
@@ -528,6 +714,8 @@ function buildNode(n) {
     case 'meter': return buildMeter(n);
     case 'detail': return buildDetail(n);
     case 'events': return buildEvents(n);
+    case 'luck': return buildLuck(n);
+    case 'statcards': return buildStatCards(n);
     case 'report': return buildReport(n);
     case 'droptable': return buildDropTable(n);
     case 'collection': return buildCollection(n);
@@ -574,6 +762,9 @@ const TAB_ICONS = {
   Help: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z',
 };
 
+// a list sheet: the events journal
+const JOURNAL_ICON = 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V7h6v2z';
+
 function svgIcon(d) {
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
@@ -610,6 +801,7 @@ function renderTabs(tabs, active) {
     b.type = 'button';
     b.addEventListener('click', () => notify('set_tab', { value: t }));
   });
+  icons.appendChild(eventsButton());
 }
 
 /* The game's state in the title band: Play (launches Farever through
@@ -632,6 +824,8 @@ function renderLink(l, shard) {
     return;
   }
   const st = el('div', 'gamestate');
+  st.title = 'Voir le détail de la connexion';
+  st.addEventListener('click', () => toggleLinkSteps(true));
   const top = el('div', 'gs');
   top.appendChild(el('i', 'dot'));
   top.appendChild(el('b', null, l.t || ''));
@@ -762,6 +956,9 @@ window.applyState = function (json) {
   }
   renderTabs(s.tabs || [], s.tab);
   renderPage(s.page || []);
+  renderEvents();
+  updateEventsBadge();
+  renderLinkSteps();
 };
 
 /* ---- boot --------------------------------------------------------------- */
@@ -1916,48 +2113,6 @@ function buildCharacter(n) {
     main.appendChild(head);
 
     main.appendChild(charSheet(o));
-
-    if (!o.luck && !o.me) {
-      main.appendChild(el('div', 'sub2', 'Chance de butin et statistiques'));
-      main.appendChild(el('p', 'note', 'Le jeu ne transmet ces compteurs que pour ton propre '
-        + 'personnage : analyse-toi pour les voir.'));
-    }
-    if (o.luck) {
-      main.appendChild(el('div', 'sub2', 'Chance de butin'));
-      main.appendChild(el('p', 'note', 'Les compteurs de chance du jeu. Le bonus est lié à '
-        + 'l’offrande correspondante du Puits des âmes.'));
-      const lk = el('div', 'lucklist');
-      o.luck.forEach((l) => {
-        const row = el('div', 'luckrow' + (l.on ? ' on' : ''));
-        const t = el('div', 'lt');
-        t.appendChild(el('b', null, l.t));
-        t.appendChild(el('span', null, l.grows
-          ? 'Compteur ' + l.n + ' · +' + l.inc + ' par cran · '
-            + (l.full ? 'plafond atteint' : l.steps + ' cran' + (l.steps > 1 ? 's' : '') + ' avant le plafond')
-          : 'Bonus fixe'));
-        row.appendChild(t);
-        const v = el('div', 'lv');
-        v.appendChild(el('b', null, '+' + l.bonus));
-        v.appendChild(el('span', null, 'sur ' + l.cap + ' max'));
-        row.appendChild(v);
-        row.appendChild(el('span', 'lst' + (l.on ? ' on' : ''), l.on
-          ? 'Offrande active' + (l.left != null ? ' · ' + l.left + ' min' : '')
-          : 'Pas d’offrande'));
-        lk.appendChild(row);
-      });
-      main.appendChild(lk);
-    }
-    if ((o.stats || []).length) {
-      main.appendChild(el('div', 'sub2', 'Statistiques'));
-      const st = el('div', 'cards statcards');
-      o.stats.forEach((s) => {
-        const c = el('div', 'card');
-        c.appendChild(el('div', 't', s.t));
-        c.appendChild(el('div', 'v', fmtN(s.v)));
-        st.appendChild(c);
-      });
-      main.appendChild(st);
-    }
 
     if ((o.infusions || []).length) {
       main.appendChild(el('div', 'sub2', 'Imprégnations'));
