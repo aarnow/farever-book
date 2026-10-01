@@ -438,7 +438,10 @@ def main():
         "Gear": {"level": gear["level"][0],
                  "upgradeLevel": gear["upgradeLevel"][0],
                  "slots": gear["slots"][0],
-                 "effects": weapon_["effects"][0]},
+                 "effects": weapon_["effects"][0],
+                 # the infusion (2026-09-30 patch) and its faction bonus stat
+                 **{k: gear[k][0] for k in ("infusion", "infusionBonusStat")
+                    if k in gear}},
         "StringMap": {"h": smap["h"][0]},
         "CodexProxy": {"count": kproxy["killCount"][0],
                        "rank": kproxy["rank"][0]},
@@ -527,6 +530,16 @@ def main():
                   f"({len(tal['trees'])} trees, {len(tal['runes'])} runes)")
         except Exception as e:
             print(f"[!] talent trees skipped ({e})")
+        try:
+            import infusions_data
+            inf = infusions_data.build(Path(hlboot).parent)
+            (_OUT_DIR / "infusions.json").write_text(
+                json.dumps(inf, ensure_ascii=False, indent=0),
+                encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'infusions.json'} "
+                  f"({len(inf['infusions'])} infusions)")
+        except Exception as e:
+            print(f"[!] infusions skipped ({e})")
         try:
             import codex_items
             ci = codex_items.build(Path(hlboot).parent,

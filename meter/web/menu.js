@@ -1640,11 +1640,43 @@ function buildCharacter(n) {
         if (x2.fx) line.appendChild(document.createTextNode(' : ' + x2.fx));
         gt.appendChild(line);
       });
+      if (g.inf) {
+        const line = el('span', 'gx infu');
+        line.appendChild(el('b', null, 'Imprégnation'));
+        line.appendChild(document.createTextNode(' : ' + g.inf.name));
+        gt.appendChild(line);
+        if (g.inf.bonus) {
+          const b = el('span', 'gx infb' + (g.inf.on ? '' : ' off'),
+            'Bonus (' + g.inf.fac + ') : ' + g.inf.bonus + (g.inf.on ? '' : ' — inactif, faction différente'));
+          gt.appendChild(b);
+        }
+      }
       r.appendChild(gt);
       gear.appendChild(r);
     });
     if (!(o.gear || []).length) gear.appendChild(el('div', 'empty', 'Aucun équipement lu.'));
     main.appendChild(gear);
+
+    if ((o.infusions || []).length) {
+      main.appendChild(el('div', 'sub2', 'Imprégnations'));
+      const box2 = el('div', 'infulist');
+      o.infusions.forEach((s) => {
+        const card = el('div', 'infucard');
+        const hd = el('div', 'infuhd');
+        hd.appendChild(el('b', null, s.name));
+        hd.appendChild(el('span', null, [s.fac, s.role].filter(Boolean).join(' · ')));
+        hd.appendChild(el('span', 'cnt', s.n + ' pièce' + (s.n > 1 ? 's' : '')));
+        card.appendChild(hd);
+        s.tiers.forEach((t) => {
+          const row = el('div', 'tier' + (t.on ? ' on' : ''));
+          row.appendChild(el('span', 'tn', '(' + t.n + ')'));
+          row.appendChild(el('span', null, t.txt));
+          card.appendChild(row);
+        });
+        box2.appendChild(card);
+      });
+      main.appendChild(box2);
+    }
 
     // the action bar, as the game shows it: 1-4, the prayer, A E R G
     if ((o.bar || []).length) {

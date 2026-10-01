@@ -244,7 +244,9 @@
     "level": 152,
     "upgradeLevel": 156,
     "slots": 160,
-    "effects": 192
+    "effects": 192,
+    "infusion": 168,
+    "infusionBonusStat": 176
   },
   "StringMap": {
     "h": 8

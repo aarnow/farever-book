@@ -1156,8 +1156,9 @@ function equipSlots(loadout) {
         const slot = (raw && !raw.isNull()) ? slotItem(raw) : null;
         const inf = slot ? itemInfo(slot.item) : null;
         if (!inf) { out.push(null); continue; }
-        // [kind, rarity, level, upgradeLevel, slots, effects]
-        const row = [inf.kind, inf.rarity, inf.level, null, [], []];
+        // [kind, rarity, level, upgradeLevel, slots, effects, infusion,
+        //  infusion bonus stat]
+        const row = [inf.kind, inf.rarity, inf.level, null, [], [], null, null];
         const G = OFF.Gear;
         if (G && inf.cls !== "st.Item") {
             const it = slot.item;
@@ -1166,6 +1167,10 @@ function equipSlots(loadout) {
             try { row[4] = proxyThings(it.add(G.slots).readPointer(), 8); } catch (e) {}
             if (inf.cls === "st.item.Weapon") {
                 try { row[5] = proxyThings(it.add(G.effects).readPointer(), 8); } catch (e) {}
+            }
+            if (G.infusion != null) {
+                try { row[6] = hlStr(it.add(G.infusion).readPointer()); } catch (e) {}
+                try { row[7] = hlStr(it.add(G.infusionBonusStat).readPointer()); } catch (e) {}
             }
         }
         out.push(row);

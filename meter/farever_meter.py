@@ -4768,17 +4768,27 @@ CHEST_LABELS = {"VaultChest": "Coffre-fort", "WorldChest": "Coffre",
                 "BossChest": "Coffre du boss"}
 
 
+# The game's generic [terms] (skill kinds), named in no sheet.
+# (singular, plural): the texts write "[WeaponSkill]s".
+FR_TERMS = {"Skill": ("compétence", "compétences"),
+            "WeaponSkill": ("compétence d'arme", "compétences d'arme"),
+            "ClassSkill": ("compétence de classe", "compétences de classe"),
+            "ComboAttack": ("attaque combo", "attaques combo")}
+
+
 def _fr_ref(text):
     """The game's [Id] references in a French text, replaced by names."""
     def one(m):
-        rid = m.group(1)
+        rid, plural = m.group(1), m.group(2)
+        if rid in FR_TERMS:
+            return FR_TERMS[rid][1 if plural else 0]
         for sheet in ("zone", "unit", "activity", "item", "itemType",
-                      "unitType"):
+                      "unitType", "skill", "attribute"):
             name = _fr_names(sheet).get(rid)
             if name:
-                return name
-        return _pretty_id(rid)
-    return re.sub(r"\[([A-Za-z0-9_]+)\]", one, text or "")
+                return name + plural
+        return _pretty_id(rid) + plural
+    return re.sub(r"\[([A-Za-z0-9_]+)\](s?)", one, text or "")
 
 
 def _zone_label(z):
@@ -5340,8 +5350,8 @@ def character_view(roster, profiles, sel, waiting, live):
         for slot in prof.get("equip") or ():
             if not slot:
                 continue
-            kind, rar, lvl, upg, gslots, effects = (
-                list(slot) + [None, None, None, None, [], []])[:6]
+            kind, rar, lvl, upg, gslots, effects, infu, istat = (
+                list(slot) + [None] * 8)[:8]
             rar = rar or item_rarity(kind) or ""
             t = item_type(kind)
             extras = [_augment_view(g) for g in gslots or ()
@@ -5356,7 +5366,8 @@ def character_view(roster, profiles, sel, waiting, live):
                      "type": item_type_label(t) if t else "",
                      "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None,
                      "up": upg if isinstance(upg, int) and upg > 0 else 0,
-                     "extras": extras}
+                     "extras": extras,
+                     "inf": _gear_infusion(kind, infu, istat)}
             (other if t in NOT_GEAR else gear).append(entry)
         view["open"] = {
             "n": prof.get("n"), "lvl": prof.get("lvl"),
@@ -5379,8 +5390,85 @@ def character_view(roster, profiles, sel, waiting, live):
                          if t and (t.endswith("_Passive")
                                    or t.endswith("_P"))],
             "raw": {k: prof.get(k) for k in ("arsenals", "prayers",
-                                              "secondary")}}
+                                              "secondary")},
+            "infusions": _infusion_sets(gear)}
     return view
+
+
+_INFUSIONS = None
+
+
+def infusion_data():
+    """{"infusions": {skill: {f, role, name, pattern, t2, t4, t6}},
+    "item_faction": {item: faction}} from analysis_out/infusions.json
+    (hltools/infusions_data.py)."""
+    global _INFUSIONS
+    if _INFUSIONS is None:
+        try:
+            _INFUSIONS = json.loads(
+                (ANALYSIS / "infusions.json").read_text(encoding="utf-8"))
+        except Exception:
+            _INFUSIONS = {}
+    return _INFUSIONS
+
+
+def _infusion_id(raw):
+    """The infusion skill a gear's `infusion` field names (the skill, or
+    the pattern that teaches it)."""
+    infs = infusion_data().get("infusions") or {}
+    if not raw:
+        return None
+    if raw in infs:
+        return raw
+    for sid, e in infs.items():
+        if e.get("pattern") == raw or sid == "Infusion_" + raw:
+            return sid
+    return raw
+
+
+def _gear_infusion(kind, raw, stat):
+    """One gear piece's infusion: name, bonus stat, and whether the bonus
+    applies (the piece's faction must be the infusion's)."""
+    sid = _infusion_id(raw)
+    if not sid:
+        return None
+    e = (infusion_data().get("infusions") or {}).get(sid) or {}
+    fac = e.get("f")
+    mine = (infusion_data().get("item_faction") or {}).get(kind)
+    return {"id": sid, "name": e.get("name") or _pretty_id(sid),
+            "fac": _fr_names("unitType").get(fac) or _pretty_id(fac or ""),
+            "bonus": (_fr_names("attribute").get(stat) or _pretty_id(stat))
+            if stat else "",
+            "on": bool(fac) and mine == fac}
+
+
+def _infusion_sets(gear):
+    """The infusions worn, by number of pieces, with their 2 / 4 / 6
+    tiers and which are reached."""
+    infs = infusion_data().get("infusions") or {}
+    counts = {}
+    for g in gear:
+        inf = g.get("inf")
+        if inf:
+            counts[inf["id"]] = counts.get(inf["id"], 0) + 1
+    out = []
+    for sid, n in sorted(counts.items(), key=lambda kv: -kv[1]):
+        e = infs.get(sid) or {}
+        four = []
+        for atb, val, ref in e.get("t4") or ():
+            name = _fr_names("attribute").get(atb) or _pretty_id(atb)
+            v = val * 100 if ref == "TAttribute_ARatio" else val
+            four.append(f"{name} {'+' if v >= 0 else '−'}"
+                        f"{abs(v):g} %".replace(".", ","))
+        out.append({
+            "name": e.get("name") or _pretty_id(sid),
+            "fac": _fr_names("unitType").get(e.get("f"))
+            or _pretty_id(e.get("f") or ""),
+            "role": e.get("role") or "", "n": n,
+            "tiers": [{"n": k, "on": n >= k, "txt": _fr_ref(t)}
+                      for k, t in ((2, e.get("t2")), (4, " · ".join(four)),
+                                   (6, e.get("t6"))) if t]})
+    return out
 
 
 _WORLD_MAP = None
@@ -5913,6 +6001,10 @@ def _data_is_current():
     if not (ANALYSIS / "names_fr.json").exists():
         print("[meter] names_fr.json absent — regenerating for the French "
               "names (dungeons, items, bosses).", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "infusions.json").exists():
+        print("[meter] infusions.json absent — regenerating for the gear "
+              "infusions.", file=sys.stderr)
         return False
     if not (ANALYSIS / "heal_specs.json").exists():
         print("[meter] heal_specs.json absent — regenerating so healing can "

@@ -971,3 +971,19 @@ select, input[type=text] {
                   border: 1px solid var(--line); }
 .citem .cpips i.on { background: var(--accent); border-color: var(--accent); }
 .collslots { margin: 0 0 12px; flex-wrap: wrap; width: fit-content; }
+
+/* Character: gear infusions */
+.gx.infu b { color: #4fc3c7; }
+.gx.infb { color: var(--dim); }
+.gx.infb.off { opacity: .6; font-style: italic; }
+.infulist { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 8px; }
+.infucard { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 10px 12px; }
+.infuhd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.infuhd b { color: #4fc3c7; }
+.infuhd span { color: var(--dim); font-size: 12px; }
+.infuhd .cnt { margin-left: auto; color: var(--text); font-weight: 700; }
+.infucard .tier { display: flex; gap: 6px; font-size: 12.5px; line-height: 1.4; color: var(--dim);
+                  opacity: .55; margin-top: 4px; }
+.infucard .tier.on { color: var(--text); opacity: 1; }
+.infucard .tier .tn { flex: none; color: #8bc34a; }
+.infucard .tier:not(.on) .tn { color: var(--dim); }
