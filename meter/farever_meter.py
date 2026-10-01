@@ -4858,6 +4858,11 @@ class App:
         """GameLink's state moved. Safe from any thread."""
         self._enqueue(self._on_link_changed)()
 
+    def on_link_steps(self):
+        """A connection step moved (not the state: no event, no reset) —
+        just show it. Safe from any thread."""
+        self._enqueue(self.menubridge.invalidate)()
+
     def on_game_disconnected(self):
         """The game closed (or the meter is leaving it). Safe from any
         thread."""
@@ -8953,7 +8958,7 @@ class GameLink:
                 st["detail"] = detail
         ov = _OVERLAY["ref"]
         if ov is not None:
-            ov.on_link_changed()
+            ov.on_link_steps()
 
     def steps_detail(self, key):
         with self._lock:
