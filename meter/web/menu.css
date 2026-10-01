@@ -1001,3 +1001,32 @@ select, input[type=text] {
 .luckrow .lst { width: 150px; text-align: right; font-size: 12px; color: var(--dim); }
 .luckrow .lst.on { color: #b98cf0; font-weight: 700; }
 .statcards { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+
+/* Achievements */
+.achcats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.achcat { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border: 1px solid var(--line);
+          border-radius: 10px; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
+.achcat.on { border-color: var(--accent); background: var(--panel-2); }
+.achcat img { width: 28px; height: 28px; object-fit: contain; }
+.achcat .ct { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; }
+.achcat .ct span { font-size: 11px; color: var(--dim); }
+.achlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 8px; }
+.achcard { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 12px;
+           display: flex; flex-direction: column; gap: 6px; }
+.achcard.done { opacity: .75; }
+.achcard .atop { display: flex; gap: 10px; align-items: flex-start; }
+.achcard .at { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.achcard .at .sub { font-size: 11px; color: var(--dim); }
+.achcard .apts { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.achcard.done .apts { color: #6fcf73; font-size: 15px; }
+.achcard .ad { margin: 0; font-size: 12.5px; color: var(--dim); line-height: 1.4; }
+.achcard .aprog { display: flex; align-items: center; gap: 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.achcard .abar { flex: 1; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.achcard .abar i { display: block; height: 100%; background: var(--accent); }
+.achcard .afoot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
+.achcard .apips { display: flex; gap: 3px; }
+.achcard .apips i { width: 8px; height: 8px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--line); }
+.achcard .apips i.on { background: var(--accent); border-color: var(--accent); }
+.achcard .arew { display: inline-flex; align-items: center; gap: 5px; color: #d9b45a; }
+.achcard .arew img { width: 22px; height: 22px; border-radius: 4px; }
+.achcard .awhen { color: var(--dim); margin-left: auto; }

@@ -1,0 +1,5259 @@
+{
+"categories": [
+{
+"id": "Character",
+"parent": null
+},
+{
+"id": "Exploration",
+"parent": null
+},
+{
+"id": "Exploration_Z1",
+"parent": "Exploration"
+},
+{
+"id": "Exploration_Z2",
+"parent": "Exploration"
+},
+{
+"id": "Exploration_Z3",
+"parent": "Exploration"
+},
+{
+"id": "Combat",
+"parent": null
+},
+{
+"id": "Combat_Z1",
+"parent": "Combat"
+},
+{
+"id": "Combat_Z2",
+"parent": "Combat"
+},
+{
+"id": "Combat_Z3",
+"parent": "Combat"
+},
+{
+"id": "WorldEvents",
+"parent": null
+},
+{
+"id": "Rifts",
+"parent": "WorldEvents"
+},
+{
+"id": "Jobs",
+"parent": null
+},
+{
+"id": "Reputation",
+"parent": null
+},
+{
+"id": "Collection",
+"parent": null
+}
+],
+"achievements": [
+{
+"id": "ReachLevel_10",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 10,
+"t": [
+[
+8,
+"HeroLevel"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "ReachLevel_20",
+"cat": "Character",
+"parent": "ReachLevel_10",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 20,
+"t": [
+[
+8,
+"HeroLevel"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "ReachLevel_30",
+"cat": "Character",
+"parent": "ReachLevel_20",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 30,
+"t": [
+[
+8,
+"HeroLevel"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnGold_1000",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 1000,
+"t": [
+[
+8,
+"Gold_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnGold_5000",
+"cat": "Character",
+"parent": "EarnGold_1000",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 5000,
+"t": [
+[
+8,
+"Gold_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnGold_10000",
+"cat": "Character",
+"parent": "EarnGold_5000",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 10000,
+"t": [
+[
+8,
+"Gold_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "UnlockSkillMasteries",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "UnlockAllMasteries",
+"cat": "Character",
+"parent": null,
+"points": 10,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FullyUpgrade_Rare",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FullyUpgrade_Epic",
+"cat": "Character",
+"parent": "FullyUpgrade_Rare",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FullyUpgrade_Legendary",
+"cat": "Character",
+"parent": "FullyUpgrade_Epic",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FullyEquipped_Rare",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FullyEquipped_Epic",
+"cat": "Character",
+"parent": "FullyEquipped_Rare",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "WeaponAllRanks",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "WeaponAllRanks_10",
+"cat": "Character",
+"parent": "WeaponAllRanks",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 10,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "WeaponAllRanks_20",
+"cat": "Character",
+"parent": "WeaponAllRanks_10",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 20,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Hero_GoingDown",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Distance": 70
+}
+},
+{
+"id": "Hero_TwistedMind",
+"cat": "Character",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteActivities_10",
+"cat": "Exploration",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": 10,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteActivities_50",
+"cat": "Exploration",
+"parent": "CompleteActivities_10",
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": 50,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteActivities_100",
+"cat": "Exploration",
+"parent": "CompleteActivities_50",
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": 100,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteActivities_250",
+"cat": "Exploration",
+"parent": "CompleteActivities_100",
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": 250,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DiscoverAllObelisks_All",
+"cat": "Exploration",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"DiscoverAllObelisks_Z1"
+],
+[
+11,
+"DiscoverAllObelisks_Z2"
+],
+[
+11,
+"DiscoverAllObelisks_Z3"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteAllRegions",
+"cat": "Exploration",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"CompleteRegion_Z1"
+],
+[
+11,
+"CompleteRegion_Z2"
+],
+[
+11,
+"CompleteRegion_Z3"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteRegion_Z1",
+"cat": "Exploration",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"AllActivities_Z1"
+],
+[
+11,
+"DiscoverAllObelisks_Z1"
+],
+[
+11,
+"FindAllChests_Z1"
+],
+[
+11,
+"KillAllUniqueMobs_Z1"
+],
+[
+11,
+"Bestiary_Z1"
+],
+[
+11,
+"FindAllSecrets_Z1"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Skunk_02"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteRegion_Z2",
+"cat": "Exploration",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"DiscoverAllObelisks_Z2"
+],
+[
+11,
+"FindAllChests_Z2"
+],
+[
+11,
+"KillAllUniqueMobs_Z2"
+],
+[
+11,
+"Bestiary_Z2"
+],
+[
+11,
+"FindAllSecrets_Z2"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Wolf_06"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteRegion_Z3",
+"cat": "Exploration",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"DiscoverAllObelisks_Z3"
+],
+[
+11,
+"FindAllChests_Z3"
+],
+[
+11,
+"KillAllUniqueMobs_Z3"
+],
+[
+11,
+"Bestiary_Z3"
+],
+[
+11,
+"FindAllSecrets_Z3"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Demon_03"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"AllActivities_Z1_1"
+],
+[
+11,
+"AllActivities_Z1_2"
+],
+[
+11,
+"AllActivities_Z1_3"
+],
+[
+11,
+"AllActivities_Z1_4"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z1_1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z1_Meridion",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z1_2",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z1_Primevalley",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z1_3",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z1_Enripit",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z1_4",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z1_Honeywoods",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DiscoverAllObelisks_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"LEVEL_Obelisk"
+],
+[
+1,
+"Z1_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllChests_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"LEVEL_WorldChest"
+],
+[
+1,
+"Z1_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "KillAllUniqueMobs_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+3
+]
+],
+[
+1,
+"Z1_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Bestiary_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+2
+]
+],
+[
+1,
+"Z1_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Goat_05"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllSecrets_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"RedOrb_World"
+],
+[
+1,
+"Z1_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Owl_BlackWarm"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllVaults_Z1",
+"cat": "Exploration_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"VaultChest_1"
+],
+[
+2,
+"VaultChest_2"
+],
+[
+2,
+"VaultChest_3"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"AllActivities_Z2_1"
+],
+[
+11,
+"AllActivities_Z2_2"
+],
+[
+11,
+"AllActivities_Z2_3"
+],
+[
+11,
+"AllActivities_Z2_4"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z2_1",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z2_Azuram",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z2_2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z2_Krisomal",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z2_3",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z2_Nescent",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z2_4",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z2_Eksod",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DiscoverAllObelisks_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"LEVEL_Obelisk"
+],
+[
+1,
+"Z2_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllChests_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"LEVEL_WorldChest"
+],
+[
+1,
+"Z2_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "KillAllUniqueMobs_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+3
+]
+],
+[
+1,
+"Z2_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Bestiary_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+2
+]
+],
+[
+1,
+"Z2_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Boar_03"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllSecrets_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"RedOrb_World"
+],
+[
+1,
+"Z2_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Raccoon_BlackBrown"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllVaults_Z2",
+"cat": "Exploration_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"VaultChest_4"
+],
+[
+2,
+"VaultChest_5"
+],
+[
+2,
+"VaultChest_6"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"AllActivities_Z3_1"
+],
+[
+11,
+"AllActivities_Z3_2"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z3_1",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z3_CrimsonIsland_South_Location",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "AllActivities_Z3_2",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+1
+]
+],
+[
+1,
+"Z3_CrimsonIsland_North_Location",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DiscoverAllObelisks_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"LEVEL_Obelisk"
+],
+[
+1,
+"Z3_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllChests_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"LEVEL_WorldChest"
+],
+[
+1,
+"Z3_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "KillAllUniqueMobs_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+3
+]
+],
+[
+1,
+"Z3_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Bestiary_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+13,
+[
+12,
+[
+2
+]
+],
+[
+1,
+"Z3_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Aries_01"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllSecrets_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+13,
+[
+2,
+"RedOrb_World"
+],
+[
+1,
+"Z3_Region",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Crimson03"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllVaults_Z3",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"VaultChest_7"
+],
+[
+2,
+"VaultChest_8"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindRamPatrol",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+0,
+"Dog_Z3W_RamPatrol01"
+],
+[
+0,
+"Dog_Z3W_RamPatrol02"
+],
+[
+0,
+"Dog_Z3W_RamPatrol03"
+],
+[
+0,
+"Dog_Z3W_RamPatrol04"
+],
+[
+0,
+"Dog_Z3W_RamPatrol05"
+],
+[
+0,
+"Dog_Z3W_RamPatrol06"
+],
+[
+0,
+"Dog_Z3W_RamPatrol07"
+],
+[
+0,
+"Dog_Z3W_RamPatrol08"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "FindAllPigeons",
+"cat": "Exploration_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+3,
+"Glider_Pigeon_Beige"
+],
+[
+3,
+"Glider_Pigeon_Blue"
+],
+[
+3,
+"Glider_Pigeon_Grey"
+],
+[
+3,
+"Glider_Pigeon_Grey02"
+],
+[
+3,
+"Glider_Pigeon_Purple"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_5",
+"cat": "Combat",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": 5,
+"t": [
+[
+13,
+[
+1,
+"Dungeon"
+],
+[
+0
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_10",
+"cat": "Combat",
+"parent": "CompleteDungeon_5",
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": 10,
+"t": [
+[
+13,
+[
+1,
+"Dungeon"
+],
+[
+0
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_Z1_All",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z1_ManfishRuins"
+],
+[
+11,
+"Complete_Z1_KoboldsMines"
+],
+[
+11,
+"Complete_Z1_Crabgantua"
+],
+[
+11,
+"Complete_Z1_Ratsar"
+],
+[
+11,
+"Complete_Z1_Beehive"
+],
+[
+11,
+"Complete_Z1_Mokshi"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Goat_04"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_Z2_All",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z2_Golem"
+],
+[
+11,
+"Complete_Z2_Abyss"
+],
+[
+11,
+"Complete_Z2_Munster"
+],
+[
+11,
+"Complete_Z2_Cleodora"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Skunk_05"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_Z3_All",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z3_Barracks"
+],
+[
+11,
+"Complete_Z3_Phrixes"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Aries_02"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SecretOrbPOI_Z1",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z1_ManfishRuins_Orbs"
+],
+[
+11,
+"Complete_Z1_KoboldsMines_Orbs"
+],
+[
+11,
+"Complete_Z1_Beehive_Orbs"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Dragon_BlueGreen"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SecretOrbPOI_Z2",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z2_Golem_Orbs"
+],
+[
+11,
+"Complete_Z2_Abyss_Orbs"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Butterfly_Green"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SecretOrbPOI_Z3",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z3_Barracks_Orbs"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Butterfly_Demon"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_All_HM",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z1_ManfishRuins_HM"
+],
+[
+11,
+"Complete_Z1_KoboldsMines_HM"
+],
+[
+11,
+"Complete_Z1_Crabgantua_HM"
+],
+[
+11,
+"Complete_Z1_Ratsar_HM"
+],
+[
+11,
+"Complete_Z1_Beehive_HM"
+],
+[
+11,
+"Complete_Z1_Mokshi_HM"
+],
+[
+11,
+"Complete_Z2_Abyss_HM"
+],
+[
+11,
+"Complete_Z2_Golem_HM"
+],
+[
+11,
+"Complete_Z2_Munster_HM"
+],
+[
+11,
+"Complete_Z2_Cleodora_HM"
+],
+[
+11,
+"Complete_Z3_Barracks_HM"
+],
+[
+11,
+"Complete_Z3_Phrixes_HM"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_YoungWarg_01"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_All_HM_Sparkless",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z1_ManfishRuins_HM_Sparkless"
+],
+[
+11,
+"Complete_Z1_KoboldsMines_HM_Sparkless"
+],
+[
+11,
+"Complete_Z1_Crabgantua_HM_Sparkless"
+],
+[
+11,
+"Complete_Z1_Ratsar_HM_Sparkless"
+],
+[
+11,
+"Complete_Z1_Beehive_HM_Sparkless"
+],
+[
+11,
+"Complete_Z1_Mokshi_Sparkless"
+],
+[
+11,
+"Complete_Z2_Abyss_HM_Sparkless"
+],
+[
+11,
+"Complete_Z2_Golem_HM_Sparkless"
+],
+[
+11,
+"Complete_Z2_Munster_HM_Sparkless"
+],
+[
+11,
+"Complete_Z2_Cleodora_HM_Sparkless"
+],
+[
+11,
+"Complete_Z3_Barracks_HM_Sparkless"
+],
+[
+11,
+"Complete_Z3_Phrixes_HM_Sparkless"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Warg_01"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CompleteDungeon_All_HM_Special",
+"cat": "Combat",
+"parent": null,
+"points": 10,
+"obj": [
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"Complete_Z1_ManfishRuins_HM_Special"
+],
+[
+11,
+"Complete_Z1_KoboldsMines_HM_Special"
+],
+[
+11,
+"Complete_Z1_Crabgantua_HM_Special"
+],
+[
+11,
+"Complete_Z1_Ratsar_HM_Special"
+],
+[
+11,
+"Complete_Z1_Beehive_HM_Special"
+],
+[
+11,
+"Complete_Z1_Mokshi_HM_Special"
+],
+[
+11,
+"Complete_Z2_Abyss_HM_Special"
+],
+[
+11,
+"Complete_Z2_Golem_HM_Special"
+],
+[
+11,
+"Complete_Z2_Munster_HM_Special"
+],
+[
+11,
+"Complete_Z2_Cleodora_HM_Special"
+],
+[
+11,
+"Complete_Z3_Barracks_HM_Special"
+],
+[
+11,
+"Complete_Z3_Phrixes_HM_Special"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_VeteranWarg_01"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_ManfishRuins",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_Manfish_Ruins"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_ManfishRuins_Orbs",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"R1_POI_ManfishRuines_RedOrb_1"
+],
+[
+2,
+"R1_POI_ManfishRuines_RedOrb_2"
+],
+[
+2,
+"R1_POI_ManfishRuines_RedOrb_3"
+],
+[
+2,
+"R1_POI_ManfishRuines_RedOrb_4"
+],
+[
+2,
+"R1_POI_ManfishRuines_RedOrb_5"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_ManfishRuins_HM",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_Manfish_Ruins",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_ManfishRuins_HM_Sparkless",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_Manfish_Ruins",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_ManfishRuins_HM_Special",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Totems": 4
+}
+},
+{
+"id": "Complete_Z1_KoboldsMines",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_AmaymonGoulp"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_KoboldsMines_Orbs",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"R1_POI_KoboldsMines_RedOrb2_1"
+],
+[
+2,
+"R1_POI_KoboldsMines_RedOrb3_1"
+],
+[
+2,
+"R1_POI_KoboldsMines_RedOrb4_1"
+],
+[
+2,
+"R1_POI_KoboldsMines_RedOrb5_1"
+],
+[
+2,
+"R1_POI_KoboldsMines_RedOrb_1"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_KoboldsMines_HM",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_AmaymonGoulp",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_KoboldsMines_HM_Sparkless",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_AmaymonGoulp",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_KoboldsMines_HM_Special",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Explosions": 5
+}
+},
+{
+"id": "Complete_Z1_Ratsar",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Boss_Ratsar"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Ratsar_HM",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Boss_Ratsar",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Ratsar_HM_Sparkless",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Boss_Ratsar",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Ratsar_HM_Special",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Crabgantua",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Nepsid_Boss"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Crabgantua_HM",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 0,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Nepsid_Boss",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Crabgantua_HM_Sparkless",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 0,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Nepsid_Boss",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Crabgantua_HM_Special",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 0,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Beehive",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"Bee_Hive"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Beehive_Orbs",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"Z1_POI_Beehive_RedOrb_1"
+],
+[
+2,
+"Z1_POI_Beehive_RedOrb_2"
+],
+[
+2,
+"Z1_POI_Beehive_RedOrb_3"
+],
+[
+2,
+"Z1_POI_Beehive_RedOrb_4"
+],
+[
+2,
+"Z1_POI_Beehive_RedOrb_5"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Beehive_HM",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"Bee_Hive",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Beehive_HM_Sparkless",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"Bee_Hive",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Beehive_HM_Special",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Stacks": 5
+}
+},
+{
+"id": "Complete_Z1_Mokshi",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_MokshisHivetree"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Mokshi_HM",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_MokshisHivetree",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Mokshi_Sparkless",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_MokshisHivetree",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z1_Mokshi_HM_Special",
+"cat": "Combat_Z1",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Abyss",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"Z1_POI_Dungeon_ManfishAbyss"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Abyss_Orbs",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"Z2_POI_Dungeon_ManfishAbyss_RedOrb_1"
+],
+[
+2,
+"Z2_POI_Dungeon_ManfishAbyss_RedOrb_2"
+],
+[
+2,
+"Z2_POI_Dungeon_ManfishAbyss_RedOrb_3"
+],
+[
+2,
+"Z2_POI_Dungeon_ManfishAbyss_RedOrb_4"
+],
+[
+2,
+"Z2_POI_Dungeon_ManfishAbyss_RedOrb_5"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Abyss_HM",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"Z1_POI_Dungeon_ManfishAbyss",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Abyss_HM_Sparkless",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"Z1_POI_Dungeon_ManfishAbyss",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Abyss_HM_Special",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Golem",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_AbbandonedMines"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Golem_Orbs",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"Z2_POI_Golem_RedOrb_1"
+],
+[
+2,
+"Z2_POI_Golem_RedOrb_2"
+],
+[
+2,
+"Z2_POI_Golem_RedOrb_3"
+],
+[
+2,
+"Z2_POI_Golem_RedOrb_4"
+],
+[
+2,
+"Z2_POI_Golem_RedOrb_5"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Golem_HM",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_AbbandonedMines",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Golem_HM_Sparkless",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_AbbandonedMines",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Golem_HM_Special",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Volcanoes": 3
+}
+},
+{
+"id": "Complete_Z2_Cleodora",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_CleodorasNest"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Cleodora_HM",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_CleodorasNest",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Cleodora_HM_Sparkless",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_CleodorasNest",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Cleodora_HM_Special",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Delay": 5
+}
+},
+{
+"id": "Complete_Z2_Munster",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_GorgonsHollow"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Munster_HM",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_GorgonsHollow",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Munster_HM_Sparkless",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_GorgonsHollow",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z2_Munster_HM_Special",
+"cat": "Combat_Z2",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Barracks",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_CrimsonBarraks_POI_Def"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Barracks_Orbs",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ElementCompleted",
+"v": null,
+"t": [
+[
+2,
+"R1_POI_Dungeon_CrimsonBarraks_RedOrb1"
+],
+[
+2,
+"R1_POI_Dungeon_CrimsonBarraks_RedOrb2"
+],
+[
+2,
+"R1_POI_Dungeon_CrimsonBarraks_RedOrb3"
+],
+[
+2,
+"R1_POI_Dungeon_CrimsonBarraks_RedOrb4"
+],
+[
+2,
+"R1_POI_Dungeon_CrimsonBarraks_RedOrb5"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Barracks_HM",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_CrimsonBarraks_POI_Def",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Barracks_HM_Sparkless",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_Dungeon_CrimsonBarraks_POI_Def",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Barracks_HM_Special",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {
+"Dogs": 4
+}
+},
+{
+"id": "Complete_Z3_Phrixes",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_CrimsonSacristy"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Phrixes_HM",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ActivityCompleted",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_CrimsonSacristy",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Phrixes_HM_Sparkless",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "DungeonWithoutSparkCube",
+"v": null,
+"t": [
+[
+1,
+"R1_POI_CrimsonSacristy",
+[
+2
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Z3_Phrixes_HM_Special",
+"cat": "Combat_Z3",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Complete_Rift",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 1,
+"t": [
+[
+8,
+"Rift_NbCompleted"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Kill_Maat",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+0,
+"DemonSuperElite"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Kill_Shaarlize",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+0,
+"DemonSuperElite_Fairy"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Close_10_Gates_Once",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 10,
+"t": [
+[
+8,
+"Rift_NbGatesClosed_InOneRift"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Demon_Red01"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Close_15_Gates_Once",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 15,
+"t": [
+[
+8,
+"Rift_NbGatesClosed_InOneRift"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Close_100_Gates_Lifetime",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 100,
+"t": [
+[
+8,
+"Rift_NbGatesClosed"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnDemonicSouls_1000",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CurrencyEarned",
+"v": 1000,
+"t": [
+[
+3,
+"DemonicSoul"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnDemonicSouls_5000",
+"cat": "Rifts",
+"parent": "EarnDemonicSouls_1000",
+"points": 5,
+"obj": [
+{
+"ref": "CurrencyEarned",
+"v": 5000,
+"t": [
+[
+3,
+"DemonicSoul"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnDemonicSouls_10000",
+"cat": "Rifts",
+"parent": "EarnDemonicSouls_5000",
+"points": 5,
+"obj": [
+{
+"ref": "CurrencyEarned",
+"v": 10000,
+"t": [
+[
+3,
+"DemonicSoul"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnNightblood_10",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CurrencyEarned",
+"v": 10,
+"t": [
+[
+3,
+"Nightblood"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnNightblood_50",
+"cat": "Rifts",
+"parent": "EarnNightblood_10",
+"points": 5,
+"obj": [
+{
+"ref": "CurrencyEarned",
+"v": 50,
+"t": [
+[
+3,
+"Nightblood"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnNightblood_100",
+"cat": "Rifts",
+"parent": "EarnNightblood_50",
+"points": 5,
+"obj": [
+{
+"ref": "CurrencyEarned",
+"v": 100,
+"t": [
+[
+3,
+"Nightblood"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "NoDead_Boss_Rift",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [
+"Mount_Hound_06"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "KillAllSoulstones_Z1",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+0,
+"Demon_Z1_Claws_Soulstone"
+],
+[
+0,
+"Demon_Z1_Spear_Soulstone"
+],
+[
+0,
+"ImpDemon_Z1_Soulstone"
+],
+[
+0,
+"FaerieDemon_Z1_Soulstone_Leg"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "KillAllSoulstones_Z2",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "FoeKilledOnce",
+"v": null,
+"t": [
+[
+0,
+"ImpDemon_Z2_Soulstone"
+],
+[
+0,
+"Demon_Z2_Claws_Soulstone"
+],
+[
+0,
+"Demon_Z2_Spear_Soulstone_Leg"
+],
+[
+0,
+"FaerieDemon_Z2_Soulstone"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "BuyItem_DH",
+"cat": "Rifts",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CurrencySpent",
+"v": 1,
+"t": [
+[
+3,
+"DemonicSoul"
+],
+[
+3,
+"Nightblood"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnJob",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 1,
+"t": [
+[
+8,
+"Jobs_NbLearnt"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnJob_All",
+"cat": "Jobs",
+"parent": "LearnJob",
+"points": 10,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 6,
+"t": [
+[
+8,
+"Jobs_NbLearnt"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "MaxLevelJob_AllJobs",
+"cat": "Jobs",
+"parent": "LearnJob_All",
+"points": 10,
+"obj": [
+{
+"ref": "ValueOnly",
+"v": 15,
+"t": [],
+"all": false
+},
+{
+"ref": "AchievementCompleted",
+"v": null,
+"t": [
+[
+11,
+"MaxLevelJob_Blacksmith"
+],
+[
+11,
+"MaxLevelJob_Alchemist"
+],
+[
+11,
+"MaxLevelJob_Jeweller"
+],
+[
+11,
+"MaxLevelJob_Outfitter"
+],
+[
+11,
+"MaxLevelJob_Cook"
+],
+[
+11,
+"MaxLevelJob_Enchanter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnRecipe_1",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "RecipeLearnt",
+"v": 1,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnRecipes_10",
+"cat": "Jobs",
+"parent": "LearnRecipe_1",
+"points": 5,
+"obj": [
+{
+"ref": "RecipeLearnt",
+"v": 10,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnRecipes_25",
+"cat": "Jobs",
+"parent": "LearnRecipes_10",
+"points": 5,
+"obj": [
+{
+"ref": "RecipeLearnt",
+"v": 25,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnRecipes_50",
+"cat": "Jobs",
+"parent": "LearnRecipes_25",
+"points": 5,
+"obj": [
+{
+"ref": "RecipeLearnt",
+"v": 50,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "LearnRecipes_100",
+"cat": "Jobs",
+"parent": "LearnRecipes_50",
+"points": 5,
+"obj": [
+{
+"ref": "RecipeLearnt",
+"v": 100,
+"t": [],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_100_Ores",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_500_Ores",
+"cat": "Jobs",
+"parent": "Collect_100_Ores",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_1000_Ores",
+"cat": "Jobs",
+"parent": "Collect_500_Ores",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_100_Plants",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_500_Plants",
+"cat": "Jobs",
+"parent": "Collect_100_Plants",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_1000_Plants",
+"cat": "Jobs",
+"parent": "Collect_500_Plants",
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Scrap_100_Items",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 100,
+"t": [
+[
+8,
+"Scrap_NbItemsScrapped"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Scrap_500_Items",
+"cat": "Jobs",
+"parent": "Scrap_100_Items",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 500,
+"t": [
+[
+8,
+"Scrap_NbItemsScrapped"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Scrap_1000_Items",
+"cat": "Jobs",
+"parent": "Scrap_500_Items",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 1000,
+"t": [
+[
+8,
+"Scrap_NbItemsScrapped"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnCraftPoints_100",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 100,
+"t": [
+[
+8,
+"CraftPoint_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnCraftPoints_500",
+"cat": "Jobs",
+"parent": "EarnCraftPoints_100",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 500,
+"t": [
+[
+8,
+"CraftPoint_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnCraftPoints_1000",
+"cat": "Jobs",
+"parent": "EarnCraftPoints_500",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 1000,
+"t": [
+[
+8,
+"CraftPoint_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "EarnCraftPoints_10000",
+"cat": "Jobs",
+"parent": "EarnCraftPoints_1000",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 10000,
+"t": [
+[
+8,
+"CraftPoint_TotalEarned"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SpendCraftPoints_100",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 100,
+"t": [
+[
+8,
+"CraftPoint_TotalSpent"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SpendCraftPoints_500",
+"cat": "Jobs",
+"parent": "SpendCraftPoints_100",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 500,
+"t": [
+[
+8,
+"CraftPoint_TotalSpent"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SpendCraftPoints_1000",
+"cat": "Jobs",
+"parent": "SpendCraftPoints_500",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 1000,
+"t": [
+[
+8,
+"CraftPoint_TotalSpent"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "SpendCraftPoints_10000",
+"cat": "Jobs",
+"parent": "SpendCraftPoints_1000",
+"points": 5,
+"obj": [
+{
+"ref": "CounterValue",
+"v": 10000,
+"t": [
+[
+8,
+"CraftPoint_TotalSpent"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Apprentice_Blacksmith",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 5,
+"t": [
+[
+7,
+"Blacksmith"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Companion_Blacksmith",
+"cat": "Jobs",
+"parent": "Apprentice_Blacksmith",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 10,
+"t": [
+[
+7,
+"Blacksmith"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "MaxLevelJob_Blacksmith",
+"cat": "Jobs",
+"parent": "Companion_Blacksmith",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 15,
+"t": [
+[
+7,
+"Blacksmith"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Craft_100_Blacksmith",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Apprentice_Outfitter",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 5,
+"t": [
+[
+7,
+"Outfitter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Companion_Outfitter",
+"cat": "Jobs",
+"parent": "Apprentice_Outfitter",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 10,
+"t": [
+[
+7,
+"Outfitter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "MaxLevelJob_Outfitter",
+"cat": "Jobs",
+"parent": "Companion_Outfitter",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 15,
+"t": [
+[
+7,
+"Outfitter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Craft_100_Outfitter",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Apprentice_Alchemist",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 5,
+"t": [
+[
+7,
+"Alchemist"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Companion_Alchemist",
+"cat": "Jobs",
+"parent": "Apprentice_Alchemist",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 10,
+"t": [
+[
+7,
+"Alchemist"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "MaxLevelJob_Alchemist",
+"cat": "Jobs",
+"parent": "Companion_Alchemist",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 15,
+"t": [
+[
+7,
+"Alchemist"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Craft_100_Alchemist",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Apprentice_Jeweller",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 5,
+"t": [
+[
+7,
+"Jeweller"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Companion_Jeweller",
+"cat": "Jobs",
+"parent": "Apprentice_Jeweller",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 10,
+"t": [
+[
+7,
+"Jeweller"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "MaxLevelJob_Jeweller",
+"cat": "Jobs",
+"parent": "Companion_Jeweller",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 15,
+"t": [
+[
+7,
+"Jeweller"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Craft_100_Jeweller",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Apprentice_Enchanter",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 5,
+"t": [
+[
+7,
+"Enchanter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Companion_Enchanter",
+"cat": "Jobs",
+"parent": "Apprentice_Enchanter",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 10,
+"t": [
+[
+7,
+"Enchanter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "MaxLevelJob_Enchanter",
+"cat": "Jobs",
+"parent": "Companion_Enchanter",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 15,
+"t": [
+[
+7,
+"Enchanter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Craft_100_Enchanter",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Apprentice_Cook",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 5,
+"t": [
+[
+7,
+"Cook"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Companion_Cook",
+"cat": "Jobs",
+"parent": "Apprentice_Cook",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 10,
+"t": [
+[
+7,
+"Cook"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "MaxLevelJob_Cook",
+"cat": "Jobs",
+"parent": "Companion_Cook",
+"points": 5,
+"obj": [
+{
+"ref": "ReachJobLevel",
+"v": 15,
+"t": [
+[
+7,
+"Cook"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": "Apprentice_Blacksmith",
+"consts": {}
+},
+{
+"id": "Craft_100_Cook",
+"cat": "Jobs",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Pilgrim_1",
+"cat": "Reputation",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReputationLevel",
+"v": 1,
+"t": [
+[
+5,
+"Pilgrims"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Pilgrim_5",
+"cat": "Reputation",
+"parent": "Pilgrim_1",
+"points": 5,
+"obj": [
+{
+"ref": "ReputationLevel",
+"v": 5,
+"t": [
+[
+5,
+"Pilgrims"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Pilgrim_10",
+"cat": "Reputation",
+"parent": "Pilgrim_5",
+"points": 5,
+"obj": [
+{
+"ref": "ReputationLevel",
+"v": 10,
+"t": [
+[
+5,
+"Pilgrims"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DH_1",
+"cat": "Reputation",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "ReputationLevel",
+"v": 1,
+"t": [
+[
+5,
+"Riftstalkers"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DH_5",
+"cat": "Reputation",
+"parent": "DH_1",
+"points": 5,
+"obj": [
+{
+"ref": "ReputationLevel",
+"v": 5,
+"t": [
+[
+5,
+"Riftstalkers"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DH_10",
+"cat": "Reputation",
+"parent": "DH_5",
+"points": 5,
+"obj": [
+{
+"ref": "ReputationLevel",
+"v": 10,
+"t": [
+[
+5,
+"Riftstalkers"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "DH_Reput_Offering",
+"cat": "Reputation",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectMounts_1",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+9,
+"Mount"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectMounts_10",
+"cat": "Collection",
+"parent": "CollectMounts_1",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 10,
+"t": [
+[
+9,
+"Mount"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Boar_05"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectMounts_25",
+"cat": "Collection",
+"parent": "CollectMounts_10",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 25,
+"t": [
+[
+9,
+"Mount"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Skunk_03"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectMounts_50",
+"cat": "Collection",
+"parent": "CollectMounts_25",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 50,
+"t": [
+[
+9,
+"Mount"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Mount_Wolf_03"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectMounts_100",
+"cat": "Collection",
+"parent": "CollectMounts_50",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 100,
+"t": [
+[
+9,
+"Mount"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_Crabgantua_Mount",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+3,
+"Mount_Crab_Blue"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_Mokshi_Mount",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+3,
+"Mount_Ladybug_Red"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "Collect_Cleodora_Mount",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+3,
+"Mount_Ladybug_Purple"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectGliders_5",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 5,
+"t": [
+[
+9,
+"GearGlider"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectGliders_10",
+"cat": "Collection",
+"parent": "CollectGliders_5",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 10,
+"t": [
+[
+9,
+"GearGlider"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Sprout_WhitePink"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectGliders_25",
+"cat": "Collection",
+"parent": "CollectGliders_10",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 25,
+"t": [
+[
+9,
+"GearGlider"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Bat_Burning"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectGliders_50",
+"cat": "Collection",
+"parent": "CollectGliders_25",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 50,
+"t": [
+[
+9,
+"GearGlider"
+]
+],
+"all": false
+}
+],
+"reward": [
+"Glider_Dragon_Pink"
+],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CapturePets_1",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+4,
+"Critter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CapturePets_5",
+"cat": "Collection",
+"parent": "CapturePets_1",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 5,
+"t": [
+[
+4,
+"Critter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CapturePets_10",
+"cat": "Collection",
+"parent": "CapturePets_5",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 10,
+"t": [
+[
+4,
+"Critter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CapturePets_50",
+"cat": "Collection",
+"parent": "CapturePets_10",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 50,
+"t": [
+[
+4,
+"Critter"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CaptureShiny",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 1,
+"t": [
+[
+13,
+[
+12,
+[
+4
+]
+],
+[
+1,
+"Z2_Azuram_Mound_Interior",
+true
+]
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_Manfish",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_Kobold",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_Bee",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_Crimson",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_Demon",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_100",
+"cat": "Collection",
+"parent": null,
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 100,
+"t": [
+[
+9,
+"Gear"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+},
+{
+"id": "CollectAppareance_200",
+"cat": "Collection",
+"parent": "CollectAppareance_100",
+"points": 5,
+"obj": [
+{
+"ref": "Collect",
+"v": 200,
+"t": [
+[
+9,
+"Gear"
+]
+],
+"all": false
+}
+],
+"reward": [],
+"copyDesc": null,
+"consts": {}
+}
+]
+}

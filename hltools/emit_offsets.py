@@ -393,7 +393,8 @@ def main():
         # The game's own "already caught?" check is Collection.hasPet(kind),
         # seen firing live with exactly these strings. NOT item ids: only two
         # Critter_* items exist in the cdb and both are special grants.
-        "AccountProgress": {"collection": acct["collection"][0]},
+        "AccountProgress": {"collection": acct["collection"][0],
+                            "achievements": acct["achievements"][0]},
         # mounts / gliders: the same proxy arrays, of item kinds.
         "Collection": {"pets": coll["pets"][0], "mounts": coll["mounts"][0],
                        "gliders": coll["gliders"][0],
@@ -422,7 +423,9 @@ def main():
                      "elements": progress["elements"][0],
                      # counter id -> value (a plain StringMap): the loot
                      # luck counters (counter sheet, Luck_*) among them
-                     "counters": progress["counters"][0]},
+                     "counters": progress["counters"][0],
+                     # achievement id -> state, per character
+                     "achievements": progress["achievements"][0]},
         "MapData": {"map": mapdata["map"][0], "value": 8},
         # Progress.elements' value (measured 2026-09-28): `completed` is when
         # the element was completed — a chest opened, an orb picked up, an
@@ -542,6 +545,17 @@ def main():
                   f"({len(tal['trees'])} trees, {len(tal['runes'])} runes)")
         except Exception as e:
             print(f"[!] talent trees skipped ({e})")
+        try:
+            import achievements_data
+            ach = achievements_data.build(Path(hlboot).parent,
+                                          _OUT_DIR / "collection_img")
+            (_OUT_DIR / "achievements.json").write_text(
+                json.dumps(ach, ensure_ascii=False, indent=0),
+                encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'achievements.json'} "
+                  f"({len(ach['achievements'])} achievements)")
+        except Exception as e:
+            print(f"[!] achievements skipped ({e})")
         try:
             import infusions_data
             inf = infusions_data.build(Path(hlboot).parent)
@@ -724,9 +738,9 @@ def extract_display_names(game_dir):
 
 # The sheets whose French names the app shows: dungeons (activity), loot
 # (item, rarity) and bosses (unit).
-FR_SHEETS = ("ach", "activity", "attribute", "gatherable", "item",
-             "itemType", "job", "rarity", "skill", "unit", "unitType",
-             "zone")
+FR_SHEETS = ("ach", "activity", "attribute", "faction", "gatherable",
+             "item", "itemType", "job", "rarity", "skill", "unit",
+             "unitType", "zone")
 # Sheets whose French descriptions the app shows (the collection's details).
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc")}
 

@@ -106,6 +106,9 @@ COLLECTION_FILE = _WRITABLE / ".meter_collection.json"
 CODEX_FILE = _WRITABLE / ".meter_codex.json"
 # Each character's item codex (item -> [count, rank]), last read.
 ITEM_CODEX_FILE = _WRITABLE / ".meter_itemcodex.json"
+# The achievements: the account's (id -> completion time) and each
+# character's (completed ids, counters), last read.
+ACH_FILE = _WRITABLE / ".meter_achievements.json"
 # Each character's world elements (chests, orbs, obelisks...) -> state.
 ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 LOG_FILE = DATA_HOME / "meter.log"
@@ -2721,11 +2724,12 @@ def _wants_params(fn):
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
 APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
-            "Character", "Settings", "Help")
+            "Achievements", "Character", "Settings", "Help")
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
                   "Hunt": "Chasse", "Map": "Carte",
+                  "Achievements": "Succès",
                   "Character": "Personnage",
                   "Settings": "Réglages",
                   "Help": "Aide"}
@@ -2871,6 +2875,8 @@ class App:
         self._codex_data = None             # .meter_codex.json, loaded
         self._elements_logged = False
         self._item_codex_logged = False
+        self._ach_logged = False
+        self._ach_data = None
         self._item_codex_cache = (None, {})
         self._roster = []                   # players around, from the hook
         self._roster_at = 0.0
@@ -3282,6 +3288,7 @@ class App:
                    "Dungeons": self._page_dungeons,
                    "Collection": self._page_collection,
                    "Hunt": self._page_hunt,
+                   "Achievements": self._page_achievements,
                    "Map": self._page_map,
                    "Character": self._page_character,
                    "Settings": self._page_settings,
@@ -3555,6 +3562,56 @@ class App:
                   f"companions, {len(owned['gears'])} gear appearances "
                   f"(e.g. {owned['gears'][:3]})", file=sys.stderr)
         self._enqueue(done)()
+
+    def on_achievements(self, p):
+        """The achievements read in game: the account's completion times and
+        this character's completed ids and counters. Saved, so the Succès
+        tab works with the game closed. Hook thread."""
+        hero = p.get("hero") or "?"
+
+        def done():
+            data = self._achievements()
+            data["account"] = p.get("account") or {}
+            data.setdefault("heroes", {})[hero] = {
+                "done": p.get("done") or [],
+                "counters": p.get("counters") or {}, "at": time.time()}
+            data["last"] = hero
+            try:
+                ACH_FILE.write_text(json.dumps(data), encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the achievements: {e}",
+                      file=sys.stderr)
+            if not self._ach_logged:
+                self._ach_logged = True
+                print(f"[meter] achievements: {hero}, "
+                      f"{len(data['account'])} completed on the account, "
+                      f"{len(p.get('done') or [])} by this character",
+                      file=sys.stderr)
+        self._enqueue(done)()
+
+    def _achievements(self):
+        if self._ach_data is None:
+            try:
+                self._ach_data = json.loads(
+                    ACH_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._ach_data = {}
+        return self._ach_data
+
+    def _page_achievements(self):
+        data = self._achievements()
+        hero = data.get("last")
+        entry = (data.get("heroes") or {}).get(hero) or {}
+        at = entry.get("at")
+        els = self._elements()
+        states = ((els.get("heroes") or {}).get(hero) or {}).get("states")
+        sync = (f"Succès du compte et progression de {hero}, lus en jeu le "
+                f"{date_fr(time.localtime(at))}." if at else
+                "Pas encore lus : lance le jeu avec Farever+ ouvert.")
+        return [{"k": "achievements", "id": "achievements", "sync": sync,
+                 **achievements_view(data.get("account") or {},
+                                     entry.get("counters") or {},
+                                     self._collection(), states or {})}]
 
     def on_item_codex(self, p):
         """A character's item codex (item -> [count, rank]), read in game.
@@ -4786,7 +4843,7 @@ def _fr_ref(text):
         if rid in FR_TERMS:
             return FR_TERMS[rid][1 if plural else 0]
         for sheet in ("zone", "unit", "activity", "item", "itemType",
-                      "unitType", "skill", "attribute"):
+                      "unitType", "skill", "attribute", "faction"):
             name = _fr_names(sheet).get(rid)
             if name:
                 return name + plural
@@ -4851,7 +4908,7 @@ def _source_text(s, bosses):
     if k == "faction":
         f = s.get("f")
         info = (collection_catalogue().get("factions") or {}).get(f) or {}
-        name = _fr_names("unitType").get(f) or _pretty_id(f)
+        name = faction_label(f)
         dgs = [_fr_names("activity").get(a) or _pretty_id(a)
                for a in info.get("dungeons") or ()]
         acts = [f"{n} {one if n == 1 else many}"
@@ -5483,6 +5540,208 @@ def _profile_stats(prof):
             if isinstance(counters.get(k), (int, float))]
 
 
+_ACHIEVEMENTS = None
+
+
+def achievements_catalogue():
+    """{"categories": [{id, parent}], "achievements": [{id, cat, parent,
+    points, obj, reward, copyDesc, consts}]} from analysis_out/
+    achievements.json (hltools/achievements_data.py)."""
+    global _ACHIEVEMENTS
+    if _ACHIEVEMENTS is None:
+        try:
+            _ACHIEVEMENTS = json.loads((ANALYSIS / "achievements.json")
+                                       .read_text(encoding="utf-8"))
+        except Exception:
+            _ACHIEVEMENTS = {}
+    return _ACHIEVEMENTS
+
+
+# Collect objectives by item type ([9, type]) / unit type ([4, type]): the
+# collection list that counts them.
+COLLECT_LISTS = {"Mount": "mounts", "GearGlider": "gliders", "Gear": "gears",
+                 "Critter": "pets"}
+# ElementCompleted's element kinds -> the map's point category
+ELEMENT_CATS = {"LEVEL_Obelisk": "obelisk", "LEVEL_WorldChest": "chest",
+                "RedOrb_World": "orb"}
+
+
+def _ach_progress(a, done, counters, owned, states):
+    """[have, need] for an achievement's first objective the app can
+    measure, else None."""
+    owned_sets = {k: set(owned.get(k) or ()) for k in COLLECT_LISTS.values()}
+    for o in a.get("obj") or ():
+        ref, v, ts = o.get("ref"), o.get("v"), o.get("t") or []
+        if ref == "CounterValue" and ts and isinstance(v, (int, float)):
+            name = ts[0][1] if isinstance(ts[0], list) else None
+            have = counters.get(name)
+            if isinstance(have, (int, float)):
+                return [have, v]
+        elif ref == "AchievementCompleted" and ts:
+            ids = [t[1] for t in ts if isinstance(t, list)
+                       and isinstance(t[1], str)]
+            return [sum(1 for i in ids if i in done), len(ids)]
+        elif ref == "Collect" and ts:
+            t0 = ts[0]
+            if isinstance(t0, list) and t0[0] in (4, 9):
+                lst = COLLECT_LISTS.get(t0[1])
+                if lst and isinstance(v, (int, float)):
+                    return [len(owned_sets[lst]), v]
+            else:
+                ids = [t[1] for t in ts if isinstance(t, list)
+                       and isinstance(t[1], str)]
+                mine = set().union(*owned_sets.values())
+                return [sum(1 for i in ids if i in mine), len(ids)]
+        elif ref == "ElementCompleted" and ts:
+            t0 = ts[0]
+            if isinstance(t0, list) and t0[0] == 13:
+                kind = t0[1][1] if isinstance(t0[1], list) else None
+                region = t0[2][1] if len(t0) > 2 and isinstance(
+                    t0[2], list) else None
+                cat = ELEMENT_CATS.get(kind)
+                pts = [p["id"] for p in world_map().get("points") or ()
+                       if p.get("c") == cat and p.get("region") == region]
+                if pts:
+                    return [sum(1 for i in pts if _element_done(states, i)),
+                            len(pts)]
+            else:
+                ids = [t[1] for t in ts if isinstance(t, list)
+                       and isinstance(t[1], str)]
+                return [sum(1 for i in ids if _element_done(states, i)),
+                        len(ids)]
+    return None
+
+
+def _ach_target_label(t):
+    """An objective target ([sheet ref, id]) in French: an activity (a
+    dungeon), a job, a faction, an item, a unit."""
+    kind, rid = t[0], t[1]
+    sheets = {1: ("activity",), 7: ("job",), 5: ("faction", "unitType"),
+              3: ("item",), 4: ("unitType",), 12: ("unit",)}.get(
+        kind, ("activity", "job", "item", "unit", "unitType", "zone"))
+    for sh in sheets:
+        nm = _fr_names(sh).get(rid)
+        if nm:
+            return nm
+    return _pretty_id(rid)
+
+
+def _ach_text(a, by_id, tier_v):
+    """An achievement's French name and description: a tier has neither of
+    its own, they are its first ancestor's, with the tier's target value."""
+    chain, cur = [], a
+    while cur and cur["id"] not in [c["id"] for c in chain]:
+        chain.append(cur)
+        cur = by_id.get(cur.get("parent"))
+    name = next((_fr_names("ach").get(c["id"]) for c in chain
+                 if _fr_names("ach").get(c["id"])), None)
+    desc = next((_fr_desc("ach").get(c["id"]) for c in chain
+                 if _fr_desc("ach").get(c["id"])), "")
+    if not desc and a.get("copyDesc"):
+        desc = _fr_desc("ach").get(a["copyDesc"]) or ""
+    v = tier_v
+    tgt = next((t for o in a.get("obj") or () for t in o.get("t") or ()
+                if isinstance(t, list) and len(t) > 1
+                and isinstance(t[1], str)), None)
+    tname = _ach_target_label(tgt) if tgt else "…"
+    desc = desc.replace("::target::", tname)
+    if name:
+        name = name.replace("::target::", tname)
+    num = (lambda x: f"{x:,.0f}".replace(",", "\u202f")
+           if isinstance(x, (int, float)) else "…")
+    desc = desc.replace("::targetValue::", num(v))
+    for k, cv in (a.get("consts") or {}).items():
+        desc = desc.replace(f"::{k}::", num(cv) if isinstance(
+            cv, (int, float)) else str(cv))
+    if name and "::targetValue::" in name:
+        name = name.replace("::targetValue::", num(v))
+    elif not _fr_names("ach").get(a["id"]) and name and isinstance(
+            v, (int, float)) and len(chain) > 1:
+        name = f"{name} ({num(v)})"
+    return _fr_ref(name or _pretty_id(a["id"])), _fr_ref(desc)
+
+
+def achievements_view(account, counters, owned, states):
+    """The Succès tab: categories with points and counts, and every
+    achievement chain (an achievement and its tiers) with its current tier,
+    progress where the app can measure it, reward and completion date."""
+    cat = achievements_catalogue()
+    achs = cat.get("achievements") or []
+    by_id = {a["id"]: a for a in achs}
+    done = set(account)
+    children = {}
+    for a in achs:
+        if a.get("parent") in by_id:
+            children.setdefault(a["parent"], []).append(a)
+    cats = {c["id"]: c for c in cat.get("categories") or ()}
+
+    def top(cid):
+        seen = set()
+        while cid in cats and cats[cid].get("parent") and cid not in seen:
+            seen.add(cid)
+            cid = cats[cid]["parent"]
+        return cid
+
+    items, totals = [], {}
+    for root in achs:
+        if root.get("parent") in by_id:
+            continue
+        tiers, cur = [], root
+        while cur and len(tiers) < 20:
+            tiers.append(cur)
+            nxt = children.get(cur["id"]) or []
+            cur = nxt[0] if nxt else None
+        cur = next((t for t in tiers if t["id"] not in done), None)
+        show = cur or tiers[-1]
+        v = next((o.get("v") for o in show.get("obj") or ()
+                  if isinstance(o.get("v"), (int, float))), None)
+        name, desc = _ach_text(show, by_id, v)
+        prog = None if cur is None else _ach_progress(
+            cur, done, counters, owned, states)
+        last = max((account.get(t["id"]) or 0 for t in tiers), default=0)
+        c = show.get("cat") or ""
+        tc = top(c) or c
+        rewards = [{"id": r, "name": item_label(r), "img": item_icon(r)}
+                   for r in (show.get("reward") or ())]
+        pts_done = sum(t.get("points") or 0 for t in tiers
+                       if t["id"] in done)
+        pts_all = sum(t.get("points") or 0 for t in tiers)
+        tt = totals.setdefault(tc, {"n": 0, "got": 0, "pts": 0,
+                                    "ptsAll": 0})
+        tt["n"] += len(tiers)
+        tt["got"] += sum(1 for t in tiers if t["id"] in done)
+        tt["pts"] += pts_done
+        tt["ptsAll"] += pts_all
+        items.append({
+            "id": root["id"], "c": tc, "sub": c if c != tc else "",
+            "name": name, "desc": desc,
+            "done": cur is None,
+            "tiers": [{"ok": t["id"] in done, "p": t.get("points") or 0}
+                      for t in tiers],
+            "have": min(prog[0], prog[1]) if prog else None,
+            "need": prog[1] if prog else None,
+            "pct": (min(1.0, prog[0] / prog[1]) if prog and prog[1]
+                    else None),
+            "pts": show.get("points") or 0,
+            "rewards": rewards,
+            "when": date_fr(time.localtime(last / 1000)) if cur is None
+            and last else ""})
+    order = [c["id"] for c in cat.get("categories") or ()
+             if not c.get("parent")]
+    out_cats = [{"v": c, "t": _fr_ref(_fr_names("ach").get(c) or c),
+                 "img": "achcat_" + c, **totals[c]}
+                for c in order if c in totals]
+    subs = {c["id"]: _fr_ref(_fr_names("ach").get(c["id"]) or c["id"])
+            for c in cat.get("categories") or () if c.get("parent")}
+    for it in items:
+        it["subT"] = subs.get(it["sub"], "")
+    return {"cats": out_cats, "items": items,
+            "pts": sum(c["pts"] for c in out_cats),
+            "ptsAll": sum(c["ptsAll"] for c in out_cats),
+            "got": sum(c["got"] for c in out_cats),
+            "n": sum(c["n"] for c in out_cats)}
+
+
 _INFUSIONS = None
 
 
@@ -5529,6 +5788,13 @@ def _offsets():
     return _OFFSETS
 
 
+def faction_label(f):
+    """A faction's French name (the faction sheet: Apix, Nepsides, Béliers
+    écarlates...), else its monster family's."""
+    return (_fr_names("faction").get(f) or _fr_names("unitType").get(f)
+            or _pretty_id(f or ""))
+
+
 def _item_flag(bits, name):
     """Whether an item copy carries one st.ItemFlag (bit index from
     meter_offsets.json's ItemFlag, read off the bytecode)."""
@@ -5549,7 +5815,7 @@ def _gear_infusion(kind, raw, stat, prism=False):
     fac = e.get("f")
     mine = (infusion_data().get("item_faction") or {}).get(kind)
     return {"id": sid, "name": e.get("name") or _pretty_id(sid),
-            "fac": _fr_names("unitType").get(fac) or _pretty_id(fac or ""),
+            "fac": faction_label(fac),
             "bonus": (_fr_names("attribute").get(stat) or _pretty_id(stat))
             if stat else "",
             "on": prism or (bool(fac) and mine == fac)}
@@ -5575,8 +5841,7 @@ def _infusion_sets(gear):
                         f"{abs(v):g} %".replace(".", ","))
         out.append({
             "name": e.get("name") or _pretty_id(sid),
-            "fac": _fr_names("unitType").get(e.get("f"))
-            or _pretty_id(e.get("f") or ""),
+            "fac": faction_label(e.get("f")),
             "role": e.get("role") or "", "n": n,
             "tiers": [{"n": k, "on": n >= k, "txt": _fr_ref(t)}
                       for k, t in ((2, e.get("t2")), (4, " · ".join(four)),
@@ -6114,6 +6379,10 @@ def _data_is_current():
     if not (ANALYSIS / "names_fr.json").exists():
         print("[meter] names_fr.json absent — regenerating for the French "
               "names (dungeons, items, bosses).", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "achievements.json").exists():
+        print("[meter] achievements.json absent — regenerating for the "
+              "Succès tab.", file=sys.stderr)
         return False
     if not (ANALYSIS / "luck.json").exists():
         print("[meter] luck.json absent — regenerating for the luck "
@@ -7551,6 +7820,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ov = _OVERLAY["ref"]
             if ov is not None:
                 ov.on_item_codex(p)
+        elif k == "achievements":
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_achievements(p)
         elif k in ("roster", "profile"):
             ov = _OVERLAY["ref"]
             if ov is not None:

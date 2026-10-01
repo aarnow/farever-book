@@ -913,6 +913,48 @@ function unitsProgressMap() {
 // another type is reported by its class name, once, for the log.
 let itemCodexSig = null;
 
+// The achievements: the character's (Progress.achievements, id -> true) and
+// the account's (AccountProgress.achievements, id -> completion time in ms),
+// with the character's counters the objectives are measured on (measured
+// 2026-10-01). Sent when anything changed. GAME THREAD ONLY.
+let achSig = null;
+
+function boxedMap(md, read) {
+    const out = {};
+    mapEntries(mapHandle(md), 2000).forEach(function (kv) {
+        const v = kv[1];
+        if (v && !v.isNull()) out[kv[0]] = read(v);
+    });
+    return out;
+}
+
+function refreshAchievements() {
+    try {
+        if (!localHero || localHero.isNull() || !OFF.Progress
+            || OFF.Progress.achievements == null || !hbKeys || !hbGet) return;
+        const player = localHero.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return;
+        const prog = player.add(OFF.Player.progress).readPointer();
+        const acct = player.add(OFF.Player.accountProgress).readPointer();
+        if (!prog || prog.isNull()) return;
+        const mine = Object.keys(boxedMap(
+            prog.add(OFF.Progress.achievements).readPointer(),
+            function (v) { return v.add(8).readU8(); }));
+        const account = (acct && !acct.isNull()
+                         && OFF.AccountProgress.achievements != null)
+            ? boxedMap(acct.add(OFF.AccountProgress.achievements).readPointer(),
+                       function (v) { return v.add(8).readDouble(); })
+            : {};
+        const counters = countersOf(localHero);
+        const sig = localName + JSON.stringify([mine, account, counters]);
+        if (sig === achSig) return;
+        achSig = sig;
+        send({ kind: "achievements", hero: localName, done: mine,
+               account: account,
+               counters: typeof counters === "object" ? counters : null });
+    } catch (e) {}
+}
+
 // GAME THREAD ONLY.
 function refreshItemCodex() {
     if (!OFF.ItemProxy || OFF.Progress.itemProgress == null) return;
@@ -968,6 +1010,7 @@ function refreshCodex() {
             send({ kind: "codex", hero: localName, ranks: out });
         }
         refreshItemCodex();
+        refreshAchievements();
     } catch (e) {}
 }
 

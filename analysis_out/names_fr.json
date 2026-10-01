@@ -2941,6 +2941,17 @@
 "WaterGolems": "Golems d'eau",
 "Kobold": "Kobolds"
 },
+"faction": {
+"World": "Siagarta",
+"Manfish": "Nepsides",
+"Crimson": "Béliers écarlates",
+"Bee": "Apix",
+"Kobold": "Kobolds",
+"Demon": "Noctaris",
+"Pilgrims": "Pèlerins de Mérilam",
+"Riftstalkers": "Sororité des rôdeuses de failles",
+"Herald": "Assemblée des Hérauts"
+},
 "job": {
 "Mining": "Mineur",
 "Herbalism": "Herboriste",

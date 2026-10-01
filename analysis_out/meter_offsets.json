@@ -184,7 +184,8 @@
     "activityCtx": 328
   },
   "AccountProgress": {
-    "collection": 192
+    "collection": 192,
+    "achievements": 176
   },
   "Collection": {
     "pets": 168,
@@ -207,7 +208,8 @@
     "unitsProgress": 176,
     "itemProgress": 184,
     "elements": 160,
-    "counters": 136
+    "counters": 136,
+    "achievements": 232
   },
   "MapData": {
     "map": 40,
