@@ -1385,22 +1385,20 @@ select:focus, input[type=text]:focus { outline: none; border-color: var(--accent
 .mcat { background: var(--bg-2); border: 1px solid #34325A; }
 .mregs button.on { color: #fff; border-color: var(--accent); background: rgba(242, 201, 76, .12); }
 
-/* ---- the app's tabs as icons, at the right of the band ---------------------- */
-#nav { position: relative; padding-right: 110px; padding-left: 110px; }
-#nav .navicons { position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-                 display: flex; gap: 6px; }
-#nav .navicon {
-  width: 34px; height: 34px; padding: 0; display: grid; place-items: center;
+/* ---- Réglages and Aide as icons, at the right of the game's state ---------- */
+#appbtns { display: flex; gap: 6px; margin-left: 4px; }
+#appbtns:empty { display: none; }
+#appbtns .navicon {
+  width: 36px; height: 36px; cursor: pointer; padding: 0; display: grid; place-items: center;
   border-radius: 50%;
   background: linear-gradient(180deg, #5B5795, #46437A);
   border: 1px solid #6E6AAE;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 3px rgba(0, 0, 0, .4);
   color: #E2DEFF; letter-spacing: 0;
 }
-#nav .navicon::after { display: none; }
-#nav .navicon svg { width: 19px; height: 19px; fill: currentColor; }
-#nav .navicon:hover { color: #fff; border-color: var(--accent); }
-#nav .navicon.active { color: #2A2208; border-color: #FBE08A;
+#appbtns .navicon svg { width: 19px; height: 19px; fill: currentColor; }
+#appbtns .navicon:hover { color: #fff; border-color: var(--accent); }
+#appbtns .navicon.active { color: #2A2208; border-color: #FBE08A;
                        background: linear-gradient(180deg, #FBE08A, #D69E2E);
                        box-shadow: 0 0 10px rgba(242, 201, 76, .45); }
 

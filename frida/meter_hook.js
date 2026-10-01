@@ -54,6 +54,13 @@ function resolveAnchors() {
     }
     return out;
 }
+function slotIsCode(base, fi) {
+    if (fi === undefined) return true;      // nothing to check against
+    try {
+        const r = Process.findRangeByAddress(base.add(fi * 8).readPointer());
+        return r !== null && r.protection.indexOf("x") >= 0;
+    } catch (e) { return false; }
+}
 function isTableAt(base, resolved) {
     // The real table holds EVERY anchor's live address at findex*8, so three
     // exact pointer matches is conclusive; any mismatch rejects immediately.
@@ -1606,6 +1613,15 @@ function main() {
         if (base) log("functions_ptrs via memory scan (" + (Date.now() - t0) + " ms)");
     }
     if (!base) { log("!! HL functions_ptrs table not found"); send({ kind: "ready", ok: false }); return; }
+    // The table exists (and holds the natives) before the game's own code is
+    // compiled into it: hooked that early, every target is garbage (measured
+    // 2026-10-01 on a relaunch: "access violation accessing 0x1556f0"). The
+    // camera's slot must point at code; until it does, it's too early.
+    if (!slotIsCode(base, DATA.cam_targets && DATA.cam_targets["client.BaseCamera.postUpdate"])) {
+        log("game still booting (its code isn't in the table yet)");
+        send({ kind: "ready", ok: false, early: true });
+        return;
+    }
 
     if (!setupNameApi()) log("skill-name API unavailable; showing raw ids");
     if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");

@@ -1885,6 +1885,28 @@ def _window_rect_of_pid(pid):
     return best["rect"] if best["area"] > 0 else None
 
 
+def _process_age(pid):
+    """Seconds since the process started, or None if Windows won't say."""
+    if sys.platform != "win32":
+        return None
+    k = ctypes.windll.kernel32
+    k.OpenProcess.restype = wintypes.HANDLE
+    h = k.OpenProcess(0x1000, False, pid)      # QUERY_LIMITED_INFORMATION
+    if not h:
+        return None
+    try:
+        made, x1, x2, x3 = (wintypes.FILETIME() for _ in range(4))
+        if not k.GetProcessTimes(h, ctypes.byref(made), ctypes.byref(x1),
+                                 ctypes.byref(x2), ctypes.byref(x3)):
+            return None
+        now = wintypes.FILETIME()
+        k.GetSystemTimeAsFileTime(ctypes.byref(now))
+        ft = lambda f: (f.dwHighDateTime << 32) | f.dwLowDateTime
+        return (ft(now) - ft(made)) / 1e7
+    finally:
+        k.CloseHandle(h)
+
+
 VK_OEM_5 = 0xDC                      # the \ key
 VK_SHIFT, VK_CONTROL, VK_MENU = 0x10, 0x11, 0x12
 WH_KEYBOARD_LL, WH_MOUSE_LL, HC_ACTION = 13, 14, 0
@@ -7780,7 +7802,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
         detached.set()
     fsession.on("detached", on_detached)
 
-    ready = {"ok": None}
+    ready = {"ok": None, "early": False}
     ready_evt = threading.Event()
     liveness = {"t": time.monotonic(), "printed": 0.0}
     hero_id = {"name": None}           # last local hero, to keep the log quiet
@@ -8120,7 +8142,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                       file=sys.stderr)
         elif k == "ready":
             ready["ok"] = p.get("ok")
-            print(f"[meter] hook ready ok={p.get('ok')}", file=sys.stderr)
+            ready["early"] = bool(p.get("early"))
+            print(f"[meter] hook ready ok={p.get('ok')}"
+                  + (" (game still booting)" if ready["early"] else ""),
+                  file=sys.stderr)
             ready_evt.set()
 
     def load_hook():
@@ -8154,10 +8179,14 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     # retry rather than leaving a half-attached agent (which is what destabilises
     # the game when people force-kill and relaunch repeatedly).
     script = None
-    for attempt in range(1, 4):
+    attempt = 0
+    booting_until = time.monotonic() + 120.0
+    while attempt < 3:
+        attempt += 1
         if STOP.is_set() or detached.is_set():
             break
         ready["ok"] = None
+        ready["early"] = False
         ready_evt.clear()
         liveness["t"] = time.monotonic()
         try:
@@ -8167,12 +8196,21 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             script = None
         if script is not None and wait_ready() and ready["ok"]:
             break
+        if ready["early"] and time.monotonic() < booting_until:
+            # Not a failure: the game hasn't finished booting. Unload, give
+            # it a few seconds, and try again without using up an attempt.
+            _unload_hook(script)
+            script = None
+            attempt -= 1
+            if STOP.wait(4.0):
+                break
+            continue
         print(f"[meter] hook didn't come up (attempt {attempt}/3); "
               "cleaning up and retrying ...", file=sys.stderr)
         if script is not None:
             _unload_hook(script)
             script = None
-        if ready["ok"] is False:            # search concluded, table not found
+        if ready["ok"] is False and not ready["early"]:   # table not found
             regenerate_data(hlboot, force=True)   # => refresh data and retry
         time.sleep(1.0)
 
@@ -8318,6 +8356,8 @@ class GameLink:
             if proc is None:
                 return
             self.set_state(self.CONNECTING)
+            if not self._wait_booted(device, proc.pid):
+                continue                    # closed while starting, or STOP
             try:
                 # Only a game we were actually connected to is set aside once
                 # it closes — never one whose attach merely failed.
@@ -8362,6 +8402,34 @@ class GameLink:
             self._retry.wait(self.POLL_SECS)
             self._retry.clear()
         return None
+
+    # A game that has just started is not hooked straight away: its code and
+    # tables only exist once it has finished booting, and a hook brought up
+    # before that finds nothing — three times over, and the link gives up.
+    # That was the "second launch never connects" bug (2026-10-01): with the
+    # data already checked, the meter attached the instant Farever.exe
+    # appeared. Hooked once it shows its window and has run a little while.
+    BOOT_MIN_SECS = 12.0
+    BOOT_MAX_SECS = 90.0
+
+    def _wait_booted(self, device, pid):
+        """True once the game looks booted; False if it closes or we stop."""
+        said = False
+        while not STOP.is_set():
+            age = _process_age(pid)
+            if age is None or age >= self.BOOT_MAX_SECS:
+                return True
+            if age >= self.BOOT_MIN_SECS and _window_rect_of_pid(pid):
+                return True
+            if not self.game_alive(device, pid):
+                return False
+            if not said:
+                said = True
+                print(f"[meter] {TARGET_PROCESS} (pid {pid}) is starting "
+                      f"({age:.0f}s old) — waiting for it to finish booting.",
+                      file=sys.stderr)
+            STOP.wait(1.0)
+        return False
 
     def _wait_failed(self, device, pid):
         while not STOP.is_set():

@@ -591,7 +591,8 @@ function renderTabs(tabs, active) {
   if (nav.dataset.sig === sig) return;
   nav.dataset.sig = sig;
   nav.textContent = '';
-  const icons = el('div', 'navicons');
+  const icons = $('#appbtns');
+  icons.textContent = '';
   tabs.forEach((tab) => {
     const t = typeof tab === 'string' ? tab : tab.v;
     const label = typeof tab === 'string' ? tab : tab.t;
@@ -609,7 +610,6 @@ function renderTabs(tabs, active) {
     b.type = 'button';
     b.addEventListener('click', () => notify('set_tab', { value: t }));
   });
-  if (icons.childNodes.length) nav.appendChild(icons);
 }
 
 /* The game's state in the title band: Play (launches Farever through
