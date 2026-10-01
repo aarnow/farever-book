@@ -609,6 +609,11 @@ def main():
         (_OUT_DIR / "augments.json").write_text(json.dumps(aug, indent=0),
                                                 encoding="utf-8")
         print(f"[written] {_OUT_DIR / 'augments.json'} ({len(aug)} augments)")
+        rift = extract_rift_rewards(Path(hlboot).parent)
+        (_OUT_DIR / "rift_rewards.json").write_text(json.dumps(rift, indent=0),
+                                                    encoding="utf-8")
+        print(f"[written] {_OUT_DIR / 'rift_rewards.json'} "
+              f"({len(rift['bosses'])} bosses)")
         luck = extract_luck(Path(hlboot).parent)
         (_OUT_DIR / "luck.json").write_text(json.dumps(luck, indent=0),
                                             encoding="utf-8")
@@ -801,6 +806,59 @@ def extract_luck(game_dir):
     sheet = next(s for s in cdb["sheets"] if s["name"] == "counter")
     return {ln["id"]: ln["luckParams"] for ln in sheet["lines"]
             if isinstance(ln.get("id"), str) and ln.get("luckParams")}
+
+
+def extract_rift_rewards(game_dir):
+    """What a rift gives, as the game's code hands it out (read from
+    hlboot.dat with hltools/hlbc_code.py, 2026-10-01 — st.activity.
+    RiftContext.dropBossActivityLoot / onElementStateComplete / isTier):
+
+    * the boss chest opens at Rift_RewardTiers[0] gates closed; opened, it
+      gives every player the boss's lootTable (one of its two weapons, by
+      weight) and bossLootTable, both at min. rarity Rare, then
+      Rift_Bosschest, plus Rift_Tier4 from tier 3 (10 gates) and Rift_Tier6
+      from tier 5 (15 gates);
+    * the other chests (tiers 1, 2, 4: 5, 9, 14 gates) give every player
+      Rift_BonusChest;
+    * a weapon's rarity is drawn by ent.Hero.makeLootItem from the rarity
+      sheet's generationChance at the player's level, Rare at least: the
+      Legendary share first, through the Luck_LegendaryWeapon counter."""
+    import pak_extract
+    cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
+                                            "data.cdb"))
+    sheets = {s["name"]: s for s in cdb["sheets"]}
+    tables = {ln["id"]: ln for ln in sheets["lootTable"]["lines"]
+              if isinstance(ln.get("id"), str)}
+    consts = {ln["id"]: ln for ln in sheets["constant"]["lines"]
+              if isinstance(ln.get("id"), str)}
+
+    def lines(tid):
+        return [{k: ln.get(k) for k in ("item", "lootTable", "proba",
+                                         "itemMin", "itemMax")}
+                for ln in (tables.get(tid) or {}).get("loot") or ()]
+
+    tiers = [{"gates": f.get("v"), "desc": f.get("desc") or ""}
+             for f in ((consts.get("Rift_RewardTiers") or {}).get("v") or {})
+             .get("floats") or ()]
+    bosses = []
+    for u in sheets["unit"]["lines"]:
+        p = u.get("props") or {}
+        main = tables.get(p.get("lootTable")) or {}
+        # a rift boss: a Demon whose loot table is one weighted pick
+        if u.get("faction") != "Demon" or not p.get("bossLootTable") \
+                or not (main.get("flags") or 0) & 1:
+            continue
+        bosses.append({"id": u["id"], "weapons": lines(p["lootTable"]),
+                       "extra": lines(p["bossLootTable"])})
+    rarities = {r["id"]: (r.get("props") or {}).get("generationChance")
+                for r in sheets["rarity"]["lines"]
+                if isinstance(r.get("id"), str)}
+    return {"tiers": tiers, "bosses": bosses,
+            "bossChest": lines("Rift_Bosschest"),
+            "bonusChest": lines("Rift_BonusChest"),
+            "tier4": lines("Rift_Tier4"), "tier6": lines("Rift_Tier6"),
+            "soulstone": lines("Soulstone"),
+            "rarities": rarities}
 
 
 def extract_item_types(game_dir):

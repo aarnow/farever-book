@@ -1,0 +1,306 @@
+{
+"tiers": [
+{
+"gates": 3,
+"desc": "Unlocks boss chest"
+},
+{
+"gates": 5,
+"desc": "Unlocks additional chest"
+},
+{
+"gates": 9,
+"desc": "Unlocks additional chest"
+},
+{
+"gates": 10,
+"desc": "Add Rift_Tier4 lootTable to boss chest"
+},
+{
+"gates": 14,
+"desc": "Unlocks additional chest"
+},
+{
+"gates": 15,
+"desc": "Add Rift_Tier5 lootTable to boss chest"
+}
+],
+"bosses": [
+{
+"id": "DemonSuperElite",
+"weapons": [
+{
+"item": "GA_Demon",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Daggers_Demondash",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+],
+"extra": [
+{
+"item": "Mount_Demon_06",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+]
+},
+{
+"id": "DemonSuperElite_Fairy",
+"weapons": [
+{
+"item": "Halos_Demon",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Staff_SummonDemon",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+],
+"extra": [
+{
+"item": "Glider_Demon_Purple",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+]
+}
+],
+"bossChest": [
+{
+"item": "DemonicSoul",
+"lootTable": null,
+"proba": 1,
+"itemMin": 300,
+"itemMax": null
+},
+{
+"item": null,
+"lootTable": "Soulstone",
+"proba": 1,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Nightblood",
+"lootTable": null,
+"proba": 1,
+"itemMin": 3,
+"itemMax": null
+},
+{
+"item": "Mount_Demon_06",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+],
+"bonusChest": [
+{
+"item": "DemonicSoul",
+"lootTable": null,
+"proba": 1,
+"itemMin": 100,
+"itemMax": null
+},
+{
+"item": null,
+"lootTable": "Soulstone",
+"proba": 1,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Mount_Demon_04",
+"lootTable": null,
+"proba": 0.0075,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Glider_Demon_Blue02",
+"lootTable": null,
+"proba": 0.0075,
+"itemMin": null,
+"itemMax": null
+}
+],
+"tier4": [
+{
+"item": "Soulstone_Z1_4",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Soulstone_Z2_4",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+],
+"tier6": [
+{
+"item": "Glider_Dragon_Demon",
+"lootTable": null,
+"proba": 1,
+"itemMin": null,
+"itemMax": null
+}
+],
+"soulstone": [
+{
+"item": "Soulstone_Z1_1",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Soulstone_Z1_2",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Soulstone_Z1_3",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Soulstone_Z2_1",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Soulstone_Z2_2",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+},
+{
+"item": "Soulstone_Z2_3",
+"lootTable": null,
+"proba": 0.01,
+"itemMin": null,
+"itemMax": null
+}
+],
+"rarities": {
+"Common": null,
+"Uncommon": [
+{
+"minLevel": 1,
+"maxLevel": 10,
+"chance": 0.4
+},
+{
+"minLevel": 11,
+"maxLevel": 30,
+"chance": 0.3
+},
+{
+"minLevel": 31,
+"maxLevel": 49,
+"chance": 0.15
+},
+{
+"minLevel": 50,
+"maxLevel": 10000,
+"chance": 0
+}
+],
+"Rare": [
+{
+"minLevel": 1,
+"maxLevel": 10,
+"chance": 0.6
+},
+{
+"minLevel": 11,
+"maxLevel": 30,
+"chance": 0.5
+},
+{
+"minLevel": 31,
+"maxLevel": 49,
+"chance": 0.59
+},
+{
+"minLevel": 50,
+"maxLevel": 10000,
+"chance": 0.6
+}
+],
+"Epic": [
+{
+"minLevel": 1,
+"maxLevel": 10,
+"chance": 0
+},
+{
+"minLevel": 11,
+"maxLevel": 30,
+"chance": 0.19
+},
+{
+"minLevel": 31,
+"maxLevel": 49,
+"chance": 0.25
+},
+{
+"minLevel": 50,
+"maxLevel": 10000,
+"chance": 0.35
+}
+],
+"Legendary": [
+{
+"minLevel": 1,
+"maxLevel": 10,
+"chance": 0
+},
+{
+"minLevel": 11,
+"maxLevel": 30,
+"chance": 0.01
+},
+{
+"minLevel": 31,
+"maxLevel": 49,
+"chance": 0.01
+},
+{
+"minLevel": 50,
+"maxLevel": 10000,
+"chance": 0.05
+}
+]
+}
+}

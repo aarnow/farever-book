@@ -2869,6 +2869,7 @@ class App:
         self.focus_player = None            # player picked in the meter
         self._help_open = None
         self._rift_view = None              # the rift report being read
+        self._rift_rewards = False          # the rift rewards page is open
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_view = None           # the dungeon run being read
         self._collection_owned = None       # .meter_collection.json, loaded
@@ -3159,6 +3160,9 @@ class App:
             # rifts
             "open_rift": lambda p: self._open_rift_file(p.get("file", "")),
             "close_rift": lambda: setattr(self, "_rift_view", None),
+            "open_rift_rewards": lambda: setattr(self, "_rift_rewards", True),
+            "close_rift_rewards": lambda: setattr(self, "_rift_rewards",
+                                                  False),
             "copy_rift_image": self._copy_rift_image,
             "copy_rift_text": self._copy_rift_text,
             "open_parses": self._open_parses,
@@ -3486,6 +3490,14 @@ class App:
         return out
 
     def _page_rifts(self):
+        if self._rift_rewards:
+            data = self._achievements()
+            entry = (data.get("heroes") or {}).get(data.get("last")) or {}
+            return [{"k": "toolbar", "id": "rift_reward_tools", "btns": [
+                        {"id": "close_rift_rewards",
+                         "t": "‹  Toutes les failles"}]},
+                    *rift_rewards_view(entry.get("counters") or {},
+                                       entry.get("luckUntil") or {})]
         if self._rift_view is not None:
             return [{"k": "toolbar", "id": "rift_tools", "btns": [
                         {"id": "close_rift", "t": "‹  Toutes les failles"},
@@ -3501,6 +3513,9 @@ class App:
                          "btns": [{"id": "open_rift", "t": "Voir",
                                    "p": {"file": path.name}}]})
         return [
+            {"k": "toolbar", "id": "rift_list_tools", "btns": [
+                {"id": "open_rift_rewards",
+                 "t": "Récompenses des failles et chances"}]},
             {"k": "section", "t": "Failles réalisées"},
             {"k": "note", "t": "Chaque faille terminée (boss vaincu) est "
                                "enregistrée ici avec son classement complet. "
@@ -3572,9 +3587,17 @@ class App:
         def done():
             data = self._achievements()
             data["account"] = p.get("account") or {}
+            now, wall = p.get("now"), time.time()
+            until = {}
+            for k, start, dur, stop in p.get("luck") or ():
+                end = stop if stop and stop > 0 else (
+                    start + dur if dur and dur > 0 else None)
+                if end is not None and isinstance(now, (int, float)):
+                    until[k] = wall + (end - now)
             data.setdefault("heroes", {})[hero] = {
                 "done": p.get("done") or [],
-                "counters": p.get("counters") or {}, "at": time.time()}
+                "counters": p.get("counters") or {}, "at": wall,
+                "luckUntil": until}
             data["last"] = hero
             try:
                 ACH_FILE.write_text(json.dumps(data), encoding="utf-8")
@@ -5762,6 +5785,181 @@ def achievements_view(account, counters, owned, states):
             "n": sum(c["n"] for c in out_cats)}
 
 
+_RIFT_REWARDS = None
+
+
+def rift_rewards_data():
+    """analysis_out/rift_rewards.json (emit_offsets.extract_rift_rewards)."""
+    global _RIFT_REWARDS
+    if _RIFT_REWARDS is None:
+        try:
+            _RIFT_REWARDS = json.loads((ANALYSIS / "rift_rewards.json")
+                                       .read_text(encoding="utf-8"))
+        except Exception:
+            _RIFT_REWARDS = {}
+    return _RIFT_REWARDS
+
+
+RARITY_ORDER_IDS = ("Common", "Uncommon", "Rare", "Epic", "Legendary")
+
+
+def weapon_rarity_odds(level, luck_bonus=0.0):
+    """A dropped weapon's rarity, at least Rare, as ent.Hero.makeLootItem
+    draws it: the rarity sheet's generationChance at the player's level;
+    the Legendary share first (plus the luck bonus, when the offering is
+    on), then Epic / Rare by weight. {rarity: probability}."""
+    rr = rift_rewards_data().get("rarities") or {}
+    w = {}
+    for rid in RARITY_ORDER_IDS[2:]:
+        for g in rr.get(rid) or ():
+            if g.get("minLevel", 0) <= level <= g.get("maxLevel", 10 ** 6):
+                w[rid] = g.get("chance") or 0
+    total = sum(w.values())
+    if not total:
+        return {}
+    leg = min(1.0, w.get("Legendary", 0) / total
+              + (luck_bonus if w.get("Legendary") else 0))
+    rest = total - w.get("Legendary", 0)
+    out = {"Legendary": leg}
+    for rid in ("Epic", "Rare"):
+        out[rid] = (1 - leg) * (w.get(rid, 0) / rest if rest else 0)
+    return out
+
+
+def _luck_bonus(counter_id, counters):
+    p = luck_data().get(counter_id) or {}
+    n = counters.get(counter_id) or 0
+    n = n if isinstance(n, (int, float)) else 0
+    return min(p.get("max") or 0, (p.get("base") or 0)
+               + n * (p.get("increment") or 0)), int(n)
+
+
+def rift_rewards_view(counters, luck_until):
+    """The rift rewards page: what each gate tier unlocks, the chests'
+    contents with their chances, and the weapon's rarity odds at the
+    player's level, with and without the Soulwell offering."""
+    d = rift_rewards_data()
+    if not d:
+        return [{"k": "note", "t": "Données des failles absentes : relance "
+                                   "Farever+ avec le jeu ouvert pour les "
+                                   "générer."}]
+    level = counters.get("HeroLevel") if isinstance(
+        counters.get("HeroLevel"), (int, float)) else 25
+    now = time.time()
+    on = {k for k, t in (luck_until or {}).items() if t > now}
+    left = {k: max(0, round((t - now) / 60)) for k, t in
+            (luck_until or {}).items() if t > now}
+
+    def names(ls):
+        return ", ".join(item_label(ln["item"]) for ln in ls if ln.get("item"))
+
+    # what each tier does, in the code's order (tier 3 adds Rift_Tier4,
+    # tier 5 adds Rift_Tier6 — the data's own comment says Tier5)
+    tier_txt = {0: "Ouvre le coffre du boss : sans ça, aucune de ses "
+                   "récompenses (armes, montures…)",
+                3: f"Ajoute au coffre du boss : {names(d.get('tier4') or [])} "
+                   "(une des deux, garantie)",
+                5: f"Ajoute au coffre du boss : {names(d.get('tier6') or [])} "
+                   "(garanti)"}
+    rows = [{"t": f"{int(t['gates'])} portails fermés",
+             "meta": tier_txt.get(i, "Un coffre bonus de plus")}
+            for i, t in enumerate(d.get("tiers") or ())]
+
+    leg_bonus, leg_n = _luck_bonus("Luck_LegendaryWeapon", counters)
+    base = weapon_rarity_odds(level)
+    lucky = weapon_rarity_odds(level, leg_bonus)
+    leg_on = "Luck_LegendaryWeapon_Status" in on
+    cards = [
+        {"title": "Arme légendaire", "value": _pct(base.get("Legendary", 0)),
+         "sub": f"par arme, sans offrande (niv. {int(level)})"},
+        {"title": "Avec l'offrande", "value": _pct(lucky.get("Legendary", 0)),
+         "sub": (f"active · {left.get('Luck_LegendaryWeapon_Status', 0)} min"
+                 if leg_on else "si tu en fais une")
+                + f" · compteur {leg_n}",
+         "tone": "rift" if leg_on else ""},
+        {"title": "Arme épique",
+         "value": _pct((lucky if leg_on else base).get("Epic", 0)),
+         "sub": "sinon rare"}]
+
+    def luck_note(item):
+        """A mount's / glider's own luck counter, when its offering is on."""
+        t = item_type(item)
+        cid = {"Mount": "Luck_Mount", "GearGlider": "Luck_Glider"}.get(t)
+        if not cid:
+            return 0.0
+        status = (luck_data().get(cid) or {}).get("status")
+        return _luck_bonus(cid, counters)[0] if status in on else 0.0
+
+    def row(item, src, chance=None, qty="", note=""):
+        rar = item_rarity(item) or ""
+        return {"img": item_icon(item), "name": item_label(item),
+                "rk": rar.lower(),
+                "type": item_type_label(item_type(item))
+                if item_type(item) else "",
+                "apt": [], "src": src,
+                "chance": (_pct(chance) if chance is not None and chance < 1
+                           else "garanti") + note,
+                "qty": qty, "got": 0}
+
+    def chest_rows(ls, src):
+        out = []
+        for ln in ls:
+            qty = (f"{ln['itemMin']}" if ln.get("itemMin") else "")
+            if ln.get("lootTable") == "Soulstone":
+                out.append({"img": item_icon("Soulstone_Z1_1"),
+                            "name": "Une pierre d'âme", "rk": "rare",
+                            "type": "Pierre d'âme", "apt": [], "src": src,
+                            "chance": "garanti",
+                            "qty": f"1 parmi {len(d.get('soulstone') or [])}",
+                            "got": 0})
+            elif ln.get("item"):
+                p = ln.get("proba") or 0
+                bonus = luck_note(ln["item"]) if p < 1 else 0
+                out.append(row(ln["item"], src, min(1.0, p + bonus), qty,
+                               " (offrande)" if bonus else ""))
+        return out
+
+    boss_rows = []
+    for b in d.get("bosses") or ():
+        who = _unit_label(b["id"])
+        ws = [w for w in b.get("weapons") or () if w.get("item")]
+        for w in ws:
+            boss_rows.append(row(w["item"], f"Coffre du boss · {who}",
+                                 1 / len(ws) if ws else None))
+        boss_rows += chest_rows(b.get("extra") or [],
+                                f"Coffre du boss · {who}")
+    boss_rows += chest_rows(d.get("bossChest") or [], "Coffre du boss")
+    t4 = [ln for ln in d.get("tier4") or () if ln.get("item")]
+    boss_rows += [row(ln["item"], "Coffre du boss · 10 portails",
+                      1 / len(t4)) for ln in t4]
+    boss_rows += [row(ln["item"], "Coffre du boss · 15 portails")
+                  for ln in d.get("tier6") or () if ln.get("item")]
+    return [
+        {"k": "section", "t": "Récompenses des failles"},
+        {"k": "note", "t": "D'après le code et les données du jeu. Chaque "
+                           "joueur reçoit sa propre part de chaque coffre. Le "
+                           "coffre du boss s'ouvre une fois 3 portails "
+                           "fermés ; chaque palier suivant ajoute un coffre "
+                           "bonus ou une récompense garantie."},
+        {"k": "list", "id": "rift_tiers", "rows": rows},
+        {"k": "section", "t": "Rareté de l'arme du boss"},
+        {"k": "note", "t": "Chaque joueur reçoit une des deux armes du boss "
+                           "de la faille. Sa rareté est tirée à ton niveau, "
+                           "rare au minimum : la légendaire d'abord, puis "
+                           "épique ou rare. Pendant l'offrande d'arme "
+                           "légendaire du Puits des âmes, ton compteur "
+                           "s'ajoute à la chance : +1 %, puis +0,5 % par "
+                           "arme non légendaire (jusqu'à +25 %), et il "
+                           "revient à 0 quand une légendaire tombe."},
+        {"k": "cards", "id": "rift_weapon_odds", "items": cards},
+        {"k": "section", "t": "Coffre du boss"},
+        {"k": "droptable", "id": "rift_boss_chest", "rows": boss_rows},
+        {"k": "section", "t": "Coffre bonus (5, 9 et 14 portails)"},
+        {"k": "droptable", "id": "rift_bonus_chest",
+         "rows": chest_rows(d.get("bonusChest") or [], "Coffre bonus")},
+    ]
+
+
 _INFUSIONS = None
 
 
@@ -6434,6 +6632,10 @@ def _data_is_current():
     if not (ANALYSIS / "achievements.json").exists():
         print("[meter] achievements.json absent — regenerating for the "
               "Succès tab.", file=sys.stderr)
+        return False
+    if not (ANALYSIS / "rift_rewards.json").exists():
+        print("[meter] rift_rewards.json absent — regenerating for the rift "
+              "rewards.", file=sys.stderr)
         return False
     if not (ANALYSIS / "luck.json").exists():
         print("[meter] luck.json absent — regenerating for the luck "

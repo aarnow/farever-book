@@ -946,12 +946,18 @@ function refreshAchievements() {
                        function (v) { return v.add(8).readDouble(); })
             : {};
         const counters = countersOf(localHero);
-        const sig = localName + JSON.stringify([mine, account, counters]);
+        // the Soulwell's luck statuses (offerings), timed by the server clock
+        const luck = statusesOf(localHero, ["Luck_"]);
+        let now = null;
+        try { now = serverNowOf(localHero.add(OFF.Hero.layer).readPointer()); } catch (e) {}
+        const sig = localName + JSON.stringify([mine, account, counters,
+            luck.map(function (l) { return [l[0], l[1]]; })]);
         if (sig === achSig) return;
         achSig = sig;
         send({ kind: "achievements", hero: localName, done: mine,
                account: account,
-               counters: typeof counters === "object" ? counters : null });
+               counters: typeof counters === "object" ? counters : null,
+               luck: luck, now: now });
     } catch (e) {}
 }
 
