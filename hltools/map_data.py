@@ -32,10 +32,25 @@ CATEGORIES = {"WorldChest.prefab": "chest", "VaultChest.prefab": "vault",
               "Obelisk.prefab": "obelisk", "RespawnPoint.prefab": "respawn"}
 
 
+# Each point category's marker, by the game's own icon rows (icon sheet:
+# the map window's markers and completion icons).
+MARKER_ICONS = {"chest": "ChestCompletion", "vault": "VaultChestMarker",
+                "recipe": "RecipeChestMarker", "orb": "RedOrbCompletion",
+                "obelisk": "ObeliskMarker", "respawn": "RespawnPointMarker"}
+
+
 def build(game_dir, tile_dir=None):
     game_dir = Path(game_dir)
     cdb = json.loads(pak_extract.read_entry(game_dir / "res.light.pak",
                                             "data.cdb"))
+    if tile_dir is not None:
+        from collection_data import _images
+        icons = {ln["id"]: ln.get("gfx") for s in cdb["sheets"]
+                 if s["name"] == "icon" for ln in s["lines"]
+                 if isinstance(ln.get("id"), str)}
+        _images(game_dir, tile_dir,
+                {"icon_" + c: icons.get(i) for c, i in MARKER_ICONS.items()
+                 if icons.get(i)})
     zones = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "zone"
              for ln in s["lines"] if isinstance(ln.get("id"), str)}
 

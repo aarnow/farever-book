@@ -1304,7 +1304,8 @@ function buildMap(n) {
     world.appendChild(im);
   });
   vp.appendChild(world);
-  const marks = el('div', 'mmarks');
+  // with the progress read, what is still to get is greyed out
+  const marks = el('div', 'mmarks' + (n.known ? ' known' : ''));
   (n.points || []).forEach((p, i) => {
     const d = el('div', 'mk mk-' + p.c + (p.f ? ' found' : ''));
     d.dataset.i = i;
@@ -1328,6 +1329,23 @@ function mapTiles() {
     const src = window.__MAP__[im.dataset.key];
     if (src && !im.src) im.src = src;
   });
+  mapIcons();
+}
+
+/* The game's own markers (icon_<category> among the map pictures), as one
+   style rule each: they reach the points, the legend and the popup alike. */
+function mapIcons() {
+  let st = document.getElementById('mapicons');
+  if (!st) {
+    st = document.createElement('style');
+    st.id = 'mapicons';
+    document.head.appendChild(st);
+  }
+  st.textContent = Object.keys(window.__MAP__ || {})
+    .filter((k) => k.indexOf('icon_') === 0)
+    .map((k) => '.mk.mk-' + k.slice(5) + '{background:url(' + window.__MAP__[k]
+      + ') center/contain no-repeat;border:0;border-radius:0;clip-path:none}')
+    .join(' ');
 }
 
 function mapPanel(n) {
