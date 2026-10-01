@@ -8,6 +8,18 @@
 </head>
 <body>
 <div id="app">
+  <!-- The window's title bar, drawn by the page: it moves the window (a
+       double click maximises) and holds the window's buttons. -->
+  <div id="titlebar">
+    <span class="tb-icon" aria-hidden="true"></span>
+    <span class="tb-title">Farever France</span>
+    <span class="spacer"></span>
+    <div id="winctl">
+      <button type="button" data-win="min" title="Réduire"><svg viewBox="0 0 12 12"><path d="M2 6.5h8"/></svg></button>
+      <button type="button" data-win="max" title="Agrandir"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+      <button type="button" data-win="close" class="close" title="Fermer"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+    </div>
+  </div>
   <header id="top">
     <span class="emblem" aria-hidden="true"><i></i></span>
     <span class="brand">Farever <b>France</b></span>
@@ -25,6 +37,12 @@
 
   <main id="page"></main>
 </div>
+
+<!-- Grips on the window's edges and corners: the frame is the page's now. -->
+<div class="grip" data-edge="n"></div><div class="grip" data-edge="s"></div>
+<div class="grip" data-edge="w"></div><div class="grip" data-edge="e"></div>
+<div class="grip" data-edge="nw"></div><div class="grip" data-edge="ne"></div>
+<div class="grip" data-edge="sw"></div><div class="grip" data-edge="se"></div>
 
 <script>/*JS*/</script>
 </body>

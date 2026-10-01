@@ -641,6 +641,88 @@ function renderLink(l, shard) {
   box.appendChild(st);
 }
 
+/* The window's own frame: the title bar drags the window (a double click
+   maximises), the edges resize it, and the three buttons do what the native
+   caption's did. All through the host (menu_host.Api.win). */
+function winCall(action, arg) {
+  const api = window.pywebview && window.pywebview.api;
+  if (!api || !api.win) return Promise.resolve(false);
+  return api.win(action, arg === undefined ? null : arg);
+}
+
+function setMaxState(isMax) {
+  document.body.classList.toggle('maxed', !!isMax);
+  const b = document.querySelector('#winctl [data-win="max"]');
+  if (b) b.title = isMax ? 'Restaurer' : 'Agrandir';
+}
+
+/* Follow the mouse while a button is held, sending the host at most one
+   new rectangle per frame (and never a new one before the last is done):
+   the window keeps up without flooding the bridge. */
+function followMouse(e, place) {
+  winCall('rect').then((r) => {
+    if (!r) return;
+    const sx = e.screenX, sy = e.screenY;
+    let last = null, busy = false, frame = 0;
+    const flush = () => {
+      frame = 0;
+      if (!last || busy) return;
+      const want = last;
+      last = null;
+      busy = true;
+      winCall(want[0], want[1]).finally(() => { busy = false; if (last) flush(); });
+    };
+    const move = (ev) => {
+      last = place(r, ev.screenX - sx, ev.screenY - sy);
+      if (!frame) frame = requestAnimationFrame(flush);
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  });
+}
+
+const MIN_W = 720, MIN_H = 480;
+
+function resizePlace(edge) {
+  return (r, dx, dy) => {
+    let [x, y, w, h] = r;
+    if (edge.includes('e')) w = Math.max(MIN_W, r[2] + dx);
+    if (edge.includes('s')) h = Math.max(MIN_H, r[3] + dy);
+    if (edge.includes('w')) { w = Math.max(MIN_W, r[2] - dx); x = r[0] + r[2] - w; }
+    if (edge.includes('n')) { h = Math.max(MIN_H, r[3] - dy); y = r[1] + r[3] - h; }
+    return ['setrect', [x, y, w, h]];
+  };
+}
+
+function initWindowFrame() {
+  const top = $('#titlebar');
+  top.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || e.detail > 1) return;
+    if (e.target.closest('button')) return;
+    if (document.body.classList.contains('maxed')) return;
+    e.preventDefault();
+    followMouse(e, (r, dx, dy) => ['move', [r[0] + dx, r[1] + dy]]);
+  });
+  top.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button, a, input, select')) return;
+    winCall('max').then(setMaxState);
+  });
+  document.querySelectorAll('#winctl [data-win]').forEach((b) => {
+    b.addEventListener('click', () => winCall(b.dataset.win).then(setMaxState));
+  });
+  document.querySelectorAll('.grip').forEach((g) => {
+    g.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || document.body.classList.contains('maxed')) return;
+      e.preventDefault();
+      followMouse(e, resizePlace(g.dataset.edge));
+    });
+  });
+}
+
 /* ---- the state push ----------------------------------------------------- */
 /* Called by the host with a JSON *string*: the state carries player names,
    and interpolating those into a script expression would break the page the
@@ -689,6 +771,7 @@ function boot() {
   document.querySelectorAll('[data-act]').forEach((b) => {
     b.addEventListener('click', () => notify(b.dataset.act, {}));
   });
+  initWindowFrame();
   notify('boot', {});
 }
 

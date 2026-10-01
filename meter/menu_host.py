@@ -76,6 +76,13 @@ else:
 DEFAULT_W, DEFAULT_H = 1200, 800
 MIN_W, MIN_H = 720, 480
 SW_RESTORE = 9
+SW_MINIMIZE = 6
+# The window draws its own title bar (frameless). Moving and resizing are
+# driven by the page, which follows the mouse and asks for the new rectangle:
+# the system's own move / size loops never see the mouse, which WebView2 —
+# another process — holds captured while a button is down (measured
+# 2026-10-01: WM_SYSCOMMAND SC_MOVE did nothing).
+SWP_NOZORDER, SWP_NOACTIVATE, SWP_NOSIZE = 0x0004, 0x0010, 0x0001
 
 
 def _log(msg):
@@ -149,6 +156,7 @@ class Api:
 
     def __init__(self, pipe):
         self.pipe = pipe
+        self._host = None                   # private: pywebview walks public attributes
 
     def call(self, method, params=None):
         return self.pipe.call(method, params)
@@ -160,12 +168,20 @@ class Api:
     def typing(self, on):
         """Kept for the page's search boxes; nothing depends on it now."""
 
+    def win(self, action, arg=None):
+        """The page's own title bar: drag, resize from an edge, minimise,
+        maximise / restore, close. Returns whether the window is maximised."""
+        host = self._host
+        return host.win(action, arg) if host is not None else False
+
 
 class AppWindow:
     def __init__(self, pipe, geom):
         self.pipe = pipe
         self.api = Api(pipe)
+        self.api._host = self
         self.hwnd = 0
+        self._restore_rect = None          # set while maximised
         self._closing = False
         self._want = geom
         self._last_geom = None
@@ -177,7 +193,9 @@ class AppWindow:
             x=geom.get("x"), y=geom.get("y"),
             min_size=(MIN_W, MIN_H),
             resizable=True,
-            background_color="#15161C",
+            frameless=True,
+            easy_drag=False,
+            background_color="#211F3A",
             js_api=self.api,
         )
         self.window.events.moved += self._on_geom
@@ -224,6 +242,56 @@ class AppWindow:
             self._closing = True
             self._on_geom()
             self.pipe.send({"t": "closed"})
+
+    def win(self, action, arg=None):
+        u = ctypes.windll.user32
+        h = self.hwnd
+        if not h:
+            return False
+        if action == "rect":
+            got = _rect(h)
+            return list(got) if got else None
+        if action == "move" and arg and self._restore_rect is None:
+            u.SetWindowPos(h, 0, int(arg[0]), int(arg[1]), 0, 0,
+                           SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE)
+            return False
+        if action == "setrect" and arg and self._restore_rect is None:
+            x, y, w, hh = (int(v) for v in arg[:4])
+            u.SetWindowPos(h, 0, x, y, max(w, MIN_W), max(hh, MIN_H),
+                           SWP_NOZORDER | SWP_NOACTIVATE)
+            return False
+        if action == "min":
+            u.ShowWindow(h, SW_MINIMIZE)
+        elif action == "max":
+            self._toggle_max()
+        elif action == "close":
+            self._on_closing()
+            self.window.destroy()
+        return self._restore_rect is not None
+
+    def _toggle_max(self):
+        """Maximised to the monitor's work area (the taskbar stays visible —
+        a borderless window maximised by Windows would cover it), and back."""
+        u = ctypes.windll.user32
+        flags = 0x0004 | 0x0010                    # NOZORDER | NOACTIVATE
+        if self._restore_rect is not None:
+            x, y, w, hh = self._restore_rect
+            self._restore_rect = None
+            u.SetWindowPos(self.hwnd, 0, x, y, w, hh, flags)
+            return
+
+        class MONITORINFO(ctypes.Structure):
+            _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT),
+                        ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+        mon = u.MonitorFromWindow(self.hwnd, 2)    # MONITOR_DEFAULTTONEAREST
+        mi = MONITORINFO()
+        mi.cbSize = ctypes.sizeof(MONITORINFO)
+        if not u.GetMonitorInfoW(mon, ctypes.byref(mi)):
+            return
+        self._restore_rect = _rect(self.hwnd)
+        w = mi.rcWork
+        u.SetWindowPos(self.hwnd, 0, w.left, w.top, w.right - w.left,
+                       w.bottom - w.top, flags)
 
     def show(self):
         if not self.hwnd:
