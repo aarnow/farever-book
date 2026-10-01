@@ -9,6 +9,8 @@ page by menu_host, nothing loaded at runtime).
     UI/icons/gear_slots.png           54 px cells: an empty slot's outline
     UI/icons/atlas_characterSheet_statsIcons_28PX.png
                                       28 px cells: the attributes' icons
+    UI/icons/ui_icons_26PX.png        26 px cells: the 8th is a gear
+                                      upgrade's pip
 
 Usage: python build_charsheet_art.py [--pak PATH]
 """
@@ -57,6 +59,9 @@ def main():
     for i, name in enumerate(STAT_CELLS):
         stats.crop((i * 28, 0, i * 28 + 28, 28)) \
              .save(OUT / f"stat_{name}.png", optimize=True)
+    pips = img("UI/icons/ui_icons_26PX.png")
+    pips.crop((7 * 26, 0, 8 * 26, 26)).save(OUT / "upgrade_pip.png",
+                                            optimize=True)
     print(f"written to {OUT}")
 
 

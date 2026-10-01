@@ -2098,13 +2098,29 @@ function charSheet(o) {
   (sh.left || []).forEach((c) => colL.appendChild(slotEl(c, c.slot)));
   const colR = el('div', 'scol');
   (sh.right || []).forEach((c) => colR.appendChild(slotEl(c, c.slot)));
-  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : ''));
-  if (SHEET_ART['banner_' + o.ck]) hero.appendChild(artImg('banner_' + o.ck, 'hban'));
-  const hid = el('div', 'hid');
-  if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
-  hid.appendChild(el('b', 'hn', o.n));
-  hid.appendChild(el('span', 'hl', o.cls + ' · niveau ' + (o.lvl || '?')));
-  hero.appendChild(hid);
+  // the hero, or the picked piece in its place
+  const all = {};
+  (sh.left || []).concat(sh.right || []).forEach((c) => { all[c.slot] = c.g; });
+  (sh.weapons || []).forEach((w, i) => { all['w' + i] = w.g; });
+  if (sh.arsenal) all.ars = sh.arsenal.g;
+  const picked = pick ? all[pick] : null;
+  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : '') + (picked ? ' detail' : ''));
+  if (picked) {
+    const x = el('button', 'hclose', '×');
+    x.type = 'button';
+    x.title = 'Revenir au personnage';
+    x.addEventListener('click', () => { CHAR_PICK = null; box.replaceWith(charSheet(o)); });
+    hero.appendChild(x);
+    hero.appendChild(gearRow(picked));
+  } else {
+    if (SHEET_ART['banner_' + o.ck]) hero.appendChild(artImg('banner_' + o.ck, 'hban'));
+    const hid = el('div', 'hid');
+    if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
+    hid.appendChild(el('b', 'hn', o.n));
+    hid.appendChild(el('span', 'hl', o.cls + ' · niveau ' + (o.lvl || '?')));
+    hid.appendChild(el('span', 'hhint', 'Clique sur une pièce pour voir son détail ici.'));
+    hero.appendChild(hid);
+  }
   doll.appendChild(colL);
   doll.appendChild(hero);
   doll.appendChild(colR);
@@ -2136,19 +2152,6 @@ function charSheet(o) {
   wrap.appendChild(arms);
   box.appendChild(wrap);
 
-  // the picked piece, in full
-  const all = {};
-  (sh.left || []).concat(sh.right || []).forEach((c) => { all[c.slot] = c.g; });
-  (sh.weapons || []).forEach((w, i) => { all['w' + i] = w.g; });
-  if (sh.arsenal) all.ars = sh.arsenal.g;
-  const g = pick ? all[pick] : null;
-  if (g) {
-    const d = el('div', 'gearlist one');
-    d.appendChild(gearRow(g));
-    box.appendChild(d);
-  } else {
-    box.appendChild(el('p', 'note sheethint', 'Clique sur une pièce d’équipement pour voir son détail (augmentations, imprégnation…).'));
-  }
   return box;
 }
 
@@ -2165,7 +2168,15 @@ function gearRow(g) {
   const gt = el('div', 'gt');
   gt.appendChild(el('b', 'nm', g.name));
   gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
-  if (g.up) gt.appendChild(el('span', 'stars', '◆'.repeat(g.up)));
+  if (g.up) {
+    const pips = el('span', 'stars');
+    pips.title = 'Amélioration ' + g.up;
+    for (let i = 0; i < g.up; i++) {
+      if (SHEET_ART.upgrade_pip) pips.appendChild(artImg('upgrade_pip', 'pip'));
+      else pips.appendChild(document.createTextNode('◆'));
+    }
+    gt.appendChild(pips);
+  }
   (g.extras || []).forEach((x2) => {
     const line = el('span', 'gx ' + x2.k);
     line.appendChild(el('b', null, x2.name));

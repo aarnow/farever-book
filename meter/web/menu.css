@@ -1549,3 +1549,21 @@ body.maxed .grip { display: none; }
 @media (max-width: 1100px) {
   .sheet { grid-template-columns: 1fr; }
 }
+
+/* Inspecter: a picked piece shown in the hero's place */
+.shero .hhint { color: var(--dim); font-size: 11px; margin-top: 6px; }
+.shero.detail { justify-content: flex-start; overflow-y: auto; }
+.shero .hclose { position: absolute; top: 8px; right: 8px; z-index: 2; width: 28px; height: 28px;
+                 border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2);
+                 color: #fff; font-size: 18px; line-height: 1; cursor: pointer; padding: 0; }
+.shero .hclose:hover { border-color: var(--accent); }
+.shero.detail .gear { flex-direction: column; align-items: center; text-align: center;
+                      background: transparent; border: 0; padding: 26px 18px 18px; gap: 12px; }
+.shero.detail .gear .gi { width: 96px; height: 96px; border-radius: 12px; border-width: 2px; }
+.shero.detail .gear .gt { align-items: center; gap: 6px; width: 100%; }
+.shero.detail .gear .gt .nm { white-space: normal; font-family: var(--font-head); font-size: 18px; }
+.shero.detail .gear .gx { display: block; width: 100%; text-align: left; padding: 7px 10px;
+                          border-radius: 8px; background: var(--bg-2); line-height: 1.4; }
+.gear .stars { display: inline-flex; gap: 2px; align-items: center; }
+.gear .stars .pip { width: 16px; height: 16px; }
+.shero.detail .gear .stars .pip { width: 22px; height: 22px; }
