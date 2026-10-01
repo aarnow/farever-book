@@ -25,11 +25,22 @@ import hbson
 import pak_extract
 
 CATEGORIES = (("mounts", "Mount"), ("gliders", "GearGlider"))
-# itemType.flags: AppearanceCollection — the armour pieces the game's
-# appearance collection (Collection.gears) counts
-APPEARANCE_FLAG = 32
-# item.flags: WorldLoot — dropped at random around its level, anywhere
-WORLD_LOOT_FLAG = 2
+# Flags read by name: their bits move when a patch edits the enum (the
+# 2026-09-30 one dropped itemType's Equippable, AppearanceCollection 32 -> 16).
+# itemType.flags AppearanceCollection: the armour pieces the game's appearance
+# collection (Collection.gears) counts. item.flags WorldLoot: dropped at
+# random around its level, anywhere.
+
+
+def flag_bit(sheets, sheet, name, column="flags"):
+    """The bit of one flag of a cdb flags column, from its definition
+    ("10:NoStack,NoAutoDisplay,..."); 0 when the flag is gone."""
+    for c in sheets[sheet]["columns"]:
+        if c.get("name") == column and isinstance(c.get("typeStr"), str):
+            names = c["typeStr"].split(":", 1)[-1].split(",")
+            if name in names:
+                return 1 << names.index(name)
+    return 0
 # the factions whose gear their activities and chests give
 # (constant Loot_FactionDropRate: Activity 20 %, Element 5 %, Foes 0)
 FACTIONS = ("Bee", "Crimson", "Demon", "Kobold", "Manfish")
@@ -93,12 +104,14 @@ def build(game_dir, img_dir=None):
     wanted = {cat: [iid for iid, r in items.items() if r.get("type") == t]
               for cat, t in CATEGORIES}
     itypes = rows("itemType")
+    appearance_flag = flag_bit(sheets, "itemType", "AppearanceCollection")
+    world_loot_flag = flag_bit(sheets, "item", "WorldLoot")
 
     def appearance(t):
         seen = set()
         while t in itypes and t not in seen:
             seen.add(t)
-            if (itypes[t].get("flags") or 0) & APPEARANCE_FLAG:
+            if (itypes[t].get("flags") or 0) & appearance_flag:
                 return True
             t = itypes[t].get("inherit")
         return False
@@ -172,9 +185,15 @@ def build(game_dir, img_dir=None):
                     iid = s.get("item") if isinstance(s, dict) else None
                     pet = iid[len("Critter_"):] if iid and \
                         iid.startswith("Critter_") else None
-                    cost = [{"item": c.get("item"), "n": c.get("qty")
-                             or c.get("count") or c.get("amount")}
-                            for c in s.get("cost") or () if isinstance(c, dict)]
+                    # {item, qty} before the 2026-09-30 patch, {kind, amount}
+                    # (kind: a currency or an item) since
+                    cost = [{"item": c.get("item") or c.get("kind"),
+                             "n": c.get("qty") or c.get("count")
+                             or c.get("amount")}
+                            for c in s.get("cost") or () if isinstance(c, dict)
+                            # "1 Gold" is a placeholder (the game prices it)
+                            and not (c.get("kind") == "Gold"
+                                     and (c.get("amount") or 1) <= 1)]
                     entry = {"k": "shop", "npc": npc or o.get("name"),
                              "zone": zone, "cost": cost}
                     if iid in collectible:
@@ -244,7 +263,7 @@ def build(game_dir, img_dir=None):
         row = items[iid]
         if row.get("faction") in FACTIONS:
             add(iid, {"k": "faction", "f": row["faction"]})
-        elif (row.get("flags") or 0) & WORLD_LOOT_FLAG:
+        elif (row.get("flags") or 0) & world_loot_flag:
             add(iid, {"k": "world", "lvl": row.get("level") or 1})
 
     def entry(iid, row):

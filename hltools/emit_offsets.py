@@ -22,6 +22,14 @@ _OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT = _OUT_DIR / "meter_offsets.json"
 
 
+# (class, the name the hook uses) -> the field's name since a patch renamed it
+FIELD_RENAMES = {
+    # 2026-09-30 patch
+    ("st.skill.DamageResult", "baseSkill"): "skill",
+    ("st.skill.HitData", "baseSkill"): "skill",
+}
+
+
 def main():
     hlboot = find_hlboot()
     print(f"[*] parsing {hlboot}")
@@ -30,7 +38,12 @@ def main():
               if t.kind in (HOBJ, HSTRUCT) and t.name}
 
     def offs(name):
-        return code.field_offsets(byname[name].index)
+        f = code.field_offsets(byname[name].index)
+        # Fields a patch renamed keep the name the hook reads them by.
+        for (cls, old), new in FIELD_RENAMES.items():
+            if cls == name and old not in f and new in f:
+                f[old] = f[new]
+        return f
 
     def descendants(root):
         """Every class that inherits from `root`, itself included.
@@ -121,8 +134,13 @@ def main():
             f"st.Inventory.content@{inv['content'][0]} — the containers no "
             "longer share a layout; fix the inventory sweep before shipping.")
 
-    # skill display-name chain: BaseSkill.inf (virtual #963) -> texts (#973) -> name
-    row = code.types[963]
+    # skill display-name chain: BaseSkill.inf (a virtual) -> texts -> name.
+    # The virtual is found through the field's own type: its index moves with
+    # every patch (#963 before the 2026-09-30 one).
+    inf_ti = next(f.type_index
+                  for t in code._super_chain(byname["st.skill.BaseSkill"].index)
+                  for f in getattr(t, "fields", ()) if f.name == "inf")
+    row = code.types[inf_ti]
     texts_ti = next(f.type_index for f in row.vfields if f.name == "texts")
     texts = code.types[texts_ti]
     vidx = lambda vt, nm: next(i for i, f in enumerate(vt.vfields) if f.name == nm)

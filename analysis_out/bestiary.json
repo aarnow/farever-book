@@ -74,6 +74,7 @@
 "Z1_BelEtir_Islets",
 "Z1_BelEtir_NuonCave",
 "Z1_BelEtir_Ruins",
+"Z2_Krisomal_Castle",
 "Z2_Krisomal_Cliff",
 "Z2_Krisomal_Hill",
 "Z2_Krisomal_Lighthouse",
@@ -105,7 +106,7 @@
 "tier": "foe",
 "zones": [
 "Z1_Honeywoods_Canopy",
-"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Cave_Shore",
 "Z1_Honeywoods_Foliage",
 "Z1_Honeywoods_Root"
 ],
@@ -119,7 +120,7 @@
 "family": "Bee",
 "tier": "foe",
 "zones": [
-"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Cave_Shore",
 "Z1_Honeywoods_Foliage",
 "Z1_Honeywoods_Isle",
 "Z1_Honeywoods_Root"
@@ -195,7 +196,7 @@
 "tier": "foe",
 "zones": [
 "Z1_Honeywoods_Canopy",
-"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Cave_Shore",
 "Z1_Honeywoods_Foliage",
 "Z1_Honeywoods_Root"
 ],
@@ -209,7 +210,7 @@
 "family": "Bee",
 "tier": "elite",
 "zones": [
-"Z1_Honeywoods_Isle"
+"Z1_Honeywoods_Isle_Cave"
 ],
 "regions": [
 "Z1_Region"
@@ -248,7 +249,7 @@
 "tier": "foe",
 "zones": [
 "Z1_Honeywoods_Canopy",
-"Z1_Honeywoods_Cave",
+"Z1_Honeywoods_Cave_Shore",
 "Z1_Honeywoods_Foliage",
 "Z1_Honeywoods_Root"
 ],
@@ -379,7 +380,7 @@
 "family": "Crab",
 "tier": "elite",
 "zones": [
-"Z1_Meridion_Bay"
+"Z1_Meridion_Bay_Cave"
 ],
 "regions": [
 "Z1_Region"
@@ -537,7 +538,7 @@
 "family": "Golem",
 "tier": "foe",
 "zones": [
-"Z1_Primevalley_Island"
+"Z1_Primevalley_Island_Cave"
 ],
 "regions": [
 "Z1_Region"
@@ -549,8 +550,8 @@
 "family": "Golem",
 "tier": "foe",
 "zones": [
-"Z1_Primevalley_Coast",
-"Z1_Primevalley_Island"
+"Z1_Primevalley_Island",
+"Z1_Primevalley_Vault"
 ],
 "regions": [
 "Z1_Region"
@@ -1039,7 +1040,7 @@
 "family": "Slime",
 "tier": "foe",
 "zones": [
-"Z1_Honeywoods_Isle"
+"Z1_Honeywoods_Isle_Cave"
 ],
 "regions": [
 "Z1_Region"
@@ -1117,6 +1118,7 @@
 "zones": [
 "Z2_Nescent_Flowers",
 "Z2_Nescent_Hive",
+"Z2_Nescent_Hive_Cave",
 "Z2_Nescent_Trunk"
 ],
 "regions": [
@@ -1141,7 +1143,7 @@
 "family": "Bee",
 "tier": "foe",
 "zones": [
-"Z2_Nescent_Hive"
+"Z2_Nescent_Hive_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1155,6 +1157,7 @@
 "zones": [
 "Z2_Nescent_Flowers",
 "Z2_Nescent_Hive",
+"Z2_Nescent_Hive_Cave",
 "Z2_Nescent_Trunk"
 ],
 "regions": [
@@ -1191,7 +1194,7 @@
 "family": "Bee",
 "tier": "big",
 "zones": [
-"Z2_Nescent_Hive"
+"Z2_Nescent_Hive_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1203,7 +1206,7 @@
 "family": "Bee",
 "tier": "big",
 "zones": [
-"Z2_Nescent_Hive"
+"Z2_Nescent_Hive_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1217,6 +1220,7 @@
 "zones": [
 "Z2_Nescent_Flowers",
 "Z2_Nescent_Hive",
+"Z2_Nescent_Hive_Cave",
 "Z2_Nescent_Trunk"
 ],
 "regions": [
@@ -1598,7 +1602,7 @@
 "family": "FireGolems",
 "tier": "foe",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1634,7 +1638,7 @@
 "family": "FireGolems",
 "tier": "foe",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1658,7 +1662,7 @@
 "family": "FireGolems",
 "tier": "elite",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1754,7 +1758,7 @@
 "family": "Kobold",
 "tier": "foe",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1766,7 +1770,7 @@
 "family": "Kobold",
 "tier": "foe",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1778,7 +1782,7 @@
 "family": "Kobold",
 "tier": "foe",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1790,7 +1794,7 @@
 "family": "Kobold",
 "tier": "elite",
 "zones": [
-"Z2_Region"
+"Z2_Eksod_Kobolds"
 ],
 "regions": [
 "Z2_Region"
@@ -1802,7 +1806,7 @@
 "family": "Kobold",
 "tier": "big",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -1814,7 +1818,7 @@
 "family": "Kobold",
 "tier": "big",
 "zones": [
-"Z2_Eksod_Kobolds"
+"Z2_Eksod_Kobolds_Cave"
 ],
 "regions": [
 "Z2_Region"
@@ -2423,7 +2427,7 @@
 "family": "Crimson",
 "tier": "foe",
 "zones": [
-"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Cathedral_Interior",
 "Z3_CrimsonIsland_Library"
 ],
 "regions": [
@@ -2436,7 +2440,7 @@
 "family": "Crimson",
 "tier": "elite",
 "zones": [
-"Z3_CrimsonIsland_Cathedral"
+"Z3_CrimsonIsland_Cathedral_Interior"
 ],
 "regions": [
 "Z3_Region"
@@ -2498,6 +2502,7 @@
 "tier": "foe",
 "zones": [
 "Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Cathedral_Interior",
 "Z3_CrimsonIsland_Library",
 "Z3_CrimsonIsland_Prison"
 ],
@@ -2535,7 +2540,7 @@
 "family": "Crimson",
 "tier": "foe",
 "zones": [
-"Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Cathedral_Interior",
 "Z3_CrimsonIsland_Library"
 ],
 "regions": [
@@ -2548,7 +2553,7 @@
 "family": "Crimson",
 "tier": "foe",
 "zones": [
-"Z3_CrimsonIsland_Cathedral"
+"Z3_CrimsonIsland_Cathedral_Interior"
 ],
 "regions": [
 "Z3_Region"
@@ -2560,7 +2565,7 @@
 "family": "Crimson",
 "tier": "foe",
 "zones": [
-"Z3_CrimsonIsland_Cathedral"
+"Z3_CrimsonIsland_Cathedral_Interior"
 ],
 "regions": [
 "Z3_Region"
@@ -2572,7 +2577,7 @@
 "family": "Crimson",
 "tier": "foe",
 "zones": [
-"Z3_CrimsonIsland_Cathedral"
+"Z3_CrimsonIsland_Cathedral_Interior"
 ],
 "regions": [
 "Z3_Region"
@@ -2622,6 +2627,7 @@
 "tier": "foe",
 "zones": [
 "Z3_CrimsonIsland_Cathedral",
+"Z3_CrimsonIsland_Cathedral_Interior",
 "Z3_CrimsonIsland_Library",
 "Z3_CrimsonIsland_Prison",
 "Z3_CrimsonIsland_South"
@@ -3117,6 +3123,36 @@
 "tier": "foe",
 "region": ""
 },
+"Nightling_Infusion_Tank": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"Nightling_Infusion_DPS": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"WanderingMerchant": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"HildaLambert": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"StableMaster": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
+"ProfessionTrainer": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
 "DemonHunterRumi": {
 "family": "Human",
 "tier": "foe",
@@ -3132,12 +3168,12 @@
 "tier": "foe",
 "region": ""
 },
-"Abigail": {
+"MedalogGloryTrader": {
 "family": "Human",
 "tier": "foe",
 "region": ""
 },
-"HildaLambert": {
+"Abigail": {
 "family": "Human",
 "tier": "foe",
 "region": ""
@@ -4842,11 +4878,6 @@
 "tier": "foe",
 "region": "rift"
 },
-"ChaoticPortalPhrixes": {
-"family": "Human",
-"tier": "foe",
-"region": "rift"
-},
 "Nepsilon": {
 "family": "Manfish",
 "tier": "elite",
@@ -4872,6 +4903,11 @@
 "tier": "foe",
 "region": ""
 },
+"Crab_Crabgantua_Summon_Heroic": {
+"family": "Crab",
+"tier": "foe",
+"region": ""
+},
 "MunsterChuck": {
 "family": "Kobold",
 "tier": "elite",
@@ -4885,6 +4921,11 @@
 "Bees_Mokshi": {
 "family": "Bee",
 "tier": "foe",
+"region": ""
+},
+"Mokshi_Heroic_Summon": {
+"family": "Bee",
+"tier": "big",
 "region": ""
 },
 "SpongeBlob": {
@@ -4907,6 +4948,31 @@
 "tier": "elite",
 "region": ""
 },
+"Phrixes_Crawler": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"Phrixes_NightGod": {
+"family": "Demon_Rift",
+"tier": "elite",
+"region": ""
+},
+"Phrixes_NightGod_NL": {
+"family": "Demon",
+"tier": "foe",
+"region": ""
+},
+"Phrixes_ChaoticPortal": {
+"family": "Human",
+"tier": "foe",
+"region": "rift"
+},
+"Phrixes_NightGodGate": {
+"family": "Human",
+"tier": "foe",
+"region": ""
+},
 "Ulserous": {
 "family": "Human",
 "tier": "elite",
@@ -4920,6 +4986,11 @@
 "Cleodora": {
 "family": "Bee",
 "tier": "elite",
+"region": ""
+},
+"Queenslayer": {
+"family": "Bee",
+"tier": "foe",
 "region": ""
 },
 "Cleodora_ChampionEgg": {
@@ -4938,6 +5009,11 @@
 "region": ""
 },
 "Cleodora_Champion3": {
+"family": "Bee",
+"tier": "foe",
+"region": ""
+},
+"Cleodora_Heroic_Dark_Champion": {
 "family": "Bee",
 "tier": "foe",
 "region": ""

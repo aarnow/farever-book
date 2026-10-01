@@ -332,7 +332,7 @@
 "max": 1
 },
 {
-"s": "Rogue_Talent_VenomInfusion",
+"s": "Rogue_Talent_NoxiousStrategem",
 "tier": 2,
 "branch": "Center",
 "max": 2
@@ -344,13 +344,13 @@
 "max": 2
 },
 {
-"s": "Rogue_Talent_IntentToKill",
+"s": "Rogue_Talent_VenomInfusion",
 "tier": 3,
 "branch": "Center",
 "max": 1
 },
 {
-"s": "Rogue_Talent_NoxiousStrategem",
+"s": "Rogue_Talent_IntentToKill",
 "tier": 3,
 "branch": "Center",
 "max": 2
@@ -368,13 +368,13 @@
 "max": 1
 },
 {
-"s": "Rogue_Talent_Adrenaline",
+"s": "Rogue_Talent_Footwork",
 "tier": 1,
 "branch": "Right",
 "max": 1
 },
 {
-"s": "Rogue_Talent_Footwork",
+"s": "Rogue_Talent_Adrenaline",
 "tier": 2,
 "branch": "Right",
 "max": 2
@@ -386,19 +386,19 @@
 "max": 2
 },
 {
-"s": "Rogue_Talent_CripplingPoison",
+"s": "Rogue_Talent_RegeneratingMiasmas",
 "tier": 3,
 "branch": "Right",
 "max": 1
 },
 {
-"s": "Rogue_Talent_AtrophicPoison",
+"s": "Rogue_Talent_CripplingPoison",
 "tier": 3,
 "branch": "Right",
 "max": 2
 },
 {
-"s": "Rogue_Talent_RegeneratingMiasmas",
+"s": "Rogue_Talent_AtrophicPoison",
 "tier": 3,
 "branch": "Right",
 "max": 2

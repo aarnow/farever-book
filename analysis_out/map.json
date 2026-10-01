@@ -511,7 +511,7 @@
 "id": "W1_Siagarta_WorldChest_34",
 "x": 1302.1,
 "y": 1100.8,
-"zone": "Z2_Krisomal_North",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -543,7 +543,7 @@
 "id": "RedOrb_World_192",
 "x": 1342.7,
 "y": 1094.7,
-"zone": "Z2_Krisomal_North",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -551,7 +551,7 @@
 "id": "RedOrb_World_181",
 "x": 1342.7,
 "y": 1091.7,
-"zone": "Z2_Krisomal_North",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -559,7 +559,7 @@
 "id": "RedOrb_World_130",
 "x": 1343.8,
 "y": 1168.5,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -567,7 +567,7 @@
 "id": "RedOrb_World_131",
 "x": 1337.8,
 "y": 1168.5,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -575,7 +575,7 @@
 "id": "RedOrb_World_132",
 "x": 1331.3,
 "y": 1168.5,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -583,7 +583,7 @@
 "id": "RedOrb_World_166",
 "x": 1284.2,
 "y": 1226.3,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -591,7 +591,7 @@
 "id": "Recipe_Chest_Root_17",
 "x": 1293.9,
 "y": 1265.3,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -599,7 +599,7 @@
 "id": "W1_Siagarta_WorldChest_30",
 "x": 1287.0,
 "y": 1348.9,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -719,7 +719,7 @@
 "id": "W1_Siagarta_WorldChest_35",
 "x": 1413.8,
 "y": 1236.6,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -727,7 +727,7 @@
 "id": "RedOrb_World_129",
 "x": 1350.8,
 "y": 1168.5,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -735,7 +735,7 @@
 "id": "W1_Siagarta_WorldChest_32",
 "x": 1422.0,
 "y": 1363.5,
-"zone": "Z2_Krisomal_South",
+"zone": "Z2_Krisomal_Castle",
 "region": "Z2_Region"
 },
 {
@@ -1071,7 +1071,7 @@
 "id": "W1_Siagarta_WorldChest_8",
 "x": 23.5,
 "y": 1148.8,
-"zone": "Z1_Primevalley_Coast",
+"zone": "Z1_Primevalley_Vault",
 "region": "Z1_Region"
 },
 {
@@ -1087,7 +1087,7 @@
 "id": "RedOrb_World_26",
 "x": 58.8,
 "y": 1175.0,
-"zone": "Z1_Primevalley_Island",
+"zone": "Z1_Primevalley_Island_Cave",
 "region": "Z1_Region"
 },
 {
@@ -1215,7 +1215,7 @@
 "id": "RedOrb_World_106",
 "x": 1956.6,
 "y": 147.2,
-"zone": "Z2_Nescent_Hive",
+"zone": "Z2_Nescent_Hive_Cave",
 "region": "Z2_Region"
 },
 {
@@ -1223,7 +1223,7 @@
 "id": "W1_Siagarta_WorldChest_13",
 "x": 1980.2,
 "y": 111.2,
-"zone": "Z2_Nescent_Hive",
+"zone": "Z2_Nescent_Hive_Cave",
 "region": "Z2_Region"
 },
 {
@@ -1247,7 +1247,7 @@
 "id": "RedOrb_World_107",
 "x": 2008.1,
 "y": 210.2,
-"zone": "Z2_Nescent_Hive",
+"zone": "Z2_Nescent_Hive_Cave",
 "region": "Z2_Region"
 },
 {
@@ -1255,7 +1255,7 @@
 "id": "RedOrb_World_155",
 "x": 1960.4,
 "y": 197.1,
-"zone": "Z2_Nescent_Hive",
+"zone": "Z2_Nescent_Hive_Cave",
 "region": "Z2_Region"
 },
 {
@@ -1263,7 +1263,7 @@
 "id": "RedOrb_World_116",
 "x": 1998.7,
 "y": 222.5,
-"zone": "Z2_Nescent_Hive",
+"zone": "Z2_Nescent_Hive_Cave",
 "region": "Z2_Region"
 },
 {
@@ -1359,7 +1359,7 @@
 "id": "RedOrb_World_101",
 "x": 2035.8,
 "y": 192.7,
-"zone": "Z2_Nescent_Hive",
+"zone": "Z2_Nescent_Hive_Cave",
 "region": "Z2_Region"
 },
 {
@@ -1975,7 +1975,7 @@
 "id": "Z1_World_Greenlands_WorldChest_13",
 "x": 532.5,
 "y": -982.7,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2087,7 +2087,7 @@
 "id": "Z1_World_Greenlands_WorldChest_12",
 "x": 543.7,
 "y": -752.5,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2095,7 +2095,7 @@
 "id": "Z1_World_Greenlands_WorldChest_16",
 "x": 520.8,
 "y": -752.0,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2111,7 +2111,7 @@
 "id": "RedOrb_World_273",
 "x": 532.7,
 "y": -753.3,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2119,7 +2119,7 @@
 "id": "RedOrb_World_274",
 "x": 555.3,
 "y": -756.0,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2127,7 +2127,7 @@
 "id": "RedOrb_World_275",
 "x": 509.1,
 "y": -755.7,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2175,7 +2175,7 @@
 "id": "Recipe_Chest_Root_21",
 "x": 558.1,
 "y": -901.2,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2239,7 +2239,7 @@
 "id": "RedOrb_World_271",
 "x": 516.6,
 "y": -955.8,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2247,7 +2247,7 @@
 "id": "RedOrb_World_272",
 "x": 548.4,
 "y": -955.8,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2255,7 +2255,7 @@
 "id": "RedOrb_World_283",
 "x": 482.5,
 "y": -909.0,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2391,7 +2391,7 @@
 "id": "RedOrb_World_284",
 "x": 582.8,
 "y": -909.6,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -2695,7 +2695,7 @@
 "id": "RedOrb_World_34",
 "x": -1047.5,
 "y": 760.3,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2703,7 +2703,7 @@
 "id": "RedOrb_World_42",
 "x": -1030.8,
 "y": 767.4,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2775,7 +2775,7 @@
 "id": "RedOrb_World_33",
 "x": -1071.0,
 "y": 647.8,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2783,7 +2783,7 @@
 "id": "RedOrb_World_57",
 "x": -1058.4,
 "y": 741.9,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2847,7 +2847,7 @@
 "id": "RedOrb_World_88",
 "x": -1337.8,
 "y": 837.3,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2855,7 +2855,7 @@
 "id": "RedOrb_World_89",
 "x": -1333.0,
 "y": 842.5,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2863,7 +2863,7 @@
 "id": "RedOrb_World_91",
 "x": -1340.4,
 "y": 843.7,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
@@ -2919,7 +2919,7 @@
 "id": "RedOrb_World_53",
 "x": -109.5,
 "y": 1315.6,
-"zone": "Z1_Primevalley_Coast",
+"zone": "Z1_Primevalley_Vault",
 "region": "Z1_Region"
 },
 {
@@ -2927,7 +2927,7 @@
 "id": "RedOrb_World_63",
 "x": -120.5,
 "y": 1308.1,
-"zone": "Z1_Primevalley_Coast",
+"zone": "Z1_Primevalley_Vault",
 "region": "Z1_Region"
 },
 {
@@ -2935,7 +2935,7 @@
 "id": "RedOrb_World_82",
 "x": -109.5,
 "y": 1300.1,
-"zone": "Z1_Primevalley_Coast",
+"zone": "Z1_Primevalley_Vault",
 "region": "Z1_Region"
 },
 {
@@ -2943,7 +2943,7 @@
 "id": "VaultChest_1",
 "x": -114.1,
 "y": 1308.0,
-"zone": "Z1_Primevalley_Coast",
+"zone": "Z1_Primevalley_Vault",
 "region": "Z1_Region"
 },
 {
@@ -3767,7 +3767,7 @@
 "id": "Z1_World_Greenlands_RespawnPoint_36",
 "x": 679.7,
 "y": -887.9,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -3783,7 +3783,7 @@
 "id": "W1_Siagarta_RespawnPoint_3",
 "x": 390.7,
 "y": -898.1,
-"zone": "Z3_CrimsonIsland_Cathedral",
+"zone": "Z3_CrimsonIsland_Cathedral_Interior",
 "region": "Z3_Region"
 },
 {
@@ -3919,7 +3919,7 @@
 "id": "Z1_World_Greenlands_RespawnPoint_7",
 "x": -1317.0,
 "y": 852.2,
-"zone": "Z1_Honeywoods_Cave",
+"zone": "Z1_Honeywoods_Cave_Shore",
 "region": "Z1_Region"
 },
 {
