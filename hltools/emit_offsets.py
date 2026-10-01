@@ -925,15 +925,23 @@ def dungeon_loot(boss, item_rows, tables):
       DungeonCrate: spark shards, the quantity by level.
     * The faction's armour set: in no table, rolled by the game's code
       (st.Player.dropFactionLoot) — so no chance is known.
-    Each entry: {item, type, rarity, apt, src, chance (0..1 or None), qty}."""
-    def entry(iid, src, chance, qty=None):
+    A line can require a difficulty (conditions.difficulty.min: since the
+    2026-09-30 patch the bosses' infusion pattern, Heroic only): `diff`.
+    Each entry: {item, type, rarity, apt, src, chance (0..1 or None), qty,
+    diff}."""
+    def min_diff(ln):
+        m = (((ln.get("conditions") or {}).get("difficulty") or {})
+             .get("min"))
+        return m[0] if isinstance(m, list) and m else None
+
+    def entry(iid, src, chance, qty=None, diff=None):
         row = item_rows.get(iid) or {}
         return {"item": iid, "type": row.get("type") or "",
                 "rarity": row.get("rarity") or "",
                 "apt": [APTITUDE_CLASS[a["ref"]]
                         for a in row.get("aptitudes") or ()
                         if a.get("ref") in APTITUDE_CLASS],
-                "src": src, "chance": chance, "qty": qty}
+                "src": src, "chance": chance, "qty": qty, "diff": diff}
 
     out = []
     props = boss.get("props") or {}
@@ -943,9 +951,11 @@ def dungeon_loot(boss, item_rows, tables):
         if (t.get("flags") or 0) & 1:
             total = sum(float(ln.get("proba") or 0) for ln in lines) or 1.0
             out += [entry(ln["item"], "coffre",
-                          float(ln.get("proba") or 0) / total) for ln in lines]
+                          float(ln.get("proba") or 0) / total,
+                          diff=min_diff(ln)) for ln in lines]
         else:
-            out += [entry(ln["item"], "boss", float(ln.get("proba") or 0))
+            out += [entry(ln["item"], "boss", float(ln.get("proba") or 0),
+                          diff=min_diff(ln))
                     for ln in lines]
     faction = boss.get("faction")
     if faction:

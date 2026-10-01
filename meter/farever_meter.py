@@ -3985,10 +3985,12 @@ class App:
                          "D'après les données du jeu. Le coffre de fin donne "
                          "une des armes du boss (tirée au hasard), des "
                          "fragments d'Étincelle selon ton niveau, et une "
-                         "pièce de l'armure de la faction, dont le jeu ne "
-                         "publie pas les chances. La mort du boss peut en "
-                         "plus donner un objet rare. « Obtenu » compte ce que "
-                         "tes runs ont rapporté."},
+                         "pièce de l'armure de la faction, rare ou épique, "
+                         "dont le jeu ne publie pas les chances. La mort du "
+                         "boss peut en plus donner un objet rare et, en "
+                         "Héroïque, donne toujours le patron d'imprégnation "
+                         "du donjon. « Obtenu » compte ce que tes runs ont "
+                         "rapporté."},
                         {"k": "droptable", "id": "dungeon_drops",
                          "rows": droptable_view(dg, got)}]
             return out
@@ -4018,20 +4020,29 @@ class App:
                      for e in dg.get("loot") or ()
                      if e.get("src") in ("coffre", "boss")
                      and e.get("chance") is not None and e["chance"] < 1]
-            armour = [e for e in dg.get("loot") or ()
-                      if e.get("src") == "faction"]
-            if armour:
-                icons.append({"img": item_icon(armour[0]["item"]),
-                              "n": len(armour),
-                              "tip": f"Armure de faction : {len(armour)} "
-                                     "pièces possibles"})
+            # the boss's infusion pattern (guaranteed, Heroic only)
+            icons += [{"img": item_icon(e["item"]),
+                       "tip": f"{item_label(e['item'])} — garanti"
+                              + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'])}"
+                                 if e.get("diff") else "")}
+                      for e in dg.get("loot") or ()
+                      if e.get("type") == "InfusionPattern"]
+            for rar, label in (("Rare", "rare"), ("Epic", "épique")):
+                armour = [e for e in dg.get("loot") or ()
+                          if e.get("src") == "faction"
+                          and e.get("rarity") == rar]
+                if armour:
+                    icons.append({"img": item_icon(armour[0]["item"]),
+                                  "n": len(armour),
+                                  "tip": f"Armure de faction {label} : "
+                                         f"{len(armour)} pièces possibles"})
             return {"t": dungeon_name(kind),
                     "icons": icons,
                     "meta": f"Boss : {_boss_label(boss)}" if boss else "",
                     "meta2": " · ".join(stats),
                     "portrait": boss or "",
                     "btns": [{"id": "open_dungeon_kind", "t": "Voir",
-                              "p": {"kind": kind}, "off": not ds}]}
+                              "p": {"kind": kind}}]}
 
         # Every dungeon of the game, by region, in the game's own order;
         # runs of a dungeon the list doesn't know (a newer game) at the end.
@@ -6047,8 +6058,10 @@ def droptable_view(dg, got):
             "type": item_type_label(e.get("type")) if e.get("type") else "",
             "apt": e.get("apt") or [],
             "src": src_label.get(e.get("src"), e.get("src") or ""),
-            "chance": _pct(chance) if chance is None or chance < 1
-            else "garanti",
+            "chance": (_pct(chance) if chance is None or chance < 1
+                       else "garanti")
+            + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'], '?')}"
+               if e.get("diff") else ""),
             "qty": qty, "got": got.get(e["item"], 0),
             # rarest first; the faction armour (chance unknown) after the
             # chest's pick, the guaranteed shards last
