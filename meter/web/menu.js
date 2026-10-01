@@ -167,7 +167,14 @@ function buildControl(c) {
 /* ---- generic nodes ------------------------------------------------------ */
 function buildRow(r) {
   if (r.portrait !== undefined) return buildPortraitRow(r);
-  const row = el('div', 'row');
+  const row = el('div', 'row' + (r.check ? ' checkable' + (r.check.on ? ' ticked' : '') : ''));
+  if (r.check) {
+    const cb = el('input', 'rowcheck');
+    cb.type = 'checkbox';
+    cb.checked = !!r.check.on;
+    cb.addEventListener('change', () => notify(r.check.id, r.check.p || {}));
+    row.appendChild(cb);
+  }
   if (r.name !== undefined) row.appendChild(el('span', 'name', r.name));
   if (r.cls !== undefined) row.appendChild(el('span', 'cls', r.cls));
   if (r.t !== undefined) row.appendChild(el('span', 'name', r.t));

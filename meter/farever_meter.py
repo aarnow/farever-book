@@ -2885,6 +2885,9 @@ class App:
         self._show_heal = True
         self._sort_heal = False
         self._auto_reset_boss = False
+        self._rift_keep = 0                 # rift reports kept (0: all)
+        self._rift_sel = set()              # rift reports ticked for deletion
+        self._rift_confirm = False          # "delete" pressed once
         self._rift_auto_view = False
         self._zoom = 100                    # the window's own size, percent
 
@@ -2954,6 +2957,8 @@ class App:
             if isinstance(data.get(key), bool):
                 setattr(self, attr, data[key])
         self._sort_heal = self._sort_heal and self._show_heal
+        if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
+            self._rift_keep = data["rift_keep"]
         bind = data.get("reset_bind")
         if isinstance(bind, dict) and isinstance(bind.get("vk"), int):
             vk = bind["vk"]
@@ -2980,6 +2985,7 @@ class App:
                 "sort_heal": bool(self._sort_heal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "rift_auto_view": bool(self._rift_auto_view),
+                "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
             }, indent=2))
@@ -3235,6 +3241,11 @@ class App:
             "copy_rift_image": self._copy_rift_image,
             "copy_rift_text": self._copy_rift_text,
             "open_parses": self._open_parses,
+            "rift_tick": lambda p: self._rift_tick(p.get("file")),
+            "rift_tick_all": self._rift_tick_all,
+            "rift_delete": self._rift_delete,
+            "rift_delete_cancel": self._rift_delete_cancel,
+            "set_rift_keep": lambda p: self._set_rift_keep(p.get("value")),
             # dungeons
             "open_dungeon_kind": lambda p: setattr(
                 self, "_dungeon_kind", p.get("kind")),
@@ -3529,6 +3540,75 @@ class App:
         except OSError:
             return []
 
+    def _rift_tick(self, name):
+        name = Path(str(name or "")).name
+        if not name.startswith("rift-"):
+            return
+        self._rift_sel ^= {name}
+        self._rift_confirm = False
+
+    def _rift_tick_all(self):
+        names = {p.name for p in self._rift_files()}
+        self._rift_sel = set() if names and names <= self._rift_sel else names
+        self._rift_confirm = False
+
+    def _rift_delete_cancel(self):
+        self._rift_confirm = False
+
+    def _rift_delete(self):
+        """Delete the ticked rift reports — on the second press: the first
+        only arms the button."""
+        names = self._rift_sel & {p.name for p in self._rift_files()}
+        if not names:
+            self._rift_sel = set()
+            return
+        if not self._rift_confirm:
+            self._rift_confirm = True
+            return
+        gone = self._remove_rift_reports(names)
+        self._rift_sel, self._rift_confirm = set(), False
+        self._toast_msg(f"{gone} faille{'s' if gone > 1 else ''} "
+                        f"supprimée{'s' if gone > 1 else ''}.")
+
+    @staticmethod
+    def _remove_rift_reports(names):
+        """Remove rift reports (rift-*.json) with their .txt and .png.
+        -> how many reports went."""
+        gone = 0
+        for name in names:
+            name = Path(str(name)).name
+            if not (name.startswith("rift-") and name.endswith(".json")):
+                continue                    # never anything else
+            stem = name[:-len(".json")]
+            for ext in (".json", ".txt", ".png"):
+                try:
+                    (PARSES_DIR / (stem + ext)).unlink()
+                    gone += ext == ".json"
+                except FileNotFoundError:
+                    pass
+                except OSError as e:
+                    print(f"[meter] couldn't delete {stem}{ext}: {e}",
+                          file=sys.stderr)
+        return gone
+
+    def _set_rift_keep(self, value):
+        try:
+            self._rift_keep = max(0, int(value))
+        except (TypeError, ValueError):
+            return
+        self._save_settings()
+
+    def _prune_rifts(self):
+        """Beyond the limit set in the Failles tab, the oldest rift reports
+        go (a new one just came in)."""
+        if self._rift_keep <= 0:
+            return
+        extra = self._rift_files()[self._rift_keep:]   # newest first
+        if extra:
+            gone = self._remove_rift_reports(p.name for p in extra)
+            print(f"[meter] {gone} old rift report(s) removed (limit "
+                  f"{self._rift_keep})", file=sys.stderr)
+
     def _read_rift_file(self, name):
         name = Path(str(name)).name              # never a path from the page
         try:
@@ -3583,26 +3663,75 @@ class App:
                         {"id": "copy_rift_text", "t": "Copier le texte"}]},
                     self._report_node(self._rift_view)]
         rows = []
-        for path in self._rift_files()[:300]:
+        files = self._rift_files()
+        names = {p.name for p in files}
+        self._rift_sel &= names
+        for path in files[:300]:
             got = self._rift_summary(path)
             if got is None:
                 continue
             rows.append({"t": got[0], "meta": got[1],
+                         "check": {"id": "rift_tick", "p": {"file": path.name},
+                                   "on": path.name in self._rift_sel},
                          "btns": [{"id": "open_rift", "t": "Voir",
                                    "p": {"file": path.name}}]})
+        n = len(self._rift_sel)
+        all_on = bool(names) and names <= self._rift_sel
+        bottom = [{"id": "open_parses", "t": "Ouvrir le dossier des rapports"},
+                  {"id": "rift_tick_all",
+                   "t": "Tout désélectionner" if all_on else "Tout sélectionner",
+                   "tone": None if names else "disabled"}]
+        if self._rift_confirm and n:
+            bottom += [{"id": "rift_delete", "tone": "warn armed",
+                        "t": f"Confirmer la suppression ({n})"},
+                       {"id": "rift_delete_cancel", "t": "Annuler"}]
+        else:
+            bottom.append({"id": "rift_delete",
+                           "tone": "warn" if n else "disabled",
+                           "t": f"Supprimer la sélection ({n})" if n
+                           else "Supprimer la sélection"})
+        keep = [0, 10, 20, 30, 50, 100]
+        if self._rift_keep not in keep:
+            keep = sorted(keep + [self._rift_keep])
         return [
             {"k": "toolbar", "id": "rift_list_tools", "btns": [
                 {"id": "open_rift_rewards",
                  "t": "Récompenses des failles et chances"}]},
+            *self._rift_stat_cards(),
             {"k": "section", "t": "Failles réalisées"},
             {"k": "note", "t": "Chaque faille terminée (boss vaincu) est "
                                "enregistrée ici avec son classement complet. "
                                "Clique sur « Voir » pour la relire."},
             {"k": "list", "id": "rifts", "grow": True, "rows": rows,
              "empty": "Aucune faille enregistrée pour l'instant."},
-            {"k": "button", "id": "open_parses",
-             "t": "Ouvrir le dossier des rapports"},
+            {"k": "toolbar", "id": "rift_bottom", "btns": bottom},
+            {"k": "field", "t": "Failles conservées",
+             "c": {"k": "select", "id": "set_rift_keep",
+                   "v": str(self._rift_keep),
+                   "o": [{"v": str(v), "t": f"Les {v} dernières" if v
+                          else "Toutes"} for v in keep]}},
         ]
+
+    def _rift_stat_cards(self):
+        """The rift counters at the top of the tab: the live ones (read every
+        minute in game), else the last saved with the achievements."""
+        counters, who = None, None
+        if self._self_prof and isinstance(self._self_prof.get("counters"),
+                                          dict):
+            counters = self._self_prof["counters"]
+        else:
+            data = self._achievements()
+            who = data.get("last")
+            entry = (data.get("heroes") or {}).get(who) or {}
+            if isinstance(entry.get("counters"), dict):
+                counters = entry["counters"]
+        if not counters:
+            return []
+        items = [{"title": label, "value": _n(counters[k]), "sub": ""}
+                 for k, label in RIFT_STAT_LABELS
+                 if isinstance(counters.get(k), (int, float))]
+        return [{"k": "cards", "id": "rift_stats", "items": items}] \
+            if items else []
 
     def _report_node(self, data):
         return report_view(data)
@@ -4328,6 +4457,7 @@ class App:
         except Exception as e:
             print(f"[meter] couldn't render the rift report image: {e}",
                   file=sys.stderr)
+        self._prune_rifts()
 
     @staticmethod
     def _load_last_rift_report():
@@ -5756,11 +5886,12 @@ LUCK_LABELS = (("Luck_Mount", "Monture"), ("Luck_Glider", "Planeur"),
                ("Luck_RareMaterial", "Matériau rare"),
                ("Luck_PrismaticGear", "Équipement prismatique"))
 # Progress.counters shown as statistics (the rest are internal flags).
-STAT_LABELS = (("Rift_NbCompleted", "Failles terminées"),
-               ("Rift_NbGatesClosed", "Portails de faille fermés"),
-               ("Rift_NbGatesClosed_InOneRift",
-                "Record de portails fermés en une faille"),
-               ("Gold_TotalEarned", "Or gagné"),
+# The rift counters head the Failles tab; the rest is on the live page.
+RIFT_STAT_LABELS = (("Rift_NbCompleted", "Failles terminées"),
+                    ("Rift_NbGatesClosed", "Portails de faille fermés"),
+                    ("Rift_NbGatesClosed_InOneRift",
+                     "Record de portails fermés en une faille"))
+STAT_LABELS = (("Gold_TotalEarned", "Or gagné"),
                ("Gold_TotalEarned_FromActivity", "Or gagné en activités"),
                ("Scrap_NbItemsScrapped", "Objets recyclés"),
                ("CraftPoint_TotalEarned", "Points d'artisanat gagnés"),

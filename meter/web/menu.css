@@ -1639,3 +1639,9 @@ body.maxed .grip { display: none; }
 .step.s-fail .st b { color: #F5A08A; }
 .stepbody .note.warn { margin-top: 12px; color: #F5A08A; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Failles: tickable rows ---------------------------------------------------- */
+.row .rowcheck { width: 17px; height: 17px; flex: none; margin: 0 4px 0 0; cursor: pointer;
+                 accent-color: var(--accent); }
+.row.ticked { border-color: var(--warn); background: rgba(224, 83, 61, .08); }
+#page.page-Rifts .field { max-width: 420px; }
