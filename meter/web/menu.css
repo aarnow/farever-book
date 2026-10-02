@@ -1984,3 +1984,30 @@ body.maxed .grip { display: none; }
 .gear.editing .bchoice .gi { width: 40px; height: 40px; grid-row: auto; }
 .gear.editing .bchoice .bct span { font-size: 12px; }
 .gear.editing .bchoice .bct b { font-size: 13px; }
+
+/* The talent tree, as the game draws it (character.js talentTree): a
+   640 x 700 grid scaled to the width, the game's shapes, the links behind */
+.ttreew { container-type: inline-size; width: 100%; max-width: 640px; margin: 0 auto; }
+.ttree { --u: calc(100cqw / 640); position: relative; display: block; width: 100%; aspect-ratio: 640 / 700;
+         padding: 0; gap: 0; border-radius: 12px; overflow: hidden; }
+.ttree > * { position: absolute; transform: translate(-50%, -50%); }
+.ttree .tband { left: 0; right: 0; height: 20%; transform: none; background: rgba(255, 255, 255, .035); }
+.ttree .tlinks { left: 0; top: 0; width: 100%; height: 100%; transform: none; }
+.ttree .tlinks path { fill: none; stroke: #8E8499; stroke-width: 1.5; }
+.ttree .tcost { color: #D8CFE0; font-size: calc(18 * var(--u)); font-weight: 700; white-space: nowrap; text-align: left; }
+.ttree .tshape { width: calc(141 * var(--u)); height: calc(128 * var(--u)); }
+.ttree .tshape .tbg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ttree .tnode { display: block; }
+.ttree .tnode .skill { width: calc(48 * var(--u)); height: calc(48 * var(--u)); border-radius: 50%;
+                       border: 2px solid #F3E9DF; box-shadow: 0 1px 3px rgba(0, 0, 0, .45); background: #2a2638; }
+.ttree .tnode .skill img { width: 100%; height: 100%; border-radius: 50%; }
+.ttree .tnode:not(.on) .skill img { filter: grayscale(1) brightness(.85) contrast(.9); }
+.ttree .tnode.on .skill { border-color: #F3E9DF; }
+.ttree .tnode b { bottom: calc(-4 * var(--u)); font-size: calc(13 * var(--u)); color: #fff; background: none;
+                  padding: 0; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 0 3px #000; }
+.ttree .tnode.on b { color: #fff; }
+.ttree .tnode.gift .skill { border-color: #E0457B; box-shadow: 0 0 0 2px rgba(224, 69, 123, .35); }
+.ttree .tnode.gift b { color: #FFD2E1; }
+.ttree.edit .tnode.locked { opacity: .55; }
+.ttree .tnode .skill { width: calc(42 * var(--u)); height: calc(42 * var(--u)); }
+.ttree .tnode b { border: 0; border-radius: 0; bottom: calc(-6 * var(--u)); font-size: calc(12 * var(--u)); }

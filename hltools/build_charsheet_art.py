@@ -9,6 +9,11 @@ page by menu_host, nothing loaded at runtime).
                                       28 px cells: the attributes' icons
     UI/icons/ui_icons_26PX.png        26 px cells: the 8th is a gear
                                       upgrade's pip
+    UI/Elements/talent/talent_tree_boxes.png
+                                      160x146 cells: the talent tree's
+                                      shapes (diamond, small diamond, large
+                                      diamond, triangle), then the grey
+                                      they take when nothing is in them
 
 Usage: python build_charsheet_art.py [--pak PATH]
 """
@@ -30,6 +35,7 @@ SLOT_CELLS = {"Chest": (0, 0), "Hands": (1, 0), "Waist": (2, 0),
               "Legs": (3, 0), "Feet": (4, 0), "Back": (5, 0), "Head": (6, 0),
               "Shoulders": (7, 0), "Neck": (8, 0), "Finger": (9, 0),
               "Trinket": (1, 1)}
+TALENT_BOXES = ("diamond", "small", "large", "triangle")
 STAT_CELLS = ("Vitality", "Strength", "Dexterity", "Faith", "Intelligence")
 
 
@@ -55,6 +61,10 @@ def main():
     pips = img("UI/icons/ui_icons_26PX.png")
     pips.crop((7 * 26, 0, 8 * 26, 26)).save(OUT / "upgrade_pip.png",
                                             optimize=True)
+    boxes = img("UI/Elements/talent/talent_tree_boxes.png")
+    for i, name in enumerate(TALENT_BOXES):
+        for row, kind in ((0, "box"), (1, "dim")):
+            boxes.crop((i * 160, row * 146, i * 160 + 160, row * 146 + 146))                  .save(OUT / f"talent_{kind}_{name}.png", optimize=True)
     print(f"written to {OUT}")
 
 

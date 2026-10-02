@@ -491,44 +491,94 @@ function skillIcon(sk, size) {
   return box;
 }
 
-/* The talent tree as the game draws it: the root, then tiers 1-4 in three
-   branches, each talent with its points (greyed when none). */
-/* `onPoint(id, delta)`, when given, makes the tree editable: a click adds a
+/* The talent tree as the game draws it: the root, a bar to the three
+   branches, then per branch tiers 1-4 in the game's own shapes (a small
+   diamond, a large one, a triangle, a diamond), linked top to bottom, the
+   points a tier needs in its branch on the left. A shape with no point in
+   it is grey, a talent with none too; one given by the gear has a pink ring.
+   `onPoint(id, delta)`, when given, makes the tree editable: a click adds a
    point where the rules allow it (c.add), a right click takes one back
-   (c.remove). */
+   (c.remove). Laid out on a 640 x 700 grid, scaled to its width. */
+const TREE_COLS = [205, 380, 555];
+const TREE_ROWS = [205, 345, 492, 632];
+const TREE_SHAPES = ['small', 'large', 'triangle', 'diamond'];
+
 function talentTree(t, ranked, onPoint) {
+  const wrap = el('div', 'ttreew');
   const box = el('div', 'ttree' + (onPoint ? ' edit' : ''));
-  const node = (c) => {
-    const n = el('span', 'tnode' + (c.pts ? ' on' : '') + (c.gift ? ' gift' : '')
-      + (onPoint && c.add ? ' can' : '') + (onPoint && !c.add && !c.pts ? ' locked' : ''));
-    n.title = c.name + (onPoint ? '\n' + (c.add ? 'Clic : +1' : '')
-      + (c.remove ? (c.add ? ' · ' : '') + 'Clic droit : −1' : '') : '');
+  wrap.appendChild(box);
+  const at = (e, x, y) => { e.style.left = (x / 6.4) + '%'; e.style.top = (y / 7) + '%'; return e; };
+
+  // the bands behind every other tier, and what each tier needs
+  [1, 3].forEach((i) => {
+    const b = el('div', 'tband');
+    b.style.top = ((TREE_ROWS[i] - 70) / 7) + '%';
+    box.appendChild(b);
+  });
+  (t.cost || []).forEach((c, i) => {
+    if (c) box.appendChild(at(el('span', 'tcost', c + ' ✦'), 42, TREE_ROWS[i]));
+  });
+
+  // the links, behind the shapes
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 640 700');
+  svg.setAttribute('class', 'tlinks');
+  const [l, c, r] = TREE_COLS;
+  const bar = 132;
+  const d = [`M${c},72 V${TREE_ROWS[0]}`,
+    `M${l},${TREE_ROWS[0]} V${bar + 14} Q${l},${bar} ${l + 14},${bar} H${r - 14} Q${r},${bar} ${r},${bar + 14} V${TREE_ROWS[0]}`]
+    .concat(TREE_COLS.map((x) => `M${x},${TREE_ROWS[0]} V${TREE_ROWS[3]}`));
+  d.forEach((p) => {
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', p);
+    svg.appendChild(path);
+  });
+  box.appendChild(svg);
+
+  const node = (x) => {
+    const n = el('span', 'tnode' + (x.pts ? ' on' : '') + (x.gift ? ' gift' : '')
+      + (onPoint && x.add ? ' can' : '') + (onPoint && !x.add && !x.pts ? ' locked' : ''));
+    n.title = x.name + (onPoint ? '\n' + (x.add ? 'Clic : +1' : '')
+      + (x.remove ? (x.add ? ' · ' : '') + 'Clic droit : −1' : '') : '');
     if (onPoint) {
-      n.addEventListener('click', () => { if (c.add) onPoint(c.id, 1); });
+      n.addEventListener('click', () => { if (x.add) onPoint(x.id, 1); });
       n.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        if (c.remove) onPoint(c.id, -1);
+        if (x.remove) onPoint(x.id, -1);
       });
     }
-    n.appendChild(skillIcon({ id: c.id, name: c.name }));
-    if (ranked || !c.pts) n.appendChild(el('b', null, c.pts + '/' + c.max));
+    n.appendChild(skillIcon({ id: x.id, name: x.name }));
+    n.appendChild(el('b', null, x.pts + '/' + x.max));
     return n;
   };
-  const top = el('div', 'trow troot');
-  top.appendChild(el('span', 'tcost'));
-  const rc = el('div', 'tcell');
-  if (t.root) rc.appendChild(node(t.root));
-  top.appendChild(rc);
-  box.appendChild(top);
-  (t.tiers || []).forEach((tier, i) => {
-    const row = el('div', 'trow');
-    row.appendChild(el('span', 'tcost', t.cost[i] ? t.cost[i] + ' ✦' : ''));
-    tier.forEach((cells) => {
-      const c = el('div', 'tcell');
-      cells.forEach((x) => c.appendChild(node(x)));
-      row.appendChild(c);
+  // where the talents sit in a shape, around its centre
+  const spots = (shape, n) => {
+    if (shape === 'triangle') {
+      return [[[0, -22]], [[-23, -27], [23, -27]], [[-23, -27], [23, -27], [0, 12]]][Math.min(n, 3) - 1]
+        || [];
+    }
+    if (n === 1) return [[0, 0]];
+    if (n === 2) return [[-24, 0], [24, 0]];
+    return Array.from({ length: n }, (_, i) => [(i - (n - 1) / 2) * 46, 0]);
+  };
+  const group = (cells, shape, x, y) => {
+    const any = cells.some((v) => v.pts);
+    const g = el('div', 'tshape ' + shape + (any ? '' : ' dim'));
+    const art = shape === 'root' ? 'diamond' : shape;
+    if (SHEET_ART['talent_box_' + art]) g.appendChild(artImg('talent_box_' + art, 'tbg'));
+    // the grey goes over the shape, inside its rim
+    if (!any && SHEET_ART['talent_dim_' + art]) g.appendChild(artImg('talent_dim_' + art, 'tbg'));
+    box.appendChild(at(g, x, y));
+    spots(shape, cells.length).forEach(([dx, dy], i) => {
+      if (cells[i]) box.appendChild(at(node(cells[i]), x + dx, y + dy));
     });
-    box.appendChild(row);
+  };
+  if (t.root) group([t.root], 'root', c, 72);
+  (t.tiers || []).forEach((tier, i) => {
+    tier.forEach((cells, b) => {
+      if (cells.length) group(cells, TREE_SHAPES[i], TREE_COLS[b], TREE_ROWS[i]);
+    });
   });
-  return box;
+  return wrap;
 }

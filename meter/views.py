@@ -462,8 +462,12 @@ def _talent_tree(cls, ranks, granted=()):
     # the points a tier needs in the lower tiers of its branch
     # (Talents_TierThresholds, read in the game's implSetTalentRank)
     thresholds = build_data().get("tiers") or [0, 1, 2, 4, 8]
+    # shown as the game does: the points in the branch, the root's apart
+    # (tier 1 needs only the root)
+    cost = [""] + [str(thresholds[k] - thresholds[1])
+                   for k in range(2, min(5, len(thresholds)))]
     return {"root": cell(root) if root else None, "tiers": tiers,
-            "cost": [str(x) for x in thresholds[1:5]], "spent": spent}
+            "cost": cost, "spent": spent}
 
 
 def _spell_bar(prof):
