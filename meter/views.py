@@ -398,18 +398,20 @@ CHIP_KINDS = ("AugmentJeweller", "AugmentOutfitter", "AugmentBlacksmith",
               "AugmentEnchantWeapon", "AugmentDemonSigil", "AugmentDemon")
 
 
-def _augment_chip(item_type, gslots):
-    """{kind, img, name} for the piece's main augment slot — img None when
-    nothing is set in it — or None when its type takes no augment."""
+def _augment_chips(item_type, gslots):
+    """[{kind, img, name}], one per augment slot the piece's type has (a
+    weapon: its formula, then its corrupted gift) — img None when nothing
+    is set in it."""
     d = build_data()
     accepts = (d.get("accepts") or {}).get(item_type) or ()
-    kind = next((k for k in CHIP_KINDS if k in accepts), None)
-    if kind is None:
-        return None
-    items = set(((d.get("augments") or {}).get(kind) or {}).get("items") or ())
-    aid = next((g for g in gslots or () if g in items), None)
-    return {"kind": kind, "img": item_icon(aid) if aid else None,
-            "name": item_label(aid) if aid else ""}
+    out = []
+    for kind in (k for k in CHIP_KINDS if k in accepts):
+        items = set(((d.get("augments") or {}).get(kind) or {}).get("items")
+                    or ())
+        aid = next((g for g in gslots or () if g in items), None)
+        out.append({"kind": kind, "img": item_icon(aid) if aid else None,
+                    "name": item_label(aid) if aid else ""})
+    return out
 
 
 def _augment_view(aid, factor=1):
@@ -571,7 +573,7 @@ def character_view(roster, profiles, sel, waiting, live):
                      "extras": extras,
                      "prism": prism,
                      "inf": _gear_infusion(kind, infu, istat, prism),
-                     "chip": _augment_chip(t, gslots),
+                     "chips": _augment_chips(t, gslots),
                      "plan": (_fr_names("attribute").get(istat)
                               or _pretty_id(istat))
                      if istat and not infu else None,

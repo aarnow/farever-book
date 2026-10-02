@@ -14,7 +14,7 @@ from common import _pretty_id, class_key, element_label
 from gamedata import (_fr_names, _skill_label, build_data, faction_label,
                       infusion_data, item_icon, item_label, item_type_label,
                       rarity_label)
-from gearstats import gear_stats
+from gearstats import gear_stats, infusion_tiers
 from simulate import simulate
 from views import _augment_view, _talent_tree, character_view
 
@@ -461,7 +461,7 @@ class BuildTab:
                              "t": AUG_LABELS.get(kind, _pretty_id(kind)),
                              "v": (p.get("augs") or {}).get(kind) or "",
                              "options": [{"v": "", "t": "Aucun"}] + sorted(
-                                 ({"v": a, "t": _aug_name(a)} for a in items),
+                                 (_aug_option(a) for a in items),
                                  key=lambda x: x["t"])})
             attr = _fr_names("attribute")
             piece = {
@@ -505,9 +505,12 @@ def _infusion_options():
     out = []
     for sid in build_data().get("infusions") or ():
         e = infs.get(sid) or {}
-        out.append({"v": sid, "t": f"{e.get('name') or _skill_label(sid)} "
-                                    f"({faction_label(e.get('f'))} · "
-                                    f"{ROLE_FR.get(e.get('role'), e.get('role') or '?')})",
+        out.append({"v": sid, "t": e.get("name") or _skill_label(sid),
+                    "sub": f"{faction_label(e.get('f'))} · "
+                           f"{ROLE_FR.get(e.get('role'), e.get('role') or '?')}",
+                    "img": item_icon(e.get("pattern")) if e.get("pattern")
+                    else "",
+                    "tiers": [t["txt"] for t in infusion_tiers(sid)],
                     "k": (faction_label(e.get("f")), e.get("role") or "")})
     out.sort(key=lambda x: x.pop("k"))
     return out
@@ -554,7 +557,8 @@ def _rune_text(rune, skill_name, vals):
     return re.sub(r"::([^:]+)::", sub, txt)
 
 
-def _aug_name(aid):
-    """An augment's name with what it does (corrupted gifts share one)."""
+def _aug_option(aid):
+    """One augment to choose: its icon, name and what it does."""
     a = _augment_view(aid)
-    return a["name"] + (f" — {a['fx']}" if a.get("fx") else "")
+    return {"v": aid, "t": a["name"], "fx": a.get("fx") or "",
+            "img": item_icon(aid)}

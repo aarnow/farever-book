@@ -23,7 +23,9 @@ function buildBuild(n) {
   main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
                                sheet: o.sheet, atbs: o.atbs },
                              (slot) => notify('build_slot', { slot: slot }),
-                             { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []) }));
+                             { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
+                               center: o.editor ? editorPanel(o.editor) : null,
+                               active: o.editor ? o.editor.slot : null }));
   if ((o.infusions || []).length) {
     main.appendChild(el('div', 'sub2', 'Imprégnations'));
     main.appendChild(infusionCards(o.infusions));
@@ -348,60 +350,86 @@ function buildHead(o) {
   return head;
 }
 
-/* ---- the piece editor (a window over the page) ------------------------- */
+/* ---- the piece editor, in the sheet's centre -------------------------- */
+let BUILD_SCROLL = { list: 0, right: 0 };   // kept across re-renders
+let BUILD_DROP = false;         // the piece list is open
+let BUILD_SUB = null;           // the augment / infusion whose choices are open
+
+/* Redraw the piece editor alone, from the last state (a local change). */
+function refreshEditor() {
+  const old = document.querySelector('.bedpanel');
+  const ed = BUILD_NODE && BUILD_NODE.open ? BUILD_NODE.open.editor : null;
+  if (old && ed) old.replaceWith(editorPanel(ed));
+}
+
 function renderBuildEditor() {
+  // the editor lives in the sheet now: just forget the search when closed
   const ed = STATE.tab === 'Build' && BUILD_NODE && BUILD_NODE.open
     ? BUILD_NODE.open.editor : null;
-  let m = $('#buildmodal');
   if (!ed) {
-    if (m) m.remove();
     BUILD_Q = '';
-    return;
+    BUILD_SCROLL = { list: 0, right: 0 };
   }
-  if (!m) {
-    m = el('div', 'modalback');
-    m.id = 'buildmodal';
-    m.addEventListener('mousedown', (e) => {
-      if (e.target === m) notify('build_slot_close', {});
-    });
-    document.body.appendChild(m);
-  }
-  const sig = JSON.stringify(ed);
-  if (m.dataset.sig === sig) return;
-  m.dataset.sig = sig;
-  const keepScroll = m.querySelector('.blist') ? m.querySelector('.blist').scrollTop : 0;
-  m.textContent = '';
-  const box = el('div', 'modal bmodal');
-  const x = el('button', 'hclose', '×');
-  x.type = 'button';
-  x.title = 'Fermer';
-  x.addEventListener('click', () => notify('build_slot_close', {}));
-  box.appendChild(x);
-  const head = el('div', 'phead');
-  head.appendChild(el('h3', null, ed.label));
-  box.appendChild(head);
+}
 
-  const body = el('div', 'bedbody');
-  // the pieces the slot can take
-  const left = el('div', 'bedleft');
-  if (BUILD_F.slot !== ed.slot) {      // another slot: fresh filters
+function editorPanel(ed) {
+  const box = el('div', 'bedpanel');
+  if (BUILD_F.slot !== ed.slot) {      // another slot: fresh search, list open if empty
     BUILD_F.slot = ed.slot;
     BUILD_F.stats = new Set();
     BUILD_F.fac = '';
+    BUILD_Q = '';
+    BUILD_DROP = !ed.piece;
+    BUILD_SUB = null;
   }
+  const p = ed.piece;
+
+  // the head: the slot, then the piece as a drop-down, and its buttons
+  const head = el('div', 'bedhead');
+  head.appendChild(el('b', null, ed.label));
+  const x = el('button', 'hclose', '×');
+  x.type = 'button';
+  x.title = 'Revenir au personnage';
+  x.addEventListener('click', () => notify('build_slot_close', {}));
+  head.appendChild(x);
+  box.appendChild(head);
+
+  const pick = el('div', 'bpick');
+  const ic = el('span', 'gi');
+  const cur = p ? (ed.options || []).find((o) => o.id === p.id) : null;
+  if (cur && cur.img) { const im = el('img'); im.src = cur.img; im.alt = ''; ic.appendChild(im); }
+  pick.appendChild(ic);
+  const combo = el('button', 'bcombo' + (BUILD_DROP ? ' open' : '')
+    + (p ? ' r-' + (p.rar || 'Common').toLowerCase() : ''));
+  combo.type = 'button';
+  combo.appendChild(el('span', null, p ? p.name : 'Choisir une pièce…'));
+  combo.appendChild(el('i', 'chev', '▾'));
+  combo.addEventListener('click', () => { BUILD_DROP = !BUILD_DROP; renderDrop(); combo.classList.toggle('open', BUILD_DROP); });
+  pick.appendChild(combo);
+  if (p) {
+    const rm = el('button', 'bsquare', '×');
+    rm.type = 'button';
+    rm.title = 'Retirer la pièce';
+    rm.addEventListener('click', () => notify('build_unequip', {}));
+    pick.appendChild(rm);
+  }
+  box.appendChild(pick);
+
+  // the drop-down: search, filters, the pieces
+  const drop = el('div', 'bdrop');
   const q = el('input', 'bsearch');
   q.type = 'search';
   q.placeholder = 'Rechercher…';
   q.value = BUILD_Q;
-  left.appendChild(q);
+  drop.appendChild(q);
   const filters = el('div', 'bfilters');
   const statRow = el('div', 'bchips small');
-  (ed.stats || []).forEach((s) => {
-    const c = el('button', 'bchip' + (BUILD_F.stats.has(s.k) ? ' on' : ''), s.t);
+  (ed.stats || []).forEach((st) => {
+    const c = el('button', 'bchip' + (BUILD_F.stats.has(st.k) ? ' on' : ''), st.t);
     c.type = 'button';
     c.addEventListener('click', () => {
-      if (BUILD_F.stats.has(s.k)) BUILD_F.stats.delete(s.k); else BUILD_F.stats.add(s.k);
-      c.classList.toggle('on', BUILD_F.stats.has(s.k));
+      if (BUILD_F.stats.has(st.k)) BUILD_F.stats.delete(st.k); else BUILD_F.stats.add(st.k);
+      c.classList.toggle('on', BUILD_F.stats.has(st.k));
       fill();
     });
     statRow.appendChild(c);
@@ -414,9 +442,9 @@ function renderBuildEditor() {
     fs.classList.add('bfac');
     filters.appendChild(fs);
   }
-  left.appendChild(filters);
+  drop.appendChild(filters);
   const count = el('div', 'bcount');
-  left.appendChild(count);
+  drop.appendChild(count);
   const list = el('div', 'blist');
   const fill = () => {
     list.textContent = '';
@@ -429,85 +457,136 @@ function renderBuildEditor() {
     if (!shown.length) list.appendChild(el('div', 'empty', ed.options.length
       ? 'Aucune pièce ne correspond.' : 'Aucune pièce possible ici pour l’instant.'));
     shown.forEach((it) => {
-      const row = el('div', 'bitem r-' + (it.rk || 'common')
-        + (ed.piece && ed.piece.id === it.id ? ' on' : ''));
-      const ic = el('span', 'gi');
-      if (it.img) { const im = el('img'); im.src = it.img; im.alt = ''; ic.appendChild(im); }
-      row.appendChild(ic);
+      const row = el('div', 'bitem r-' + (it.rk || 'common') + (p && p.id === it.id ? ' on' : ''));
+      const ii = el('span', 'gi');
+      if (it.img) { const im = el('img'); im.src = it.img; im.alt = ''; ii.appendChild(im); }
+      row.appendChild(ii);
       const t = el('div', 'bt');
       t.appendChild(el('b', 'nm', it.name));
       t.appendChild(el('span', null, it.type));
       row.appendChild(t);
-      row.addEventListener('click', () => notify('build_pick', { id: it.id }));
+      row.addEventListener('click', () => { BUILD_DROP = false; notify('build_pick', { id: it.id }); });
       list.appendChild(row);
     });
   };
   q.addEventListener('input', () => { BUILD_Q = q.value; fill(); });
   fill();
-  left.appendChild(list);
-  body.appendChild(left);
+  drop.appendChild(list);
+  box.appendChild(drop);
+  const renderDrop = () => { drop.style.display = BUILD_DROP ? '' : 'none'; if (BUILD_DROP) q.focus(); };
+  drop.style.display = BUILD_DROP ? '' : 'none';
 
-  // the chosen piece's settings
-  const right = el('div', 'bedright');
-  const p = ed.piece;
+  // the piece's settings, the whole width
+  const body = el('div', 'bedcfg');
   if (!p) {
-    right.appendChild(el('p', 'note', 'Choisis une pièce dans la liste.'));
+    body.appendChild(el('p', 'note', 'Choisis une pièce dans la liste.'));
   } else {
-    const field = (label, ctl) => {
-      const f = el('div', 'bfield');
-      f.appendChild(el('span', 'bl', label));
-      f.appendChild(ctl);
-      right.appendChild(f);
-    };
-    const chips = el('div', 'bchips');
-    (ed.rarities || []).forEach((r) => {
-      const c = el('button', 'bchip' + (p.rar === r.v ? ' on' : '') + ' r-' + r.v.toLowerCase(), r.t);
-      c.type = 'button';
-      c.addEventListener('click', () => notify('build_piece', { field: 'rar', value: r.v }));
-      chips.appendChild(c);
-    });
-    field('Rareté', chips);
-    field('Niveau', slider(1, ed.maxLvl, p.lvl, (v) => notify('build_piece', { field: 'lvl', value: v }), 'Niveau '));
-    if (p.maxUp) {
-      field('Amélioration', slider(0, p.maxUp, p.up, (v) => notify('build_piece', { field: 'up', value: v }), '+'));
-    }
+    // augments and infusion: lines of the card, waiting for a choice;
+    // a click opens the choices right there
+    const g = p.g || {};
+    const choices = [];
+    (p.augs || []).forEach((a) => choices.push({
+      key: 'aug:' + a.kind, t: a.t, v: a.v, options: a.options, none: 'Aucun',
+    }));
     if (p.infusable) {
-      const lab = el('label', 'bcheck');
-      const cb = el('input');
-      cb.type = 'checkbox';
-      cb.checked = !!p.prism;
-      cb.addEventListener('change', () => notify('build_piece', { field: 'prism', value: cb.checked }));
-      lab.appendChild(cb);
-      lab.appendChild(el('span', null, 'Prismatique'));
-      lab.appendChild(el('small', null, ' — le bonus d’imprégnation s’applique quelle que soit la faction'));
-      field('Qualité', lab);
+      choices.push({ key: 'inf', t: 'Imprégnation', v: p.inf, options: p.infOptions, none: 'Aucune' });
+      choices.push({ key: 'istat', t: 'Bonus d’imprégnation', v: p.istat, options: p.statOptions,
+        none: 'Aucun', small: true,
+        fx: g.inf && g.inf.bonus
+          ? '+' + (g.inf.val || '') + (g.inf.on ? '' : ' — inactif, faction différente')
+          : (g.plan ? g.plan + ' — inactif sans imprégnation' : '') });
     }
-    (p.augs || []).forEach((a) => {
-      field(a.t, select(a.options, a.v, (v) => notify('build_piece', { field: 'aug:' + a.kind, value: v })));
-    });
-    if (p.infusable) {
-      field('Imprégnation', select(p.infOptions, p.inf, (v) => notify('build_piece', { field: 'inf', value: v })));
-      field('Bonus d’imprégnation' + (p.inf ? '' : ' (prévisionnel)'),
-        select(p.statOptions, p.istat, (v) => notify('build_piece', { field: 'istat', value: v })));
-    } else if (['Head', 'Shoulders', 'Chest', 'Back', 'Hands', 'Waist', 'Legs', 'Feet'].includes(ed.slot)) {
-      right.appendChild(el('p', 'note', 'Imprégnation : sur une armure de faction, à partir de la rareté '
-        + (ed.infusionMin || 'Épique').toLowerCase() + '.'));
-    }
+    const lines = choices.map((c) => (c.key === BUILD_SUB ? choiceList(c) : choiceLine(c)));
     if (p.g) {
       const pv = el('div', 'gearlist one');
-      pv.appendChild(gearRow(p.g));
-      right.appendChild(pv);
+      pv.appendChild(gearRow(p.g, {
+        rars: ed.rarities, rar: p.rar, onRar: (v) => notify('build_piece', { field: 'rar', value: v }),
+        lvl: p.lvl, maxLvl: ed.maxLvl, onLvl: (v) => notify('build_piece', { field: 'lvl', value: v }),
+        up: p.up, maxUp: p.maxUp, onUp: (v) => notify('build_piece', { field: 'up', value: v }),
+        prism: p.infusable ? !!p.prism : null,
+        onPrism: (v) => notify('build_piece', { field: 'prism', value: v }),
+        lines,
+      }));
+      body.appendChild(pv);
+    } else {
+      lines.forEach((x) => body.appendChild(x));
     }
-    const rm = el('button', 'rowbtn', 'Retirer la pièce');
-    rm.type = 'button';
-    rm.addEventListener('click', () => notify('build_unequip', {}));
-    right.appendChild(rm);
+    if (!p.infusable && ['Head', 'Shoulders', 'Chest', 'Back', 'Hands', 'Waist', 'Legs', 'Feet'].includes(ed.slot)) {
+      body.appendChild(el('p', 'note', 'Imprégnation : sur une armure de faction, à partir de la rareté '
+        + (ed.infusionMin || 'Épique').toLowerCase() + '.'));
+    }
   }
-  body.appendChild(right);
   box.appendChild(body);
-  m.appendChild(box);
-  const bl = m.querySelector('.blist');
-  if (bl) bl.scrollTop = keepScroll;
+  // keep where the list and the settings were scrolled, across re-renders
+  list.addEventListener('scroll', () => { BUILD_SCROLL.list = list.scrollTop; });
+  body.addEventListener('scroll', () => { BUILD_SCROLL.right = body.scrollTop; });
+  requestAnimationFrame(() => {
+    list.scrollTop = BUILD_SCROLL.list;
+    body.scrollTop = BUILD_SCROLL.right;
+  });
+  return box;
+}
+
+/* One choice row: its icon, then its name and what it does. */
+function choiceRow(o, none, on) {
+  const row = el('button', 'bchoice' + (on ? ' on' : '') + (o && o.v ? '' : ' none'));
+  row.type = 'button';
+  const ic = el('span', 'gi');
+  if (o && o.img) { const im = el('img'); im.src = o.img; im.alt = ''; ic.appendChild(im); }
+  row.appendChild(ic);
+  const t = el('div', 'bct');
+  t.appendChild(el('b', null, o && o.v ? o.t : none));
+  if (o && o.sub) t.appendChild(el('span', 'sub', o.sub));
+  if (o && o.fx) t.appendChild(el('span', 'fx', o.fx));
+  ((o && o.tiers) || []).forEach((x, i) => t.appendChild(el('span', 'fx tier', '(' + [2, 4, 6][i] + ') ' + x)));
+  row.appendChild(t);
+  return row;
+}
+
+/* An augment / the infusion, a line of the piece's card: what is set,
+   or waiting for a choice; a click shows the choices. */
+function choiceLine(c) {
+  const cur = (c.options || []).find((o) => o.v && o.v === c.v);
+  const row = el('button', 'gchoice' + (cur ? '' : ' wait'));
+  row.type = 'button';
+  if (!c.small) {
+    const ic = el('span', 'gi');
+    if (cur && cur.img) { const im = el('img'); im.src = cur.img; im.alt = ''; ic.appendChild(im); }
+    row.appendChild(ic);
+  }
+  const t = el('div', 'bct');
+  t.appendChild(el('span', 'k', c.t));
+  if (cur) {
+    const nm = el('b', null, cur.t);
+    if (cur.sub) nm.appendChild(el('small', null, '  ' + cur.sub));
+    t.appendChild(nm);
+    if (cur.fx || c.fx) t.appendChild(el('span', 'fx', cur.fx || c.fx));
+  } else {
+    t.appendChild(el('b', 'wait', 'En attente de sélection'));
+    if (c.fx) t.appendChild(el('span', 'fx off', c.fx));
+  }
+  row.appendChild(t);
+  row.appendChild(el('i', 'chev', '›'));
+  row.addEventListener('click', () => { BUILD_SUB = c.key; refreshEditor(); });
+  return row;
+}
+
+/* Its choices, in the block: pick one, or go back. */
+function choiceList(c) {
+  const box = el('div', 'bchoices' + (c.small ? ' small' : ''));
+  const back = el('button', 'bsubback', '‹  ' + c.t);
+  back.type = 'button';
+  back.addEventListener('click', () => { BUILD_SUB = null; refreshEditor(); });
+  box.appendChild(back);
+  (c.options || []).forEach((o) => {
+    const row = choiceRow(o, c.none, o.v === (c.v || ''));
+    row.addEventListener('click', () => {
+      BUILD_SUB = null;
+      notify('build_piece', { field: c.key, value: o.v });
+    });
+    box.appendChild(row);
+  });
+  return box;
 }
 
 function slider(min, max, v, onChange, prefix, suffix) {
@@ -537,5 +616,7 @@ function select(options, v, onChange) {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && $('#buildmodal')) notify('build_slot_close', {});
+  if (e.key === 'Escape' && !$('#skillmodal') && BUILD_NODE && BUILD_NODE.open && BUILD_NODE.open.editor) {
+    notify('build_slot_close', {});
+  }
 });

@@ -453,18 +453,25 @@ def _infusion_sets(gear):
     out = []
     for sid, n in sorted(counts.items(), key=lambda kv: -kv[1]):
         e = infs.get(sid) or {}
-        four = []
-        for atb, val, ref in e.get("t4") or ():
-            name = _fr_names("attribute").get(atb) or _pretty_id(atb)
-            v = val * 100 if ref == "TAttribute_ARatio" else val
-            four.append(f"{name} {'+' if v >= 0 else '−'}"
-                        f"{abs(v):g} %".replace(".", ","))
         out.append({
             "name": e.get("name") or _pretty_id(sid),
             "fac": faction_label(e.get("f")),
             "role": e.get("role") or "", "n": n,
-            "tiers": [{"n": k, "on": n >= k, "txt": _fr_ref(t)}
-                      for k, t in ((2, e.get("t2")), (4, " · ".join(four)),
-                                   (6, e.get("t6"))) if t]})
+            "tiers": infusion_tiers(sid, n)})
     return out
+
+
+def infusion_tiers(sid, n=0):
+    """An infusion's 2 / 4 / 6 pieces bonuses, in French, those reached
+    with `n` pieces marked on."""
+    e = (infusion_data().get("infusions") or {}).get(sid) or {}
+    four = []
+    for atb, val, ref in e.get("t4") or ():
+        name = _fr_names("attribute").get(atb) or _pretty_id(atb)
+        v = val * 100 if ref == "TAttribute_ARatio" else val
+        four.append(f"{name} {'+' if v >= 0 else '−'}"
+                    f"{abs(v):g} %".replace(".", ","))
+    return [{"n": k, "on": n >= k, "txt": _fr_ref(t)}
+            for k, t in ((2, e.get("t2")), (4, " · ".join(four)),
+                         (6, e.get("t6"))) if t]
 

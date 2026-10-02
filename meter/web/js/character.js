@@ -219,7 +219,8 @@ function charSheet(o, onSlot, extra) {
   const slotEl = (c, key) => {
     const g = c.g;
     const b = el('button', 'slot' + (g ? ' r-' + (g.rk || 'common') : ' empty')
-      + (pick === key ? ' on' : ''));
+      + (pick === key || (extra && extra.active
+        && extra.active === (WEAPON_KEYS[key] || key)) ? ' on' : ''));
     b.type = 'button';
     b.title = g ? g.name + (g.rar ? ' (' + g.rar + ')' : '') : c.label + ' : vide';
     if (g && g.img) {
@@ -231,17 +232,19 @@ function charSheet(o, onSlot, extra) {
       b.appendChild(artImg('slot_' + c.icon, 'ghost'));
     }
     if (g && g.prism) b.appendChild(el('i', 'prism', '✦'));
-    if (g && g.chip) {
-      const ch = el('span', 'chip' + (g.chip.img ? '' : ' none'));
-      ch.title = g.chip.img ? g.chip.name : 'Emplacement d’augmentation vide';
-      if (g.chip.img) {
+    // one chip per augment slot, stacked down the top right corner
+    ((g && g.chips) || []).forEach((chip, i) => {
+      const ch = el('span', 'chip' + (chip.img ? '' : ' none'));
+      ch.style.top = (-4 + i * 19) + 'px';
+      ch.title = chip.img ? chip.name : 'Emplacement d’augmentation vide';
+      if (chip.img) {
         const im = el('img');
-        im.src = g.chip.img;
+        im.src = chip.img;
         im.alt = '';
         ch.appendChild(im);
       }
       b.appendChild(ch);
-    }
+    });
     if (g && g.up) b.appendChild(el('i', 'up', '+' + g.up));
     if (g && g.lvl) b.appendChild(el('i', 'lv', 'lv.' + g.lvl));
     if (g && g.inf && g.inf.id) {
@@ -275,8 +278,12 @@ function charSheet(o, onSlot, extra) {
   (sh.weapons || []).forEach((w, i) => { all['w' + i] = w.g; });
   if (sh.arsenal) all.ars = sh.arsenal.g;
   const picked = pick ? all[pick] : null;
-  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : '') + (picked ? ' detail' : ''));
-  if (picked) {
+  const center = extra && extra.center;
+  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : '') + (picked ? ' detail' : '')
+    + (center ? ' editing' : ''));
+  if (center) {
+    hero.appendChild(center);
+  } else if (picked) {
     const x = el('button', 'hclose', '×');
     x.type = 'button';
     x.title = 'Revenir au personnage';
@@ -341,8 +348,25 @@ function charSheet(o, onSlot, extra) {
   return box;
 }
 
-function gearRow(g) {
-  const r = el('div', 'gear' + (g.rk ? ' r-' + g.rk : ''));
+/* A small menu under `anchor`; `fill(box, close)` puts its content in. */
+function gearPop(anchor, fill) {
+  document.querySelectorAll('.gpop').forEach((x) => x.remove());
+  const box = el('div', 'gpop');
+  const close = () => { box.remove(); document.removeEventListener('mousedown', out, true); };
+  const out = (e) => { if (!box.contains(e.target) && e.target !== anchor) close(); };
+  fill(box, close);
+  // beside the anchor, in its own line: right whatever the page's zoom
+  box.style.left = anchor.offsetLeft + 'px';
+  box.style.top = (anchor.offsetTop + anchor.offsetHeight + 4) + 'px';
+  anchor.parentNode.appendChild(box);
+  document.addEventListener('mousedown', out, true);
+}
+
+/* A piece. With `ed` (the build's editor), its rarity, level, quality and
+   upgrade are set right on it: ed = {rars, rar, onRar, lvl, maxLvl, onLvl,
+   up, maxUp, onUp, prism (null when it cannot be), onPrism}. */
+function gearRow(g, ed) {
+  const r = el('div', 'gear' + (g.rk ? ' r-' + g.rk : '') + (ed ? ' editing' : ''));
   const gi = el('span', 'gi');
   if (g.img) {
     const im = document.createElement('img');
@@ -353,8 +377,21 @@ function gearRow(g) {
   r.appendChild(gi);
   const gt = el('div', 'gt');
   gt.appendChild(el('b', 'nm', g.name));
-  gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
-  if (g.up) {
+  if (ed) gt.appendChild(gearEditLine(g, ed));
+  else gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
+  if (ed && ed.maxUp) {
+    const pips = el('span', 'stars edit');
+    pips.title = 'Amélioration +' + (ed.up || 0) + ' — clique pour changer';
+    for (let i = 1; i <= ed.maxUp; i++) {
+      const pip = el('button', 'pipb' + (i <= (ed.up || 0) ? ' on' : ''));
+      pip.type = 'button';
+      if (SHEET_ART.upgrade_pip) pip.appendChild(artImg('upgrade_pip', 'pip'));
+      else pip.textContent = '◆';
+      pip.addEventListener('click', () => ed.onUp(i === ed.up ? i - 1 : i));
+      pips.appendChild(pip);
+    }
+    gt.appendChild(pips);
+  } else if (g.up) {
     const pips = el('span', 'stars');
     pips.title = 'Amélioration ' + g.up;
     for (let i = 0; i < g.up; i++) {
@@ -374,6 +411,13 @@ function gearRow(g) {
       st.appendChild(r);
     });
     gt.appendChild(st);
+  }
+  if (ed && ed.lines) {          // the editor: its own lines for these
+    const box = el('div', 'gchoices');
+    ed.lines.forEach((x) => box.appendChild(x));
+    gt.appendChild(box);
+    r.appendChild(gt);
+    return r;
   }
   (g.extras || []).forEach((x2) => {
     const line = el('span', 'gx ' + x2.k);
@@ -398,6 +442,39 @@ function gearRow(g) {
   }
   r.appendChild(gt);
   return r;
+}
+
+/* "Torse · Légendaire · niv. 25 · Prismatique", each part a control. */
+function gearEditLine(g, ed) {
+  const line = el('div', 'gedline');
+  if (g.type) line.appendChild(el('span', null, g.type));
+  const btn = (txt, cls, onClick) => {
+    const b = el('button', 'gedit' + (cls ? ' ' + cls : ''), txt);
+    b.type = 'button';
+    b.addEventListener('click', () => onClick(b));
+    line.appendChild(b);
+    return b;
+  };
+  const rar = (ed.rars || []).find((x) => x.v === ed.rar);
+  btn((rar ? rar.t : ed.rar) + ' ▾', 'r-' + String(ed.rar || '').toLowerCase(), (b) => gearPop(b, (box, close) => {
+    (ed.rars || []).forEach((x) => {
+      const o = el('button', 'gpopi r-' + x.v.toLowerCase() + (x.v === ed.rar ? ' on' : ''), x.t);
+      o.type = 'button';
+      o.addEventListener('click', () => { close(); if (x.v !== ed.rar) ed.onRar(x.v); });
+      box.appendChild(o);
+    });
+  }));
+  btn('niv. ' + ed.lvl + ' ▾', null, (b) => gearPop(b, (box, close) => {
+    box.classList.add('lvl');
+    box.appendChild(el('span', 'gpopt', 'Niveau de la pièce'));
+    box.appendChild(slider(1, ed.maxLvl, ed.lvl, (v) => { close(); ed.onLvl(v); }, 'niv. '));
+  }));
+  if (ed.prism !== null && ed.prism !== undefined) {
+    const p = btn(ed.prism ? '✦ Prismatique' : '✧ Non prismatique', 'prism' + (ed.prism ? ' on' : ''),
+      () => ed.onPrism(!ed.prism));
+    p.title = 'Prismatique : le bonus d’imprégnation s’applique quelle que soit la faction';
+  }
+  return line;
 }
 
 function skillIcon(sk, size) {
