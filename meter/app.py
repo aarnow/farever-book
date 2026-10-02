@@ -85,7 +85,7 @@ class App:
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
         self._rift_auto_view = False
-        self._zoom = 100                    # the window's own size, percent
+        self._zoom = 130                    # the window's own size, percent
 
         # ---- what the window is showing (not saved) ----
         self._menu_tab = APP_TAB_DEFAULT
@@ -459,7 +459,7 @@ class App:
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "begin_bind": self._begin_bind_capture,
-            "set_zoom": lambda p: self._set_zoom(p.get("value", 100)),
+            "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "open_log": self._open_log_folder,
             # help
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),

@@ -9,7 +9,8 @@ import threading
 import time
 from pathlib import Path
 
-from common import ANALYSIS, CREATE_NO_WINDOW, FROZEN, MENU_FLAG
+from common import (ANALYSIS, CREATE_NO_WINDOW, FROZEN, LOG_FILE, MENU_FLAG,
+                    message_box)
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +155,23 @@ class MenuBridge:
             pass
         # stdout closed: the panel has gone.
         print("[meter] settings panel closed", file=sys.stderr)
+        if not self.ready and self.proc is proc:
+            # It died before ever showing: the window is all there is to
+            # see of the app, so say so rather than sit silent in the tray.
+            self._failed = True
+            code = proc.poll()
+            print(f"[meter] the window never opened (exit code {code})",
+                  file=sys.stderr)
+            message_box(
+                "La fenêtre de Farever France n'a pas pu s'ouvrir.\n\n"
+                "Causes les plus courantes :\n"
+                "• le zip n'a pas été débloqué (clic droit sur le zip > "
+                "Propriétés > cocher « Débloquer », puis décompresser à "
+                "nouveau) ;\n"
+                "• Microsoft Edge WebView2 n'est pas installé "
+                "(https://developer.microsoft.com/microsoft-edge/webview2/).\n\n"
+                f"Le détail est dans :\n{LOG_FILE}",
+                "Farever France — fenêtre impossible à ouvrir", 0x10)
         self.ready = False
         if self.proc is proc:
             self.proc = None
