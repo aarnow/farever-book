@@ -22,6 +22,7 @@ from data.cdb (res.light.pak). Rules read in hlboot.dat (hltools/hlbc_code.py,
   UnlockLevel_Arsenal.
 """
 import json
+import re
 from pathlib import Path
 
 import pak_extract
@@ -200,30 +201,62 @@ def build(game_dir):
     except Exception:
         pass
     effects, skill_info = {}, {}
-    for sid in wanted:
+    def collect(sid, rune, no_rune, depth, seen, out, reach):
+        """The damage / heal / shield effects of a skill and of the
+        statuses and sub-skills it puts down (a bubble, an area left behind),
+        two levels deep; a step's rune condition carries over to them."""
+        if sid in seen or depth > 2:
+            return reach
+        seen.add(sid)
         sk = skills.get(sid) or {}
-        out = []
-        reach = None                    # the range of the step that hits
+        subs = [x.get("skill") if isinstance(x, dict) else x
+                for x in (sk.get("props") or {}).get("subskills") or ()]
+        # a skill with no steps of its own may put its status down from its
+        # script: setStatus(owner, Skill.<status>, ...)
+        subs += [m for m in re.findall(r"setStatus\([^,]+,\s*Skill\.(\w+)",
+                                       sk.get("script") or "")
+                 if m in skills]
         for st in sk.get("steps") or ():
             cond = st.get("cond") or {}
-            if not (cond.get("minRank") or 0) <= max_rank                     <= (cond.get("maxRank") or max_rank):
+            if not ((cond.get("minRank") or 0) <= max_rank
+                    <= (cond.get("maxRank") or max_rank)):
                 continue                # a step for lower ranks only
+            r = cond.get("mastery") or rune
+            nr = cond.get("masteryExclude") or no_rune
             for e in st.get("effects") or ():
                 k = e.get("effect")
                 kind = eff_kinds[k] if isinstance(k, int) else None
+                if kind == "Status" and e.get("status"):
+                    reach = collect(e["status"], r, nr, depth + 1, seen, out,
+                                    reach)
+                    continue
                 if kind not in ("Damage", "Heal", "Shield"):
                     continue
                 if reach is None and isinstance(st.get("range"),
                                                 (int, float)):
                     reach = st["range"]
-                out.append({"k": kind, "aff": e.get("affinity"),
-                            "base": e.get("baseVal") or 0,
-                            "rune": cond.get("mastery"),
-                            "noRune": cond.get("masteryExclude"),
-                            "sc": [[x.get("atb"), x.get("ratio") or 0]
-                                   for x in e.get("scaling") or ()
-                                   if x.get("atb")
-                                   and _at_rank(x.get("conds"), max_rank)]})
+                line = {"k": kind, "aff": e.get("affinity"),
+                        "base": e.get("baseVal") or 0,
+                        "rune": r, "noRune": nr,
+                        "sc": [[x.get("atb"), x.get("ratio") or 0]
+                               for x in e.get("scaling") or ()
+                               if x.get("atb")
+                               and _at_rank(x.get("conds"), max_rank)]}
+                if line not in out:     # the same hit again (a last charge)
+                    out.append(line)
+            ref = ((st.get("props") or {}).get("status") or {}).get("ref")
+            if ref:
+                reach = collect(ref, r, nr, depth + 1, seen, out, reach)
+        for sub in subs:
+            if sub:
+                reach = collect(sub, rune, no_rune, depth + 1, seen, out,
+                                reach)
+        return reach
+
+    for sid in wanted:
+        sk = skills.get(sid) or {}
+        out = []
+        reach = collect(sid, None, None, 0, set(), out, None)
         if out:
             effects[sid] = out
         runes = [{"id": m.get("id"),

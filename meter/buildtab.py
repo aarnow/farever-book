@@ -103,6 +103,9 @@ class BuildTab:
                 self.slot, self.confirm_delete = None, False
                 return
 
+    def close(self):
+        self._close()
+
     def _close(self):
         self.file = self.build = self.slot = None
         self.confirm_delete = False
@@ -243,7 +246,8 @@ class BuildTab:
         o = view["open"] or {}
         talents = B.talent_view(b)
         tree = _talent_tree(b["cls"], {k: v["rank"] for k, v in
-                                       talents.items()})
+                                       talents.items() if not v.get("gift")},
+                            B.granted_talents(b))
         if tree:
             def mark(c):
                 t = talents.get(c["id"]) or {}
@@ -264,7 +268,8 @@ class BuildTab:
             "confirmDelete": self.confirm_delete,
             "sheet": o.get("sheet"), "atbs": o.get("atbs"),
             "infusions": o.get("infusions"), "gear": o.get("gear"),
-            "points": {"used": sum(t["rank"] for t in talents.values()),
+            "points": {"used": sum(t["rank"] for t in talents.values()
+                                   if not t.get("gift")),
                        "total": B.talent_points(b),
                        "from": d.get("talentsFrom") or 10},
             "tree": tree, "bar": bar, "passives": passives,
@@ -309,10 +314,12 @@ class BuildTab:
                 rows.append((s, None, None))
         out = simulate(raw, b["lvl"], rows, armor, enemy, hit,
                        (b.get("runes") or {}).values())
+        base_ids = [sid for sid, label, _w in rows
+                    if label and label.startswith("Attaque de base")]
         fmt = lambda v: f"{v:.0f}"
         pc = lambda v: f"{v * 100:.1f}".replace(".", ",") + " %"
         kinds = {"Damage": "Dégâts", "Heal": "Soin", "Shield": "Bouclier"}
-        return {
+        view = {
             "armor": armor, "enemy": enemy, "hit": hit,
             "maxLvl": build_data().get("maxLevel") or 25,
             "crit": pc(out["critChance"]), "critMult": pc(out["critMult"]),
@@ -328,6 +335,7 @@ class BuildTab:
                            "avg": fmt(x["avg"]),
                            "mit": pc(x["mit"]) if "mit" in x else ""}
                           for x in r["lines"]]} for r in out["rows"]],
+            "base": base_ids,
             "runes": self._runes_view(b, raw, rows, armor, enemy, hit),
             "defense": {
                 "hit": fmt(hit),
@@ -339,6 +347,8 @@ class BuildTab:
                 "hp": fmt(out["defense"]["hp"]),
                 "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", ",")
                              if out["defense"]["phys"]["after"] > 0 else "—")}}
+        view["skills"] = _merge_base_attacks(view["skills"], view.pop("base"))
+        return view
 
     def _runes_view(self, b, raw, rows, armor, enemy, hit):
         """Each skill on the bar that has runes: its three, the one chosen,
@@ -445,6 +455,8 @@ class BuildTab:
             augs = []
             for kind in B.aug_kinds(p["id"]):
                 items = augs_data.get(kind, {}).get("items") or []
+                if kind == "AugmentDemonSigil":
+                    items = [a for a in items if B.sigil_ok(b, a)]
                 augs.append({"kind": kind,
                              "t": AUG_LABELS.get(kind, _pretty_id(kind)),
                              "v": (p.get("augs") or {}).get(kind) or "",
@@ -498,6 +510,28 @@ def _infusion_options():
                                     f"{ROLE_FR.get(e.get('role'), e.get('role') or '?')})",
                     "k": (faction_label(e.get("f")), e.get("role") or "")})
     out.sort(key=lambda x: x.pop("k"))
+    return out
+
+
+def _merge_base_attacks(skills, base_ids):
+    """The weapon's basic attacks 1, 2, 3 in one card, a line per hit."""
+    base = [s for s in skills if s["id"] in base_ids]
+    if len(base) < 2:
+        return skills
+    lines = []
+    for n, s in enumerate(base, 1):
+        for x in s["lines"]:
+            lines.append(dict(x, kind=f"Coup {n}"))
+    merged = {"id": base[0]["id"], "name": "Attaques de base", "cd": "",
+              "range": base[0]["range"], "lines": lines}
+    out, done = [], False
+    for s in skills:
+        if s["id"] in base_ids:
+            if not done:
+                out.append(merged)
+                done = True
+            continue
+        out.append(s)
     return out
 
 

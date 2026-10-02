@@ -395,6 +395,8 @@ class App:
             return
         if name != "Help":
             self._help_open = None
+        if name == "Build" and self._menu_tab != "Build":
+            self.buildtab.close()       # the tab opens on the list of builds
         self._menu_tab = name
 
     def _menu_actions(self):
@@ -1205,8 +1207,8 @@ class App:
         opened in the Build tab."""
         prof = self._profiles_data().get(name)
         if prof:
-            self.buildtab.import_profile(prof)
             self._set_tab("Build")
+            self.buildtab.import_profile(prof)
 
     def _page_character(self):
         profs = self._profiles_data()

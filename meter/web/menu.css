@@ -1833,3 +1833,18 @@ body.maxed .grip { display: none; }
 .brune .brt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .brune .brt b { color: #fff; font-size: 13px; }
 .brune .brt span { color: var(--dim); font-size: 12px; line-height: 1.35; }
+
+/* Build: the list of builds, then one build on its own */
+.blisthead { display: flex; align-items: center; gap: 12px; }
+.blisthead .section { flex: 1; }
+.blisthead .bnew { width: auto; max-width: none; margin: 0; }
+.bcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.bcard { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; cursor: pointer;
+         background: linear-gradient(180deg, #3A3768, var(--panel)); border: 1px solid #5A5694; text-align: left; }
+.bcard:hover { border-color: var(--accent); }
+.bcard .clsicon.big { width: 40px; height: 40px; flex: none; }
+.bcard .bct { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bcard .bct b { color: #fff; font-family: var(--font-head); font-size: 15px; white-space: nowrap; overflow: hidden;
+                text-overflow: ellipsis; }
+.bcard .bct span { color: var(--dim); font-size: 12px; }
+.buildpage > .bback { align-self: flex-start; width: auto; max-width: none; }

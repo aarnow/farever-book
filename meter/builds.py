@@ -102,6 +102,29 @@ def infusable(piece):
     return (r in rar and need in rar and rar.index(r) >= rar.index(need))
 
 
+# a demonic sigil's class, from its id (DemonSigil_War_..., _Priest_...)
+SIGIL_CLASS = {"War": "Warrior", "Priest": "Priest", "Mage": "Mage",
+               "Rogue": "Rogue"}
+
+
+def sigil_ok(b, aug):
+    """A demonic sigil fits the build's class (its talent is the class's)."""
+    parts = str(aug).split("_")
+    return len(parts) > 1 and SIGIL_CLASS.get(parts[1]) == b["cls"]
+
+
+def granted_talents(b):
+    """The talents the gear grants: a demonic sigil on the head."""
+    from gamedata import _augments_data
+    out = []
+    for p in (b.get("gear") or {}).values():
+        for aug in (p.get("augs") or {}).values():
+            a = _augments_data().get(aug) or {}
+            if a.get("t") == "AugmentDemonSigil":
+                out += list(a.get("s") or ())
+    return out
+
+
 def talent_points(b):
     d = build_data()
     return max(0, int(b["lvl"]) - int(d.get("talentsFrom") or 10) + 1)
@@ -143,9 +166,14 @@ def talent_view(b):
     taken back."""
     tr = tree(b)
     ranks = {k: int(v) for k, v in (b.get("talents") or {}).items() if v}
+    gifts = set(granted_talents(b))
     out = {}
     for t in tr.get("talents") or ():
         r = ranks.get(t["s"], 0)
+        if t["s"] in gifts and not r:
+            out[t["s"]] = {"rank": t["max"], "max": t["max"], "add": False,
+                           "remove": False, "gift": True}
+            continue
         up = dict(ranks, **{t["s"]: r + 1})
         down = dict(ranks, **{t["s"]: r - 1})
         out[t["s"]] = {"rank": r, "max": t["max"],
@@ -219,7 +247,8 @@ def normalize(b):
         kinds = aug_kinds(p["id"])
         augs = d.get("augments") or {}
         p["augs"] = {k: v for k, v in (p.get("augs") or {}).items()
-                     if k in kinds and v in (augs.get(k) or {}).get("items", ())}
+                     if k in kinds and v in (augs.get(k) or {}).get("items", ())
+                     and (k != "AugmentDemonSigil" or sigil_ok(b, v))}
         if not infusable(p):
             # ent.Hero.makeLootItem rolls prismatic only on a piece that
             # can be infused (and gets an infusion bonus stat)
@@ -299,7 +328,8 @@ def to_profile(b):
         if wid:
             arsenals[wid] = [s for s in sk.get(group) or () if s]
     tr = tree(b)
-    skills = [s for s in sk.get("class") or () if s] + passives(b)
+    skills = ([s for s in sk.get("class") or () if s] + passives(b)
+              + granted_talents(b))
     return {"n": b.get("name"), "k": b["cls"], "lvl": b["lvl"], "me": False,
             "at": b.get("at") or time.time(), "equip": equip,
             "talents": dict(b.get("talents") or {}),

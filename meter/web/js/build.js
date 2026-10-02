@@ -11,34 +11,14 @@ const BUILD_F = { slot: null, stats: new Set(), fac: '' };
 function buildBuild(n) {
   BUILD_NODE = n;
   const box = el('div', 'buildpage');
-  const band = el('div', 'bband');
-  band.appendChild(el('b', 'bbt', 'Mes builds'));
-  (n.list || []).forEach((b) => {
-    const chip = el('button', 'bbuild' + (b.on ? ' on' : ''));
-    chip.type = 'button';
-    chip.appendChild(charClass(b));
-    chip.appendChild(el('span', null, b.name));
-    chip.appendChild(el('small', null, 'niv. ' + (b.lvl || '?')));
-    chip.addEventListener('click', () => notify('build_open', { file: b.file }));
-    band.appendChild(chip);
-  });
-  const nb = el('button', 'btn bnew', '+ Nouveau build');
-  nb.type = 'button';
-  nb.addEventListener('click', () => notify('build_new', {}));
-  band.appendChild(nb);
-  box.appendChild(band);
-  if (!(n.list || []).length) {
-    box.appendChild(el('p', 'note', 'Aucun build pour l’instant. Crée-en un, ou pars d’un '
-      + 'joueur analysé dans Inspecter (« Créer un build »).'));
-  }
+  const o = n.open;
+  if (!o) return buildList(n, box);
+  const back = el('button', 'btn bback', '‹  Revenir aux builds');
+  back.type = 'button';
+  back.addEventListener('click', () => notify('build_close', {}));
+  box.appendChild(back);
 
   const main = el('div', 'charmain');
-  const o = n.open;
-  if (!o) {
-    main.appendChild(el('div', 'empty charempty', 'Choisis un build, ou crée-en un nouveau.'));
-    box.appendChild(main);
-    return box;
-  }
   main.appendChild(buildHead(o));
   main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
                                sheet: o.sheet, atbs: o.atbs },
@@ -158,10 +138,13 @@ function spellCard(sk) {
   const item = (t) => foot.appendChild(el('li', null, t));
   if (sk.cd) item('Recharge ' + sk.cd);
   if (sk.range) item('Portée ' + sk.range);
-  (sk.lines || []).forEach((l) => {
-    item('Moyenne ' + l.avg + (sk.lines.length > 1 ? ' (' + l.kind.toLowerCase() + ')' : ''));
-    if (l.mit) item('Réduction cible −' + l.mit);
-  });
+  // the averages: one when they are all the same, else one per line
+  const lines = sk.lines || [];
+  const avgs = [...new Set(lines.map((l) => l.avg))];
+  if (avgs.length === 1) item('Moyenne ' + avgs[0]);
+  else lines.forEach((l) => item('Moyenne ' + l.avg + ' (' + l.kind.toLowerCase() + ')'));
+  [...new Set(lines.map((l) => l.mit).filter(Boolean))]
+    .forEach((m) => item('Réduction cible −' + m));
   card.appendChild(foot);
   return card;
 }
@@ -282,6 +265,36 @@ function buildPassives(list) {
     p.appendChild(row);
   });
   return p;
+}
+
+/* The builds, as cards: a click opens one. */
+function buildList(n, box) {
+  const head = el('div', 'blisthead');
+  head.appendChild(el('div', 'section', 'Mes builds'));
+  const nb = el('button', 'btn bnew', '+ Nouveau build');
+  nb.type = 'button';
+  nb.addEventListener('click', () => notify('build_new', {}));
+  head.appendChild(nb);
+  box.appendChild(head);
+  if (!(n.list || []).length) {
+    box.appendChild(el('p', 'note', 'Aucun build pour l’instant. Crée-en un, ou pars d’un '
+      + 'joueur analysé dans Inspecter (« Créer un build »).'));
+    return box;
+  }
+  const grid = el('div', 'bcards');
+  n.list.forEach((b) => {
+    const c = el('button', 'bcard');
+    c.type = 'button';
+    c.appendChild(classEl(b.cls, b.ck, 'big'));
+    const t = el('div', 'bct');
+    t.appendChild(el('b', null, b.name));
+    t.appendChild(el('span', null, b.cls + ' · niveau ' + (b.lvl || '?')));
+    c.appendChild(t);
+    c.addEventListener('click', () => notify('build_open', { file: b.file }));
+    grid.appendChild(c);
+  });
+  box.appendChild(grid);
+  return box;
 }
 
 /* Name, class, level, and the build's own buttons. */
