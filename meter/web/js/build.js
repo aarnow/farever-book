@@ -108,7 +108,7 @@ function buildSim(s) {
     return f;
   };
   const arm = el('div', 'bsimf wide');
-  arm.appendChild(el('span', null, 'Armure de la cible'));
+  arm.appendChild(el('span', null, 'Réduction cible'));
   arm.appendChild(slider(0, 80, s.armor, (v) => notify('build_sim', { field: 'armor', value: v }), '', ' %'));
   ctl.appendChild(arm);
   ctl.appendChild(num('Niveau de l’ennemi', s.enemy, 'enemy', 1, s.maxLvl));
