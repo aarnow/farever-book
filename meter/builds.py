@@ -249,7 +249,21 @@ def normalize(b):
             cur.pop()
         b["skills"][g] = cur
     b["skills"]["weapon"] = opts["weapon"][:slots["weapon"]]
+    # runes: one per skill on the bar, among that skill's own
+    info = d.get("skillInfo") or {}
+    on_bar = set(bar_skills(b))
+    b["runes"] = {s: r for s, r in (b.get("runes") or {}).items()
+                  if s in on_bar and r in {x["id"] for x in
+                                           (info.get(s) or {}).get("runes")
+                                           or ()}}
     return b
+
+
+def bar_skills(b):
+    """The skills on the bar: the weapon's, the arsenal's, the class's."""
+    sk = b.get("skills") or {}
+    return [s for g in ("weapon", "arsenal", "class")
+            for s in sk.get(g) or () if s]
 
 
 def passives(b):
@@ -293,7 +307,8 @@ def to_profile(b):
             "weaponSkills": [s for s in list(sk.get("weapon") or [])
                              + list(sk.get("arsenal") or []) if s],
             "arsenals": arsenals, "skills": skills, "statuses": [],
-            "masteries": [], "prayers": [],
+            "masteries": list((b.get("runes") or {}).values()),
+            "prayers": [],
             "root": tr.get("root")}
 
 

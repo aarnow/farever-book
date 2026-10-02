@@ -1800,3 +1800,36 @@ body.maxed .grip { display: none; }
               overflow: hidden; display: grid; place-items: center; }
 .slot .chip img { width: 20px; height: 20px; border-radius: 50%; }
 .slot .chip.none { background: rgba(20, 18, 40, .85); border: 1.5px dashed #8D8BA8; box-shadow: none; }
+
+/* Build simulation: spells as cards, then the runes */
+.bsimcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; align-content: start; }
+.spell { background: linear-gradient(180deg, #3A3768, var(--panel)); border: 1px solid #5A5694; border-radius: 12px;
+         padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.sphead { display: flex; align-items: center; gap: 10px; }
+.sphead b { color: #fff; font-family: var(--font-head); font-size: 14px; line-height: 1.2; }
+.spline { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px;
+          border-radius: 8px; background: var(--bg-2); }
+.spline .spk { display: flex; flex-direction: column; }
+.spline .spk b { font-size: 12px; }
+.spline .spk small { color: var(--dim); font-size: 11px; }
+.spline.k-Damage .spk b { color: #F08A6E; } .spline.k-Heal .spk b { color: #A6E37A; }
+.spline.k-Shield .spk b { color: #7FE8FF; }
+.spline .spv { display: flex; align-items: baseline; gap: 10px; }
+.spline .spv b { color: #fff; font-family: var(--font-head); font-size: 18px; }
+.spline .spv .cc { color: var(--accent); font-family: var(--font-head); font-size: 13px; }
+.spfoot { list-style: none; margin: 0; padding: 6px 2px 0; border-top: 1px solid rgba(90, 86, 148, .5);
+          display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+.spfoot li { color: #C9C5EC; font-size: 12px; position: relative; padding-left: 12px; }
+.spfoot li::before { content: ""; position: absolute; left: 0; top: 7px; width: 5px; height: 5px; border-radius: 50%;
+                     background: var(--dim); }
+.bruneswrap { margin-top: 6px; }
+.brunes { margin-bottom: 12px; }
+.brunes .brn { display: block; color: #fff; font-family: var(--font-head); font-size: 13px; margin-bottom: 6px; }
+.brunerow { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.brune { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer;
+         background: var(--panel); border: 1px solid var(--line); text-align: left; color: #E2DEFF; }
+.brune:hover { border-color: #8D8BA8; }
+.brune.on { border-color: var(--accent); background: rgba(242, 201, 76, .08); box-shadow: 0 0 0 1px rgba(242, 201, 76, .3); }
+.brune .brt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.brune .brt b { color: #fff; font-size: 13px; }
+.brune .brt span { color: var(--dim); font-size: 12px; line-height: 1.35; }

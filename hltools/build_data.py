@@ -35,6 +35,15 @@ JEWEL = {"GearNeck": "Neck", "GearFinger": "Finger", "GearTrinket": "Trinket"}
 CLASS_SKILL_TYPES = ("ClassSkill",)
 
 
+def _at_rank(conds, rank):
+    """A scaling applies at this rank: only rank conditions, met."""
+    conds = conds or {}
+    if set(conds) - {"minRank", "maxRank"}:
+        return False                    # heroic-only and the like
+    return (conds.get("minRank") or 0) <= rank <= (conds.get("maxRank")
+                                                   or rank)
+
+
 def build(game_dir):
     cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
                                             "data.cdb"))
@@ -169,22 +178,72 @@ def build(game_dir):
     for c in CLASSES:
         wanted |= {s.get("skill") for s in (unit.get(c) or {}).get("skills")
                    or ()}
-    effects = {}
+    # A step can need a rune (cond.mastery), exclude one (masteryExclude)
+    # or a skill rank (minRank / maxRank, on steps and scalings): skills are
+    # shown at their highest rank (WeaponSkill_MaxRank).
+    max_rank = int(num("WeaponSkill_MaxRank") or 3)
+    # the runes' French descriptions (res.pak lang/export_fr.xml: under each
+    # skill, mastery/<rune>/text.desc)
+    rune_fr = {}
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(pak_extract.read_entry(Path(game_dir) / "res.pak",
+                                                    "lang/export_fr.xml"))
+        for sheet in root.findall("sheet"):
+            if sheet.get("name") != "skill":
+                continue
+            for row in sheet:
+                for m in row.findall("mastery/*"):
+                    d = m.find("text.desc")
+                    if d is not None:
+                        rune_fr[m.tag] = "".join(d.itertext()).strip()
+    except Exception:
+        pass
+    effects, skill_info = {}, {}
     for sid in wanted:
+        sk = skills.get(sid) or {}
         out = []
-        for st in (skills.get(sid) or {}).get("steps") or ():
+        reach = None                    # the range of the step that hits
+        for st in sk.get("steps") or ():
+            cond = st.get("cond") or {}
+            if not (cond.get("minRank") or 0) <= max_rank                     <= (cond.get("maxRank") or max_rank):
+                continue                # a step for lower ranks only
             for e in st.get("effects") or ():
                 k = e.get("effect")
                 kind = eff_kinds[k] if isinstance(k, int) else None
                 if kind not in ("Damage", "Heal", "Shield"):
                     continue
+                if reach is None and isinstance(st.get("range"),
+                                                (int, float)):
+                    reach = st["range"]
                 out.append({"k": kind, "aff": e.get("affinity"),
                             "base": e.get("baseVal") or 0,
+                            "rune": cond.get("mastery"),
+                            "noRune": cond.get("masteryExclude"),
                             "sc": [[x.get("atb"), x.get("ratio") or 0]
                                    for x in e.get("scaling") or ()
-                                   if x.get("atb") and not x.get("conds")]})
+                                   if x.get("atb")
+                                   and _at_rank(x.get("conds"), max_rank)]})
         if out:
             effects[sid] = out
+        runes = [{"id": m.get("id"),
+                  "cd": (m.get("props") or {}).get("cooldown"),
+                  "desc": rune_fr.get(m.get("id"))
+                  or (m.get("text") or {}).get("desc") or ""}
+                 for m in sk.get("mastery") or () if m.get("id")]
+        if reach is None:
+            reach = max((st["range"] for st in sk.get("steps") or ()
+                         if isinstance(st.get("range"), (int, float))),
+                        default=None)
+        cd = sk.get("cooldown")
+        for ov in (sk.get("props") or {}).get("rankOverride") or ():
+            if (ov.get("minRank") or 0) <= max_rank and                     (ov.get("props") or {}).get("cooldown") is not None:
+                cd = ov["props"]["cooldown"]
+        info = {"cd": cd, "range": reach}
+        if runes:
+            info["runes"] = runes
+        if info["cd"] or runes or reach:
+            skill_info[sid] = info
     affinities = {a["id"]: a.get("parent") for a in sh["affinity"]["lines"]}
     apt_flags = {a["id"]: (a.get("props") or {}).get("flags") or 0
                  for a in sh["aptitude"]["lines"]}
@@ -207,7 +266,8 @@ def build(game_dir):
                                   or 0) for r in sh["rarity"]["lines"]},
         "classes": classes, "items": items, "augments": augments,
         "accepts": accepts, "infusions": infusions,
-        "effects": effects, "affinities": affinities, "aptFlags": apt_flags,
+        "effects": effects, "skillInfo": skill_info, "skillRank": max_rank,
+        "affinities": affinities, "aptFlags": apt_flags,
         "weaponPowerRatio": wp_ratio,
     }
 

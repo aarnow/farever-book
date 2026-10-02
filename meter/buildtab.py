@@ -77,6 +77,7 @@ class BuildTab:
             "build_talents_reset": lambda: self._edit(
                 lambda b: b.update(talents={})),
             "build_sim": lambda p: self._sim(p.get("field"), p.get("value")),
+            "build_rune": lambda p: self._rune(p.get("skill"), p.get("rune")),
             "build_skill": lambda p: self._skill(p.get("group"),
                                                  p.get("index"),
                                                  p.get("value")),
@@ -183,6 +184,17 @@ class BuildTab:
             except (TypeError, ValueError):
                 return
             b["sim"] = sim
+        self._edit(change)
+
+    def _rune(self, skill, rune):
+        """One rune per skill: choosing the chosen one takes it off."""
+        def change(b):
+            runes = dict(b.get("runes") or {})
+            if runes.get(skill) == rune or not rune:
+                runes.pop(skill, None)
+            else:
+                runes[skill] = rune
+            b["runes"] = runes
         self._edit(change)
 
     def _talent(self, sid, delta):
@@ -295,7 +307,8 @@ class BuildTab:
         for s in sk.get("class") or ():
             if s:
                 rows.append((s, None, None))
-        out = simulate(raw, b["lvl"], rows, armor, enemy, hit)
+        out = simulate(raw, b["lvl"], rows, armor, enemy, hit,
+                       (b.get("runes") or {}).values())
         fmt = lambda v: f"{v:.0f}"
         pc = lambda v: f"{v * 100:.1f}".replace(".", ",") + " %"
         kinds = {"Damage": "Dégâts", "Heal": "Soin", "Shield": "Bouclier"}
@@ -303,14 +316,19 @@ class BuildTab:
             "armor": armor, "enemy": enemy, "hit": hit,
             "maxLvl": build_data().get("maxLevel") or 25,
             "crit": pc(out["critChance"]), "critMult": pc(out["critMult"]),
-            "rows": [{"name": r["name"], "kind": kinds.get(r["kind"],
-                                                           r["kind"]),
-                      "k": r["kind"],
-                      "aff": element_label(r["aff"]) if r["aff"] else "",
-                      "normal": fmt(r["normal"]), "crit": fmt(r["crit"]),
-                      "avg": fmt(r["avg"]),
-                      "mit": pc(r["mit"]) if "mit" in r else ""}
-                     for r in out["rows"]],
+            "skills": [{
+                "id": r["id"], "name": r["name"],
+                "cd": f"{r['cd']:g} s".replace(".", ",") if r.get("cd")
+                else "",
+                "range": f"{r['range']:g} m".replace(".", ",") if r.get("range") else "",
+                "lines": [{"kind": kinds.get(x["kind"], x["kind"]),
+                           "k": x["kind"],
+                           "aff": element_label(x["aff"]) if x["aff"] else "",
+                           "normal": fmt(x["normal"]), "crit": fmt(x["crit"]),
+                           "avg": fmt(x["avg"]),
+                           "mit": pc(x["mit"]) if "mit" in x else ""}
+                          for x in r["lines"]]} for r in out["rows"]],
+            "runes": self._runes_view(b, raw, rows, armor, enemy, hit),
             "defense": {
                 "hit": fmt(hit),
                 "phys": fmt(out["defense"]["phys"]["after"]),
@@ -321,6 +339,37 @@ class BuildTab:
                 "hp": fmt(out["defense"]["hp"]),
                 "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", ",")
                              if out["defense"]["phys"]["after"] > 0 else "—")}}
+
+    def _runes_view(self, b, raw, rows, armor, enemy, hit):
+        """Each skill on the bar that has runes: its three, the one chosen,
+        each described with its own numbers (::dmg::, ::heal:: simulated
+        with that rune, ::cooldown:: its own)."""
+        info = build_data().get("skillInfo") or {}
+        chosen = b.get("runes") or {}
+        out = []
+        weapon_of = {sid: w for sid, _l, w in rows}
+        for sid in B.bar_skills(b):
+            rs = (info.get(sid) or {}).get("runes") or ()
+            if not rs:
+                continue
+            cards = []
+            for r in rs:
+                sim = simulate(raw, b["lvl"], [(sid, None,
+                                                weapon_of.get(sid))],
+                               armor, enemy, hit, [r["id"]])
+                lines = [x for sk in sim["rows"] for x in sk["lines"]
+                         if x.get("rune") == r["id"]]
+                vals = {"dmg": next((x for x in lines
+                                     if x["kind"] == "Damage"), None),
+                        "heal": next((x for x in lines
+                                      if x["kind"] in ("Heal", "Shield")),
+                                     None)}
+                cards.append({"id": r["id"], "name": _skill_label(r["id"]),
+                              "on": chosen.get(sid) == r["id"],
+                              "desc": _rune_text(r, _skill_label(sid), vals)})
+            out.append({"skill": sid, "name": _skill_label(sid),
+                        "runes": cards})
+        return out
 
     def _skill_bar(self, b):
         """The action bar as the game shows it: 1-2 the weapon's skills
@@ -450,6 +499,25 @@ def _infusion_options():
                     "k": (faction_label(e.get("f")), e.get("role") or "")})
     out.sort(key=lambda x: x.pop("k"))
     return out
+
+
+def _rune_text(rune, skill_name, vals):
+    """A rune's French description with its numbers filled in."""
+    import re
+    txt = rune.get("desc") or ""
+
+    def sub(m):
+        key = m.group(1).split("%")[0]
+        if key == "name":
+            return skill_name
+        if key == "cooldown" and rune.get("cd") is not None:
+            return f"{rune['cd']:g} s".replace(".", ",")
+        if key in ("dmg", "damage") and vals.get("dmg"):
+            return f"{vals['dmg']['normal']:.0f} dégâts"
+        if key in ("heal", "shield") and vals.get("heal"):
+            return f"{vals['heal']['normal']:.0f} PV"
+        return "X"
+    return re.sub(r"::([^:]+)::", sub, txt)
 
 
 def _aug_name(aid):

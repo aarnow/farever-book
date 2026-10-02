@@ -19,8 +19,8 @@ mitigation (ent.GameObject.getAffinityDamageReduction)
     r / (r + a + b * attacker level) (ResistanceScalableReductionFormula),
     + MagicReduction for magic.
 heal (ent.Unit.computeHeal)
-    amount * CritDamage on a critical heal * HealGivenMultiplier
-    (100 % + Fervor).
+    amount * CritDamage on a critical heal * (1 + Fervor) *
+    HealGivenMultiplier (100 % + Fervor) — checked against the tooltip.
 
 Not simulated: what a skill's own script adds (conditional bonuses,
 stacks, special effects) — those are code, not data.
@@ -129,30 +129,48 @@ def effect_amount(effect, hero, weapon=None):
     return total
 
 
-def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming):
+def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
+             runes=()):
     """Every damage / heal / shield the bar's skills do, against a target
     whose armour stops `target_armor_pct` % at this level; and what an
     `incoming` hit of an enemy of `enemy_level` leaves.
 
     hero: the sheet's attribute values (percent attributes in %).
     bar:  [(skill id, label, (weapon kind, level) when it is a weapon's
-           skill — the main weapon's or the arsenal's — else None)]."""
+           skill — the main weapon's or the arsenal's — else None)].
+    runes: the runes chosen; a step that needs a rune (or excludes one)
+           counts only then. Rows: one per skill, its effects in `lines`."""
+    runes = set(runes or ())
+    info = build_data().get("skillInfo") or {}
     pct = lambda k: (hero.get(k) or 0) / 100.0
     fervor = pct("Fervor")
     crit_c = max(0.0, min(1.0, pct("CritChance")))
     crit_m = max(1.0, pct("CritDamage"))
     dmg_mod = 1.0                               # DamageModifier: 100 %
-    heal_mod = 1.0 + fervor                     # HealGivenMultiplier
+    # a heal goes through the damage ratio's Fervor, then through
+    # HealGivenMultiplier (100 % + Fervor): measured 2026-10-02 against the
+    # game's tooltip (Bond d'essaim, Fervor 22.59 %: 68 PV)
+    heal_mod = (1.0 + fervor) * (1.0 + fervor)
     target_resist = resist_for(target_armor_pct / 100.0, level)
     effects = build_data().get("effects") or {}
     rows = []
     for sid, label, weapon in bar:
+        si = info.get(sid) or {}
+        cd = si.get("cd")
+        for r in si.get("runes") or ():
+            if r["id"] in runes and r.get("cd") is not None:
+                cd = r["cd"]
+        skill = {"id": sid, "name": label or _skill_label(sid), "cd": cd,
+                 "range": si.get("range"), "lines": []}
         for e in effects.get(sid) or ():
+            if e.get("rune") and e["rune"] not in runes:
+                continue
+            if e.get("noRune") and e["noRune"] in runes:
+                continue
             base = effect_amount(e, hero, weapon)
             if base <= 0:
                 continue
-            row = {"id": sid, "name": label or _skill_label(sid),
-                   "kind": e["k"],
+            row = {"kind": e["k"], "rune": e.get("rune"),
                    "aff": e.get("aff") or ""}
             if e["k"] == "Damage":
                 magic = is_magic(e.get("aff"))
@@ -168,7 +186,9 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming):
                 v = base * heal_mod
                 row.update(normal=v, crit=v * crit_m,
                            avg=v * (1 + crit_c * (crit_m - 1)))
-            rows.append(row)
+            skill["lines"].append(row)
+        if skill["lines"] or cd:
+            rows.append(skill)
     taken = max(0.0, (100 - 0.5 * (hero.get("Fervor") or 0)) / 100)
     phys = mitigation(hero.get("Armor") or 0, 0, enemy_level)
     magic = min(1.0, mitigation(hero.get("MagicArmor") or 0, 0, enemy_level)

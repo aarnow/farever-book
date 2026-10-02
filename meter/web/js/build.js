@@ -98,35 +98,16 @@ function buildSim(s) {
   ctl.appendChild(num('Coup reçu', s.hit, 'hit', 0, 100000, 10));
   wrap.appendChild(ctl);
   wrap.appendChild(el('p', 'note', 'Critique ' + s.crit + ' · bonus critique ' + s.critMult
-    + '. La moyenne tient compte des chances de critique. Les effets propres à certains sorts '
-    + '(bonus conditionnels, cumuls, effets spéciaux codés dans le jeu) ne sont pas simulés.'));
+    + ' (CC : coup critique). La moyenne tient compte des chances de critique. Les effets propres '
+    + 'à certains sorts (bonus conditionnels, cumuls, effets spéciaux codés dans le jeu) ne sont pas simulés.'));
 
   const out = el('div', 'bsimgrid');
-  const t = el('div', 'spanel bsimtab');
-  t.appendChild(el('div', 'sptitle', 'Ce que tu infliges'));
-  if (!(s.rows || []).length) {
+  const t = el('div', 'bsimcards');
+  if (!(s.skills || []).length) {
     t.appendChild(el('p', 'anote', 'Équipe une arme ou place des compétences.'));
-  } else {
-    const tab = el('table', 'simtable');
-    const hr = el('tr');
-    ['Sort', 'Effet', 'Normal', 'Critique', 'Moyenne'].forEach((h) => hr.appendChild(el('th', null, h)));
-    tab.appendChild(hr);
-    s.rows.forEach((r) => {
-      const tr = el('tr', 'k-' + r.k);
-      const n = el('td', 'sn');
-      n.appendChild(el('b', null, r.name));
-      if (r.aff) n.appendChild(el('small', null, r.aff + (r.mit ? ' · armure −' + r.mit : '')));
-      tr.appendChild(n);
-      tr.appendChild(el('td', 'sk', r.kind));
-      tr.appendChild(el('td', 'sv', r.normal));
-      tr.appendChild(el('td', 'sv', r.crit));
-      tr.appendChild(el('td', 'sv avg', r.avg));
-      tab.appendChild(tr);
-    });
-    t.appendChild(tab);
   }
+  (s.skills || []).forEach((sk) => t.appendChild(spellCard(sk)));
   out.appendChild(t);
-
   const d = s.defense;
   const c = el('div', 'spanel bsimdef');
   c.appendChild(el('div', 'sptitle', 'Ce que tu reçois'));
@@ -146,7 +127,70 @@ function buildSim(s) {
   line('Coups physiques encaissés', d.hitsPhys);
   out.appendChild(c);
   wrap.appendChild(out);
+  if ((s.runes || []).length) wrap.appendChild(runesSection(s.runes));
   return wrap;
+}
+
+/* A spell as a card: its icon and name, each effect normal and critical,
+   then its cooldown, range and average. */
+function spellCard(sk) {
+  const card = el('div', 'spell');
+  const head = el('div', 'sphead');
+  head.appendChild(skillIcon({ id: sk.id, name: sk.name }, 'big'));
+  head.appendChild(el('b', null, sk.name));
+  card.appendChild(head);
+  if (!(sk.lines || []).length) {
+    card.appendChild(el('p', 'anote', 'Pas de dégâts ni de soin chiffrés (effet de script ou de rune).'));
+  }
+  (sk.lines || []).forEach((l) => {
+    const row = el('div', 'spline k-' + l.k);
+    const left = el('div', 'spk');
+    left.appendChild(el('b', null, l.kind));
+    if (l.aff) left.appendChild(el('small', null, l.aff));
+    row.appendChild(left);
+    const v = el('div', 'spv');
+    v.appendChild(el('b', null, l.normal));
+    v.appendChild(el('span', 'cc', l.crit + ' CC'));
+    row.appendChild(v);
+    card.appendChild(row);
+  });
+  const foot = el('ul', 'spfoot');
+  const item = (t) => foot.appendChild(el('li', null, t));
+  if (sk.cd) item('Recharge ' + sk.cd);
+  if (sk.range) item('Portée ' + sk.range);
+  (sk.lines || []).forEach((l) => {
+    item('Moyenne ' + l.avg + (sk.lines.length > 1 ? ' (' + l.kind.toLowerCase() + ')' : ''));
+    if (l.mit) item('Réduction cible −' + l.mit);
+  });
+  card.appendChild(foot);
+  return card;
+}
+
+/* The runes: for each skill on the bar, its three, one to pick. */
+function runesSection(list) {
+  const box = el('div', 'bruneswrap');
+  box.appendChild(el('div', 'sub2', 'Runes'));
+  box.appendChild(el('p', 'note', 'Une rune par compétence. Clic pour la poser, re-clic pour l’enlever. '
+    + 'Ses effets chiffrés entrent dans la simulation.'));
+  list.forEach((g) => {
+    const blk = el('div', 'brunes');
+    blk.appendChild(el('b', 'brn', g.name));
+    const row = el('div', 'brunerow');
+    g.runes.forEach((r) => {
+      const c = el('button', 'brune' + (r.on ? ' on' : ''));
+      c.type = 'button';
+      c.appendChild(skillIcon({ id: r.id, name: r.name }));
+      const t = el('div', 'brt');
+      t.appendChild(el('b', null, r.name));
+      t.appendChild(el('span', null, r.desc));
+      c.appendChild(t);
+      c.addEventListener('click', () => notify('build_rune', { skill: g.skill, rune: r.id }));
+      row.appendChild(c);
+    });
+    blk.appendChild(row);
+    box.appendChild(blk);
+  });
+  return box;
 }
 
 /* The action bar under the hero: 1-2 the weapons' skills (set by the
