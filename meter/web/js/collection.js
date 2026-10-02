@@ -1,6 +1,6 @@
 /* The Collection page. */
 
-const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '' };
+const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '' };
 let COLL_NODE = null;
 
 function ring(pct) {
@@ -108,25 +108,48 @@ function renderCollection(box, n) {
   tools.appendChild(seg);
   box.appendChild(tools);
   const gears = COLL.cat === 'gears';
-  if (gears && (n.slots || []).length) {
-    const sl = el('div', 'seg collslots');
-    [{ v: '', t: 'Tous' }].concat(n.slots).forEach((s) => {
-      const b = el('button', COLL.slot === s.v ? 'on' : '', s.t);
+  const things = COLL.cat === 'items';
+  // a filter row: big chips, each led by its icon
+  const chips = (opts, cur, set) => {
+    const row = el('div', 'collfilters');
+    opts.forEach((o) => {
+      const b = el('button', 'cfchip' + (cur === o.v ? ' on' : ''));
       b.type = 'button';
-      b.addEventListener('click', () => { COLL.slot = s.v; rerenderCollection(); });
-      sl.appendChild(b);
+      if (o.icon) b.appendChild(o.icon);
+      b.appendChild(el('span', null, o.t));
+      b.addEventListener('click', () => { set(o.v); rerenderCollection(); });
+      row.appendChild(b);
     });
-    box.appendChild(sl);
+    return row;
+  };
+  const art = (key) => {
+    const src = (window.__SHEET__ || {})[key];
+    if (!src) return null;
+    const im = el('img', 'cfic');
+    im.src = src;
+    im.alt = '';
+    return im;
+  };
+  if (gears && (n.slots || []).length) {
+    box.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.slots.map((sl) => (
+      { v: sl.v, t: sl.t, icon: art('slot_' + sl.v) }))), COLL.slot, (v) => { COLL.slot = v; }));
   }
   if (gears && (n.classes || []).length) {
-    const cl = el('div', 'seg collslots');
-    [{ v: '', t: 'Toutes les classes' }].concat(n.classes).forEach((c) => {
-      const b = el('button', COLL.cls === c.v ? 'on' : '', c.t);
-      b.type = 'button';
-      b.addEventListener('click', () => { COLL.cls = c.v; rerenderCollection(); });
-      cl.appendChild(b);
-    });
-    box.appendChild(cl);
+    box.appendChild(chips([{ v: '', t: 'Toutes les classes' }].concat(n.classes.map((c) => (
+      { v: c.v, t: c.t, icon: classEl(c.t, c.v, 'cfic') }))), COLL.cls, (v) => { COLL.cls = v; }));
+  }
+  if (things && (n.itemCats || []).length) {
+    // each kind shown by one of its items (an owned one if any)
+    const pick = (v) => {
+      const it = (n.items || []).find((x) => x.c === 'items' && x.ic === v && x.own)
+        || (n.items || []).find((x) => x.c === 'items' && x.ic === v);
+      if (!it) return null;
+      const im = collImg(it.id);
+      im.classList.add('cfic');
+      return im;
+    };
+    box.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.itemCats.map((c) => (
+      { v: c.v, t: c.t, icon: pick(c.v) }))), COLL.icat, (v) => { COLL.icat = v; }));
   }
 
   const cat = cats.find((c) => c.v === COLL.cat) || cats[0] || { one: 'élément' };
@@ -135,6 +158,7 @@ function renderCollection(box, n) {
     && (COLL.filter === 'all' || (COLL.filter === 'own') === it.own)
     && (!gears || !COLL.slot || it.sl === COLL.slot)
     && (!gears || !COLL.cls || !(it.cls || []).length || it.cls.includes(COLL.cls))
+    && (!things || !COLL.icat || it.ic === COLL.icat)
     && (!needle || it.name.toLowerCase().includes(needle)));
   box.appendChild(el('div', 'collcount', shown.length + ' ' + cat.one + (shown.length > 1 ? 's' : '')));
 

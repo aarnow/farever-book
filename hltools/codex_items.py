@@ -17,6 +17,37 @@ from collection_data import _images, _table_items
 
 TYPES = ("CraftingComponent", "Ore", "Cloth", "Leather")
 
+# The game gives these no category of their own (nearly all are a
+# "CraftingComponent"), but files their models by nature: the folder of an
+# item's model names what it is. A few are filed oddly and set by hand.
+FOLDER_CATS = {
+    "Gatherables/Ores": "ore", "Loot/Mineral": "ore", "Loot/Metal": "metal",
+    "Gatherables/Plants": "plant", "Loot/Vegetals": "plant",
+    "Loot/Cloths": "cloth",
+    "Loot/Fangs": "creature", "Loot/Eye": "creature",
+    "Loot/DiaphanousWing": "creature", "Loot/MobLoot": "creature",
+    "Loot/NepsidScale": "creature", "Loot/Tusk": "creature",
+    "Loot/Spirit": "creature", "Loot/GearAccessory": "creature",
+    "Loot/Coin": "creature",
+    "Loot/Spark": "magic", "Loot/Scrolls": "magic", "Loot/Affinities": "magic",
+    "Loot/Liquide": "cook", "Loot/Cook": "cook", "Loot/Miscellaneous": "cook"}
+ID_CATS = {"Blood_Z1": "creature", "StrangeSpores": "plant",
+           "Stone_Ore_Z1": "ore"}
+
+
+def category(item):
+    """ore, metal, plant, cloth, creature, magic, cook or misc."""
+    if item["id"] in ID_CATS:
+        return ID_CATS[item["id"]]
+    v = item.get("visuals") or {}
+    path = (v.get("modelPath")
+            or ((v.get("models") or [{}])[0].get("prefab")) or "")
+    parts = path.split("/")
+    folder = ("/".join(parts[1:3]) if path.startswith("Items/")
+              else "/".join(parts[2:4]) if path.startswith("Environment/")
+              else "")
+    return FOLDER_CATS.get(folder, "misc")
+
 
 def build(game_dir, img_dir=None):
     game_dir = Path(game_dir)
@@ -122,7 +153,8 @@ def build(game_dir, img_dir=None):
                                        for i in r.get("input") or ()]})
 
     out = [{"id": iid, "rarity": items[iid].get("rarity") or "",
-            "type": items[iid].get("type"), "src": src.get(iid, []),
+            "type": items[iid].get("type"), "cat": category(items[iid]),
+            "src": src.get(iid, []),
             "uses": uses.get(iid, 0)} for iid in wanted]
     if img_dir is not None:
         _images(game_dir, img_dir, {iid: items[iid].get("gfx")

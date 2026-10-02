@@ -3,6 +3,7 @@
 "id": "CopperOre",
 "rarity": "Common",
 "type": "Ore",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -54,6 +55,7 @@
 "id": "CopperIngot",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [
 {
 "k": "craft",
@@ -78,6 +80,7 @@
 "id": "TinOre",
 "rarity": "Common",
 "type": "Ore",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -129,6 +132,7 @@
 "id": "BronzeIngot",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [
 {
 "k": "craft",
@@ -157,6 +161,7 @@
 "id": "TungsteneOre",
 "rarity": "Rare",
 "type": "Ore",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -195,6 +200,7 @@
 "id": "TungsteneIngot",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [
 {
 "k": "craft",
@@ -219,6 +225,7 @@
 "id": "Alloy_Z1",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [
 {
 "k": "craft",
@@ -247,6 +254,7 @@
 "id": "Alloy_Z2",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [],
 "uses": 0
 },
@@ -254,6 +262,7 @@
 "id": "IronOre",
 "rarity": "Common",
 "type": "Ore",
+"cat": "ore",
 "src": [],
 "uses": 0
 },
@@ -261,6 +270,7 @@
 "id": "IronIngot",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [],
 "uses": 0
 },
@@ -268,6 +278,7 @@
 "id": "Coal",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -301,6 +312,7 @@
 "id": "SteelIngot",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [],
 "uses": 0
 },
@@ -308,6 +320,7 @@
 "id": "CopperSetting",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "metal",
 "src": [
 {
 "k": "craft",
@@ -328,6 +341,7 @@
 "id": "Rock_Z1",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -386,6 +400,7 @@
 "id": "CutStone",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "craft",
@@ -410,6 +425,7 @@
 "id": "Stone_Ore_Z1",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "gather",
@@ -443,6 +459,7 @@
 "id": "Pearl",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -461,6 +478,7 @@
 "id": "Amber",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -514,6 +532,7 @@
 "id": "Beryl",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -567,6 +586,7 @@
 "id": "Malachite",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -620,6 +640,7 @@
 "id": "Agate",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -673,6 +694,7 @@
 "id": "Ruby",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "family",
@@ -726,6 +748,7 @@
 "id": "CutAmber",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "craft",
@@ -750,6 +773,7 @@
 "id": "CutBeryl",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "craft",
@@ -774,6 +798,7 @@
 "id": "CutMalachite",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "craft",
@@ -798,6 +823,7 @@
 "id": "CutAgate",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "craft",
@@ -822,6 +848,7 @@
 "id": "CutRuby",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "ore",
 "src": [
 {
 "k": "craft",
@@ -846,6 +873,7 @@
 "id": "HunterSauce",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "cook",
 "src": [
 {
 "k": "craft",
@@ -874,6 +902,7 @@
 "id": "FishermanSauce",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "cook",
 "src": [
 {
 "k": "craft",
@@ -902,6 +931,7 @@
 "id": "SkoverDriedHerbs",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "craft",
@@ -930,6 +960,7 @@
 "id": "MadrigoldPetal",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "gather",
@@ -948,6 +979,7 @@
 "id": "LavendulaPetal",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "gather",
@@ -966,6 +998,7 @@
 "id": "AncientThymePetal",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "gather",
@@ -984,6 +1017,7 @@
 "id": "ZealotusPetal",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "gather",
@@ -1002,6 +1036,7 @@
 "id": "FreshFlowerPowder",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "craft",
@@ -1034,6 +1069,7 @@
 "id": "StrangeSpores",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "gather",
@@ -1082,6 +1118,7 @@
 "id": "AlchemistEssence_Z1",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "plant",
 "src": [
 {
 "k": "craft",
@@ -1110,6 +1147,7 @@
 "id": "Cloth_Z1",
 "rarity": "Common",
 "type": "Cloth",
+"cat": "cloth",
 "src": [
 {
 "k": "family",
@@ -1146,6 +1184,7 @@
 "id": "Leather_Z1",
 "rarity": "Common",
 "type": "Leather",
+"cat": "cloth",
 "src": [
 {
 "k": "family",
@@ -1182,6 +1221,7 @@
 "id": "LinenBolt",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "cloth",
 "src": [
 {
 "k": "craft",
@@ -1206,6 +1246,7 @@
 "id": "TannedLeather",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "cloth",
 "src": [
 {
 "k": "craft",
@@ -1230,6 +1271,7 @@
 "id": "SoftFur",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "cloth",
 "src": [
 {
 "k": "family",
@@ -1258,6 +1300,7 @@
 "id": "HideboundWeave",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "cloth",
 "src": [
 {
 "k": "craft",
@@ -1286,6 +1329,7 @@
 "id": "Paper_Z1",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [],
 "uses": 10
 },
@@ -1293,6 +1337,7 @@
 "id": "Residues_Z1",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "salvage",
@@ -1309,6 +1354,7 @@
 "id": "Particle_Z1",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "scrap",
@@ -1327,6 +1373,7 @@
 "id": "BrightVoidOrb",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "craft",
@@ -1351,6 +1398,7 @@
 "id": "Fragments_Z1",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "salvage",
@@ -1367,6 +1415,7 @@
 "id": "EnchantPowder_Z1",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "craft",
@@ -1391,6 +1440,7 @@
 "id": "EnchantConcentrate_Z1",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "craft",
@@ -1419,6 +1469,7 @@
 "id": "EnchantPaper_Z1",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "craft",
@@ -1443,6 +1494,7 @@
 "id": "Crystal_Z2",
 "rarity": "Epic",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "salvage",
@@ -1459,6 +1511,7 @@
 "id": "Essence_Z2",
 "rarity": "Legendary",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "salvage",
@@ -1475,6 +1528,7 @@
 "id": "Fang_Z1",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1503,6 +1557,7 @@
 "id": "KoboldMetal",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1516,6 +1571,7 @@
 "id": "Fin_Z1",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1529,6 +1585,7 @@
 "id": "NepsidScale",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1542,6 +1599,7 @@
 "id": "ChippedTusk",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1555,6 +1613,7 @@
 "id": "Eye_Z1",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1568,6 +1627,7 @@
 "id": "Wing_Z1",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1586,6 +1646,7 @@
 "id": "GlossyChitin",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1604,6 +1665,7 @@
 "id": "Blood_Z1",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1652,6 +1714,7 @@
 "id": "SpiritHeart_Z2",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1665,6 +1728,7 @@
 "id": "Ramgold",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1678,6 +1742,7 @@
 "id": "DemonicHorn",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1736,6 +1801,7 @@
 "id": "TailSlice",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1794,6 +1860,7 @@
 "id": "VeiledWing",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1852,6 +1919,7 @@
 "id": "FiendishEye",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "creature",
 "src": [
 {
 "k": "family",
@@ -1910,6 +1978,7 @@
 "id": "PrismaticFragment",
 "rarity": "Rare",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "craft",
@@ -1950,6 +2019,7 @@
 "id": "MoteOfFire",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "family",
@@ -1979,6 +2049,7 @@
 "id": "FragmentOfFire",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "combine",
@@ -1996,6 +2067,7 @@
 "id": "MoteOfWater",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "family",
@@ -2035,6 +2107,7 @@
 "id": "FragmentOfWater",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "combine",
@@ -2052,6 +2125,7 @@
 "id": "MoteOfAir",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "family",
@@ -2081,6 +2155,7 @@
 "id": "FragmentOfAir",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "combine",
@@ -2098,6 +2173,7 @@
 "id": "MoteOfEarth",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "family",
@@ -2132,6 +2208,7 @@
 "id": "FragmentOfEarth",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "combine",
@@ -2149,6 +2226,7 @@
 "id": "MoteOfNature",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "family",
@@ -2188,6 +2266,7 @@
 "id": "FragmentOfNature",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "combine",
@@ -2205,6 +2284,7 @@
 "id": "MoteOfChaos",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "family",
@@ -2263,6 +2343,7 @@
 "id": "FragmentOfChaos",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "combine",
@@ -2280,6 +2361,7 @@
 "id": "SparkSample",
 "rarity": "Uncommon",
 "type": "CraftingComponent",
+"cat": "magic",
 "src": [
 {
 "k": "scrap",
@@ -2363,6 +2445,7 @@
 "id": "Vial",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "cook",
 "src": [],
 "uses": 24
 },
@@ -2370,6 +2453,7 @@
 "id": "SimpleCauldron",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "cook",
 "src": [],
 "uses": 1
 },
@@ -2377,6 +2461,7 @@
 "id": "SilverTray",
 "rarity": "Common",
 "type": "CraftingComponent",
+"cat": "cook",
 "src": [],
 "uses": 1
 }

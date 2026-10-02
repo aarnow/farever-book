@@ -57,6 +57,14 @@ FACTION_ACTS = (("WorldElite", "élite", "élites"),
 ITEM_RANKS = 4
 
 
+# the item codex's kinds (hltools/codex_items.py: from the models' folders)
+ITEM_CATS = (("ore", "Minerais et gemmes"), ("metal", "Métaux"),
+             ("plant", "Plantes"), ("cloth", "Tissus et cuirs"),
+             ("creature", "Parties de créatures"),
+             ("magic", "Magie et Étincelle"), ("cook", "Cuisine"),
+             ("misc", "Divers"))
+
+
 CLASS_LABELS = {"warrior": "Guerrier", "mage": "Mage", "rogue": "Voleur",
                 "priest": "Prêtre"}
 
@@ -210,6 +218,7 @@ def collection_view(owned, item_codex=None):
                        (rarity_label(rar) if rar else ""),
                 "desc": _fr_ref(_fr_desc("item").get(iid)) if not pet else "",
                 "sl": e.get("slot"),
+                "ic": e.get("cat") if key == "items" else None,
                 "slot": dict(GEAR_SLOTS).get(e.get("slot")),
                 "cls": [APTITUDE_CLASSES[a] for a in e.get("apt") or ()
                         if a in APTITUDE_CLASSES],
@@ -222,7 +231,9 @@ def collection_view(owned, item_codex=None):
                         for line in _source_text(s, bosses).split("\n")]})
     return {"cats": cats, "items": items,
             "slots": [{"v": v, "t": t} for v, t in GEAR_SLOTS],
-            "classes": [{"v": c, "t": CLASS_LABELS[c]} for c in GEAR_CLASSES]}
+            "classes": [{"v": c, "t": CLASS_LABELS[c]} for c in GEAR_CLASSES],
+            "itemCats": [{"v": v, "t": t} for v, t in ITEM_CATS
+                         if any(e.get("cat") == v for e in cat["items"])]}
 
 
 HUNT_TIERS = {"elite": "Élite / boss", "big": "Grand", "foe": ""}

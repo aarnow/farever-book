@@ -2087,3 +2087,14 @@ body.maxed .grip { display: none; }
 /* a card whose title is led by the game's art (a dungeon's difficulty) */
 .card .t.withart { display: flex; align-items: center; gap: 8px; }
 .card .t.withart img { width: 30px; height: 30px; flex: none; }
+
+/* Collection: the gear and item filters, big chips led by their icon */
+.collfilters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.cfchip { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; min-height: 42px; border-radius: 10px;
+          cursor: pointer; background: var(--panel); border: 1px solid var(--line); color: var(--dim);
+          font-size: 14px; font-weight: 600; }
+.cfchip:hover { color: #fff; border-color: #8D8BA8; }
+.cfchip.on { color: #fff; border-color: var(--accent); background: rgba(242, 201, 76, .08); }
+.cfchip .cfic { width: 28px; height: 28px; flex: none; object-fit: contain; }
+.cfchip:not(.on) .cfic { opacity: .8; }
+.cfchip span.noimg { display: none; }
