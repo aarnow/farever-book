@@ -17,6 +17,8 @@ page by menu_host, nothing loaded at runtime).
     UI/icons/POI_DifficultySkulls_atlas_38PX.png
                                       38 px cells: the dungeon difficulties
                                       (Normal, Vétéran, Héroïque)
+    UI/icons/Steam_Achievments/Steam_Achievments_unlocked2.png
+                                      the achievement badge (Succès tab)
 
 Usage: python build_charsheet_art.py [--pak PATH]
 """
@@ -71,6 +73,9 @@ def main():
     skulls = img("UI/icons/POI_DifficultySkulls_atlas_38PX.png")
     for i in range(3):
         skulls.crop((i * 38, 0, i * 38 + 38 + (1 if i == 2 else 0), 38))               .save(OUT / f"dungeon_diff_{i}.png", optimize=True)
+    badge = img("UI/icons/Steam_Achievments/Steam_Achievments_unlocked2.png")
+    badge.resize((64, 64), Image.LANCZOS).save(OUT / "ach_badge.png",
+                                               optimize=True)
     print(f"written to {OUT}")
 
 

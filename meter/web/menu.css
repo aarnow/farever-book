@@ -2098,3 +2098,10 @@ body.maxed .grip { display: none; }
 .cfchip .cfic { width: 28px; height: 28px; flex: none; object-fit: contain; }
 .cfchip:not(.on) .cfic { opacity: .8; }
 .cfchip span.noimg { display: none; }
+
+/* Succès: the counters led by their picture */
+.achstats .card { display: flex; align-items: center; gap: 16px; }
+.achstats .achstat { width: 52px; height: 52px; flex: none; object-fit: contain; }
+.achstats .achring svg { width: 52px; height: 52px; }
+.achstats .achtx { min-width: 0; }
+.achstats .achstat.badge { border-radius: 50%; }

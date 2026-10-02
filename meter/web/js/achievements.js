@@ -22,13 +22,31 @@ function renderAch(box, n) {
   box.textContent = '';
   box.appendChild(el('div', 'section', 'Succès'));
   box.appendChild(el('p', 'note', n.sync || ''));
-  const stats = el('div', 'cards');
-  [['Points', fmtN(n.pts || 0) + ' / ' + fmtN(n.ptsAll || 0)],
-   ['Succès obtenus', (n.got || 0) + ' / ' + (n.n || 0)],
-   ['Progression', (n.n ? Math.round(n.got / n.n * 100) : 0) + ' %']].forEach(([t, v]) => {
+  // the counters, each led by its picture: the game's star (its
+  // "Personnage" category's), its achievement badge, a ring for the share
+  const stats = el('div', 'cards achstats');
+  const pct = n.n ? Math.round(n.got / n.n * 100) : 0;
+  const pic = (src, cls) => {
+    if (!src) return null;
+    const im = el('img', 'achstat' + (cls ? ' ' + cls : ''));
+    im.src = src;
+    im.alt = '';
+    return im;
+  };
+  const ringBox = () => {
+    const r = el('div', 'achstat achring');
+    r.appendChild(ring(pct));
+    return r;
+  };
+  [['Points', fmtN(n.pts || 0) + ' / ' + fmtN(n.ptsAll || 0), pic((window.__COLL__ || {}).achcat_Character)],
+   ['Succès obtenus', (n.got || 0) + ' / ' + (n.n || 0), pic((window.__SHEET__ || {}).ach_badge, 'badge')],
+   ['Progression', pct + ' %', ringBox()]].forEach(([t, v, icon]) => {
     const c = el('div', 'card');
-    c.appendChild(el('div', 't', t));
-    c.appendChild(el('div', 'v', v));
+    if (icon) c.appendChild(icon);
+    const tx = el('div', 'achtx');
+    tx.appendChild(el('div', 't', t));
+    tx.appendChild(el('div', 'v', v));
+    c.appendChild(tx);
     stats.appendChild(c);
   });
   box.appendChild(stats);
