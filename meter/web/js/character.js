@@ -232,6 +232,16 @@ function charSheet(o, onSlot, extra) {
     }
     if (g && g.prism) b.appendChild(el('i', 'prism', '✦'));
     if (g && g.up) b.appendChild(el('i', 'up', '+' + g.up));
+    if (g && g.lvl) b.appendChild(el('i', 'lv', 'lv.' + g.lvl));
+    if (g && g.inf && g.inf.id) {
+      const ic = el('img', 'infic skic' + (g.inf.on ? '' : ' off'));
+      ic.dataset.id = g.inf.id;
+      ic.alt = '';
+      ic.title = 'Imprégnation : ' + g.inf.name + (g.inf.on ? '' : ' (bonus inactif)');
+      const src = (window.__SKILL__ || {})[g.inf.id];
+      if (src) ic.src = src;
+      b.appendChild(ic);
+    }
     if (onSlot) {
       b.classList.add('edit');
       if (!g) b.title = c.label + ' : choisir une pièce';
@@ -360,6 +370,10 @@ function gearRow(g) {
     if (x2.fx) line.appendChild(document.createTextNode(' : ' + x2.fx));
     gt.appendChild(line);
   });
+  if (!g.inf && g.plan) {
+    gt.appendChild(el('span', 'gx infb off', 'Bonus d’imprégnation : ' + g.plan
+      + ' — inactif sans imprégnation'));
+  }
   if (g.inf) {
     const line = el('span', 'gx infu');
     line.appendChild(el('b', null, 'Imprégnation'));

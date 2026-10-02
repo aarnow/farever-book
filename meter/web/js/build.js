@@ -430,9 +430,8 @@ function renderBuildEditor() {
     });
     if (p.infusable) {
       field('Imprégnation', select(p.infOptions, p.inf, (v) => notify('build_piece', { field: 'inf', value: v })));
-      if (p.inf) {
-        field('Bonus d’imprégnation', select(p.statOptions, p.istat, (v) => notify('build_piece', { field: 'istat', value: v })));
-      }
+      field('Bonus d’imprégnation' + (p.inf ? '' : ' (prévisionnel)'),
+        select(p.statOptions, p.istat, (v) => notify('build_piece', { field: 'istat', value: v })));
     } else if (['Head', 'Shoulders', 'Chest', 'Back', 'Hands', 'Waist', 'Legs', 'Feet'].includes(ed.slot)) {
       right.appendChild(el('p', 'note', 'Imprégnation : sur une armure de faction, à partir de la rareté '
         + (ed.infusionMin || 'Épique').toLowerCase() + '.'));

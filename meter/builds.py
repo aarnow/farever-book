@@ -229,7 +229,7 @@ def normalize(b):
         elif p.get("inf") not in (d.get("infusions") or ()):
             p.pop("inf", None)
         if p.get("istat") not in INFUSION_STATS:
-            p["istat"] = INFUSION_STATS[0] if p.get("inf") else None
+            p["istat"] = None           # set on its own: a planned bonus
         gear[slot] = p
     b["gear"] = gear
     ranks = {k: int(v) for k, v in (b.get("talents") or {}).items() if v}
@@ -276,7 +276,7 @@ def to_profile(b):
         equip[EQUIP_SLOTS.index(slot)] = [
             p["id"], p.get("rar"), p.get("lvl"), p.get("up") or 0,
             list((p.get("augs") or {}).values()), [], p.get("inf"),
-            p.get("istat") if p.get("inf") else None,
+            p.get("istat"),
             prismatic_flag() if p.get("prism") else 0]
     sk = b.get("skills") or {}
     arsenals = {}

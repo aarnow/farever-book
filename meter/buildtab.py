@@ -412,8 +412,9 @@ class BuildTab:
                 "augs": augs, "infusable": B.infusable(p),
                 "inf": p.get("inf") or "", "istat": p.get("istat") or "",
                 "infOptions": [{"v": "", "t": "Aucune"}] + _infusion_options(),
-                "statOptions": [{"v": s, "t": attr.get(s) or _pretty_id(s)}
-                                for s in B.INFUSION_STATS],
+                "statOptions": [{"v": "", "t": "Aucun"}] + [
+                    {"v": s, "t": attr.get(s) or _pretty_id(s)}
+                    for s in B.INFUSION_STATS],
                 "g": entry}
         order = {k: i for i, k in enumerate(FILTER_STAT_ORDER)}
         return {"slot": slot, "label": SLOT_LABELS.get(slot, slot),

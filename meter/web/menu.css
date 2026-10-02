@@ -1782,3 +1782,12 @@ body.maxed .grip { display: none; }
                  border-radius: 6px; background: var(--panel-2); }
 .bsimdef .attr .an { flex: 1; color: #E2DEFF; font-size: 12px; }
 .bsimdef .attr .av { color: #fff; font-size: 13px; text-align: right; }
+
+/* the slot's badges: upgrades top left, level bottom left, infusion bottom right */
+.slot .up { top: 1px; bottom: auto; }
+.slot .lv { position: absolute; left: 3px; bottom: 1px; font-style: normal; font-size: 9px; font-weight: 700;
+            color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; letter-spacing: .2px; }
+.slot .infic { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%;
+               box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 1px 3px rgba(0, 0, 0, .6); }
+.slot .infic.off { filter: grayscale(.85) brightness(.8); }
+.slot img.infic { width: 20px; height: 20px; }

@@ -550,6 +550,9 @@ def character_view(roster, profiles, sel, waiting, live):
                      "extras": extras,
                      "prism": prism,
                      "inf": _gear_infusion(kind, infu, istat, prism),
+                     "plan": (_fr_names("attribute").get(istat)
+                              or _pretty_id(istat))
+                     if istat and not infu else None,
                      "t": t}
             st = gear_stats(kind, rar, lvl, upg, gslots, iflags)
             inf = entry["inf"]
