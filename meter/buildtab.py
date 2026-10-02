@@ -10,11 +10,12 @@ from __future__ import annotations
 import copy
 
 import builds as B
-from common import _pretty_id, class_key
+from common import _pretty_id, class_key, element_label
 from gamedata import (_fr_names, _skill_label, build_data, faction_label,
                       infusion_data, item_icon, item_label, item_type_label,
                       rarity_label)
 from gearstats import gear_stats
+from simulate import simulate
 from views import _augment_view, _talent_tree, character_view
 
 CLASS_FR = {"Warrior": "Guerrier", "Mage": "Mage", "Priest": "Prêtre",
@@ -75,6 +76,7 @@ class BuildTab:
                                                    p.get("delta")),
             "build_talents_reset": lambda: self._edit(
                 lambda b: b.update(talents={})),
+            "build_sim": lambda p: self._sim(p.get("field"), p.get("value")),
             "build_skill": lambda p: self._skill(p.get("group"),
                                                  p.get("index"),
                                                  p.get("value")),
@@ -170,6 +172,19 @@ class BuildTab:
                 p["augs"] = augs
         self._edit(change)
 
+    def _sim(self, field, value):
+        if field not in ("armor", "enemy", "hit"):
+            return
+
+        def change(b):
+            sim = dict(b.get("sim") or {})
+            try:
+                sim[field] = max(0, float(value))
+            except (TypeError, ValueError):
+                return
+            b["sim"] = sim
+        self._edit(change)
+
     def _talent(self, sid, delta):
         if self.build and B.set_talent(self.build, sid, int(delta or 0)):
             B.save_build(self.build, self.file)
@@ -241,7 +256,71 @@ class BuildTab:
                        "total": B.talent_points(b),
                        "from": d.get("talentsFrom") or 10},
             "tree": tree, "bar": bar, "passives": passives,
+            "sim": self._sim_view(b, (o.get("atbs") or {}).get("raw")),
             "editor": self._editor_view(o) if self.slot else None}
+
+    def _sim_view(self, b, raw):
+        """The simulation: the bar's skills and the main weapon's attacks
+        against the target set in the build, and the incoming hit."""
+        if not raw:
+            return None
+        sim = b.get("sim") or {}
+        armor = float(sim.get("armor") if sim.get("armor") is not None
+                      else 30)
+        enemy = int(sim.get("enemy") or b["lvl"])
+        hit = float(sim.get("hit") if sim.get("hit") is not None else 300)
+        gear = b.get("gear") or {}
+
+        def weapon(slot):
+            p = gear.get(slot)
+            return (p["id"], p.get("lvl") or b["lvl"]) if p else None
+        main, ars = weapon("Weapon1"), weapon("Weapon2")
+        rows = []
+        e = B.item(main[0]) if main else None
+        n = 0
+        for s in (e or {}).get("skills") or ():
+            if s["type"] in ("Attack", "Attack2", "Attack3", "Attack4"):
+                n += 1
+                rows.append((s["id"], f"Attaque de base {n}", main))
+            elif s["type"] == "AttackCombo":
+                rows.append((s["id"], f"Combo : {_skill_label(s['id'])}",
+                             main))
+        sk = b.get("skills") or {}
+        mine = set(B._skills_of(b, "Weapon1", B.WEAPON_SKILL_TYPES))
+        for s in sk.get("weapon") or ():
+            rows.append((s, None, main if s in mine else None))
+        for s in sk.get("arsenal") or ():
+            if s:
+                rows.append((s, None, ars))
+        for s in sk.get("class") or ():
+            if s:
+                rows.append((s, None, None))
+        out = simulate(raw, b["lvl"], rows, armor, enemy, hit)
+        fmt = lambda v: f"{v:.0f}"
+        pc = lambda v: f"{v * 100:.1f}".replace(".", ",") + " %"
+        kinds = {"Damage": "Dégâts", "Heal": "Soin", "Shield": "Bouclier"}
+        return {
+            "armor": armor, "enemy": enemy, "hit": hit,
+            "maxLvl": build_data().get("maxLevel") or 25,
+            "crit": pc(out["critChance"]), "critMult": pc(out["critMult"]),
+            "rows": [{"name": r["name"], "kind": kinds.get(r["kind"],
+                                                           r["kind"]),
+                      "k": r["kind"],
+                      "aff": element_label(r["aff"]) if r["aff"] else "",
+                      "normal": fmt(r["normal"]), "crit": fmt(r["crit"]),
+                      "avg": fmt(r["avg"]),
+                      "mit": pc(r["mit"]) if "mit" in r else ""}
+                     for r in out["rows"]],
+            "defense": {
+                "hit": fmt(hit),
+                "phys": fmt(out["defense"]["phys"]["after"]),
+                "physMit": pc(out["defense"]["phys"]["mit"]),
+                "magic": fmt(out["defense"]["magic"]["after"]),
+                "magicMit": pc(out["defense"]["magic"]["mit"]),
+                "taken": pc(out["defense"]["taken"]),
+                "hp": fmt(out["defense"]["hp"]),
+                "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", ",")
+                             if out["defense"]["phys"]["after"] > 0 else "—")}}
 
     def _skill_bar(self, b):
         """The action bar as the game shows it: 1-2 the weapon's skills

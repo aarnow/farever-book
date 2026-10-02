@@ -39,6 +39,7 @@ def new_build(name, cls="Priest", lvl=None):
     d = build_data()
     return {"name": name, "cls": cls if cls in CLASSES else "Priest",
             "lvl": int(lvl or d.get("maxLevel") or 25), "gear": {},
+            "sim": {"armor": 30, "enemy": None, "hit": 300},
             "talents": {}, "skills": {"class": [], "weapon": [],
                                       "arsenal": []},
             "at": time.time()}

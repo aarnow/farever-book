@@ -70,8 +70,83 @@ function buildBuild(n) {
       (id, delta) => notify('build_talent', { id: id, delta: delta })));
   }
 
+  if (o.sim) main.appendChild(buildSim(o.sim));
   box.appendChild(main);
   return box;
+}
+
+/* The simulation: what the build deals and heals against a target whose
+   armour is set in %, and what an incoming hit leaves. */
+function buildSim(s) {
+  const wrap = el('div', 'bsim');
+  wrap.appendChild(el('div', 'sub2', 'Simulation'));
+  const ctl = el('div', 'bsimctl');
+  const num = (label, v, field, min, max, step) => {
+    const f = el('label', 'bsimf');
+    f.appendChild(el('span', null, label));
+    const i = el('input');
+    i.type = 'number'; i.min = min; i.max = max; i.step = step || 1; i.value = v;
+    i.addEventListener('change', () => notify('build_sim', { field: field, value: Number(i.value) }));
+    f.appendChild(i);
+    return f;
+  };
+  const arm = el('div', 'bsimf wide');
+  arm.appendChild(el('span', null, 'Armure de la cible'));
+  arm.appendChild(slider(0, 80, s.armor, (v) => notify('build_sim', { field: 'armor', value: v }), '', ' %'));
+  ctl.appendChild(arm);
+  ctl.appendChild(num('Niveau de l’ennemi', s.enemy, 'enemy', 1, s.maxLvl));
+  ctl.appendChild(num('Coup reçu', s.hit, 'hit', 0, 100000, 10));
+  wrap.appendChild(ctl);
+  wrap.appendChild(el('p', 'note', 'Critique ' + s.crit + ' · bonus critique ' + s.critMult
+    + '. La moyenne tient compte des chances de critique. Les effets propres à certains sorts '
+    + '(bonus conditionnels, cumuls, effets spéciaux codés dans le jeu) ne sont pas simulés.'));
+
+  const out = el('div', 'bsimgrid');
+  const t = el('div', 'spanel bsimtab');
+  t.appendChild(el('div', 'sptitle', 'Ce que tu infliges'));
+  if (!(s.rows || []).length) {
+    t.appendChild(el('p', 'anote', 'Équipe une arme ou place des compétences.'));
+  } else {
+    const tab = el('table', 'simtable');
+    const hr = el('tr');
+    ['Sort', 'Effet', 'Normal', 'Critique', 'Moyenne'].forEach((h) => hr.appendChild(el('th', null, h)));
+    tab.appendChild(hr);
+    s.rows.forEach((r) => {
+      const tr = el('tr', 'k-' + r.k);
+      const n = el('td', 'sn');
+      n.appendChild(el('b', null, r.name));
+      if (r.aff) n.appendChild(el('small', null, r.aff + (r.mit ? ' · armure −' + r.mit : '')));
+      tr.appendChild(n);
+      tr.appendChild(el('td', 'sk', r.kind));
+      tr.appendChild(el('td', 'sv', r.normal));
+      tr.appendChild(el('td', 'sv', r.crit));
+      tr.appendChild(el('td', 'sv avg', r.avg));
+      tab.appendChild(tr);
+    });
+    t.appendChild(tab);
+  }
+  out.appendChild(t);
+
+  const d = s.defense;
+  const c = el('div', 'spanel bsimdef');
+  c.appendChild(el('div', 'sptitle', 'Ce que tu reçois'));
+  const line = (label, v, sub) => {
+    const r = el('div', 'attr sec');
+    r.appendChild(el('span', 'an', label));
+    const b = el('b', 'av', v);
+    if (sub) b.appendChild(el('small', null, ' (' + sub + ')'));
+    r.appendChild(b);
+    c.appendChild(r);
+  };
+  line('Coup reçu', d.hit);
+  line('Physique', d.phys, 'armure −' + d.physMit);
+  line('Magique', d.magic, 'réduction −' + d.magicMit);
+  line('Dégâts reçus (ferveur)', d.taken);
+  line('Points de vie', d.hp);
+  line('Coups physiques encaissés', d.hitsPhys);
+  out.appendChild(c);
+  wrap.appendChild(out);
+  return wrap;
 }
 
 /* The action bar under the hero: 1-2 the weapons' skills (set by the
@@ -379,13 +454,14 @@ function renderBuildEditor() {
   if (bl) bl.scrollTop = keepScroll;
 }
 
-function slider(min, max, v, onChange, prefix) {
+function slider(min, max, v, onChange, prefix, suffix) {
   const w = el('div', 'bslider');
   const r = el('input');
   r.type = 'range';
   r.min = min; r.max = max; r.value = v;
-  const out = el('b', null, prefix + v);
-  r.addEventListener('input', () => { out.textContent = prefix + r.value; });
+  suffix = suffix || '';
+  const out = el('b', null, prefix + v + suffix);
+  r.addEventListener('input', () => { out.textContent = prefix + r.value + suffix; });
   r.addEventListener('change', () => onChange(Number(r.value)));
   w.appendChild(r);
   w.appendChild(out);

@@ -1755,3 +1755,30 @@ body.maxed .grip { display: none; }
 .skcard.on { border-color: var(--accent); color: #fff; box-shadow: 0 0 0 1px rgba(242, 201, 76, .3); }
 .skfoot { display: flex; justify-content: flex-end; gap: 8px; }
 .bbar .sptitle { border-bottom: 0; padding-bottom: 0; }
+
+/* Build: the simulation */
+.bsimctl { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding: 12px 14px; border-radius: 12px;
+           background: var(--panel); border: 1px solid var(--line); }
+.bsimf { display: flex; flex-direction: column; gap: 4px; color: var(--dim); font-size: 11px; letter-spacing: .5px;
+         text-transform: uppercase; }
+.bsimf.wide { flex: 1 1 320px; }
+.bsimf input[type=number] { width: 110px; background: var(--bg-2); color: #fff; border: 1px solid var(--line);
+                            border-radius: 8px; padding: 6px 8px; font-size: 14px; }
+.bsimgrid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .bsimgrid { grid-template-columns: 1fr; } }
+.simtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.simtable th { text-align: left; color: var(--dim); font-size: 11px; font-weight: 600; letter-spacing: .5px;
+               text-transform: uppercase; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.simtable td { padding: 6px 8px; border-bottom: 1px solid rgba(71, 68, 122, .45); color: #E2DEFF; }
+.simtable td.sn b { display: block; color: #fff; font-weight: 600; }
+.simtable td.sn small { color: var(--dim); font-size: 11px; }
+.simtable td.sv { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-head); }
+.simtable td.avg { color: var(--accent); }
+.simtable th:nth-child(n+3) { text-align: right; }
+.simtable tr.k-Heal td.sk { color: #A6E37A; } .simtable tr.k-Shield td.sk { color: #7FE8FF; }
+.simtable tr.k-Damage td.sk { color: #F08A6E; }
+.bsimdef .attr .av small { color: var(--dim); font-size: 10px; font-weight: 400; }
+.bsimdef .attr { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 4px;
+                 border-radius: 6px; background: var(--panel-2); }
+.bsimdef .attr .an { flex: 1; color: #E2DEFF; font-size: 12px; }
+.bsimdef .attr .av { color: #fff; font-size: 13px; text-align: right; }

@@ -269,7 +269,11 @@ HERO_SECONDARY = ("CritChance", "CritDamage", "ArmorPenetration",
                   "HealthRegen")
 
 
-def hero_attributes(cls, level, gear_totals, effects=None):
+# what the damage simulator reads besides the sheet (meter/simulate.py)
+SIM_EXTRA = ("MagicArmor", "MagicReduction")
+
+
+def hero_attributes(cls, level, gear_totals, effects=None, extra=()):
     """{attribute: value} for a hero of class `cls` at `level` wearing gear
     worth `gear_totals` ({attribute: flat value}), under `effects`
     ({attribute: [flat, share, factor]}: statuses, passives, talents —
@@ -319,7 +323,7 @@ def hero_attributes(cls, level, gear_totals, effects=None):
         memo[k] = v
         return v
 
-    return {k: total(k) for k in HERO_PRIMARY + HERO_SECONDARY}
+    return {k: total(k) for k in HERO_PRIMARY + HERO_SECONDARY + tuple(extra)}
 
 
 def _hero_sheet(prof, gear):
@@ -339,7 +343,7 @@ def _hero_sheet(prof, gear):
             totals[k] = totals.get(k, 0) + inf["val"]
     lvl = prof.get("lvl") if isinstance(prof.get("lvl"), int) else None
     effects, counted = _hero_effects(prof, gear)
-    vals = hero_attributes(prof.get("k"), lvl, totals, effects)
+    vals = hero_attributes(prof.get("k"), lvl, totals, effects, SIM_EXTRA)
     if vals is None:
         return None
     d = gear_stats_data()
@@ -363,7 +367,7 @@ def _hero_sheet(prof, gear):
         return out
     return {"primary": [row(k) for k in HERO_PRIMARY],
             "secondary": [row(k) for k in HERO_SECONDARY],
-            "effects": counted}
+            "effects": counted, "raw": vals}
 
 
 def _hero_effects(prof, gear):

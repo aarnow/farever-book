@@ -122,7 +122,8 @@ def build(game_dir):
                 {"id": s.get("skill"), "type": stype(s.get("skill"))}
                 for s in it.get("skills") or ()
                 if stype(s.get("skill")) in ("WeaponSkill", "AttackCombo",
-                                             "WeaponPassive")]
+                                             "WeaponPassive", "Attack",
+                                             "Attack2", "Attack3", "Attack4")]
         items[it["id"]] = entry
 
     # augments: kind -> the types they go on, and the augments themselves
@@ -160,6 +161,36 @@ def build(game_dir):
                          for s in u.get("skills") or ()
                          if stype(s.get("skill")) == "ClassPassive"]}
 
+    # what each skill does, for the simulator: per step effect its kind
+    # (Damage, Heal, Shield), affinity, fixed value and attribute scalings
+    eff_kinds = next(c for c in sh["skill@steps@effects"]["columns"]
+                     if c["name"] == "effect")["typeStr"].split(":")[1]         .split(",")
+    wanted = {s["id"] for e in items.values() for s in e.get("skills") or ()}
+    for c in CLASSES:
+        wanted |= {s.get("skill") for s in (unit.get(c) or {}).get("skills")
+                   or ()}
+    effects = {}
+    for sid in wanted:
+        out = []
+        for st in (skills.get(sid) or {}).get("steps") or ():
+            for e in st.get("effects") or ():
+                k = e.get("effect")
+                kind = eff_kinds[k] if isinstance(k, int) else None
+                if kind not in ("Damage", "Heal", "Shield"):
+                    continue
+                out.append({"k": kind, "aff": e.get("affinity"),
+                            "base": e.get("baseVal") or 0,
+                            "sc": [[x.get("atb"), x.get("ratio") or 0]
+                                   for x in e.get("scaling") or ()
+                                   if x.get("atb") and not x.get("conds")]})
+        if out:
+            effects[sid] = out
+    affinities = {a["id"]: a.get("parent") for a in sh["affinity"]["lines"]}
+    apt_flags = {a["id"]: (a.get("props") or {}).get("flags") or 0
+                 for a in sh["aptitude"]["lines"]}
+    wp_ratio = {g.get("id"): (g.get("v") or {}).get("float")
+                for g in (consts.get("WeaponPowerRatio") or {}).get("group")
+                or ()}
     rarities = [r["id"] for r in sh["rarity"]["lines"]]
     min_rar = ((consts.get("Item_InfusionMinRarity") or {}).get("other")
                or {}).get("rarity")
@@ -176,6 +207,8 @@ def build(game_dir):
                                   or 0) for r in sh["rarity"]["lines"]},
         "classes": classes, "items": items, "augments": augments,
         "accepts": accepts, "infusions": infusions,
+        "effects": effects, "affinities": affinities, "aptFlags": apt_flags,
+        "weaponPowerRatio": wp_ratio,
     }
 
 
