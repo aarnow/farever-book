@@ -177,10 +177,11 @@ function infusionCards(list) {
 }
 
 /* `onSlot`, when given, makes the sheet an editor (the Build tab): every
-   slot, empty or not, calls it with the slot's name. */
+   slot, empty or not, calls it with the slot's name. `extra` adds
+   elements under the hero ({below}) and under the weapons ({arms}). */
 const WEAPON_KEYS = { w0: 'Weapon1', w1: 'OffhandWeapon', ars: 'Weapon2' };
 
-function charSheet(o, onSlot) {
+function charSheet(o, onSlot, extra) {
   const sh = o.sheet || { left: [], right: [], weapons: [], arsenal: null };
   const box = el('div', 'charsheet');
   const wrap = el('div', 'sheet');
@@ -274,7 +275,14 @@ function charSheet(o, onSlot) {
   doll.appendChild(colL);
   doll.appendChild(hero);
   doll.appendChild(colR);
-  wrap.appendChild(doll);
+  if (extra && extra.below) {
+    const col = el('div', 'scolumn');
+    col.appendChild(doll);
+    col.appendChild(extra.below);
+    wrap.appendChild(col);
+  } else {
+    wrap.appendChild(doll);
+  }
 
   const arms = el('div', 'spanel sarms');
   const weaponCard = (w, key) => {
@@ -299,7 +307,14 @@ function charSheet(o, onSlot) {
     arms.appendChild(el('div', 'sptitle', 'Arsenal'));
     arms.appendChild(weaponCard(sh.arsenal, 'ars'));
   }
-  wrap.appendChild(arms);
+  if (extra && extra.arms) {
+    const col = el('div', 'scolumn');
+    col.appendChild(arms);
+    col.appendChild(extra.arms);
+    wrap.appendChild(col);
+  } else {
+    wrap.appendChild(arms);
+  }
   box.appendChild(wrap);
 
   return box;

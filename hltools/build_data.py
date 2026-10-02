@@ -155,7 +155,10 @@ def build(game_dir):
             "apt": apt[0] if apt else None,
             "skills": [{"id": s.get("skill"), "lvl": s.get("level") or 1}
                        for s in u.get("skills") or ()
-                       if stype(s.get("skill")) in CLASS_SKILL_TYPES]}
+                       if stype(s.get("skill")) in CLASS_SKILL_TYPES],
+            "passives": [{"id": s.get("skill"), "lvl": s.get("level") or 1}
+                         for s in u.get("skills") or ()
+                         if stype(s.get("skill")) == "ClassPassive"]}
 
     rarities = [r["id"] for r in sh["rarity"]["lines"]]
     min_rar = ((consts.get("Item_InfusionMinRarity") or {}).get("other")

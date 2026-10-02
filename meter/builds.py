@@ -31,6 +31,7 @@ INFUSION_STATS = ("CritChanceRating", "FervorRating",
                   "ArmorPenetrationRating", "SpellPenetrationRating")
 CLASS_SKILL_SLOTS = 4
 WEAPON_SKILL_TYPES = ("WeaponSkill",)
+PASSIVE_TYPES = ("WeaponPassive",)
 
 
 # ---- the build ---------------------------------------------------------------
@@ -163,21 +164,28 @@ def set_talent(b, sid, delta):
     return False
 
 
+def _skills_of(b, slot, types):
+    e = item((b["gear"].get(slot) or {}).get("id"))
+    return [s["id"] for s in (e or {}).get("skills") or ()
+            if s.get("type") in types]
+
+
 def skill_options(b):
-    """What each skill group can hold now: class skills unlocked at this
-    level (4 slots), the main weapon's skills (slots at
-    UnlockLevel_WeaponSkillSlots), the arsenal's (UnlockLevel_Arsenal)."""
+    """What each skill group holds or can hold now. The weapon's are not a
+    choice: the main weapon's skills then the off hand's, as many as the
+    slots open at this level (UnlockLevel_WeaponSkillSlots: "Weapon 1
+    second skill or off-hand skill"). The arsenal's are picked among its
+    skills and passive (UnlockLevel_Arsenal slots); the class's among those
+    unlocked at this level, 4 slots."""
     d = build_data()
     lvl = int(b["lvl"])
     cls = (d.get("classes") or {}).get(b["cls"]) or {}
     opts = {"class": [s["id"] for s in cls.get("skills") or ()
                       if (s.get("lvl") or 1) <= lvl],
-            "weapon": [], "arsenal": []}
-    for group, slot in (("weapon", "Weapon1"), ("arsenal", "Weapon2")):
-        e = item((b["gear"].get(slot) or {}).get("id"))
-        if e:
-            opts[group] = [s["id"] for s in e.get("skills") or ()
-                           if s.get("type") in WEAPON_SKILL_TYPES]
+            "weapon": (_skills_of(b, "Weapon1", WEAPON_SKILL_TYPES)
+                       + _skills_of(b, "OffhandWeapon", WEAPON_SKILL_TYPES)),
+            "arsenal": _skills_of(b, "Weapon2",
+                                  WEAPON_SKILL_TYPES + PASSIVE_TYPES)}
     slots = {"class": CLASS_SKILL_SLOTS,
              "weapon": sum(1 for x in d.get("weaponSkillLevels") or (1, 2)
                            if x <= lvl),
@@ -231,9 +239,30 @@ def normalize(b):
     b["talents"] = ranks
     opts, slots = skill_options(b)
     sk = b.get("skills") or {}
-    b["skills"] = {g: [s for s in (sk.get(g) or []) if s in opts[g]][:slots[g]]
-                   for g in ("class", "weapon", "arsenal")}
+    # each slot keeps its place: an empty slot stays empty (None)
+    b["skills"] = {}
+    for g in ("class", "arsenal"):
+        cur = [s if s in opts[g] else None for s in (sk.get(g) or [])]
+        cur = cur[:slots[g]]
+        while cur and cur[-1] is None:
+            cur.pop()
+        b["skills"][g] = cur
+    b["skills"]["weapon"] = opts["weapon"][:slots["weapon"]]
     return b
+
+
+def passives(b):
+    """The passives at work: the class's (by level), the main weapon's and
+    the off hand's, and the arsenal's when it is one of the two picked."""
+    d = build_data()
+    cls = (d.get("classes") or {}).get(b["cls"]) or {}
+    out = [s["id"] for s in cls.get("passives") or ()
+           if (s.get("lvl") or 1) <= int(b["lvl"])]
+    out += _skills_of(b, "Weapon1", PASSIVE_TYPES)
+    out += _skills_of(b, "OffhandWeapon", PASSIVE_TYPES)
+    picked = set((b.get("skills") or {}).get("arsenal") or ())
+    out += [s for s in _skills_of(b, "Weapon2", PASSIVE_TYPES) if s in picked]
+    return out
 
 
 # ---- the build as a profile --------------------------------------------------
@@ -253,15 +282,15 @@ def to_profile(b):
     for group, slot in (("weapon", "Weapon1"), ("arsenal", "Weapon2")):
         wid = (b["gear"].get(slot) or {}).get("id")
         if wid:
-            arsenals[wid] = list(sk.get(group) or [])
+            arsenals[wid] = [s for s in sk.get(group) or () if s]
     tr = tree(b)
-    skills = list(sk.get("class") or [])
+    skills = [s for s in sk.get("class") or () if s] + passives(b)
     return {"n": b.get("name"), "k": b["cls"], "lvl": b["lvl"], "me": False,
             "at": b.get("at") or time.time(), "equip": equip,
             "talents": dict(b.get("talents") or {}),
             "slots": list(sk.get("class") or []),
-            "weaponSkills": list(sk.get("weapon") or [])
-            + list(sk.get("arsenal") or []),
+            "weaponSkills": [s for s in list(sk.get("weapon") or [])
+                             + list(sk.get("arsenal") or []) if s],
             "arsenals": arsenals, "skills": skills, "statuses": [],
             "masteries": [], "prayers": [],
             "root": tr.get("root")}

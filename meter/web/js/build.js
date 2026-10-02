@@ -42,7 +42,8 @@ function buildBuild(n) {
   main.appendChild(buildHead(o));
   main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
                                sheet: o.sheet, atbs: o.atbs },
-                             (slot) => notify('build_slot', { slot: slot })));
+                             (slot) => notify('build_slot', { slot: slot }),
+                             { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []) }));
   if ((o.infusions || []).length) {
     main.appendChild(el('div', 'sub2', 'Imprégnations'));
     main.appendChild(infusionCards(o.infusions));
@@ -69,35 +70,99 @@ function buildBuild(n) {
       (id, delta) => notify('build_talent', { id: id, delta: delta })));
   }
 
-  main.appendChild(el('div', 'sub2', 'Compétences'));
-  const sk = el('div', 'bskills');
-  (o.skills || []).forEach((g) => {
-    const grp = el('div', 'bskgroup');
-    grp.appendChild(el('b', null, g.t));
-    if (!g.slots || !g.options.length) {
-      grp.appendChild(el('span', 'note', g.empty || 'Aucune.'));
-    }
-    if (g.slots && g.options.length) {
-      g.chosen.forEach((cur, i) => {
-        const row = el('div', 'bskrow');
-        row.appendChild(skillIcon(cur ? { id: cur, name: (g.options.find((x) => x.id === cur) || {}).name } : null));
-        const s = el('select');
-        [{ id: '', name: '— vide —' }].concat(g.options).forEach((x) => {
-          const op = el('option', null, x.name);
-          op.value = x.id;
-          s.appendChild(op);
-        });
-        s.value = cur || '';
-        s.addEventListener('change', () => notify('build_skill', { group: g.g, index: i, value: s.value }));
-        row.appendChild(s);
-        grp.appendChild(row);
-      });
-    }
-    sk.appendChild(grp);
-  });
-  main.appendChild(sk);
   box.appendChild(main);
   return box;
+}
+
+/* The action bar under the hero: 1-2 the weapons' skills (set by the
+   weapons), 3-4 the arsenal's and A E R G the class's (a click picks). */
+function buildBar(cells) {
+  const p = el('div', 'spanel bbar');
+  p.appendChild(el('div', 'sptitle', 'Barre de sorts'));
+  const bar = el('div', 'skbar actionbar');
+  cells.forEach((c) => {
+    if (c.sep) bar.appendChild(el('span', 'barsep'));
+    const cell = el('div', 'barcell' + (c.options ? ' pick' : '') + (c.open ? '' : ' locked'));
+    const ic = skillIcon(c.id ? { id: c.id, name: c.name } : null, 'big');
+    if (!c.open) ic.title = 'Débloqué au ' + (c.lock || 'niveau suivant');
+    else if (c.options) ic.title = (c.name ? c.name + '\n' : '') + 'Clic : choisir';
+    cell.appendChild(ic);
+    cell.appendChild(el('span', 'bk', c.lock || c.key));
+    if (c.options) cell.addEventListener('click', () => skillMenu(cell, c));
+    bar.appendChild(cell);
+  });
+  p.appendChild(bar);
+  return p;
+}
+
+/* The skills a bar slot can take, in a window over the page: a click
+   places one in THIS slot (and only there), or empties it. */
+const SLOT_TITLES = { arsenal: 'Compétence d’arsenal', class: 'Compétence de classe' };
+
+function skillMenu(_anchor, c) {
+  const close = () => { const x = $('#skillmodal'); if (x) x.remove(); };
+  close();
+  const back = el('div', 'modalback');
+  back.id = 'skillmodal';
+  back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+  const box = el('div', 'modal skmodal');
+  const x = el('button', 'hclose', '×');
+  x.type = 'button';
+  x.title = 'Fermer';
+  x.addEventListener('click', close);
+  box.appendChild(x);
+  const head = el('div', 'phead');
+  head.appendChild(el('h3', null, (SLOT_TITLES[c.group] || 'Compétence') + ' — case ' + c.key));
+  box.appendChild(head);
+  const body = el('div', 'skbody');
+  const choose = (id) => {
+    close();
+    notify('build_skill', { group: c.group, index: c.index, value: id });
+  };
+  if (!(c.options || []).length) body.appendChild(el('p', 'note', 'Rien à placer ici pour l’instant.'));
+  const grid = el('div', 'skgrid');
+  (c.options || []).forEach((s) => {
+    const card = el('button', 'skcard' + (s.id === c.id ? ' on' : ''));
+    card.type = 'button';
+    card.appendChild(skillIcon(s, 'big'));
+    card.appendChild(el('span', null, s.name));
+    card.addEventListener('click', () => choose(s.id));
+    grid.appendChild(card);
+  });
+  body.appendChild(grid);
+  const foot = el('div', 'skfoot');
+  if (c.id) {
+    const clear = el('button', 'rowbtn', 'Vider la case');
+    clear.type = 'button';
+    clear.addEventListener('click', () => choose(''));
+    foot.appendChild(clear);
+  }
+  const cancel = el('button', 'rowbtn', 'Annuler');
+  cancel.type = 'button';
+  cancel.addEventListener('click', close);
+  foot.appendChild(cancel);
+  body.appendChild(foot);
+  box.appendChild(body);
+  back.appendChild(box);
+  document.body.appendChild(back);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('#skillmodal')) $('#skillmodal').remove();
+});
+
+/* The passives at work, under the weapons. */
+function buildPassives(list) {
+  const p = el('div', 'spanel bpass');
+  p.appendChild(el('div', 'sptitle', 'Passifs'));
+  if (!list.length) p.appendChild(el('p', 'anote', 'Aucun passif.'));
+  list.forEach((s) => {
+    const row = el('div', 'bprow');
+    row.appendChild(skillIcon(s));
+    row.appendChild(el('span', null, s.name));
+    p.appendChild(row);
+  });
+  return p;
 }
 
 /* Name, class, level, and the build's own buttons. */

@@ -35,9 +35,6 @@ AUG_LABELS = {"AugmentDemon": "Cadeau corrompu",
               "AugmentEnchantHands": "Enchantement de gants"}
 HANDS_FR = {"1h": "une main", "2h": "deux mains", "dual": "deux armes",
             "long": "arme longue", "off": "main secondaire"}
-SKILL_GROUPS = (("class", "Compétences de classe"),
-                ("weapon", "Compétences de l'arme"),
-                ("arsenal", "Compétences de l'arsenal"))
 
 
 class BuildTab:
@@ -178,7 +175,7 @@ class BuildTab:
             B.save_build(self.build, self.file)
 
     def _skill(self, group, index, value):
-        if not self.build or group not in ("class", "weapon", "arsenal"):
+        if not self.build or group not in ("class", "arsenal"):
             return
 
         def change(b):
@@ -189,7 +186,9 @@ class BuildTab:
             if value and value in cur:          # a skill sits in one slot
                 cur[cur.index(value)] = None
             cur[i] = value or None
-            b["skills"][group] = [s for s in cur if s]
+            while cur and cur[-1] is None:      # slots keep their place
+                cur.pop()
+            b["skills"][group] = cur
         self._edit(change)
 
     # ---- the page --------------------------------------------------------
@@ -228,18 +227,8 @@ class BuildTab:
                 for cells in tier:
                     for c in cells:
                         mark(c)
-        opts, slots = B.skill_options(b)
-        skills = []
-        for g, label in SKILL_GROUPS:
-            chosen = list((b.get("skills") or {}).get(g) or [])
-            skills.append({
-                "g": g, "t": label, "slots": slots[g],
-                "chosen": chosen + [None] * max(0, slots[g] - len(chosen)),
-                "options": [{"id": s, "name": _skill_label(s)}
-                            for s in opts[g]],
-                "empty": ("Choisis d'abord l'arme." if g != "class"
-                          and not opts[g] and slots[g] else
-                          "Débloqué plus tard." if not slots[g] else "")})
+        bar = self._skill_bar(b)
+        passives = [{"id": s, "name": _skill_label(s)} for s in B.passives(b)]
         return {
             "file": self.file, "name": b["name"], "cls": b["cls"],
             "clsFr": CLASS_FR.get(b["cls"]), "ck": class_key(b["cls"]),
@@ -251,8 +240,38 @@ class BuildTab:
             "points": {"used": sum(t["rank"] for t in talents.values()),
                        "total": B.talent_points(b),
                        "from": d.get("talentsFrom") or 10},
-            "tree": tree, "skills": skills,
+            "tree": tree, "bar": bar, "passives": passives,
             "editor": self._editor_view(o) if self.slot else None}
+
+    def _skill_bar(self, b):
+        """The action bar as the game shows it: 1-2 the weapon's skills
+        (set by the weapons), 3-4 the arsenal's (picked), A E R G the
+        class's (picked). A slot not open yet says the level it opens at."""
+        d = build_data()
+        opts, slots = B.skill_options(b)
+        sk = b.get("skills") or {}
+
+        def cell(key, group, i, levels, choice):
+            chosen = list(sk.get(group) or [])
+            sid = chosen[i] if i < len(chosen) else None
+            open_ = i < slots[group]
+            c = {"key": key, "group": group, "index": i,
+                 "id": sid, "name": _skill_label(sid) if sid else "",
+                 "open": open_}
+            if not open_ and i < len(levels):
+                c["lock"] = f"niv. {levels[i]}"
+            if choice and open_:
+                c["options"] = [{"id": s, "name": _skill_label(s)}
+                                for s in opts[group]]
+            return c
+        wl = d.get("weaponSkillLevels") or [1, 2]
+        al = d.get("arsenalLevels") or [7, 20]
+        out = [cell(str(i + 1), "weapon", i, wl, False) for i in range(2)]
+        out += [dict(cell(str(i + 3), "arsenal", i, al, True),
+                     sep=(i == 0)) for i in range(2)]
+        out += [dict(cell(k, "class", i, (), True), sep=(i == 0))
+                for i, k in enumerate("AERG")]
+        return out
 
     def _editor_view(self, o):
         b, slot, d = self.build, self.slot, build_data()
