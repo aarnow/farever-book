@@ -42,6 +42,10 @@ from bridge import MenuBridge, _Scheduler, _parse_help
 from gamelink import GameLink
 
 
+
+# Runs kept per dungeon: the 11th removes the oldest (records stay).
+DUNGEON_RUNS_KEPT = 10
+
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
     saved data, and the one window (a WebView2 app in its own process — see
@@ -1304,11 +1308,42 @@ class App:
                                              encoding="utf-8")
             print(f"[meter] dungeon run saved to {DUNGEONS_DIR / name}",
                   file=sys.stderr)
+            self._prune_dungeon_runs(report.get("kind"), keep_name=name)
             return name
         except OSError as e:
             print(f"[meter] couldn't save the dungeon run: {e}",
                   file=sys.stderr)
             return None
+
+    def _prune_dungeon_runs(self, kind, keep_name=None):
+        """At most DUNGEON_RUNS_KEPT runs per dungeon: past that the oldest
+        go. A run holding a difficulty's record stays, or the record would
+        go with it; the run just saved stays too."""
+        mine = [(n, d) for n, d in self._dungeon_runs()
+                if d.get("kind") == kind]          # newest first
+        if len(mine) <= DUNGEON_RUNS_KEPT:
+            return
+        records = set()
+        for diff in {d.get("difficulty") for _n, d in mine}:
+            best = self._dungeon_best(kind, diff)
+            hit = next((n for n, d in mine if d.get("difficulty") == diff
+                        and d.get("result") == "victoire" and best is not None
+                        and abs(d["duration"] - best) < 0.05), None)
+            if hit:
+                records.add(hit)
+        extra = len(mine) - DUNGEON_RUNS_KEPT
+        for n, _d in reversed(mine):                 # oldest first
+            if extra <= 0:
+                break
+            if n in records or n == keep_name:
+                continue
+            try:
+                (DUNGEONS_DIR / n).unlink()
+                self._dungeon_cache.pop(n, None)
+                extra -= 1
+                print(f"[meter] old dungeon run removed: {n}", file=sys.stderr)
+            except OSError as e:
+                print(f"[meter] couldn't remove {n}: {e}", file=sys.stderr)
 
     def _dungeon_runs(self):
         """Every saved run, newest first, as (file name, data). Cached by
@@ -1384,7 +1419,7 @@ class App:
                 best = self._dungeon_best(kind, diff)
                 won = [d for _n, d in mine if d.get("difficulty") == diff
                        and d.get("result") == "victoire"]
-                cards.append({"title": f"Record — {label}",
+                cards.append({"title": label, "art": f"dungeon_diff_{diff}",
                               "value": _mmss(best) if best else "—",
                               "sub": f"{len(won)} victoire"
                                      f"{'s' if len(won) > 1 else ''}",
@@ -1402,11 +1437,13 @@ class App:
                                      + (f" · {group}" if group else ""),
                              "btns": [{"id": "open_dungeon_run", "t": "Voir",
                                        "p": {"file": n}}]})
-            got = {}
+            # what the runs brought back, per difficulty
+            got = {k: {} for k in DUNGEON_DIFFICULTIES}
             for _name, d in mine:
+                g = got.setdefault(d.get("difficulty"), {})
                 for it in d.get("loot") or ():
-                    got[it.get("item")] = (got.get(it.get("item"), 0)
-                                           + int(it.get("count") or 1))
+                    g[it.get("item")] = (g.get(it.get("item"), 0)
+                                         + int(it.get("count") or 1))
             dg = next((x for x in dungeon_catalogue()
                        if x["kind"] == kind), None)
             out = [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
@@ -1435,9 +1472,12 @@ class App:
                          "âmes). La mort du boss peut en plus donner un objet "
                          "rare et, en Héroïque, donne toujours le patron "
                          "d'imprégnation du donjon. « Obtenu » compte ce que "
-                         "tes runs ont rapporté."},
+                         "tes runs ont rapporté dans cette difficulté."},
                         {"k": "droptable", "id": "dungeon_drops",
-                         "rows": droptable_view(dg, got)}]
+                         "tables": [{"d": k, "t": label,
+                                     "rows": droptable_view(dg, got[k], k)}
+                                    for k, label
+                                    in DUNGEON_DIFFICULTIES.items()]}]
             return out
         by_kind = {}
         for _name, d in runs:

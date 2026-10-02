@@ -1102,15 +1102,22 @@ def _pct(chance):
         else f"{v:.2g} %".replace(".", ",")
 
 
-def droptable_view(dg, got):
+def droptable_view(dg, got, diff=None):
     """A dungeon's possible loot as table rows, rarest first. `got`: item id
-    -> how many the saved runs of this dungeon brought back."""
+    -> how many the saved runs of this dungeon brought back. `diff`: only
+    what that difficulty gives (the rare faction armour up to Vétéran, the
+    epic one and the infusion pattern in Héroïque)."""
     src_label = {"coffre": "Coffre de fin", "boss": "Mort du boss",
                  "faction": "Armure (Normal, Vétéran)",
                  "heroic": "Armure (Héroïque)"}
     pools = dg.get("pools") or {}
     rows = []
     for e in dg.get("loot") or ():
+        if diff is not None and (
+                (e.get("src") == "heroic" and diff != 2)
+                or (e.get("src") == "faction" and diff == 2)
+                or (e.get("diff") is not None and e["diff"] != diff)):
+            continue
         qty = ""
         if e.get("qty"):
             qty = " · ".join(
@@ -1140,7 +1147,10 @@ def droptable_view(dg, got):
                         _pct(chance) if chance is None or chance < 1
                         else "garanti")
                        + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'], '?')}"
-                          if e.get("diff") and not per_class else "")),
+                          if e.get("diff") and not per_class
+                          and diff is None else "")),
+            # the chance as a number, for sorting (guaranteed 1, unknown -1)
+            "cv": (chance if chance is not None else -1),
             "qty": qty, "got": got.get(e["item"], 0),
             # rarest first; the faction armour (chance unknown) after the
             # chest's pick, the guaranteed shards last

@@ -312,7 +312,11 @@ function buildNode(n) {
       const box = el('div', 'cards');
       (n.items || []).forEach((c) => {
         const card = el('div', 'card' + (c.tone ? ' ' + c.tone : ''));
-        card.appendChild(el('div', 't', c.title));
+        const t = el('div', 't' + (c.art ? ' withart' : ''));
+        const art = c.art && (window.__SHEET__ || {})[c.art];
+        if (art) { const im = document.createElement('img'); im.src = art; im.alt = ''; t.appendChild(im); }
+        t.appendChild(document.createTextNode(c.title));
+        card.appendChild(t);
         card.appendChild(el('div', 'v', c.value));
         card.appendChild(el('div', 's', c.sub || ''));
         box.appendChild(card);
