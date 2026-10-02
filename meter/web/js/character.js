@@ -231,6 +231,17 @@ function charSheet(o, onSlot, extra) {
       b.appendChild(artImg('slot_' + c.icon, 'ghost'));
     }
     if (g && g.prism) b.appendChild(el('i', 'prism', '✦'));
+    if (g && g.chip) {
+      const ch = el('span', 'chip' + (g.chip.img ? '' : ' none'));
+      ch.title = g.chip.img ? g.chip.name : 'Emplacement d’augmentation vide';
+      if (g.chip.img) {
+        const im = el('img');
+        im.src = g.chip.img;
+        im.alt = '';
+        ch.appendChild(im);
+      }
+      b.appendChild(ch);
+    }
     if (g && g.up) b.appendChild(el('i', 'up', '+' + g.up));
     if (g && g.lvl) b.appendChild(el('i', 'lv', 'lv.' + g.lvl));
     if (g && g.inf && g.inf.id) {

@@ -391,6 +391,27 @@ AUGMENT_KIND = {"AugmentDemon": "gift", "AugmentDemonSigil": "sigil",
                 "AugmentJeweller": "gem"}
 
 
+# The augment shown on a piece's top right corner: the one its type is
+# known for (a ring's gem, a cape's embroidery...), first that it accepts.
+CHIP_KINDS = ("AugmentJeweller", "AugmentOutfitter", "AugmentBlacksmith",
+              "AugmentEnchantHands", "AugmentEnchantFeet",
+              "AugmentEnchantWeapon", "AugmentDemonSigil", "AugmentDemon")
+
+
+def _augment_chip(item_type, gslots):
+    """{kind, img, name} for the piece's main augment slot — img None when
+    nothing is set in it — or None when its type takes no augment."""
+    d = build_data()
+    accepts = (d.get("accepts") or {}).get(item_type) or ()
+    kind = next((k for k in CHIP_KINDS if k in accepts), None)
+    if kind is None:
+        return None
+    items = set(((d.get("augments") or {}).get(kind) or {}).get("items") or ())
+    aid = next((g for g in gslots or () if g in items), None)
+    return {"kind": kind, "img": item_icon(aid) if aid else None,
+            "name": item_label(aid) if aid else ""}
+
+
 def _augment_view(aid, factor=1):
     """One augment set into a gear: its name and what it does — the attribute
     bonuses and maluses, or the skill it grants (a formula's enchantment, a
@@ -550,6 +571,7 @@ def character_view(roster, profiles, sel, waiting, live):
                      "extras": extras,
                      "prism": prism,
                      "inf": _gear_infusion(kind, infu, istat, prism),
+                     "chip": _augment_chip(t, gslots),
                      "plan": (_fr_names("attribute").get(istat)
                               or _pretty_id(istat))
                      if istat and not infu else None,
