@@ -308,6 +308,7 @@ function buildNode(n) {
     case 'achievements': return buildAch(n);
     case 'map': return buildMap(n);
     case 'character': return buildCharacter(n);
+    case 'build': return buildBuild(n);
     default: return el('div');
   }
 }
@@ -380,6 +381,7 @@ window.applyState = function (json) {
   renderEvents();
   updateEventsBadge();
   renderLinkSteps();
+  renderBuildEditor();
 };
 
 /* The pictures arrive after the page, in batches (menu_host.py). */

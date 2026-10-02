@@ -105,6 +105,7 @@ def _move_rift_reports():
 
 
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
+BUILDS_DIR = _WRITABLE / "builds"       # one JSON per build (Build tab)
 
 
 # What the account owns (mounts, gliders, companions), as last read in game.
@@ -611,7 +612,7 @@ VERSION = "1.0.0"
 # One window, meant for a second screen. Tab ids are what the window sends
 # back; the labels are what it shows.
 APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
-            "Achievements", "Character", "Settings", "Help")
+            "Achievements", "Character", "Build", "Settings", "Help")
 
 
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
@@ -622,6 +623,7 @@ APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Hunt": "Chasse", "Map": "Carte",
                   "Achievements": "Succès",
                   "Character": "Inspecter",
+                  "Build": "Build",
                   "Settings": "Réglages",
                   "Help": "Aide"}
 

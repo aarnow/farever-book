@@ -66,6 +66,11 @@ function buildCharacter(n) {
     t.appendChild(el('b', null, o.n));
     t.appendChild(el('span', null, o.cls + ' · analysé le ' + o.when));
     head.appendChild(t);
+    const mk = el('button', 'rowbtn', 'Créer un build');
+    mk.type = 'button';
+    mk.title = 'Reprendre ce personnage dans un nouveau build modifiable';
+    mk.addEventListener('click', () => notify('char_to_build', { name: o.n }));
+    head.appendChild(mk);
     const x = el('button', 'rowbtn', 'Retirer de la liste');
     x.type = 'button';
     x.addEventListener('click', () => notify('char_forget', { name: o.n }));
@@ -76,23 +81,7 @@ function buildCharacter(n) {
 
     if ((o.infusions || []).length) {
       main.appendChild(el('div', 'sub2', 'Imprégnations'));
-      const box2 = el('div', 'infulist');
-      o.infusions.forEach((s) => {
-        const card = el('div', 'infucard');
-        const hd = el('div', 'infuhd');
-        hd.appendChild(el('b', null, s.name));
-        hd.appendChild(el('span', null, [s.fac, s.role].filter(Boolean).join(' · ')));
-        hd.appendChild(el('span', 'cnt', s.n + ' pièce' + (s.n > 1 ? 's' : '')));
-        card.appendChild(hd);
-        s.tiers.forEach((t) => {
-          const row = el('div', 'tier' + (t.on ? ' on' : ''));
-          row.appendChild(el('span', 'tn', '(' + t.n + ')'));
-          row.appendChild(el('span', null, t.txt));
-          card.appendChild(row);
-        });
-        box2.appendChild(card);
-      });
-      main.appendChild(box2);
+      main.appendChild(infusionCards(o.infusions));
     }
 
     // the action bar, as the game shows it: 1-4, the prayer, A E R G
@@ -165,7 +154,33 @@ function artImg(key, cls) {
   return im;
 }
 
-function charSheet(o) {
+/* The infusions worn: one card each, its 2 / 4 / 6 piece tiers lit when
+   reached. */
+function infusionCards(list) {
+  const box = el('div', 'infulist');
+  list.forEach((s) => {
+    const card = el('div', 'infucard');
+    const hd = el('div', 'infuhd');
+    hd.appendChild(el('b', null, s.name));
+    hd.appendChild(el('span', null, [s.fac, s.role].filter(Boolean).join(' · ')));
+    hd.appendChild(el('span', 'cnt', s.n + ' pièce' + (s.n > 1 ? 's' : '')));
+    card.appendChild(hd);
+    s.tiers.forEach((t) => {
+      const row = el('div', 'tier' + (t.on ? ' on' : ''));
+      row.appendChild(el('span', 'tn', '(' + t.n + ')'));
+      row.appendChild(el('span', null, t.txt));
+      card.appendChild(row);
+    });
+    box.appendChild(card);
+  });
+  return box;
+}
+
+/* `onSlot`, when given, makes the sheet an editor (the Build tab): every
+   slot, empty or not, calls it with the slot's name. */
+const WEAPON_KEYS = { w0: 'Weapon1', w1: 'OffhandWeapon', ars: 'Weapon2' };
+
+function charSheet(o, onSlot) {
   const sh = o.sheet || { left: [], right: [], weapons: [], arsenal: null };
   const box = el('div', 'charsheet');
   const wrap = el('div', 'sheet');
@@ -216,7 +231,11 @@ function charSheet(o) {
     }
     if (g && g.prism) b.appendChild(el('i', 'prism', '✦'));
     if (g && g.up) b.appendChild(el('i', 'up', '+' + g.up));
-    if (g) b.addEventListener('click', () => {
+    if (onSlot) {
+      b.classList.add('edit');
+      if (!g) b.title = c.label + ' : choisir une pièce';
+      b.addEventListener('click', () => onSlot(WEAPON_KEYS[key] || key));
+    } else if (g) b.addEventListener('click', () => {
       CHAR_PICK = pick === key ? null : [o.n, key];
       box.replaceWith(charSheet(o));
     });
@@ -247,7 +266,9 @@ function charSheet(o) {
     if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
     hid.appendChild(el('b', 'hn', o.n));
     hid.appendChild(el('span', 'hl', o.cls + ' · niveau ' + (o.lvl || '?')));
-    hid.appendChild(el('span', 'hhint', 'Clique sur une pièce pour voir son détail ici.'));
+    hid.appendChild(el('span', 'hhint', onSlot
+      ? 'Clique sur un emplacement pour choisir ou régler une pièce.'
+      : 'Clique sur une pièce pour voir son détail ici.'));
     hero.appendChild(hid);
   }
   doll.appendChild(colL);
@@ -355,11 +376,23 @@ function skillIcon(sk, size) {
 
 /* The talent tree as the game draws it: the root, then tiers 1-4 in three
    branches, each talent with its points (greyed when none). */
-function talentTree(t, ranked) {
-  const box = el('div', 'ttree');
+/* `onPoint(id, delta)`, when given, makes the tree editable: a click adds a
+   point where the rules allow it (c.add), a right click takes one back
+   (c.remove). */
+function talentTree(t, ranked, onPoint) {
+  const box = el('div', 'ttree' + (onPoint ? ' edit' : ''));
   const node = (c) => {
-    const n = el('span', 'tnode' + (c.pts ? ' on' : '') + (c.gift ? ' gift' : ''));
-    n.title = c.name;
+    const n = el('span', 'tnode' + (c.pts ? ' on' : '') + (c.gift ? ' gift' : '')
+      + (onPoint && c.add ? ' can' : '') + (onPoint && !c.add && !c.pts ? ' locked' : ''));
+    n.title = c.name + (onPoint ? '\n' + (c.add ? 'Clic : +1' : '')
+      + (c.remove ? (c.add ? ' · ' : '') + 'Clic droit : −1' : '') : '');
+    if (onPoint) {
+      n.addEventListener('click', () => { if (c.add) onPoint(c.id, 1); });
+      n.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (c.remove) onPoint(c.id, -1);
+      });
+    }
     n.appendChild(skillIcon({ id: c.id, name: c.name }));
     if (ranked || !c.pts) n.appendChild(el('b', null, c.pts + '/' + c.max));
     return n;

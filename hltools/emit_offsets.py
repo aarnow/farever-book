@@ -567,6 +567,16 @@ def main():
         except Exception as e:
             print(f"[!] infusions skipped ({e})")
         try:
+            import build_data
+            bd = build_data.build(Path(hlboot).parent)
+            (_OUT_DIR / "build_data.json").write_text(
+                json.dumps(bd, ensure_ascii=False, separators=(",", ":")),
+                encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'build_data.json'} "
+                  f"({len(bd['items'])} gear items)")
+        except Exception as e:
+            print(f"[!] build data skipped ({e})")
+        try:
             import gear_stats_data
             gs = gear_stats_data.build(Path(hlboot).parent)
             (_OUT_DIR / "gear_stats.json").write_text(

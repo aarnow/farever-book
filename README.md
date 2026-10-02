@@ -42,6 +42,7 @@ sans Farever France avant de l'envoyer.
 | **Carte** | La carte de Siagarta avec les points de complétion (coffres, orbes rouges, obélisques…), trouvés ou à récupérer. |
 | **Succès** | Les succès du compte, leur progression et leurs récompenses. |
 | **Inspecter** | Les joueurs du serveur et, sur demande, la fiche d'un joueur comme en jeu : équipement par emplacement avec les **statistiques de chaque pièce**, **attributs** et stats secondaires, armes et arsenal, imprégnations, barre de sorts, talents et runes. |
+| **Build** | Des builds enregistrés (dans `builds/`) et simulés : classe et niveau, équipement de la classe (une ou deux mains, bouclier, arsenal) avec rareté, niveau, améliorations, augmentations (cadeaux corrompus, formules, broderies, gemmes…) et imprégnation, arbre de talents et compétences, sous les règles du jeu. La fiche affiche les statistiques de chaque pièce, les attributs et les sets d'imprégnation. Un build peut partir d'un joueur analysé (Inspecter → « Créer un build »). |
 | **Réglages** (⚙) | Colonnes de soins, réinitialisation au pull d'un boss, raccourci clavier, taille de l'interface, dossiers. |
 | **Aide** (?) | Utilisation, lancement avec Steam, et **Réparer** après une mise à jour du jeu. |
 | **Événements** (☰) | Fenêtre des kills de boss, records, fins de faille et donjons ; une pastille compte les nouveaux. |
@@ -97,6 +98,7 @@ Depuis les sources, tout est écrit dans le dossier du projet :
 |---|---|
 | Rapports de faille (`.json`, `.txt`, `.png`) | `failles/` |
 | Runs de donjon | `donjons/` |
+| Builds | `builds/` |
 | Collection, kills par monstre, succès, carte | `.meter_collection.json`, `.meter_codex.json`, `.meter_achievements.json`, `.meter_elements.json` |
 | Réglages, position de la fenêtre, records de boss | `.meter_settings.json`, `.meter_position.json`, `.meter_besttimes.json` |
 | Données tirées du jeu | `analysis_out/` |
@@ -138,6 +140,8 @@ bytecode qui garde les noms de toutes les classes, champs et méthodes du jeu.
    | `gamedata.py` | les tables tirées du jeu et leur régénération |
    | `gearstats.py` | statistiques d'équipement et attributs, comme le jeu |
    | `views.py` | construction des pages à partir des données |
+   | `builds.py` | les builds : règles du jeu, modèle, enregistrement |
+   | `buildtab.py` | l'onglet Build : état, actions, page |
    | `reports.py` | rapports de faille : page et image |
    | `bridge.py` | le processus de la fenêtre et le canal vers elle |
    | `winsys.py` | Windows : DPI, raccourci, icône, presse-papiers, instance unique |

@@ -9,7 +9,7 @@ import time
 
 from common import ANALYSIS, _n, _pretty_id, class_key, date_fr
 from gamedata import (
-    RARITY_ORDER, _augments_data, _codex_thresholds, _element_done,
+    RARITY_ORDER, _augments_data, _codex_thresholds, _element_done, build_data,
     _family_label, _fr_desc, _fr_names, _fr_ref, _item_flag, _skill_label,
     _spark_units, _unit_label, _zone_label, achievements_catalogue,
     bestiary_catalogue, codex_items_catalogue, collection_catalogue,
@@ -436,8 +436,11 @@ def _talent_tree(cls, ranks, granted=()):
                       for b in ("Left", "Center", "Right")])
     spent = sum(int(v or 0) for v in ranks.values())
     # the tree's own talents only; the root's point counts like any other
+    # the points a tier needs in the lower tiers of its branch
+    # (Talents_TierThresholds, read in the game's implSetTalentRank)
+    thresholds = build_data().get("tiers") or [0, 1, 2, 4, 8]
     return {"root": cell(root) if root else None, "tiers": tiers,
-            "cost": ["", "1", "3", "7"], "spent": spent}
+            "cost": [str(x) for x in thresholds[1:5]], "spent": spent}
 
 
 def _spell_bar(prof):

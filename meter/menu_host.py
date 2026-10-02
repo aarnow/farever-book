@@ -368,7 +368,7 @@ def _rect(hwnd):
 # helpers and the state push everything else uses), boot last (it starts the
 # page once every function and constant above exists).
 JS_FILES = ("core", "frame", "live", "report", "dungeons", "collection",
-            "achievements", "hunt", "map", "character", "boot")
+            "achievements", "hunt", "map", "character", "build", "boot")
 
 
 def _document():

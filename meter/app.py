@@ -10,6 +10,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from pathlib import Path
+from buildtab import BuildTab
 
 from common import (
     ACH_FILE, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT, APP_TAB_LABELS,
@@ -65,6 +66,7 @@ class App:
         self.target_pid = target_pid
         self.root = _Scheduler()            # after()/after_cancel()/quit()
         self.menubridge = MenuBridge(self)
+        self.buildtab = BuildTab(self.menubridge.invalidate, self._toast_msg)
         self._action_q = []
         self._q_lock = threading.Lock()
         self._stopping = False
@@ -437,6 +439,7 @@ class App:
             "char_open": lambda p: setattr(self, "_char_sel", p.get("name")),
             "char_close": lambda: setattr(self, "_char_sel", None),
             "char_forget": lambda p: self._forget_profile(p.get("name")),
+            "char_to_build": lambda p: self._profile_to_build(p.get("name")),
             # settings
             "toggle_heal": self._toggle_heal,
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
@@ -449,6 +452,7 @@ class App:
             "help_close": lambda: setattr(self, "_help_open", None),
             "repair_data": self._repair,
         }
+        acts.update(self.buildtab.actions())
         return acts
 
 
@@ -560,6 +564,7 @@ class App:
                    "Map": self._page_map,
                    "Character": self._page_character,
                    "Settings": self._page_settings,
+                   "Build": self.buildtab.page,
                    "Help": self._page_help}.get(tab)
         try:
             return builder() if builder else []
@@ -1194,6 +1199,14 @@ class App:
         self._profiles_data().pop(name, None)
         if self._char_sel == name:
             self._char_sel = None
+
+    def _profile_to_build(self, name):
+        """Inspecter's "Créer un build": the analysed player as a build,
+        opened in the Build tab."""
+        prof = self._profiles_data().get(name)
+        if prof:
+            self.buildtab.import_profile(prof)
+            self._set_tab("Build")
 
     def _page_character(self):
         profs = self._profiles_data()

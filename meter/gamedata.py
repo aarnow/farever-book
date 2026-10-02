@@ -323,6 +323,22 @@ def gear_stats_data():
     return _GEAR_STATS
 
 
+_BUILD_DATA = None
+
+
+def build_data():
+    """The Build tab's catalogue and rules: analysis_out/build_data.json
+    (hltools/build_data.py)."""
+    global _BUILD_DATA
+    if _BUILD_DATA is None:
+        try:
+            _BUILD_DATA = json.loads((ANALYSIS / "build_data.json").read_text(
+                encoding="utf-8"))
+        except Exception:
+            _BUILD_DATA = {}
+    return _BUILD_DATA
+
+
 _WORLD_MAP = None
 
 
@@ -815,7 +831,7 @@ def forget_loaded_data():
     """Drop every table loaded from analysis_out/, so the next use reads the
     files a regenerate just wrote (Réparer)."""
     g = globals()
-    for name in ("_GEAR_STATS", "_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
+    for name in ("_BUILD_DATA", "_GEAR_STATS", "_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
         g[name] = None
 
 
