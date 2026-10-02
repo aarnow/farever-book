@@ -224,11 +224,24 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                     print(line, file=sys.stderr)
         elif k == "combat":
             session.set_combat(p.get("state") or {})
+            # the heartbeat also closes a rift whose kill never came in
+            report = rift_rec.tick()
+            if report is not None:
+                print("[meter] rift over without a kill seen — reporting it "
+                      "anyway", file=sys.stderr)
+                _stamp_report_classes(report, world)
+                o = _OVERLAY["ref"]
+                if o is not None:
+                    o.show_rift_report(report)
         elif k == "rift":
             state = bool(p.get("state"))
             ui_state.set_rift(state)
-            rift_rec.set_rift(state)
-            print(f"[meter] rift: {state}", file=sys.stderr)
+            what = rift_rec.set_rift(state)
+            print(f"[meter] rift: {state}"
+                  + (f" (recording: {what})" if what else ""), file=sys.stderr)
+            o = _OVERLAY["ref"]
+            if what == "abandoned" and o is not None:
+                o.on_rift_dropped("la faille s’est terminée avant le boss")
         elif k == "bossbar":
             # The game's own boss/elite healthbar went up or down. `n` drives
             # the compass auto-hide; the up/down lists drive the boss-only
@@ -380,7 +393,12 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             ui_state.set_zone(p.get("sig"), p.get("world_map"))
             # A loading screen mid-rift is a wipe or a walk-out, not a finished
             # run — the recording is abandoned, not reported.
-            rift_rec.on_zone()
+            if rift_rec.on_zone():
+                print("[meter] rift recording dropped (zone change)",
+                      file=sys.stderr)
+                o = _OVERLAY["ref"]
+                if o is not None:
+                    o.on_rift_dropped("changement de zone avant la victoire")
             # The other way a boss fight ends. Nothing else re-arms the pull
             # reset now that a dropped bar doesn't, so leaving an instance
             # mid-fight has to — otherwise a fight abandoned rather than won

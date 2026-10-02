@@ -439,6 +439,7 @@ select, input[type=text] {
 .ev.best .txt { color: var(--accent); font-weight: 600; }
 .ev.rift .txt { color: var(--rift); }
 .ev.ok .txt { color: var(--ok); }
+.ev.warn .txt { color: var(--warn); }
 
 /* rift report */
 .report { padding: 18px 20px 22px; }

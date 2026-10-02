@@ -130,6 +130,7 @@ ELEMENTS_FILE = _WRITABLE / ".meter_elements.json"
 
 
 LOG_FILE = DATA_HOME / "meter.log"
+LOG_KEEP = 10                    # earlier runs kept, meter.log.1 to .10
 
 
 TARGET_PROCESS = "Farever.exe"
@@ -494,15 +495,21 @@ def setup_logging():
 
     Without this the windowed build is silent in the one situation where output
     matters most — it failed to start and the user wants to know why. The
-    previous run is kept as meter.log.1, because "it worked yesterday" is
+    previous runs are kept as meter.log.1 to .10, because "it worked yesterday" is
     usually asked after today's run has already overwritten the evidence."""
     if HAS_CONSOLE:
         return
     try:
         DATA_HOME.mkdir(parents=True, exist_ok=True)
+        # the last runs, meter.log.1 the newest: a restart no longer
+        # wipes what an earlier session saw
         prev = LOG_FILE.with_suffix(".log.1")
         if LOG_FILE.exists():
             try:
+                for n in range(LOG_KEEP - 1, 0, -1):
+                    old = LOG_FILE.with_suffix(f".log.{n}")
+                    if old.exists():
+                        old.replace(LOG_FILE.with_suffix(f".log.{n + 1}"))
                 LOG_FILE.replace(prev)
             except OSError:
                 # Windows won't rename a file another process still has open,

@@ -262,9 +262,17 @@ class App:
             self._save_rift_report(report)
             best = (report.get("phases") or [{}])[-1].get("players") or []
             who = f" — MVP {best[0]['name']}" if best else ""
-            self._event(f"Faille terminée{who}.", "rift",
+            seen = (" (victoire non vue : rapport à la fin de la faille)"
+                    if report.get("unconfirmed") else "")
+            self._event(f"Faille terminée{who}{seen}.", "rift",
                         {"id": "open_last_rift", "t": "Voir le rapport"})
         self._enqueue(done)()
+
+    def on_rift_dropped(self, why):
+        """A rift recording given up: said, so a missing report is never
+        silent. Called from the hook thread."""
+        self._enqueue(lambda: self._event(
+            f"Faille non enregistrée : {why}.", "warn"))()
 
     def on_boss_giveup(self):
         self._enqueue(lambda: self._event(

@@ -677,11 +677,19 @@ class RiftRecorder:
     would be comparing nothing with nothing."""
 
     PHASE_LABELS = ("Phase de faille", "Phase du boss")
+    # The rift flag can drop before the boss's bar does: the flag is read
+    # every 0.4 s, the bar only when the game refreshes it (2/s), and the bar
+    # stays up through the death. Dropping the recording on the flag then
+    # lost the report to a race. Once the boss is pulled, the end of the rift
+    # leaves this long for the kill to come in; past it, the rift is reported
+    # anyway, as one whose kill was not seen.
+    CLOSE_GRACE = 20.0
 
     def __init__(self):
         self.lock = threading.Lock()
         self.active = False
         self.phase = 0
+        self._closing_at = None     # the rift flag dropped mid-boss, at
         self._phases = [self._new_phase(), self._new_phase()]
         # (timestamp, phase, "hit"|"heal", event) — kept so the boss-pull
         # edge can move the opening burst across the phase boundary, same
@@ -749,30 +757,61 @@ class RiftRecorder:
             h[3] += amount if ev.get("self") else 0.0
 
     def set_rift(self, state: bool):
+        """What became of the recording: "start", "closing" (the boss was
+        pulled: waiting for the kill), "abandoned" (left before the boss),
+        or None (nothing was recording)."""
         with self.lock:
             if state:
                 self.active = True
                 self.phase = 0
+                self._closing_at = None
                 self._phases = [self._new_phase(), self._new_phase()]
                 self._phases[0]["start"] = time.time()
                 self._recent.clear()
-            else:
-                # Leaving normally happens after the kill, when the report has
-                # already been taken; leaving mid-run abandons the recording.
-                self.active = False
+                return "start"
+            if not self.active:
+                return None
+            if self.phase == 1 and self.CLOSE_GRACE > 0:
+                if self._closing_at is None:
+                    self._closing_at = time.time()
+                return "closing"
+            # Leaving normally happens after the kill, when the report has
+            # already been taken; leaving mid-run abandons the recording.
+            self.active = False
+            return "abandoned"
 
     def on_zone(self):
         """A loading screen means the player left the instance — a wipe or a
-        walk-out. Whatever was building is not a finished rift."""
+        walk-out. Whatever was building is not a finished rift — unless the
+        rift is already over and only its kill is awaited. True when a
+        recording was dropped."""
         with self.lock:
+            if self.active and self._closing_at is not None:
+                return False
+            dropped = self.active
             self.active = False
+            return dropped
+
+    def tick(self):
+        """Called on the hook's heartbeat: a rift whose flag dropped during
+        the boss and whose kill never came is reported once the grace is
+        over, marked unconfirmed. None otherwise."""
+        with self.lock:
+            due = (self.active and self._closing_at is not None
+                   and time.time() - self._closing_at > self.CLOSE_GRACE)
+        if not due:
+            return None
+        report = self.on_boss_kill()
+        if report is not None:
+            report["unconfirmed"] = True
+        return report
 
     def record(self, kind, ev: dict):
         """kind is "hit" or "heal". Hits arrive already filtered of nullified
         damage — the caller drops those before the meter sees them too."""
         with self.lock:
-            if not self.active:
-                return
+            if not self.active or self._closing_at is not None:
+                return              # nothing recording, or the rift is over
             now = time.time()
             self._recent.append((now, self.phase, kind, ev))
             self._apply(self._phases[self.phase], kind, ev, 1)
@@ -809,7 +848,9 @@ class RiftRecorder:
             if not self.active:
                 return None
             self.active = False
-            now = time.time()
+            # the rift's end, if the flag came first, not the kill's signal
+            now = self._closing_at or time.time()
+            self._closing_at = None
             self._phases[self.phase]["end"] = now
             phases = []
             used_skills = set()
@@ -858,6 +899,7 @@ class DungeonRecorder(RiftRecorder):
     than from the boss bar — see DungeonTracker."""
 
     PHASE_LABELS = ("Exploration", "Phase du boss")
+    CLOSE_GRACE = 0             # its end comes from the dungeon's own state
 
 
 # The dungeon difficulty as the instance lobby stores it (measured: the value
