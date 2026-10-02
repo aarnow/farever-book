@@ -4,6 +4,8 @@
    (meter/buildtab.py); this only draws it and sends the changes. */
 
 let BUILD_NODE = null;
+const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents et runes'], ['sim', 'Simulation']];
+let BUILD_VIEW = 'stuff';        // the open build's tab
 let BUILD_Q = '';               // the piece editor's search
 // the piece editor's filters: stats the piece must all give, its family
 const BUILD_F = { slot: null, stats: new Set(), fac: '' };
@@ -12,7 +14,7 @@ function buildBuild(n) {
   BUILD_NODE = n;
   const box = el('div', 'buildpage');
   const o = n.open;
-  if (!o) return buildList(n, box);
+  if (!o) { BUILD_VIEW = 'stuff'; return buildList(n, box); }
   const back = el('button', 'btn bback', '‹  Revenir aux builds');
   back.type = 'button';
   back.addEventListener('click', () => notify('build_close', {}));
@@ -20,17 +22,52 @@ function buildBuild(n) {
 
   const main = el('div', 'charmain');
   main.appendChild(buildHead(o));
-  main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
-                               sheet: o.sheet, atbs: o.atbs },
-                             (slot) => notify('build_slot', { slot: slot }),
-                             { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
-                               center: o.editor ? editorPanel(o.editor) : null,
-                               active: o.editor ? o.editor.slot : null }));
-  if ((o.infusions || []).length) {
-    main.appendChild(el('div', 'sub2', 'Imprégnations'));
-    main.appendChild(infusionCards(o.infusions));
-  }
 
+  // the build in three tabs: the gear, the talents and runes, the simulation
+  const tabs = el('div', 'btabs');
+  BUILD_VIEWS.forEach(([k, t]) => {
+    const b = el('button', 'btab' + (BUILD_VIEW === k ? ' on' : ''), t);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      if (BUILD_VIEW === k) return;
+      BUILD_VIEW = k;
+      if (o.editor) notify('build_slot_close', {});
+      const page = buildBuild(BUILD_NODE);
+      box.replaceWith(page);
+      NODES.forEach((v) => { if (v.el === box) v.el = page; });   // core.js keeps the page's nodes
+    });
+    tabs.appendChild(b);
+  });
+  main.appendChild(tabs);
+
+  if (BUILD_VIEW === 'stuff') {
+    main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
+                                 sheet: o.sheet, atbs: o.atbs },
+                               (slot) => notify('build_slot', { slot: slot }),
+                               { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
+                                 center: o.editor ? editorPanel(o.editor) : null,
+                                 active: o.editor ? o.editor.slot : null }));
+    if ((o.infusions || []).length) {
+      main.appendChild(el('div', 'sub2', 'Imprégnations'));
+      main.appendChild(infusionCards(o.infusions));
+    }
+  } else if (BUILD_VIEW === 'talents') {
+    buildTalents(o, main);
+  } else if (o.sim) {
+    main.appendChild(buildSim(o.sim));
+  } else {
+    main.appendChild(el('p', 'note', 'La simulation a besoin d’une classe et d’un équipement.'));
+  }
+  box.appendChild(main);
+  return box;
+}
+
+/* The talents tab: the tree, then the runes of the skills on the bar. */
+function buildTalents(o, main) {
+  // the tree on the left, the runes on the right (one under the other
+  // when the window is narrow)
+  const cols = el('div', 'btalents');
+  const left = el('div', 'btleft');
   const th = el('div', 'sub2 bsub');
   th.appendChild(document.createTextNode('Talents — ' + o.points.used + ' / '
     + o.points.total + ' points'));
@@ -40,28 +77,26 @@ function buildBuild(n) {
     r.addEventListener('click', () => notify('build_talents_reset', {}));
     th.appendChild(r);
   }
-  main.appendChild(th);
+  left.appendChild(th);
   if (!o.points.total) {
-    main.appendChild(el('p', 'note', 'Les talents se débloquent au niveau ' + o.points.from + '.'));
+    left.appendChild(el('p', 'note', 'Les talents se débloquent au niveau ' + o.points.from + '.'));
   } else {
-    main.appendChild(el('p', 'note', 'Clic sur un talent : +1 point. Clic droit : −1. Un palier '
+    left.appendChild(el('p', 'note', 'Clic sur un talent : +1 point. Clic droit : −1. Un palier '
       + 's’ouvre avec les points dépensés plus haut dans sa branche (chiffre à gauche).'));
   }
   if (o.tree) {
-    main.appendChild(talentTree(o.tree, true,
+    left.appendChild(talentTree(o.tree, true,
       (id, delta) => notify('build_talent', { id: id, delta: delta })));
   }
-
-  if (o.sim) main.appendChild(buildSim(o.sim));
-  box.appendChild(main);
-  return box;
+  cols.appendChild(left);
+  cols.appendChild(runesSection((o.sim && o.sim.runes) || []));
+  main.appendChild(cols);
 }
 
 /* The simulation: what the build deals and heals against a target whose
    armour is set in %, and what an incoming hit leaves. */
 function buildSim(s) {
   const wrap = el('div', 'bsim');
-  wrap.appendChild(el('div', 'sub2', 'Simulation'));
   const ctl = el('div', 'bsimctl');
   const num = (label, v, field, min, max, step) => {
     const f = el('label', 'bsimf');
@@ -83,12 +118,22 @@ function buildSim(s) {
     + ' (CC : coup critique). La moyenne tient compte des chances de critique. Les effets propres '
     + 'à certains sorts (bonus conditionnels, cumuls, effets spéciaux codés dans le jeu) ne sont pas simulés.'));
 
+  // a block per source: the weapons worn, the arsenal's, the class's skills
   const out = el('div', 'bsimgrid');
-  const t = el('div', 'bsimcards');
-  if (!(s.skills || []).length) {
-    t.appendChild(el('p', 'anote', 'Équipe une arme ou place des compétences.'));
-  }
-  (s.skills || []).forEach((sk) => t.appendChild(spellCard(sk)));
+  const t = el('div', 'bsimgroups');
+  const groups = (s.groups || []).filter((g) => (g.skills || []).length);
+  if (!groups.length) t.appendChild(el('p', 'anote', 'Équipe une arme pour simuler ses attaques.'));
+  groups.forEach((g) => {
+    const blk = el('div', 'bsimgroup');
+    const h = el('div', 'bsimgh');
+    h.appendChild(el('b', null, g.t));
+    if (g.sub) h.appendChild(el('span', null, g.sub));
+    blk.appendChild(h);
+    const cards = el('div', 'bsimcards');
+    g.skills.forEach((sk) => cards.appendChild(spellCard(sk)));
+    blk.appendChild(cards);
+    t.appendChild(blk);
+  });
   out.appendChild(t);
   const d = s.defense;
   const c = el('div', 'spanel bsimdef');
@@ -109,7 +154,6 @@ function buildSim(s) {
   line('Coups physiques encaissés', d.hitsPhys);
   out.appendChild(c);
   wrap.appendChild(out);
-  if ((s.runes || []).length) wrap.appendChild(runesSection(s.runes));
   return wrap;
 }
 
@@ -155,26 +199,31 @@ function spellCard(sk) {
 function runesSection(list) {
   const box = el('div', 'bruneswrap');
   box.appendChild(el('div', 'sub2', 'Runes'));
-  box.appendChild(el('p', 'note', 'Une rune par compétence. Clic pour la poser, re-clic pour l’enlever. '
-    + 'Ses effets chiffrés entrent dans la simulation.'));
-  list.forEach((g) => {
-    const blk = el('div', 'brunes');
-    blk.appendChild(el('b', 'brn', g.name));
-    const row = el('div', 'brunerow');
-    g.runes.forEach((r) => {
-      const c = el('button', 'brune' + (r.on ? ' on' : ''));
+  box.appendChild(el('p', 'note', 'Une rune par compétence de classe, réglée pour le personnage : '
+    + 'elle vaut que la compétence soit dans la barre ou non. Clic pour la poser, re-clic pour l’enlever.'));
+  const grid = el('div', 'brunegrid');
+  const row = (g) => {
+    const sk = el('div', 'bruneskill');
+    sk.appendChild(skillIcon({ id: g.skill, name: g.name }, 'big'));
+    sk.appendChild(el('b', null, g.name));
+    if (g.bar) sk.appendChild(el('span', 'onbar', 'dans la barre'));
+    grid.appendChild(sk);
+    const r = el('div', 'brunerow');
+    g.runes.forEach((x) => {
+      const c = el('button', 'brune' + (x.on ? ' on' : ''));
       c.type = 'button';
-      c.appendChild(skillIcon({ id: r.id, name: r.name }));
+      c.appendChild(skillIcon({ id: x.id, name: x.name }));
       const t = el('div', 'brt');
-      t.appendChild(el('b', null, r.name));
-      t.appendChild(el('span', null, r.desc));
+      t.appendChild(el('b', null, x.name));
+      t.appendChild(el('span', null, x.desc));
       c.appendChild(t);
-      c.addEventListener('click', () => notify('build_rune', { skill: g.skill, rune: r.id }));
-      row.appendChild(c);
+      c.addEventListener('click', () => notify('build_rune', { skill: g.skill, rune: x.id }));
+      r.appendChild(c);
     });
-    blk.appendChild(row);
-    box.appendChild(blk);
-  });
+    grid.appendChild(r);
+  };
+  list.forEach(row);
+  box.appendChild(grid);
   return box;
 }
 
@@ -275,7 +324,7 @@ function buildList(n, box) {
   head.appendChild(el('div', 'section', 'Mes builds'));
   const nb = el('button', 'btn bnew', '+ Nouveau build');
   nb.type = 'button';
-  nb.addEventListener('click', () => notify('build_new', {}));
+  nb.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); });
   head.appendChild(nb);
   box.appendChild(head);
   if (!(n.list || []).length) {
@@ -292,7 +341,7 @@ function buildList(n, box) {
     t.appendChild(el('b', null, b.name));
     t.appendChild(el('span', null, b.cls + ' · niveau ' + (b.lvl || '?')));
     c.appendChild(t);
-    c.addEventListener('click', () => notify('build_open', { file: b.file }));
+    c.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_open', { file: b.file }); });
     grid.appendChild(c);
   });
   box.appendChild(grid);

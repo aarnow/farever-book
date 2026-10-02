@@ -57,8 +57,12 @@ def options(b, slot):
         return []
     if slot == "OffhandWeapon" and not offhand_allowed(b):
         return []
+    # one weapon cannot be both the main one and the arsenal's
+    other = {"Weapon1": "Weapon2", "Weapon2": "Weapon1"}.get(slot)
+    taken = (b["gear"].get(other) or {}).get("id") if other else None
     return sorted(k for k, e in (build_data().get("items") or {}).items()
-                  if e["slot"] == kind and b["cls"] in e["cls"])
+                  if e["slot"] == kind and b["cls"] in e["cls"]
+                  and k != taken)
 
 
 def offhand_allowed(b):
@@ -278,14 +282,25 @@ def normalize(b):
             cur.pop()
         b["skills"][g] = cur
     b["skills"]["weapon"] = opts["weapon"][:slots["weapon"]]
-    # runes: one per skill on the bar, among that skill's own
+    # runes: the character's own, one per class skill whether it is on
+    # the bar or not, among that skill's runes
     info = d.get("skillInfo") or {}
-    on_bar = set(bar_skills(b))
+    mine = set(rune_skills(b))
     b["runes"] = {s: r for s, r in (b.get("runes") or {}).items()
-                  if s in on_bar and r in {x["id"] for x in
+                  if s in mine and r in {x["id"] for x in
                                            (info.get(s) or {}).get("runes")
                                            or ()}}
     return b
+
+
+def rune_skills(b):
+    """The class's skills that have runes, all of them (runes are set for
+    the character, not for the bar)."""
+    d = build_data()
+    info = d.get("skillInfo") or {}
+    cls = (d.get("classes") or {}).get(b.get("cls")) or {}
+    return [s["id"] for s in cls.get("skills") or ()
+            if (info.get(s["id"]) or {}).get("runes")]
 
 
 def bar_skills(b):

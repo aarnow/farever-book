@@ -291,31 +291,50 @@ class BuildTab:
         def weapon(slot):
             p = gear.get(slot)
             return (p["id"], p.get("lvl") or b["lvl"]) if p else None
-        main, ars = weapon("Weapon1"), weapon("Weapon2")
-        rows = []
-        e = B.item(main[0]) if main else None
-        n = 0
-        for s in (e or {}).get("skills") or ():
-            if s["type"] in ("Attack", "Attack2", "Attack3", "Attack4"):
-                n += 1
-                rows.append((s["id"], f"Attaque de base {n}", main))
-            elif s["type"] == "AttackCombo":
-                rows.append((s["id"], f"Combo : {_skill_label(s['id'])}",
-                             main))
-        sk = b.get("skills") or {}
-        mine = set(B._skills_of(b, "Weapon1", B.WEAPON_SKILL_TYPES))
-        for s in sk.get("weapon") or ():
-            rows.append((s, None, main if s in mine else None))
-        for s in sk.get("arsenal") or ():
-            if s:
-                rows.append((s, None, ars))
-        for s in sk.get("class") or ():
-            if s:
-                rows.append((s, None, None))
-        out = simulate(raw, b["lvl"], rows, armor, enemy, hit,
-                       (b.get("runes") or {}).values())
-        base_ids = [sid for sid, label, _w in rows
-                    if label and label.startswith("Attaque de base")]
+        main, off, ars = (weapon("Weapon1"), weapon("OffhandWeapon"),
+                          weapon("Weapon2"))
+        runes = (b.get("runes") or {}).values()
+        d = build_data()
+
+        def attacks(w):
+            """A weapon's basic attacks and combo."""
+            out, n = [], 0
+            for s in (B.item(w[0]) or {}).get("skills") or ():
+                if s["type"] in ("Attack", "Attack2", "Attack3", "Attack4"):
+                    n += 1
+                    out.append((s["id"], f"Attaque de base {n}", w))
+                elif s["type"] == "AttackCombo":
+                    out.append((s["id"], f"Combo : {_skill_label(s['id'])}",
+                                w))
+            return out
+
+        def skills_of(w, types, scaled=True):
+            return [(s["id"], None, w if scaled else None)
+                    for s in (B.item(w[0]) or {}).get("skills") or ()
+                    if s["type"] in types]
+
+        # every source the hero can use, the bar aside: the weapons worn,
+        # the arsenal's, and all the class's skills (runes as set)
+        groups = []
+        if main:
+            groups.append(("Arme principale", item_label(main[0]),
+                           attacks(main)
+                           + skills_of(main, B.WEAPON_SKILL_TYPES)))
+        if off:
+            groups.append(("Main secondaire", item_label(off[0]),
+                           skills_of(off, B.WEAPON_SKILL_TYPES, False)))
+        if ars:
+            groups.append(("Arsenal", item_label(ars[0]),
+                           skills_of(ars, B.WEAPON_SKILL_TYPES
+                                     + B.PASSIVE_TYPES)))
+        cls = (d.get("classes") or {}).get(b["cls"]) or {}
+        groups.append(("Compétences de classe", CLASS_FR.get(b["cls"]) or "",
+                       [(s["id"], None, None) for s in cls.get("skills") or ()]))
+        rows = [r for _t, _s, rs in groups for r in rs]
+        # the hero alone: critical chances and what an incoming hit leaves
+        out = simulate(raw, b["lvl"], [], armor, enemy, hit, runes)
+        sims = [(t, sub, rs, simulate(raw, b["lvl"], rs, armor, enemy, hit,
+                                      runes)) for t, sub, rs in groups if rs]
         fmt = lambda v: f"{v:.0f}"
         pc = lambda v: f"{v * 100:.1f}".replace(".", ",") + " %"
         kinds = {"Damage": "Dégâts", "Heal": "Soin", "Shield": "Bouclier"}
@@ -323,19 +342,13 @@ class BuildTab:
             "armor": armor, "enemy": enemy, "hit": hit,
             "maxLvl": build_data().get("maxLevel") or 25,
             "crit": pc(out["critChance"]), "critMult": pc(out["critMult"]),
-            "skills": [{
-                "id": r["id"], "name": r["name"],
-                "cd": f"{r['cd']:g} s".replace(".", ",") if r.get("cd")
-                else "",
-                "range": f"{r['range']:g} m".replace(".", ",") if r.get("range") else "",
-                "lines": [{"kind": kinds.get(x["kind"], x["kind"]),
-                           "k": x["kind"],
-                           "aff": element_label(x["aff"]) if x["aff"] else "",
-                           "normal": fmt(x["normal"]), "crit": fmt(x["crit"]),
-                           "avg": fmt(x["avg"]),
-                           "mit": pc(x["mit"]) if "mit" in x else ""}
-                          for x in r["lines"]]} for r in out["rows"]],
-            "base": base_ids,
+            "groups": [{
+                "t": t, "sub": sub,
+                "skills": _merge_base_attacks(
+                    [self._card(r, fmt, pc, kinds) for r in g["rows"]],
+                    [sid for sid, label, _w in rs
+                     if label and label.startswith("Attaque de base")])}
+                for t, sub, rs, g in sims],
             "runes": self._runes_view(b, raw, rows, armor, enemy, hit),
             "defense": {
                 "hit": fmt(hit),
@@ -347,18 +360,34 @@ class BuildTab:
                 "hp": fmt(out["defense"]["hp"]),
                 "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", ",")
                              if out["defense"]["phys"]["after"] > 0 else "—")}}
-        view["skills"] = _merge_base_attacks(view["skills"], view.pop("base"))
         return view
 
+    @staticmethod
+    def _card(r, fmt, pc, kinds):
+        """One simulated skill, as its card shows it."""
+        return {
+            "id": r["id"], "name": r["name"],
+            "cd": f"{r['cd']:g} s".replace(".", ",") if r.get("cd") else "",
+            "range": f"{r['range']:g} m".replace(".", ",")
+            if r.get("range") else "",
+            "lines": [{"kind": kinds.get(x["kind"], x["kind"]), "k": x["kind"],
+                       "aff": element_label(x["aff"]) if x["aff"] else "",
+                       "normal": fmt(x["normal"]), "crit": fmt(x["crit"]),
+                       "avg": fmt(x["avg"]),
+                       "mit": pc(x["mit"]) if "mit" in x else ""}
+                      for x in r["lines"]]}
+
     def _runes_view(self, b, raw, rows, armor, enemy, hit):
-        """Each skill on the bar that has runes: its three, the one chosen,
+        """Each class skill that has runes, on the bar or not: its three,
+        the one chosen,
         each described with its own numbers (::dmg::, ::heal:: simulated
         with that rune, ::cooldown:: its own)."""
         info = build_data().get("skillInfo") or {}
         chosen = b.get("runes") or {}
         out = []
         weapon_of = {sid: w for sid, _l, w in rows}
-        for sid in B.bar_skills(b):
+        on_bar = set(B.bar_skills(b))
+        for sid in B.rune_skills(b):
             rs = (info.get(sid) or {}).get("runes") or ()
             if not rs:
                 continue
@@ -378,7 +407,7 @@ class BuildTab:
                               "on": chosen.get(sid) == r["id"],
                               "desc": _rune_text(r, _skill_label(sid), vals)})
             out.append({"skill": sid, "name": _skill_label(sid),
-                        "runes": cards})
+                        "bar": sid in on_bar, "runes": cards})
         return out
 
     def _skill_bar(self, b):
