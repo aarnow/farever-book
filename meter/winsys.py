@@ -613,17 +613,6 @@ class TrayIcon:
         d.szTip = self.tip
         self._notify(NIM_ADD, d)
 
-    def _balloon(self, title, text):
-        """Windows 11 files a brand-new tray icon into the overflow flyout by
-        default, so a first-run user would never find it. The toast is what
-        tells them it's there — and how to get it back."""
-        d = self._base_data()
-        d.uFlags = NIF_INFO
-        d.szInfoTitle = title
-        d.szInfo = text
-        d.dwInfoFlags = NIIF_INFO
-        self._notify(NIM_MODIFY, d)
-
     def _menu(self):
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
@@ -765,10 +754,6 @@ class TrayIcon:
             self._ready.set()
             return
         print("[meter] tray icon active.", file=sys.stderr)
-        self._balloon("Farever France est lancé",
-                      "Clic droit sur cette icône pour l'arrêter. Si elle est "
-                      "masquée, clique sur la flèche ^ près de l'horloge et "
-                      "fais-la glisser dans la barre des tâches.")
         self._ready.set()
         msg = wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:

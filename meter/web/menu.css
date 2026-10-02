@@ -2047,3 +2047,26 @@ body.maxed .grip { display: none; }
 .bsimgh b { color: var(--accent); font-family: var(--font-head); font-size: 13px; letter-spacing: .08em;
             text-transform: uppercase; }
 .bsimgh span { color: var(--dim); font-size: 13px; }
+
+/* Dungeon list: the loot by difficulty, a line each */
+.loottiers { flex: 0 1 auto; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ltier { display: flex; align-items: center; gap: 10px; }
+.ltier .ltl { flex: none; width: 116px; display: flex; align-items: center; gap: 6px; }
+.ltier .ltl img { width: 30px; height: 30px; flex: none; }
+.ltier .ltn { display: flex; flex-direction: column; color: var(--dim); font-size: 12px; font-weight: 700;
+              line-height: 1.1; }
+.ltier .ltn small { color: var(--faint); font-weight: 400; font-size: 10px; }
+.ltier.d2 .ltn { color: #F29A4A; }
+.ltier .lootstrip { gap: 4px; }
+.ltier .lootstrip .lic { width: 30px; height: 30px; }
+.ltier .lootstrip .lic img { width: 28px; height: 28px; }
+.loottiers { flex: none; }
+.ltier .lootstrip { flex-wrap: nowrap; }
+.ltier .lootstrip { margin-left: 0; justify-content: flex-start; }
+.ltier .lootstrip { max-width: none; }
+
+/* loot icons framed in their rarity's colour */
+.lootstrip .lic.r-uncommon { border: 2px solid #7BD88F; background: rgba(123, 216, 143, .12); }
+.lootstrip .lic.r-rare { border: 2px solid #5B8DEF; background: rgba(91, 141, 239, .14); }
+.lootstrip .lic.r-epic { border: 2px solid #B57BEF; background: rgba(181, 123, 239, .16); }
+.lootstrip .lic.r-legendary { border: 2px solid #F29A4A; background: rgba(242, 154, 74, .16); }

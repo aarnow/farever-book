@@ -206,10 +206,10 @@ function buildPortraitRow(r) {
   if (r.meta) txt.appendChild(el('span', 'meta', r.meta));
   if (r.meta2) txt.appendChild(el('span', 'meta meta2', r.meta2));
   row.appendChild(txt);
-  if (r.icons && r.icons.length) {
-    const strip = el('div', 'lootstrip');
-    r.icons.forEach((ic) => {
-      const box = el('span', 'lic');
+  const strip = (icons) => {
+    const s = el('div', 'lootstrip');
+    icons.forEach((ic) => {
+      const box = el('span', 'lic' + (ic.rk ? ' r-' + ic.rk : ''));
       box.title = ic.tip || '';
       if (ic.img) {
         const im = document.createElement('img');
@@ -218,9 +218,32 @@ function buildPortraitRow(r) {
         box.appendChild(im);
       }
       if (ic.n) box.appendChild(el('b', null, String(ic.n)));
-      strip.appendChild(box);
+      s.appendChild(box);
     });
-    row.appendChild(strip);
+    return s;
+  };
+  if (r.icons && r.icons.length) row.appendChild(strip(r.icons));
+  // the loot by difficulty: a line each, led by the game's skull
+  if (r.tiers && r.tiers.length) {
+    const tiers = el('div', 'loottiers');
+    r.tiers.forEach((t) => {
+      const line = el('div', 'ltier d' + t.d);
+      const lab = el('span', 'ltl');
+      const art = (window.__SHEET__ || {})['dungeon_diff_' + t.d];
+      if (art) {
+        const im = document.createElement('img');
+        im.src = art;
+        im.alt = '';
+        lab.appendChild(im);
+      }
+      const nm = el('span', 'ltn', t.t);
+      if (t.sub) nm.appendChild(el('small', null, t.sub));
+      lab.appendChild(nm);
+      line.appendChild(lab);
+      line.appendChild(strip(t.icons));
+      tiers.appendChild(line);
+    });
+    row.appendChild(tiers);
   }
   (r.btns || []).forEach((b) => {
     const btn = el('button', 'rowbtn', b.t);

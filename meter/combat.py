@@ -904,7 +904,7 @@ class DungeonRecorder(RiftRecorder):
 
 # The dungeon difficulty as the instance lobby stores it (measured: the value
 # followed the Normal/Difficile toggle in the lobby).
-DUNGEON_DIFFICULTIES = {0: "Normal", 1: "Difficile", 2: "Héroïque"}
+DUNGEON_DIFFICULTIES = {0: "Normal", 1: "Vétéran", 2: "Héroïque"}   # the game's names
 
 
 # How long a difficulty seen in a lobby is trusted for the run that follows.

@@ -14,6 +14,9 @@ page by menu_host, nothing loaded at runtime).
                                       shapes (diamond, small diamond, large
                                       diamond, triangle), then the grey
                                       they take when nothing is in them
+    UI/icons/POI_DifficultySkulls_atlas_38PX.png
+                                      38 px cells: the dungeon difficulties
+                                      (Normal, Vétéran, Héroïque)
 
 Usage: python build_charsheet_art.py [--pak PATH]
 """
@@ -65,6 +68,9 @@ def main():
     for i, name in enumerate(TALENT_BOXES):
         for row, kind in ((0, "box"), (1, "dim")):
             boxes.crop((i * 160, row * 146, i * 160 + 160, row * 146 + 146))                  .save(OUT / f"talent_{kind}_{name}.png", optimize=True)
+    skulls = img("UI/icons/POI_DifficultySkulls_atlas_38PX.png")
+    for i in range(3):
+        skulls.crop((i * 38, 0, i * 38 + 38 + (1 if i == 2 else 0), 38))               .save(OUT / f"dungeon_diff_{i}.png", optimize=True)
     print(f"written to {OUT}")
 
 

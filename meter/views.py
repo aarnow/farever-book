@@ -1106,7 +1106,7 @@ def droptable_view(dg, got):
     """A dungeon's possible loot as table rows, rarest first. `got`: item id
     -> how many the saved runs of this dungeon brought back."""
     src_label = {"coffre": "Coffre de fin", "boss": "Mort du boss",
-                 "faction": "Armure (Normal, Difficile)",
+                 "faction": "Armure (Normal, Vétéran)",
                  "heroic": "Armure (Héroïque)"}
     pools = dg.get("pools") or {}
     rows = []

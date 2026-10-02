@@ -1425,7 +1425,7 @@ class App:
                          "hasard) et des fragments d'Étincelle selon ton "
                          "niveau. Chaque joueur reçoit aussi une pièce "
                          "d'armure de la faction, garantie : en Normal et "
-                         "Difficile une rare, tirée à parts égales parmi "
+                         "Vétéran une rare, tirée à parts égales parmi "
                          "celles que sa classe peut porter (les 2 dernières "
                          "reçues sont écartées) ; en Héroïque une épique, "
                          "parmi celles du boss pour sa classe. À 3 joueurs "
@@ -1460,31 +1460,42 @@ class App:
             else:
                 stats.append("pas encore fait")
             dg = catalogue.get(kind) or {}
-            icons = [{"img": item_icon(e["item"]),
+            loot = dg.get("loot") or ()
+            # the loot worth coming for, a line per difficulty: the boss's
+            # weapons (the chest), the faction armour (rare up to Vétéran,
+            # epic in Héroïque), the infusion pattern (Héroïque), the glider
+            # or mount (any difficulty)
+            rk = lambda e: (e.get("rarity") or "").lower()
+            weapons = [{"img": item_icon(e["item"]), "rk": rk(e),
+                        "tip": f"{item_label(e['item'])} — {_pct(e['chance'])}"
+                               " (coffre de fin)"}
+                       for e in loot if e.get("src") == "coffre"
+                       and e.get("type") != "UpgradeComponent"]
+            rides = [{"img": item_icon(e["item"]), "rk": rk(e),
                       "tip": f"{item_label(e['item'])} — {_pct(e['chance'])}"}
-                     for e in dg.get("loot") or ()
-                     if e.get("src") in ("coffre", "boss")
-                     and e.get("chance") is not None and e["chance"] < 1]
-            # the boss's infusion pattern (guaranteed, Heroic only)
-            icons += [{"img": item_icon(e["item"]),
-                       "tip": f"{item_label(e['item'])} — garanti"
-                              + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'])}"
-                                 if e.get("diff") else "")}
-                      for e in dg.get("loot") or ()
-                      if e.get("type") == "InfusionPattern"]
-            for src, label in (("faction", "rare (Normal, Difficile)"),
-                               ("heroic", "épique (Héroïque)")):
-                armour = [e for e in dg.get("loot") or ()
-                          if e.get("src") == src]
-                if armour:
-                    icons.append({"img": item_icon(armour[0]["item"]),
-                                  "n": len(armour),
-                                  "tip": f"Armure de faction {label} : "
-                                         f"{len(armour)} pièces, une garantie "
-                                         "par joueur parmi celles de sa "
-                                         "classe"})
+                     for e in loot if e.get("src") == "boss"
+                     and e.get("type") in ("GearGlider", "Mount")]
+
+            def armour(src, what):
+                a = [e for e in loot if e.get("src") == src]
+                return [{"img": item_icon(a[0]["item"]), "n": len(a),
+                         "rk": rk(a[0]),
+                         "tip": f"Armure de faction {what} : {len(a)} pièces, "
+                                "une garantie par joueur parmi celles de sa "
+                                "classe"}] if a else []
+            infusion = [{"img": item_icon(e["item"]), "rk": rk(e),
+                         "tip": f"{item_label(e['item'])} — garanti"}
+                        for e in loot if e.get("type") == "InfusionPattern"]
+            tiers = [
+                {"d": 0, "t": "Normal", "icons": weapons
+                 + armour("faction", "rare") + rides},
+                {"d": 1, "t": "Vétéran", "sub": "niveau max",
+                 "icons": weapons + armour("faction", "rare") + rides},
+                {"d": 2, "t": "Héroïque", "icons": weapons
+                 + armour("heroic", "épique") + infusion + rides}]
+            tiers = [t for t in tiers if t["icons"]]
             return {"t": dungeon_name(kind),
-                    "icons": icons,
+                    "tiers": tiers,
                     "meta": f"Boss : {_boss_label(boss)}" if boss else "",
                     "meta2": " · ".join(stats),
                     "portrait": boss or "",
