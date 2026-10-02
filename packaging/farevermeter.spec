@@ -1,4 +1,4 @@
-# PyInstaller spec for the Farever+ Meter.
+# PyInstaller spec for Farever France.
 #
 #   py -m PyInstaller --clean --noconfirm packaging/farevermeter.spec
 #
@@ -37,7 +37,8 @@ datas = [
     # wrong. Required, not optional: without them the panel opens blank.
     (str(ROOT / "meter" / "web" / "menu.html"), "res/web"),
     (str(ROOT / "meter" / "web" / "menu.css"), "res/web"),
-    (str(ROOT / "meter" / "web" / "menu.js"), "res/web"),
+    *[(str(f), "res/web/js")
+      for f in sorted((ROOT / "meter" / "web" / "js").glob("*.js"))],
 ]
 
 # The Help tab's articles. Globbed rather than listed, because a help topic

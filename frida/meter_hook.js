@@ -662,7 +662,7 @@ function hookBossBar(base) {
 }
 
 // ---- loot (the inventory sweep) ----
-// Restored from the original's legendary-pickup cue, now feeding the dungeon
+// The legendary-pickup cue, feeding the dungeon
 // loot list. Plain pointer reads only.
 //
 // st.Inventory.content is an ArrayObj whose entries are NOT items: each is a
@@ -882,7 +882,7 @@ function checkCollection() {
 }
 
 // ---- the codex: the game's own kill count per monster ----
-// Restored from the original (measured 2026-08-05). The per-character store
+// Measured 2026-08-05. The per-character store
 // is replicated, so it is pointer reads plus the game's native map calls:
 //
 //   Hero.player -> Player.progress -> Progress.unitsProgress (hxbit.MapData)

@@ -25,7 +25,7 @@ OUT = HERE.parent / "assets" / "classes"
 # The strip's order, left to right, read off the art: sword and shield, orb and
 # flame, twin daggers, halo and cross.
 ORDER = ("warrior", "mage", "rogue", "priest")
-# The meter's class colours (the original project's palette).
+# The meter's class colours.
 COLOURS = {"warrior": "#D98A5A", "mage": "#6FA8DC",
            "rogue": "#87B37A", "priest": "#C9B87A"}
 SIZE = 64                       # square output, icon centred in it

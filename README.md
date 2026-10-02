@@ -1,21 +1,13 @@
-# Farever France (fork en français, hors jeu)
+# Farever France
 
-> **Ce dépôt est un fork personnel de [Farever+](https://github.com/brudrbear/FareverMeter)**,
-> le compteur de dégâts pour **Farever** créé par **Brudr**. Tout le travail de
-> lecture du jeu (analyse du bytecode, script Frida, calcul des soins, rapports de
-> faille) vient de son projet.
->
-> Cette version vise un usage **plus sobre** :
->
-> * **en français** ;
-> * **externe au jeu** : aucun overlay, rien n'est jamais dessiné dans Farever, le
->   HUD du jeu reste intact ;
-> * **purement analytique** : une seule fenêtre, pensée pour un 2nd écran, qui
->   affiche les données en direct et garde ce qui a été enregistré, consultable
->   même jeu fermé.
->
-> Le projet d'origine ne publie pas de licence : ce fork est destiné à un usage
-> personnel et n'est pas redistribué.
+Compagnon de second écran pour **Farever**, en français. Une seule fenêtre
+Windows, à côté du jeu, qui lit ce qui se passe en jeu et le garde consultable
+même jeu fermé :
+
+* **externe au jeu** : aucun overlay, rien n'est jamais dessiné dans Farever, le
+  HUD du jeu reste intact ;
+* **en lecture** : les données du jeu sont lues en mémoire, jamais modifiées ;
+* **usage personnel** : le projet n'est pas redistribué.
 
 ## Position du studio
 
@@ -29,65 +21,54 @@ le 27/05/2026 :
 > like minimaps or DPS meter 🙏
 
 Autrement dit : pendant l'accès anticipé, le studio ne met pas en avant les
-add-ons, mais tolère leur usage personnel. C'est le cadre de ce fork : usage
+add-ons, mais tolère leur usage personnel. C'est le cadre de ce projet : usage
 personnel, sans diffusion. Cette tolérance peut évoluer, à surveiller.
 
-Pour être exact sur ce que fait Farever France dans le jeu : il ne modifie aucune
-donnée et n'envoie rien sur le réseau, mais Frida s'injecte dans le processus
-du jeu et dévie quelques fonctions en mémoire pour être prévenu des coups et
-des soins. En cas de plantage à signaler aux développeurs, reproduis-le sans
-Farever France avant de l'envoyer.
+Pour être exact sur ce que fait Farever France dans le jeu : il ne modifie
+aucune donnée et n'envoie rien sur le réseau, mais Frida s'injecte dans le
+processus du jeu et dévie quelques fonctions en mémoire pour être prévenu des
+coups et des soins. En cas de plantage à signaler aux développeurs, reproduis-le
+sans Farever France avant de l'envoyer.
 
-## Ce que fait Farever France
+## Les onglets
 
-Farever France lit en mémoire les données de combat de Farever (sorts, éléments,
-critiques, kills, soins) pour tous les joueurs proches, et les affiche dans une
-fenêtre Windows séparée.
-
-| Page | Contenu |
+| Onglet | Contenu |
 |---|---|
-| **En direct** | Tableau dégâts/soins du groupe (ou de tous les joueurs), détail du joueur sélectionné (sorts, critiques, types de dégâts), durée du combat, mode parse 60 s, fil d'événements (kills de boss, records, fins de faille) |
-| **Failles** | Toutes les failles terminées. Chaque rapport compare la phase de faille et la phase du boss : durée, DPS, HPS, MVP, classement complet des dégâts et des soins, dégâts par type. Copiable en image (au visuel de l'interface) ou en texte. |
-| **Donjons** | Chaque donjon est enregistré automatiquement : difficulté (lue dans le lobby), résultat (victoire, échec, abandon), temps du run (l'horloge du jeu), morts, groupe, un rapport en deux phases (exploration puis boss) comme pour les failles, et le butin ramassé (dont le coffre de fin). Noms des donjons, objets et boss en français, tirés du jeu. Records par donjon et par difficulté. |
-| **Collection** | Montures, planeurs, compagnons, apparences d'équipement (par emplacement) et objets du Codex (nombre obtenu et rang) : ta collection est lue en jeu et gardée hors jeu. Compteurs par catégorie, recherche, filtres (tous, manquants, obtenus) et, pour chaque élément, comment l'obtenir d'après les données du jeu (butin et chances, marchands, coffres, succès, zones de capture et taux d'apparition, butin de faction, récolte, recettes de fabrication, démontage). |
-| **Chasse** | Tableau de chasse : le nombre de kills de ton personnage pour chaque monstre, lu dans le Codex du jeu (il inclut donc tout ce que tu as tué avant Farever France), avec le rang du Codex. Filtres par région, recherche, tri. |
-| **Carte** | La carte de Siagarta (les tuiles de la minimap du jeu), déplaçable et zoomable, avec les points de complétion : coffres du monde, de chambre forte et de recette, orbes rouges, obélisques et points de réapparition. Filtres par catégorie et par région, compteurs, détail au clic. |
-| **Personnage** | Les joueurs autour de toi et, sur demande, le profil d'un joueur : classe, niveau, équipement (améliorations, cadeaux, formules, sceaux et gemmes posés, avec leurs effets ; imprégnations et effets de set actifs à 2 / 4 / 6 pièces), barre de sorts, arbre de talents et runes. Les profils ne sont gardés que pendant la session. |
-| **Réglages** | Colonnes de soins, réinitialisation au pull d'un boss, « Tous les joueurs » automatique en faille, raccourci clavier, taille de l'interface, dossiers. |
-| **Aide** | Utilisation, lancement avec Steam. |
+| **En direct** | Dégâts et soins du groupe (ou de tous les joueurs), détail du joueur sélectionné (sorts, critiques, types de dégâts), durée du combat, parse 60 s. Ta **chance de butin** (compteurs du Puits des âmes, offrandes actives) et tes **statistiques**, relues chaque minute. |
+| **Failles** | Tes compteurs de failles, puis chaque faille terminée avec son rapport : phase de faille et phase du boss, durée, DPS, HPS, MVP, classements, types de dégâts ; copiable en image ou en texte. Suppression par sélection, nombre de failles conservées réglable. Récompenses des failles et chances (paliers de portails, armes légendaires). |
+| **Donjons** | Chaque run enregistré : difficulté, résultat, temps, morts, groupe, rapport en deux phases et butin. Records par donjon et difficulté, table de butin du donjon. |
+| **Collection** | Montures, planeurs, compagnons, apparences d'équipement et objets du Codex, avec pour chacun la façon de l'obtenir d'après les données du jeu. |
+| **Chasse** | Tes kills par monstre (Codex du jeu) et leur rang, par région. |
+| **Carte** | La carte de Siagarta avec les points de complétion (coffres, orbes rouges, obélisques…), trouvés ou à récupérer. |
+| **Succès** | Les succès du compte, leur progression et leurs récompenses. |
+| **Inspecter** | Les joueurs du serveur et, sur demande, la fiche d'un joueur comme en jeu : équipement par emplacement avec les **statistiques de chaque pièce**, **attributs** et stats secondaires, armes et arsenal, imprégnations, barre de sorts, talents et runes. |
+| **Réglages** (⚙) | Colonnes de soins, réinitialisation au pull d'un boss, raccourci clavier, taille de l'interface, dossiers. |
+| **Aide** (?) | Utilisation, lancement avec Steam, et **Réparer** après une mise à jour du jeu. |
+| **Événements** (☰) | Fenêtre des kills de boss, records, fins de faille et donjons ; une pastille compte les nouveaux. |
 
-Le minuteur de faille reste visible en bas du menu, sur toutes les pages : il
-compte jusqu'à la prochaine faille (à chaque heure pile), puis les 3 minutes
-d'ouverture du portail.
+En haut, le minuteur de la prochaine faille, puis l'état du jeu : **Jouer**
+(lance Farever par Steam), **Connexion…**, ou **En jeu** avec le serveur. Un
+clic sur cet état ouvre le **suivi de connexion**, étape par étape.
 
-### Avec ou sans le jeu
-
-Farever France s'ouvre à tout moment. Il détecte Farever tout seul, s'y connecte, et
-s'y reconnecte après une fermeture du jeu. Le voyant en haut à droite indique
-l'état :
-
-* **● Hors jeu** : le jeu n'est pas lancé, les failles, les combats et les
-  réglages restent consultables ;
-* **● Connexion…** : le jeu vient d'être détecté ;
-* **● En jeu** : les données arrivent en direct ;
-* **● Échec — réessayer** : un clic relance une tentative.
+Les statistiques d'équipement et les attributs sont **calculés comme le fait
+le jeu**, à partir de ses données : un équipement ne garde en mémoire que son
+niveau, ses améliorations et ses augmentations, et le jeu en dérive ses
+statistiques (voir `hltools/gear_stats_data.py`).
 
 ### Réinitialiser en plein combat
 
-Un raccourci clavier global (par défaut **Maj + \\**) réinitialise le combat sans
-quitter le jeu des yeux. Il ne fonctionne que lorsque Farever est au premier
-plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
+Un raccourci clavier global (par défaut **Maj + \\**) réinitialise le combat
+sans quitter le jeu des yeux. Il ne fonctionne que lorsque Farever est au
+premier plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
 ## Installation et lancement
 
-Ce fork se lance depuis les sources (Windows). Il faut
+Farever France se lance depuis les sources (Windows). Il faut
 [Python](https://www.python.org/downloads/), puis un double-clic sur
 **`Installer Farever France.cmd`** : il installe les modules (dans les bonnes
 versions) et crée le raccourci **Farever France** sur le Bureau et dans le menu
-Démarrer. Le raccourci lance l'application sans fenêtre de console ; son
-journal est alors dans `%LOCALAPPDATA%\FareverMeter\meter.log` (bouton du
-journal dans les Réglages). Le script peut être relancé sans risque, par
-exemple après avoir déplacé le dossier.
+Démarrer. Le raccourci lance l'application sans console ; son journal est alors
+dans `%LOCALAPPDATA%\FareverMeter\meter.log` (bouton dans les Réglages).
 
 À la main, avec la console (pratique pour lire le journal en direct) :
 
@@ -96,22 +77,17 @@ pip install frida==17.18.0 pillow pywebview
 python meter/farever_meter.py
 ```
 
-Au premier lancement avec le jeu, Farever France extrait ses données du jeu
-(images, carte, catalogues) : une à deux minutes.
-
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
 
 **Frida doit être en 17.18.0.** La 17.19.0 fait planter tout processus dont
 elle se détache, donc Farever à la fermeture de Farever France (mesuré le
-28/09/2026 sur Windows 11 build 26200 ; les versions 16.7.19 à 17.18.0 n'ont
-pas ce problème). Farever France refuse de s'attacher avec la 17.19.0 et l'indique
-dans sa fenêtre.
+28/09/2026 sur Windows 11 build 26200). Farever France refuse de s'attacher
+avec la 17.19.0 et l'indique dans sa fenêtre.
 
-Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône Farever France près de
-l'horloge → **Arrêter le compteur**. Farever France se détache alors proprement du jeu.
-
-**Ne l'arrête pas depuis le Gestionnaire des tâches** : le processus serait tué
-avant de s'être détaché du jeu, ce qui peut déstabiliser Farever.
+Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône près de l'horloge.
+Farever France se détache alors proprement du jeu. **Ne l'arrête pas depuis le
+Gestionnaire des tâches** : le processus serait tué avant de s'être détaché, ce
+qui peut déstabiliser Farever.
 
 ## Où sont les fichiers
 
@@ -119,80 +95,81 @@ Depuis les sources, tout est écrit dans le dossier du projet :
 
 | Quoi | Où |
 |---|---|
-| Rapports de faille (`.json`, `.txt`, `.png`) et parses 60 s | `parses/` |
-| Runs de donjon (`.json`) | `donjons/` |
-| Ta collection, lue en jeu | `.meter_collection.json` |
-| Tes kills par monstre (par personnage) | `.meter_codex.json` |
+| Rapports de faille (`.json`, `.txt`, `.png`) | `failles/` |
+| Runs de donjon | `donjons/` |
+| Collection, kills par monstre, succès, carte | `.meter_collection.json`, `.meter_codex.json`, `.meter_achievements.json`, `.meter_elements.json` |
 | Réglages, position de la fenêtre, records de boss | `.meter_settings.json`, `.meter_position.json`, `.meter_besttimes.json` |
-| Données du jeu régénérées | `analysis_out/` |
-| Journal | la console |
-
-Rien n'est jamais supprimé de `parses/` ni de `donjons/` : fais le ménage toi-même.
+| Données tirées du jeu | `analysis_out/` |
 
 ## Après une mise à jour de Farever
 
-Les index de fonctions et les positions des champs changent d'une version du jeu
-à l'autre. Au lancement, Farever France compare le `hlboot.dat` du jeu en cours avec
-celui qui a servi à générer `analysis_out/`, et **régénère les données tout seul**
-si besoin (quelques secondes). Si Farever est installé à un endroit inhabituel,
-indique le chemin complet de `hlboot.dat` dans la variable d'environnement
-`FAREVER_HLBOOT`.
+Les index de fonctions et les positions des champs changent d'une version du
+jeu à l'autre. À chaque connexion, Farever France compare le `hlboot.dat` du
+jeu en cours avec celui qui a servi à générer `analysis_out/`, et **régénère
+les données tout seul** si besoin (une dizaine de secondes ; l'indicateur
+affiche « Mise à jour… »). Le bouton **Réparer** de l'Aide refait cette lecture
+depuis zéro et se reconnecte, sans relancer l'application.
 
-Pour régénérer à la main :
-
-```
-python hltools/build_targets.py     # -> resolver_data.json (fonctions)
-python hltools/emit_offsets.py      # -> meter_offsets.json (champs)
-```
+Si Farever est installé à un endroit inhabituel, indique le chemin complet de
+`hlboot.dat` dans la variable d'environnement `FAREVER_HLBOOT`.
 
 ## Comment ça marche
 
-Farever tourne sur **HashLink** : `Farever.exe` exécute `hlboot.dat`, un bytecode
-qui contient encore les noms de toutes les classes, champs et méthodes du jeu.
+Farever tourne sur **HashLink** : `Farever.exe` exécute `hlboot.dat`, un
+bytecode qui garde les noms de toutes les classes, champs et méthodes du jeu.
 
-1. **Analyse du bytecode** (`hltools/`) : le parseur lit `hlboot.dat` et en tire
-   l'index de chaque fonction utile et la position de chaque champ lu.
-2. **Connexion au jeu** (`GameLink`, dans `meter/farever_meter.py`) : un fil
-   d'exécution en arrière-plan attend Farever, s'y attache avec **Frida**, et
-   recommence après une fermeture.
-3. **Lecture en jeu** (`frida/meter_hook.js`) : le script injecté retrouve la
-   table des fonctions de HashLink et observe, **en lecture seule**, les coups
-   (`ent.Unit.onInflictDamage` : montant, élément, critique, kill, sort), les
-   effets de soin et la vie des cibles, les barres de boss, la faille, la zone,
-   le groupe et la liste des joueurs du serveur. Il n'écrit rien dans le jeu et
-   n'affiche rien.
-4. **Moteur** (`App`, dans `meter/farever_meter.py`) : agrège les combats,
-   détecte les pulls et kills de boss, construit les rapports de faille,
-   enregistre l'historique, et construit chaque page de la fenêtre.
-5. **Fenêtre** (`meter/menu_host.py` + `meter/web/`) : une fenêtre WebView2 dans
-   son propre processus, reliée au moteur par ses entrées/sorties standard. Le
-   moteur lui envoie l'état de la page plusieurs fois par seconde ; elle lui
-   renvoie les clics.
+1. **Données du jeu** (`hltools/`) : le parseur lit `hlboot.dat` (index des
+   fonctions, positions des champs, et même le code des fonctions avec
+   `hlbc_code.py`) ; les générateurs tirent de `res.pak` et `data.cdb` les
+   noms français, images, catalogues et règles de jeu dans `analysis_out/`.
+2. **Lecture en jeu** (`frida/meter_hook.js`) : le script injecté retrouve la
+   table des fonctions de HashLink et observe, en lecture seule, les coups,
+   les soins, les barres de boss, la faille, la zone, le groupe, les joueurs du
+   serveur, la collection, le Codex et les profils. Il n'écrit rien dans le jeu
+   et n'affiche rien.
+3. **Moteur** (`meter/`, un module par responsabilité) :
+
+   | Module | Rôle |
+   |---|---|
+   | `farever_meter.py` | démarrage et arrêt |
+   | `app.py` | l'application : état, actions, pages |
+   | `gamelink.py` | la connexion au jeu (attache, hook, reconnexion, étapes) |
+   | `combat.py` | comptage dégâts/soins, enregistrement des failles et donjons |
+   | `gamedata.py` | les tables tirées du jeu et leur régénération |
+   | `gearstats.py` | statistiques d'équipement et attributs, comme le jeu |
+   | `views.py` | construction des pages à partir des données |
+   | `reports.py` | rapports de faille : page et image |
+   | `bridge.py` | le processus de la fenêtre et le canal vers elle |
+   | `winsys.py` | Windows : DPI, raccourci, icône, presse-papiers, instance unique |
+   | `common.py` | chemins, constantes, petits utilitaires |
+
+4. **Fenêtre** (`meter/menu_host.py` + `meter/web/`) : une fenêtre WebView2
+   sans cadre, dans son propre processus, reliée au moteur par ses
+   entrées/sorties standard. Le moteur lui envoie l'état de la page plusieurs
+   fois par seconde ; elle lui renvoie les clics.
 
 Les soins ne sont jamais transmis tels quels au client : leur montant est
-reconstitué à partir de l'effet de soin joué sur la cible et de la hausse de ses
-points de vie, et leur taille réelle est estimée à partir des données de sorts
-du jeu (d'où la colonne « excès » pour le soin perdu). La régénération naturelle
-compte comme du soin.
+reconstitué à partir de l'effet de soin joué sur la cible et de la hausse de
+ses points de vie, et leur taille réelle est estimée à partir des données de
+sorts du jeu (d'où la colonne « excès »).
 
 ## Organisation du dépôt
 
 ```
-meter/         le moteur (farever_meter.py) et la fenêtre (menu_host.py, web/)
+meter/         le moteur (modules ci-dessus) et la fenêtre (menu_host.py, web/)
 frida/         le script injecté dans le jeu (meter_hook.js)
 hltools/       le parseur de bytecode HashLink et les générateurs de données
-analysis_out/  données générées à partir du jeu (fonctions, champs, noms)
-assets/        icône
-packaging/     scripts de construction d'un exécutable (projet d'origine, non
-               mis à jour pour ce fork)
+analysis_out/  données générées à partir du jeu
+assets/        icône, icônes de classe, images de la fiche personnage
+packaging/     raccourci, icône, et construction d'un exécutable
 ```
 
 ## Limites connues
 
-* Les rapports enregistrés avant la traduction gardent quelques libellés en
-  anglais dans leurs fichiers ; l'affichage les traduit.
 * L'appartenance au groupe se fait par nom de joueur.
-* Si deux copies de Farever tournent en même temps, Farever France se connecte à la
-  première.
-* Le suivi des morts en phase de boss est en attente d'une mise à jour du jeu
-  (état « à terre »).
+* Si deux copies de Farever tournent en même temps, Farever France se connecte
+  à la première.
+* Les attributs de la fiche ne comptent ni le blocage du bouclier ni la
+  puissance des armes ; les effets actifs sont ceux du moment de l'analyse.
+* Le suivi des morts en phase de boss attend une mise à jour du jeu (état « à
+  terre »).

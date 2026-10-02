@@ -1,7 +1,7 @@
-; Inno Setup script for the Farever+ Meter.
+; Inno Setup script for Farever France.
 ;
 ; Compiled by packaging/build.ps1, which passes AppVersion in from the VERSION
-; constant in meter/farever_meter.py so the two can't drift:
+; constant in meter/common.py so the two can't drift:
 ;
 ;   ISCC.exe /DAppVersion=2.1 packaging\FareverMeter.iss
 ;
@@ -13,10 +13,8 @@
   #define AppVersion "0.0"
 #endif
 
-#define AppName "Farever+ Meter"
+#define AppName "Farever France"
 #define AppExe "FareverMeter.exe"
-#define AppPublisher "Brudr"
-#define AppUrl "https://github.com/brudrbear/FareverMeter"
 
 [Setup]
 ; Stable across releases — it's how Windows knows an install is an upgrade of
@@ -24,9 +22,6 @@
 AppId={{8B4B1F2E-9C6A-4E7D-93A5-2F1D6C0B7A34}
 AppName={#AppName}
 AppVersion={#AppVersion}
-AppPublisher={#AppPublisher}
-AppSupportURL={#AppUrl}
-AppUpdatesURL={#AppUrl}/releases
 DefaultDirName={autopf}\FareverMeter
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
@@ -64,7 +59,7 @@ Source: "..\dist\FareverMeter\*"; DestDir: "{app}"; Flags: ignoreversion recurse
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
-Name: "{group}\Farever+ log folder"; Filename: "{localappdata}\FareverMeter"
+Name: "{group}\Farever France log folder"; Filename: "{localappdata}\FareverMeter"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
@@ -79,7 +74,7 @@ Type: filesandordirs; Name: "{app}\_internal"
 
 [Code]
 { The tray icon's hidden window. Its class name is registered by TrayIcon._run
-  in farever_meter.py, and is the most reliable way to tell a running meter
+  in meter/winsys.py, and is the most reliable way to tell a running meter
   from any other process that happens to share the executable name. }
 const
   TrayClass = 'FareverMeterTray';
@@ -99,7 +94,7 @@ begin
   end;
   while FindWindowByClassName(TrayClass) <> 0 do
   begin
-    if MsgBox('The Farever+ Meter is still running.' + #13#10#13#10 +
+    if MsgBox('Farever France is still running.' + #13#10#13#10 +
               'Right-click its icon in the notification area (by the clock - ' +
               'click the ^ arrow if you don''t see it) and choose "Stop the ' +
               'meter". You can also use the Stop button in the meter''s control ' +

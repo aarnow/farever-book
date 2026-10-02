@@ -1,4 +1,4 @@
-# Build the Farever+ Meter release: icon -> executable -> installer.
+# Build Farever France: icon -> executable -> installer.
 #
 #   powershell -ExecutionPolicy Bypass -File packaging\build.ps1
 #
@@ -17,12 +17,12 @@ Set-Location $root
 # One source of truth for the version: the constant the update check compares
 # against. Reading it here means the installer, its filename and the running
 # app can never disagree about which release this is.
-$meter = Get-Content "meter\farever_meter.py" -Raw
+$meter = Get-Content "meter\common.py" -Raw
 if ($meter -notmatch '(?m)^VERSION\s*=\s*"([^"]+)"') {
-    throw "Couldn't find VERSION in meter\farever_meter.py"
+    throw "Couldn't find VERSION in meter\common.py"
 }
 $version = $Matches[1]
-Write-Host "==> Building Farever+ Meter $version" -ForegroundColor Cyan
+Write-Host "==> Building Farever France $version" -ForegroundColor Cyan
 
 # --- 1. Icon ---------------------------------------------------------------
 # Regenerated rather than assumed: it's the tray, executable and installer icon,

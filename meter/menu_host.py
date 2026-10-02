@@ -30,7 +30,8 @@ One JSON object per line, in both directions.
 
 This module is deliberately dumb. It owns the window and the pipe and nothing
 else: every label is computed by the meter and every button calls back into it.
-The page's behaviour lives in web/menu.js.
+The page's behaviour lives in web/js/ (one file per concern, joined in
+JS_FILES order into the page's single script).
 """
 from __future__ import annotations
 
@@ -58,7 +59,7 @@ if sys.platform == "win32":
             pass
 
 # One CSS pixel is one real pixel whatever the Windows display scale says; the
-# user's own size preference is a CSS zoom on the page (setZoom in menu.js), so
+# user's own size preference is a CSS zoom on the page (setZoom in web/js/core.js), so
 # it can change without restarting the browser environment.
 os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                       "--force-device-scale-factor=1")
@@ -363,6 +364,13 @@ def _rect(hwnd):
     return (r.left, r.top, r.right - r.left, r.bottom - r.top)
 
 
+# The page's script, by concern, in the order it is joined: core first (the
+# helpers and the state push everything else uses), boot last (it starts the
+# page once every function and constant above exists).
+JS_FILES = ("core", "frame", "live", "report", "dungeons", "collection",
+            "achievements", "hunt", "map", "character", "boot")
+
+
 def _document():
     """One self-contained HTML document, assembled from the three files."""
     def read(name):
@@ -374,7 +382,8 @@ def _document():
 
     html = (read("menu.html")
             .replace("/*CSS*/", read("menu.css"))
-            .replace("/*JS*/", read("menu.js"))
+            .replace("/*JS*/", "\n".join(read(f"js/{f}.js")
+                                         for f in JS_FILES))
             .replace("/*ICONS*/",
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
                      "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())

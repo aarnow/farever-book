@@ -4,8 +4,8 @@ respawn points — each with its position and zone.
 
 Tiles: res.map.pak Level/World/<world>.dat/minimap/<tx>_<ty>_1024.png. Tile
 (tx, ty) covers world x in [tx*576, (tx+1)*576) and y in [ty*576,
-(ty+1)*576); +y is south, so the map reads with +y DOWN. (Worked out for the
-original's minimap and cross-checked against questlog.gg, whose markers use
+(ty+1)*576); +y is south, so the map reads with +y DOWN. (Worked out on the
+game's minimap and cross-checked against questlog.gg, whose markers use
 raw in-game coordinates on these same tiles.)
 
 Points: the world level's elements (HBSON, see hbson.py), by the prefab they

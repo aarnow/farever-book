@@ -24,9 +24,6 @@ def main():
         "$s = New-Object -ComObject WScript.Shell; "
         "foreach ($dir in @([Environment]::GetFolderPath('Desktop'), "
         "[Environment]::GetFolderPath('Programs'))) { "
-        # the shortcut's name before the app was renamed (Farever+)
-        "Remove-Item -LiteralPath (Join-Path $dir 'Farever+.lnk') "
-        "-ErrorAction SilentlyContinue; "
         "$l = $s.CreateShortcut((Join-Path $dir 'Farever France.lnk')); "
         f"$l.TargetPath = {ps(pyw)}; "
         f"$l.Arguments = {ps(chr(34) + str(script) + chr(34))}; "

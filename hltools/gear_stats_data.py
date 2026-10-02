@@ -1,6 +1,6 @@
 """Gear stats, for the Inspecter tab: what the game needs to compute a gear
 piece's attributes — from data.cdb (res.light.pak). The computation itself
-is in the meter (farever_meter.gear_stats); this only packs its inputs.
+is in the meter (meter/gearstats.py, gear_stats); this only packs its inputs.
 
 A gear piece holds no rolled stats: st.item.Gear keeps level, upgradeLevel,
 slots, infusion and infusionBonusStat, nothing else. The game derives the
