@@ -339,6 +339,16 @@ def _mat(p):
             [c * sz for c in r[2]], [x, y, z]]
 
 
+def _mat_post(p):
+    """The same, as Position.toMatrix(true) builds a joint's bind matrix
+    (transPos): rotated, translated, and only then scaled — the scale
+    reaches the translation too. A model in centimetres (the crawlers) has
+    its bind matrices scaled, and gets this wrong otherwise."""
+    m = _mat(list(p[:6]) + [1.0, 1.0, 1.0])
+    s = p[6:9] if len(p) >= 9 else (1.0, 1.0, 1.0)
+    return [[row[c] * s[c] for c in range(3)] for row in m]
+
+
 def _mul(a, b):
     """a then b, both 4x3 row-vector matrices."""
     out = [[sum(a[i][k] * b[k][j] for k in range(3)) for j in range(3)]
@@ -362,7 +372,7 @@ def rest_pose(m, sub_of_vertex, model, skinned=False):
         loc = _mat(j["pos"])
         absm[i] = loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]])
         if j["bind"] >= 0:
-            palette[j["bind"]] = _mul(_mat(j["trans"]), absm[i])
+            palette[j["bind"]] = _mul(_mat_post(j["trans"]), absm[i])
     if not skinned:
         # the mesh as modelled, moved as a whole by the skeleton's root: the
         # default pose stretches limbs (a crab's eye on its stalk, its claws)
@@ -444,12 +454,14 @@ def _inv(m):
     return r
 
 
-def _pose_matrix(j, pose):
+def _pose_matrix(j, pose, keep_pos=True):
     """A joint's local matrix in one frame: what the animation says of it,
-    else its default (h3d: no rotation in the frame is no rotation)."""
+    else its default (h3d: no rotation in the frame is no rotation). Without
+    `keep_pos`, the joint keeps its own length: an animation shared by a rig
+    (the crawlers') was made for other proportions than every model on it."""
     if pose is None:
         return _mat(j["pos"])
-    p = pose.get("pos") or j["pos"][:3]
+    p = (pose.get("pos") if keep_pos else None) or j["pos"][:3]
     q = pose.get("rot") or (0.0, 0.0, 0.0)
     sc = pose.get("scale") or (1.0, 1.0, 1.0)
     return _mat([p[0], p[1], p[2], q[0], q[1], q[2], sc[0], sc[1], sc[2]])
@@ -475,7 +487,7 @@ def skin_animation(model, m, sub_of_vertex, frames, G, N):
             loc = _pose_matrix(j, fr.get(j["name"]))
             absm[i] = loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]])
             if j["bind"] >= 0:
-                P = _mul(_mat(j["trans"]), absm[i])
+                P = _mul(_mat_post(j["trans"]), absm[i])
                 row[slot[j["bind"]]] = _mul(pre, _mul(P, post))
         mats.append(row)
     by_mat = {mat: [joints[k]["bind"] for k in ids] for mat, ids in skin["splits"]}
@@ -494,13 +506,15 @@ def skin_animation(model, m, sub_of_vertex, frames, G, N):
 
 
 def item_rig(game_dir, item_id):
-    """The skeleton a unit's model is animated with (the model sheet's
-    rigName, inherited), or None."""
+    """The skeleton a unit's (or a mount's) model is animated with (the
+    model sheet's rigName, inherited), or None."""
     sh = _sheets(game_dir)
     unit = sh["unit"].get(item_id)
-    if not unit:
+    # a mount names its model row straight from the item
+    ref = ((sh["item"].get(item_id) or {}).get("visuals") or {}).get("modelRef")
+    if not unit and not ref:
         return None
-    todo, done, ref = [item_id], set(), None
+    todo, done = ([] if ref else [item_id]), set()
     while todo and not ref:
         uid = todo.pop(0)
         if uid in done:
@@ -519,19 +533,23 @@ def item_rig(game_dir, item_id):
     return None
 
 
-def idle_frames(game_dir, rig):
-    """The rig's idle animation, sampled at ANIM_FPS: (frames, fps), or None."""
+def idle_frames(game_dir, rig, names=("Idle",)):
+    """The rig's idle animation, sampled at ANIM_FPS: (frames, fps), or None.
+    `names`, in order of preference: a mount's own idle (MountIdle) first."""
     if not rig:
         return None
     res = Path(game_dir) / "res.pak"
-    path = f"Anim/{rig}/Anim_{rig}_Common_Idle.fbx"
-    if _read(res, path) is None:
-        # some rigs keep it a folder down (Anim/Human/Common/...)
-        index = next((v[0] for k, v in _DIRS.items() if k[0] == str(res)), {})
+    _read(res, "")                       # the pak's directory, once
+    index = next((v[0] for k, v in _DIRS.items() if k[0] == str(res)), {})
+    path = None
+    for nm in names:
+        # some rigs keep theirs a folder down (Anim/Human/Common/...)
         path = next((p for p in sorted(index) if p.startswith(f"Anim/{rig}/")
-                     and p.endswith(f"Anim_{rig}_Common_Idle.fbx")), None)
-        if not path:
-            return None
+                     and p.endswith(f"/Anim_{rig}_Common_{nm}.fbx")), None)
+        if path:
+            break
+    if not path:
+        return None
     raw = _read(res, path)
     if not raw or raw[:3] != b"HMD":
         return None
@@ -841,7 +859,10 @@ def item_model(game_dir, item_id, anim=False):
     prefab = item_prefab(game_dir, item_id)
     if not prefab:
         return None
-    idle = idle_frames(game_dir, item_rig(game_dir, item_id)) if anim else None
+    mount = (_sheets(game_dir)["item"].get(item_id) or {}).get("type") == "Mount"
+    idle = (idle_frames(game_dir, item_rig(game_dir, item_id),
+                        ("MountIdle", "Idle") if mount else ("Idle",))
+            if anim else None)
     frames = idle[0] if idle else None
     pos, nor, uv, uv2, groups = [], [], [], [], []
     jv, wv, cols, spans = bytearray(), bytearray(), [], []
@@ -912,7 +933,32 @@ def item_model(game_dir, item_id, anim=False):
                     for M in col[f]:
                         for c in range(3):
                             flat += (M[0][c], M[1][c], M[2][c], M[3][c])
+            allm = [[M for col in cols for M in col[f]] for f in range(len(frames))]
+            sample = list(range(0, n, max(1, n // 6000)))
+
+            def skinned(f):
+                """Where frame f puts the sampled vertices."""
+                out = {}
+                for i in sample:
+                    P = pos[i * 3:i * 3 + 3]
+                    acc, tw = [0.0, 0.0, 0.0], 0.0
+                    for k in range(4):
+                        w = wv[i * 4 + k] / 255
+                        if w:
+                            M = allm[f][jv[i * 4 + k]]
+                            for c in range(3):
+                                acc[c] += w * (P[0] * M[0][c] + P[1] * M[1][c]
+                                               + P[2] * M[2][c] + M[3][c])
+                            tw += w
+                    out[i] = [x / tw for x in acc] if tw else P
+                return out
+            # where the first frame puts the vertices: the framing follows
+            # the pose (a crawler's legs spread wider than they were modelled)
+            sk = skinned(0)
+            mn = [min(v[c] for v in sk.values()) for c in range(3)]
+            mx = [max(v[c] for v in sk.values()) for c in range(3)]
             payload["anim"] = {"fps": idle[1], "frames": len(frames), "joints": nj,
+                               "box": mn + mx,
                                "pal": _b64("f", flat),
                                "j": base64.b64encode(bytes(jv)).decode(),
                                "w": base64.b64encode(bytes(wv)).decode()}

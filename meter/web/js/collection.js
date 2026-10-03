@@ -4,6 +4,8 @@ const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '
 let COLL_NODE = null;
 // the categories whose models the meter knows how to read: all of them
 const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears', 'items']);
+// ...and those that have a skeleton to play their idle animation on
+const COLL_ANIM = new Set(['mounts', 'pets']);
 
 function ring(pct) {
   const r = 22, c = 2 * Math.PI * r;
@@ -254,7 +256,7 @@ function buildCollView(it, cat) {
     // a glider's wings read best from above
     stage.appendChild(m3dCanvas(it.id, (st) => {
       stage.dataset.st = st;
-    }, { pitch: it.c === 'gliders' ? 0.6 : 0.18 }));
+    }, { pitch: it.c === 'gliders' ? 0.6 : 0.18, anim: COLL_ANIM.has(it.c) }));
     stage.appendChild(wait);
     stage.appendChild(hint);
   }

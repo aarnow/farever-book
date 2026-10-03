@@ -610,7 +610,7 @@ def _pretty_id(sid: str) -> str:
 # Bump this on every release, and tag the repo with the same string — it's the
 # left-hand side of the comparison below, so a release that forgets it tells
 # everyone they're out of date forever.
-VERSION = "1.9.0"
+VERSION = "1.10.0"
 
 
 # ---------------------------------------------------------------------------
@@ -627,7 +627,7 @@ APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 
 APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
-                  "Hunt": "Chasse", "Map": "Carte",
+                  "Hunt": "Codex", "Map": "Carte",
                   "Achievements": "Succès",
                   "Character": "Inspecter",
                   "Build": "Build",

@@ -39,7 +39,7 @@ seul à la prochaine session.
   pour la consulter jeu fermé. Clique sur un élément pour savoir comment
   l'obtenir (butin, factions, récolte, fabrication, démontage…).
 
-* **Chasse** — ton tableau de chasse : combien de fois ton personnage a tué
+* **Codex** — ton tableau de chasse : combien de fois ton personnage a tué
   chaque monstre, d'après le Codex du jeu, et le rang atteint.
 
 * **Carte** — la carte du monde avec les coffres, les orbes rouges, les

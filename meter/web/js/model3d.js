@@ -243,6 +243,11 @@ function m3dLoad(id) {
       if (pos[i + k] > mx[k]) mx[k] = pos[i + k];
     }
   }
+  // an animated model is framed on its pose, not on how it was modelled
+  const box = d.anim && M3D.gl2 && d.anim.box;
+  if (box) {
+    for (let k = 0; k < 3; k++) { mn[k] = box[k]; mx[k] = box[k + 3]; }
+  }
   M3D.center = [0, 1, 2].map((k) => (mn[k] + mx[k]) / 2);
   M3D.radius = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2 || 1;
   M3D.dist = 1;
