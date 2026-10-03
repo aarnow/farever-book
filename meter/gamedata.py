@@ -749,6 +749,10 @@ def _data_is_current():
             print("[meter] bestiary.json predates the monsters' factions — "
                   "regenerating.", file=sys.stderr)
             return False
+        if "regionArt" not in best or not (ANALYSIS / "dungeon_bg").is_dir():
+            print("[meter] bestiary.json predates the dungeon backgrounds — "
+                  "regenerating.", file=sys.stderr)
+            return False
     except (OSError, ValueError):
         pass
     try:

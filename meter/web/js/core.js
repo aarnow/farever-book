@@ -246,6 +246,123 @@ function buildRow(r) {
   return row;
 }
 
+/* A dungeon's loading screen behind its card, once the pictures are in. */
+function applyBackdrop(node) {
+  const src = (window.__DBG__ || {})[node.dataset.bg];
+  if (src) node.style.setProperty('--bg', 'url("' + src + '")');
+}
+
+/* A row of item icons, each with its rarity and a tooltip. */
+function lootStrip(icons) {
+  const s = el('div', 'lootstrip');
+  icons.forEach((ic) => {
+    const box = el('span', 'lic' + (ic.rk ? ' r-' + ic.rk : ''));
+    box.title = ic.tip || '';
+    if (ic.img) {
+      const im = document.createElement('img');
+      im.src = ic.img;
+      im.alt = '';
+      box.appendChild(im);
+    }
+    if (ic.n) box.appendChild(el('b', null, String(ic.n)));
+    s.appendChild(box);
+  });
+  return s;
+}
+
+/* The loot by difficulty: a line each, led by the game's skull. */
+function lootTiers(list) {
+  const tiers = el('div', 'loottiers');
+  list.forEach((t) => {
+    const line = el('div', 'ltier d' + t.d);
+    const lab = el('span', 'ltl');
+    const art = (window.__SHEET__ || {})['dungeon_diff_' + t.d];
+    if (art) {
+      const im = document.createElement('img');
+      im.src = art;
+      im.alt = '';
+      lab.appendChild(im);
+    }
+    const nm = el('span', 'ltn', t.t);
+    if (t.sub) nm.appendChild(el('small', null, t.sub));
+    lab.appendChild(nm);
+    line.appendChild(lab);
+    line.appendChild(lootStrip(t.icons));
+    tiers.appendChild(line);
+  });
+  return tiers;
+}
+
+/* The dungeon list: a card each, the whole card a link to its runs — on
+   top the boss and what we have done there, under it what it can give. */
+function buildDungeonCards(n) {
+  const grid = el('div', 'dcards');
+  (n.cards || []).forEach((c) => {
+    const card = el('div', 'dcard' + (c.runs ? ' done' : '') + (c.bg ? ' hasbg' : ''));
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    const open = () => notify('open_dungeon_kind', { kind: c.kind });
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+    if (c.bg) {
+      card.dataset.bg = c.bg;
+      applyBackdrop(card);
+    }
+    const head = el('div', 'dchead');
+    const pic = el('div', 'portrait');
+    const src = (window.__PORTRAITS__ || {})[c.portrait];
+    if (src) {
+      const im = document.createElement('img');
+      im.src = src;
+      im.alt = '';
+      pic.appendChild(im);
+    }
+    head.appendChild(pic);
+    const info = el('div', 'dcinfo');
+    info.appendChild(el('div', 'dcname', c.t));
+    if (c.boss) info.appendChild(el('div', 'dcboss', 'Boss : ' + c.boss));
+    const done = el('div', 'dcdone');
+    if (c.runs) {
+      done.appendChild(el('span', 'dcstat', fmtN(c.runs) + ' run' + (c.runs > 1 ? 's' : '')));
+      done.appendChild(el('span', 'dcstat' + (c.wins ? ' win' : ''),
+        fmtN(c.wins) + ' victoire' + (c.wins > 1 ? 's' : '')));
+    } else {
+      done.appendChild(el('span', 'dcstat none', 'Pas encore fait'));
+    }
+    info.appendChild(done);
+    if ((c.recs || []).length) {
+      const recs = el('div', 'dcrecs');
+      c.recs.forEach((r) => {
+        const chip = el('span', 'dcrec d' + r.d);
+        chip.title = 'Record en ' + r.t;
+        const art = (window.__SHEET__ || {})['dungeon_diff_' + r.d];
+        if (art) {
+          const im = document.createElement('img');
+          im.src = art;
+          im.alt = '';
+          chip.appendChild(im);
+        }
+        chip.appendChild(el('b', null, r.v));
+        recs.appendChild(chip);
+      });
+      info.appendChild(recs);
+    }
+    head.appendChild(info);
+    card.appendChild(head);
+    if ((c.tiers || []).length) {
+      const loot = el('div', 'dcloot');
+      loot.appendChild(el('div', 'dclabel', 'Butin possible'));
+      loot.appendChild(lootTiers(c.tiers));
+      card.appendChild(loot);
+    }
+    grid.appendChild(card);
+  });
+  if (!(n.cards || []).length) grid.appendChild(el('div', 'empty', 'Aucun donjon.'));
+  return grid;
+}
+
 /* A row led by a boss portrait (the dungeon list): the name over its
    details, vertically centred against the picture. */
 function buildPortraitRow(r) {
@@ -264,45 +381,8 @@ function buildPortraitRow(r) {
   if (r.meta) txt.appendChild(el('span', 'meta', r.meta));
   if (r.meta2) txt.appendChild(el('span', 'meta meta2', r.meta2));
   row.appendChild(txt);
-  const strip = (icons) => {
-    const s = el('div', 'lootstrip');
-    icons.forEach((ic) => {
-      const box = el('span', 'lic' + (ic.rk ? ' r-' + ic.rk : ''));
-      box.title = ic.tip || '';
-      if (ic.img) {
-        const im = document.createElement('img');
-        im.src = ic.img;
-        im.alt = '';
-        box.appendChild(im);
-      }
-      if (ic.n) box.appendChild(el('b', null, String(ic.n)));
-      s.appendChild(box);
-    });
-    return s;
-  };
-  if (r.icons && r.icons.length) row.appendChild(strip(r.icons));
-  // the loot by difficulty: a line each, led by the game's skull
-  if (r.tiers && r.tiers.length) {
-    const tiers = el('div', 'loottiers');
-    r.tiers.forEach((t) => {
-      const line = el('div', 'ltier d' + t.d);
-      const lab = el('span', 'ltl');
-      const art = (window.__SHEET__ || {})['dungeon_diff_' + t.d];
-      if (art) {
-        const im = document.createElement('img');
-        im.src = art;
-        im.alt = '';
-        lab.appendChild(im);
-      }
-      const nm = el('span', 'ltn', t.t);
-      if (t.sub) nm.appendChild(el('small', null, t.sub));
-      lab.appendChild(nm);
-      line.appendChild(lab);
-      line.appendChild(strip(t.icons));
-      tiers.appendChild(line);
-    });
-    row.appendChild(tiers);
-  }
+  if (r.icons && r.icons.length) row.appendChild(lootStrip(r.icons));
+  if (r.tiers && r.tiers.length) row.appendChild(lootTiers(r.tiers));
   (r.btns || []).forEach((b) => {
     const btn = el('button', 'rowbtn', b.t);
     if (b.off) btn.disabled = true;
@@ -317,6 +397,7 @@ function buildNode(n) {
   switch (n.k) {
     case 'section': return el('div', 'section', n.t);
     case 'note': return el('p', 'note' + (n.warn ? ' warn' : ''), n.t);
+    case 'dcards': return buildDungeonCards(n);
     case 'prose': return inline(el('p', 'prose'), n.t);
     case 'bullets': {
       const ul = el('ul', 'bullets');
@@ -504,10 +585,12 @@ window.__COLL__ = window.__COLL__ || {};
 window.__BEST__ = window.__BEST__ || {};
 window.__MAP__ = window.__MAP__ || {};
 window.__SKILL__ = window.__SKILL__ || {};
+window.__DBG__ = window.__DBG__ || {};
 window.addImages = function (ns, json) {
   const into = ns === 'best' ? window.__BEST__ : ns === 'map' ? window.__MAP__
-    : ns === 'skill' ? window.__SKILL__ : window.__COLL__;
+    : ns === 'skill' ? window.__SKILL__ : ns === 'dbg' ? window.__DBG__ : window.__COLL__;
   Object.assign(into, JSON.parse(json));
+  if (ns === 'dbg') { document.querySelectorAll('[data-bg]').forEach(applyBackdrop); return; }
   if (ns === 'map') { mapTiles(); return; }
   if (ns === 'skill') { document.querySelectorAll('img.skic[data-id]').forEach((im) => {
     const src = window.__SKILL__[im.dataset.id];

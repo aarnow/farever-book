@@ -5,6 +5,7 @@ import ctypes
 import json
 import math
 import os
+import re
 import sys
 import threading
 import time
@@ -13,7 +14,8 @@ from pathlib import Path
 from buildtab import BuildTab
 
 from common import (
-    ACH_FILE, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT, APP_TAB_LABELS,
+    ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
+    APP_TAB_LABELS,
     BEST_TIMES_CACHE, CODEX_FILE, COLLECTION_FILE, DATA_HOME, DUNGEONS_DIR,
     ELEMENTS_FILE, EVENTS_MAX, FAREVER_STEAM_APPID, HELP_DIR, HELP_GROUPS,
     ITEM_CODEX_FILE, LOG_FILE, MAX_PLAYER_ROWS, MAX_SKILL_ROWS,
@@ -29,7 +31,8 @@ from winsys import (
 import goals as G
 from me import MeStore
 from gamedata import (
-    REGENERATING, _boss_label, _element_done, _fr_names, dungeon_catalogue,
+    REGENERATING, _boss_label, _element_done, _fr_names, bestiary_catalogue,
+    dungeon_catalogue,
     item_rarity,
     dungeon_name, forget_loaded_data, item_icon, item_label, item_type,
     item_model_json, locate_hlboot, regenerate_data, world_map)
@@ -58,6 +61,30 @@ OVERLAY_HERO_SECS = 8.0
 
 # How often one's own character is re-read while playing (kept on disk).
 SELF_PROFILE_SECS = 300.0
+
+
+def _dungeon_backdrop(kind, boss, region=""):
+    """The picture behind a dungeon's card: the loading screen the game shows
+    for it, else the one named after its boss that no instance claims (the
+    cheese station's Munster_Chuck), else its region's illustration in the
+    game's codex (the Gorgon's Hollow, in Z2: loading_screen4); "" when
+    there is none."""
+    cat = bestiary_catalogue()
+    got = (cat.get("loading") or {}).get(kind)
+    if got:
+        return got
+    key = re.sub(r"[^a-z]", "", str(boss or "").lower())
+    try:
+        stems = [p.stem for p in (ANALYSIS / "dungeon_bg").glob("*.webp")]
+    except OSError:
+        stems = []
+    named = next((st for st in stems
+                  if key and re.sub(r"[^a-z]", "", st.lower()) == key), "")
+    if named:
+        return named
+    art = (cat.get("regionArt") or {}).get(str(region or "").split("_")[0])
+    return art if art in stems else ""
+
 
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
@@ -1783,19 +1810,12 @@ class App:
 
         def row(kind, boss):
             ds = by_kind.get(kind) or []
-            # Second line the boss, third the runs and records.
-            stats = []
-            if ds:
-                won = sum(1 for d in ds if d.get("result") == "victoire")
-                stats.append(f"{len(ds)} run{'s' if len(ds) > 1 else ''} · "
-                             f"{won} victoire{'s' if won > 1 else ''}")
-                recs = [f"{label} {_mmss(best)}"
-                        for diff, label in DUNGEON_DIFFICULTIES.items()
-                        for best in [self._dungeon_best(kind, diff)] if best]
-                if recs:
-                    stats.append("records : " + ", ".join(recs))
-            else:
-                stats.append("pas encore fait")
+            # what we have done there: runs, victories, best time per
+            # difficulty
+            won = sum(1 for d in ds if d.get("result") == "victoire")
+            recs = [{"d": diff, "t": label, "v": _mmss(best)}
+                    for diff, label in DUNGEON_DIFFICULTIES.items()
+                    for best in [self._dungeon_best(kind, diff)] if best]
             dg = catalogue.get(kind) or {}
             loot = dg.get("loot") or ()
             # the loot worth coming for, a line per difficulty: the boss's
@@ -1831,13 +1851,13 @@ class App:
                 {"d": 2, "t": "Héroïque", "icons": weapons
                  + armour("heroic", "épique") + infusion + rides}]
             tiers = [t for t in tiers if t["icons"]]
-            return {"t": dungeon_name(kind),
-                    "tiers": tiers,
-                    "meta": f"Boss : {_boss_label(boss)}" if boss else "",
-                    "meta2": " · ".join(stats),
+            return {"kind": kind, "t": dungeon_name(kind),
+                    "boss": _boss_label(boss) if boss else "",
                     "portrait": boss or "",
-                    "btns": [{"id": "open_dungeon_kind", "t": "Voir",
-                              "p": {"kind": kind}}]}
+                    # the dungeon's own loading screen, behind its card
+                    "bg": _dungeon_backdrop(kind, boss, region_of.get(kind)),
+                    "runs": len(ds), "wins": won, "recs": recs,
+                    "tiers": tiers}
 
         # Every dungeon of the game, by region, in the game's own order;
         # runs of a dungeon the list doesn't know (a newer game) at the end.
@@ -1849,6 +1869,8 @@ class App:
                                   "phases — exploration et boss — et butin. "
                                   "Les échecs et abandons sont gardés "
                                   "aussi."}]
+        region_of = {dg["kind"]: dg.get("region") or ""
+                     for dg in dungeon_catalogue()}
         regions, known = {}, set()
         for dg in dungeon_catalogue():
             regions.setdefault(dg.get("region") or "", []).append(dg)
@@ -1862,9 +1884,9 @@ class App:
                 or ("Autres donjons" if regions.keys() - {""} else "")
             if title:
                 out.append({"k": "sub", "t": title})
-            out.append({"k": "list", "id": f"dungeons_{i}",
-                        "rows": [row(dg["kind"], dg.get("boss"))
-                                 for dg in dgs]})
+            out.append({"k": "dcards", "id": f"dungeons_{i}",
+                        "cards": [row(dg["kind"], dg.get("boss"))
+                                  for dg in dgs]})
         if not regions:
             out.append({"k": "list", "id": "dungeons", "grow": True,
                         "rows": [],

@@ -71,6 +71,7 @@ def build(game_dir, codex, img_dir=None):
     level_act = {}                      # instance level -> its activity
     doors = defaultdict(set)            # activity -> {(x, y, zone)}, entrance
     keys = defaultdict(set)             # unit -> items its altar takes
+    loading = {}                        # activity -> its loading screen
 
     def walk(o, zone, px, py, rot, world, lvl):
         if isinstance(o, dict):
@@ -84,6 +85,10 @@ def build(game_dir, codex, img_dir=None):
                 wr = rot + float(o.get("rotationZ") or 0)
             if o.get("$cdbtype") == "activity" and not world:
                 level_act[lvl] = o.get("id")
+            if o.get("$cdbtype") == "activity":
+                ls = props.get("loadingScreen") or o.get("loadingScreen")
+                if isinstance(ls, str) and isinstance(o.get("id"), str):
+                    loading[o["id"]] = ls
             if world and isinstance(o.get("targetActivity"), str):
                 doors[o["targetActivity"]].add((round(wx), round(wy),
                                                 zone or ""))
@@ -231,11 +236,27 @@ def build(game_dir, codex, img_dir=None):
     entrances = {a: sorted([x, y, z] for x, y, z in pts)
                  for a, pts in doors.items()}
 
+    # each region's first illustration in the game's codex (Z2: the sunset
+    # over the mill): the picture of a dungeon that has none of its own
+    region_art = {}
+    for cid, c in rows("codexCategory").items():
+        for f in re.findall(r'"file": *"([^"]*LoadingScreen/Background/[^"]+)"',
+                            json.dumps(c)):
+            region_art.setdefault(cid, f)
+            break
+
     if img_dir is not None:
         type_gfx = {tid: r.get("gfx") for tid, r in rows("unitType").items()}
         gfx = {uid: units[uid].get("gfx") for uid in every}
         gfx.update({f"family_{f}": type_gfx.get(f) for f in families})
         _images(game_dir, img_dir, gfx)
+        # the screens the instances name, and the ones named after a boss
+        # that no instance claims (Munster_Chuck: the Gorgon's Hollow's)
+        named = {e.path for e in _pak_entries(game_dir)
+                 if e.path.startswith("UI/Window/LoadingScreen/Background/")
+                 and not re.search(r"/(loading_screen\d+|Default)\.png$", e.path)}
+        _backdrops(game_dir, Path(img_dir).parent / "dungeon_bg",
+                   set(loading.values()) | named | set(region_art.values()))
     # each monster's line of descent (itself, then what it inherits from):
     # a variant's description and faction are often its base monster's
     def chain(uid):
@@ -257,7 +278,42 @@ def build(game_dir, codex, img_dir=None):
             "spawns": spawns, "lvl": lvls, "famLoot": fam_loot,
             "unitLoot": unit_loot, "where": where, "entrances": entrances,
             "chain": {u: c for u, c in chains.items() if len(c) > 1},
+            # an instance's loading screen (a dungeon's own, the rifts'),
+            # by the file's name in dungeon_bg/
+            "loading": {a: Path(p).stem for a, p in sorted(loading.items())},
+            "regionArt": {r: Path(p).stem for r, p in sorted(region_art.items())},
             "faction": factions}
+
+
+BACKDROP_W = 960
+
+
+def _pak_entries(game_dir):
+    pak = Path(game_dir) / "res.pak"
+    with open(pak, "rb") as f:
+        header = struct.unpack_from("<i", f.read(12), 4)[0]
+        f.seek(0)
+        return pak_extract.read_tree(f.read(header), pak.name)[0]
+
+
+def _backdrops(game_dir, out_dir, paths):
+    """The loading screens (1920x1080), halved and in WebP: backgrounds for
+    the app's dungeon cards, under the app's 2 MB page."""
+    import io
+    from PIL import Image
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for path in sorted(paths):
+        raw = pak_extract.read_entry(game_dir / "res.pak", path)
+        if not raw:
+            continue
+        try:
+            img = Image.open(io.BytesIO(raw)).convert("RGB")
+        except Exception:
+            continue
+        h = round(img.height * BACKDROP_W / img.width)
+        imgcache.save(img.resize((BACKDROP_W, h), Image.LANCZOS),
+                      out_dir / f"{Path(path).stem}.webp", quality=70, method=6)
 
 
 def _images(game_dir, out_dir, gfx):

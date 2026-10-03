@@ -31276,6 +31276,26 @@ null
 "BaseMob"
 ]
 },
+"loading": {
+"Bee_Hive": "Beehive",
+"POI_Rift_01": "Rifts",
+"POI_Rift_02": "Rifts",
+"POI_Rift_03": "Rifts",
+"R1_POI_AmaymonGoulp": "Kobold_Mine",
+"R1_POI_Boss_Ratsar": "Ratsar",
+"R1_POI_CleodorasNest": "Cleodora",
+"R1_POI_CrimsonSacristy": "Phrixes",
+"R1_POI_Dungeon_CrimsonBarraks_POI_Def": "Barracks",
+"R1_POI_Dungeon_Manfish_Ruins": "Manfish_Ruins",
+"R1_POI_MokshisHivetree": "Mokshi",
+"R1_POI_Nepsid_Boss": "Crabgantua",
+"Z1_POI_Dungeon_ManfishAbyss": "ManfishAbyss"
+},
+"regionArt": {
+"Z1": "loading_screen6",
+"Z2": "loading_screen4",
+"Z3": "loading_screen9"
+},
 "faction": {
 "Nightling_Infusion_DPS": "Demon",
 "Dog_Z3W_E": "Demon",

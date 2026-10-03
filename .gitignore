@@ -59,6 +59,7 @@ analysis_out/bestiary_img/
 analysis_out/map_tiles/
 .meter_elements.json
 analysis_out/skill_img/
+analysis_out/dungeon_bg/
 .meter_itemcodex.json
 .meter_achievements.json
 .meter_goals.json
