@@ -57,17 +57,20 @@ function renderCollection(box, n) {
   const got = cats.reduce((a, c) => a + c.got, 0);
   const pct = total ? Math.round(got / total * 100) : 0;
 
-  box.appendChild(el('div', 'section', 'Collection'));
-  box.appendChild(el('p', 'note', 'Tes montures, planeurs, compagnons, équipements et objets. ' + (n.sync || '')));
+  // the first column: where you are in the collection, and which part of it
+  // the list shows
+  const side = el('aside', 'collside');
+  side.appendChild(el('div', 'section', 'Collection'));
+  if (n.sync) side.appendChild(el('p', 'note', n.sync));
   const top = el('div', 'colltotal');
   top.appendChild(el('b', null, got + ' / ' + total));
   top.appendChild(el('span', null, pct + ' %'));
-  box.appendChild(top);
+  side.appendChild(top);
   const bar_ = el('div', 'collbar');
   const fill = el('i');
   fill.style.width = pct + '%';
   bar_.appendChild(fill);
-  box.appendChild(bar_);
+  side.appendChild(bar_);
 
   const cards = el('div', 'collcats');
   cats.forEach((c) => {
@@ -93,7 +96,7 @@ function renderCollection(box, n) {
     card.addEventListener('click', () => { COLL.cat = c.v; rerenderCollection(); });
     cards.appendChild(card);
   });
-  box.appendChild(cards);
+  side.appendChild(cards);
 
   const list = el('div', 'colllist');
   const tools = el('div', 'colltools');
@@ -117,6 +120,12 @@ function renderCollection(box, n) {
   // a filter row: big chips, each led by its icon
   const chips = (opts, cur, set) => {
     const row = el('div', 'collfilters');
+    // one line that scrolls sideways: let the wheel do it
+    row.addEventListener('wheel', (e) => {
+      if (row.scrollWidth <= row.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      row.scrollLeft += e.deltaY;
+    }, { passive: false });
     opts.forEach((o) => {
       const b = el('button', 'cfchip' + (cur === o.v ? ' on' : ''));
       b.type = 'button';
@@ -166,6 +175,7 @@ function renderCollection(box, n) {
     && (!things || !COLL.icat || it.ic === COLL.icat)
     && (!needle || it.name.toLowerCase().includes(needle)));
   const main = el('div', 'collmain');
+  main.appendChild(side);
   list.appendChild(el('div', 'collcount', shown.length + ' ' + cat.one + (shown.length > 1 ? 's' : '')));
 
   // the shown item: the one picked, while the filters keep it, else the first

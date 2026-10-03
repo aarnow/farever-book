@@ -2341,19 +2341,6 @@ html.lt-760 .cvstage { aspect-ratio: 1 / .62; max-height: 48vh; }
 #page.page-Collection { display: flex; flex-direction: column; padding-bottom: 14px; }
 #page.page-Collection > .coll { flex: 1 0 auto; height: 100%; min-height: 380px;
                                 display: flex; flex-direction: column; }
-.coll > .section { margin-bottom: 4px; }
-.coll > .note { margin: 0 0 6px; font-size: 12px; }
-.coll > .colltotal { margin-top: 0; }
-.coll > .collbar { margin-bottom: 12px; }
-/* the five categories on one row, compact */
-.coll .collcats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.coll .collcat { min-height: 62px; padding: 7px 10px; gap: 10px; }
-.coll .collcat .rg, .coll .collcat .ring { width: 46px; height: 46px; }
-.coll .collcat .rg span { font-size: 11px; }
-.coll .collcat .th { width: 42px; height: 42px; right: 6px; }
-html.lt-1100 .coll .collcat .th { display: none; }
-html.lt-1100 .coll .collcat .tx small { display: none; }
-html.lt-900 .coll .collcats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .coll .collmain { flex: 1; min-height: 0; align-items: stretch; margin-top: 14px; }
 .coll .colllist { display: flex; flex-direction: column; min-height: 0; }
 .coll .colllist .collgrid { flex: 1; min-height: 0; overflow-y: auto; align-content: start;
@@ -2413,3 +2400,51 @@ html.lt-760 .coll .cvinfo { max-height: none; }
 }
 .collgrid .citem.sel .num { border-color: var(--accent); color: var(--accent); }
 .collgrid .citem .cpips { padding: 4px 0 0; justify-content: center; }
+
+/* ---- Collection: three columns — where you are, the list, the selection --- */
+.coll .collmain { grid-template-columns: 212px minmax(0, 1fr) minmax(260px, 30%);
+                  gap: 16px; margin-top: 0; }
+.collside { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto;
+            padding: 14px 12px; border-radius: 12px; border: 1px solid var(--line);
+            background: linear-gradient(180deg, #2E2B52, #24223F); }
+.collside > .section { margin: 0 0 2px; }
+.collside > .note { margin: 0; font-size: 11px; line-height: 1.4; color: var(--faint); }
+.collside > .colltotal { margin: 6px 0 0; }
+.collside > .collbar { margin: 0 0 8px; }
+.collside .collcats { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.collside .collcat { min-height: 0; padding: 6px 10px 6px 8px; gap: 10px; }
+.collside .collcat .rg, .collside .collcat .ring { width: 40px; height: 40px; }
+.collside .collcat .rg span { font-size: 10px; }
+.collside .collcat .tx b { font-size: 12px; }
+.collside .collcat .tx span { font-size: 12px; }
+.collside .collcat .tx small { display: block; font-size: 9px; }
+.collside .collcat .th { width: 34px; height: 34px; right: 6px; opacity: .55; }
+html.lt-1100 .coll .collmain { grid-template-columns: 184px minmax(0, 1fr) minmax(240px, 32%); }
+html.lt-1100 .collside .collcat .th { display: none; }
+/* narrower: a slimmer first column, its categories down to ring and name */
+html.lt-900 .coll .collmain { grid-template-columns: 150px minmax(0, 1fr) minmax(220px, 34%); gap: 12px; }
+html.lt-900 .collside { padding: 10px 8px; }
+html.lt-900 .collside > .note { display: none; }
+html.lt-900 .collside .collcat { padding: 5px 6px; gap: 7px; }
+html.lt-900 .collside .collcat .rg, html.lt-900 .collside .collcat .ring { width: 34px; height: 34px; }
+html.lt-900 .collside .collcat .rg span { font-size: 9px; }
+html.lt-900 .collside .collcat .tx b { font-size: 10.5px; letter-spacing: .3px; }
+html.lt-900 .collside .collcat .tx span { font-size: 11px; }
+html.lt-900 .collside .collcat .tx small { display: none; }
+/* stacked, the categories in a row above the panel and the list */
+html.lt-760 .collside .collcats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+html.lt-760 .coll .collmain { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+html.lt-760 .collside { order: -2; }
+.collside { overflow-x: hidden; }
+.collside .collcat { min-width: 0; }
+.collside .collcat .tx { min-width: 0; }
+.collside .collcat .tx b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.lt-1100 .colllist .collgrid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 12px 6px; }
+/* the list's filters: one compact line each, scrolled sideways when long */
+.colllist .collfilters { flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 0 0 8px;
+                         padding-bottom: 4px; scrollbar-width: thin; }
+.colllist .collfilters::-webkit-scrollbar { height: 5px; }
+.colllist .cfchip { flex: none; min-height: 32px; padding: 3px 11px 3px 6px; gap: 6px;
+                    font-size: 12px; border-radius: 8px; }
+.colllist .cfchip .cfic { width: 22px; height: 22px; }
+.colllist .colltools { margin-bottom: 8px; }
