@@ -177,10 +177,10 @@ function renderHunt(box, n) {
 /* Who it is, where it spawns in the open world (the Map tab's tiles, framed
    on its spawns, each one a pin with its portrait) and what a kill gives. */
 function buildHuntMon(n) {
+  // its name on top; under it, two columns side by side — its words and the
+  // monster itself, where it lives and the map; then what it drops
   const page = el('div', 'huntmon');
-  const box = el('div', 'hminfo');
-  page.appendChild(box);
-  page.appendChild(huntModel(n));
+  let box = page;
   const head = el('div', 'hmhead' + (n.kills ? ' seen' : ''));
   const pic = el('span', 'pic');
   pic.appendChild(huntImg(n.uid));
@@ -201,14 +201,22 @@ function buildHuntMon(n) {
   t.appendChild(k);
   head.appendChild(t);
   box.appendChild(head);
-  if (n.desc) box.appendChild(el('p', 'hmdesc', n.desc));
+  const cols = el('div', 'hmcols');
+  const first = el('div', 'hmcol hmself');
+  const second = el('div', 'hmcol hmplace');
+  cols.appendChild(first);
+  cols.appendChild(second);
+  page.appendChild(cols);
+  if (n.desc) first.appendChild(el('p', 'hmdesc', n.desc));
+  first.appendChild(huntModel(n));
 
-  box.appendChild(el('div', 'section', 'Où le trouver'));
+  second.appendChild(el('div', 'section', 'Où le trouver'));
   if (n.note) {
-    box.appendChild(el('p', 'note', n.note));
+    second.appendChild(el('p', 'note', n.note));
   } else {
-    box.appendChild(huntWhere(n));
+    second.appendChild(huntWhere(n));
   }
+  box = page;
 
   box.appendChild(el('div', 'section', 'Butin'));
   box.appendChild(el('p', 'note', 'Chance par kill. « Famille » : la table commune à toute sa '
@@ -238,8 +246,8 @@ function buildHuntMon(n) {
   return page;
 }
 
-/* Beside the page, the monster itself, turning (its portrait while the
-   model comes, or when the game has none). */
+/* The monster itself, turning (its portrait while the model comes, or when
+   the game has none). */
 function huntModel(n) {
   const v = el('div', 'collview hmview');
   const stage = el('div', 'cvstage');

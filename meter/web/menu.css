@@ -2489,15 +2489,25 @@ html.lt-760 .huntmain > .huntgrid, html.lt-760 .huntmain > .famgrid,
 html.lt-760 .huntmain > .farmlist { overflow: visible; }
 html.lt-760 .huntnav.regs { flex-direction: row; flex-wrap: wrap; }
 
-/* ---- a monster's page: what it is on the left, the monster on the right ----- */
-.huntmon { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 32%);
-           gap: 18px; align-items: start; }
-.hminfo { min-width: 0; }
-.hmview { position: sticky; top: 8px; }
-.hmview .cvstage { aspect-ratio: 1 / 1.05; max-height: calc(100vh - 260px); min-height: 260px; }
-html.lt-900 .huntmon { grid-template-columns: minmax(0, 1fr); }
-html.lt-900 .hmview { position: static; order: -1; }
-html.lt-900 .hmview .cvstage { aspect-ratio: 1 / .6; max-height: 46vh; }
+/* ---- a monster's page: the monster beside where it lives ------------------- */
+.hmcols { display: grid; grid-template-columns: minmax(260px, 38%) minmax(0, 1fr);
+          gap: 18px; align-items: stretch; margin-top: 4px; }
+.hmcol { min-width: 0; display: flex; flex-direction: column; }
+.hmself .hmdesc { margin: 10px 2px 12px; }
+.hmself .hmview { flex: 1; display: flex; flex-direction: column; }
+/* as tall as the column beside it: the model ends where the map does */
+.hmself .hmview .cvstage { flex: 1; height: auto; min-height: 320px; aspect-ratio: auto; }
+.hmplace > .section { margin-top: 10px; }
+/* the zones above the map, in a row that wraps */
+.hmplace .hmwhere { grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
+.hmplace .hmzlist { flex-direction: row; flex-wrap: wrap; max-height: none; overflow: visible; gap: 6px; }
+.hmplace .hmz { padding: 5px 10px; }
+.hmplace .hmby, .hmplace .hmreg { width: 100%; }
+.hmplace .hmap { height: 400px; }
+.hmplace .hmwhere.nomap { grid-template-columns: minmax(0, 1fr); }
+html.lt-900 .hmcols { grid-template-columns: minmax(0, 1fr); }
+html.lt-900 .hmself .hmview .cvstage { flex: none; height: auto; aspect-ratio: 1 / .6; max-height: 46vh; }
+html.lt-900 .hmplace .hmap { height: 340px; }
 /* the farm cards in the narrower column: the odds under the name */
 .huntmain > .farmlist { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
 .huntmain .farmcard .fhead { flex-wrap: wrap; row-gap: 6px; }
