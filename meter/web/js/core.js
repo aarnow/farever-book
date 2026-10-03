@@ -369,6 +369,15 @@ function renderPage(nodes) {
   NODES = next;
 }
 
+/* Which view a page shows: its first block (a list's toolbar or a detail's
+   "back" bar) and the subject of any detail block (`uid`). The live
+   updates that redraw a page keep both, so they never scroll it. */
+let PAGE_VIEW = '';
+function pageView(nodes) {
+  const first = nodes[0] ? nodes[0].k + ':' + (nodes[0].id || 0) : '';
+  return first + '|' + nodes.filter((n) => n.uid).map((n) => n.uid).join(',');
+}
+
 /* The app's own tabs (Réglages, Aide) are icons on the right of the band,
    named on hover. Built as elements, never as markup. */
 window.applyState = function (json) {
@@ -405,6 +414,11 @@ window.applyState = function (json) {
     page.scrollTop = 0;
   }
   renderTabs(s.tabs || [], s.tab);
+  // a tab whose content changes view (a monster's page, a dungeon, a rift
+  // report opened or closed) starts at the top, like a new tab
+  const view = pageView(s.page || []);
+  if (s.tab === prev.tab && view !== PAGE_VIEW) $('#page').scrollTop = 0;
+  PAGE_VIEW = view;
   renderPage(s.page || []);
   renderEvents();
   updateEventsBadge();

@@ -782,8 +782,21 @@ select, input[type=text] {
 .hmreg { color: var(--faint); font-size: 11px; margin-top: 4px; padding: 0 2px; }
 .hmap { position: relative; height: 420px; overflow: hidden; border-radius: 10px;
         border: 1px solid var(--line); background: #0F1D42; }
-.hmnomap { display: grid; place-items: center; color: var(--dim); font-size: 13px; }
+.hmwhere.nomap { grid-template-columns: minmax(240px, 520px); }
 .hpin.dim { opacity: .3; }
+.hpin.hdoor { width: 34px; height: 34px; margin: -17px 0 0 -17px; overflow: visible;
+         border-radius: 6px; border-color: #F2C94C; background: #3A2F12;
+         box-shadow: none; filter: drop-shadow(0 1px 3px rgba(0,0,0,.7)); }
+.hmby { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.hmby .l { color: var(--faint); font-size: 11px; width: 100%; }
+.hmby .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+              padding: 4px 10px; font: inherit; font-size: 12px; color: var(--text);
+              cursor: pointer; }
+.hmby .chip:hover { border-color: var(--accent); }
+.hmby .chip.key { display: inline-flex; align-items: center; gap: 6px; cursor: default;
+                  padding: 3px 10px 3px 4px; }
+.hmby .chip.key:hover { border-color: var(--line); }
+.hmby .chip.key img { width: 22px; height: 22px; border-radius: 4px; }
 .hpin { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px;
         border-radius: 50%; overflow: hidden; border: 2px solid var(--accent);
         background: var(--bg-2); box-shadow: 0 1px 4px rgba(0,0,0,.6); }

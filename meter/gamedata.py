@@ -763,7 +763,7 @@ def _data_is_current():
         print("[meter] item_types.json absent — regenerating for the "
               "Character tab.", file=sys.stderr)
         return False
-    if not (ANALYSIS / "map_tiles" / "icon_chest.webp").exists():
+    if not (ANALYSIS / "map_tiles" / "icon_rift.webp").exists():
         print("[meter] map icons absent — regenerating for the Map tab.",
               file=sys.stderr)
         return False

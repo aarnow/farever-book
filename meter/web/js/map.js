@@ -71,7 +71,8 @@ function mapIcons() {
   }
   st.textContent = Object.keys(window.__MAP__ || {})
     .filter((k) => k.indexOf('icon_') === 0)
-    .map((k) => '.mk.mk-' + k.slice(5) + '{background:url(' + window.__MAP__[k]
+    .map((k) => '.mk.mk-' + k.slice(5) + ',.hdoor.hd-' + k.slice(5)
+      + '{background:url(' + window.__MAP__[k]
       + ') center/contain no-repeat;border:0;border-radius:0;clip-path:none}')
     .join(' ');
 }

@@ -1513,7 +1513,9 @@ class App:
             self._char_wait = wait = None
         # one's own characters as last read, under any analysed this session
         profs = {**self.me.profiles(), **profs}
+        # uid: the open profile — opening one starts the page at the top
         return [{"k": "character", "id": "character",
+                 "uid": self._char_sel or "",
                  **character_view(roster, profs, self._char_sel,
                                   wait[0] if wait else None, live)}]
 

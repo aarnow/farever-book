@@ -37,7 +37,12 @@ CATEGORIES = {"WorldChest.prefab": "chest", "VaultChest.prefab": "vault",
 # the map window's markers and completion icons).
 MARKER_ICONS = {"chest": "ChestCompletion", "vault": "VaultChestMarker",
                 "recipe": "RecipeChestMarker", "orb": "RedOrbCompletion",
-                "obelisk": "ObeliskMarker", "respawn": "RespawnPointMarker"}
+                "obelisk": "ObeliskMarker", "respawn": "RespawnPointMarker",
+                "dungeon": "Dungeon"}
+# The rifts have no icon row of their own: the same sheet's purple eye, the
+# chaos one, stands for them (the hunting log's rift entrances).
+RAW_ICONS = {"rift": {"file": "UI/icons/activities.png", "size": 128,
+                      "x": 2, "y": 2}}
 
 
 def build(game_dir, tile_dir=None):
@@ -51,7 +56,8 @@ def build(game_dir, tile_dir=None):
                  if isinstance(ln.get("id"), str)}
         _images(game_dir, tile_dir,
                 {"icon_" + c: icons.get(i) for c, i in MARKER_ICONS.items()
-                 if icons.get(i)})
+                 if icons.get(i)}
+                | {"icon_" + c: g for c, g in RAW_ICONS.items()})
     zones = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "zone"
              for ln in s["lines"] if isinstance(ln.get("id"), str)}
 

@@ -178,9 +178,8 @@ function buildHuntMon(n) {
   box.appendChild(head);
 
   box.appendChild(el('div', 'section', 'Où le trouver'));
-  if (!(n.zones || []).length && !(n.spawns || []).length) {
-    box.appendChild(el('p', 'note', 'Zone inconnue : il n’apparaît que lors d’événements '
-      + '(failles, invasions) ou comme invocation.'));
+  if (n.note) {
+    box.appendChild(el('p', 'note', n.note));
   } else {
     box.appendChild(huntWhere(n));
   }
@@ -222,39 +221,72 @@ function huntWhere(n) {
   const list = el('div', 'hmzlist');
   const count = {};
   (n.spawns || []).forEach((p) => { count[p.z] = (count[p.z] || 0) + 1; });
-  const map = (n.spawns || []).length ? huntMiniMap(n) : null;
+  const insts = n.insts || [];
+  const doors = insts.reduce((k, i) => k + (i.doors || []).length, 0);
+  const map = (n.spawns || []).length || doors ? huntMiniMap(n) : null;
   const pick = (z) => {
     HUNTMON_ZONE[n.uid] = z;
     list.querySelectorAll('.hmz').forEach((b) => b.classList.toggle('on', b.dataset.z === (z || '')));
     if (map) map.focusZone(z);
   };
-  if (map) {
-    const all = el('button', 'hmz', 'Toutes les zones');
-    all.type = 'button';
-    all.dataset.z = '';
-    all.appendChild(el('span', 'n', String((n.spawns || []).length)));
-    all.addEventListener('click', () => pick(null));
-    list.appendChild(all);
-  }
-  (n.zones || []).forEach((z) => {
-    const b = el('button', 'hmz' + (count[z] ? '' : ' off'), z);
+  const item = (label, z, tag, on) => {
+    const b = el('button', 'hmz' + (on ? '' : ' off'), label);
     b.type = 'button';
     b.dataset.z = z;
-    if (count[z]) {
-      b.appendChild(el('span', 'n', String(count[z])));
-      b.addEventListener('click', () => pick(z));
-    } else {
-      b.title = 'Donjon ou faille : pas de carte';
-      b.appendChild(el('span', 'n', 'instance'));
-    }
+    b.appendChild(el('span', 'n', tag));
+    if (on) b.addEventListener('click', () => pick(z || null));
     list.appendChild(b);
+  };
+  if (map) item('Tout voir', '', '', true);
+  // the open world's zones with spawns; the instance zones only when no
+  // instance says better where they are
+  (n.zones || []).forEach((z) => {
+    if (count[z]) item(z, z, String(count[z]), true);
+    else if (!insts.length) item(z, z, 'instance', false);
   });
+  insts.forEach((i) => item(i.t.startsWith(i.kind) ? i.t : i.kind + ' : ' + i.t, i.t,
+    (i.doors || []).length ? 'entrée' : 'instance', (i.doors || []).length > 0));
+  if ((n.keys || []).length) {
+    const ks = el('div', 'hmby');
+    ks.appendChild(el('span', 'l', 'Invoqué à son autel avec'));
+    n.keys.forEach((k) => {
+      const c = el('span', 'chip key');
+      if (k.img) {
+        const im = document.createElement('img');
+        im.src = k.img;
+        im.alt = '';
+        c.appendChild(im);
+      }
+      c.appendChild(document.createTextNode(k.name));
+      ks.appendChild(c);
+    });
+    list.appendChild(ks);
+  }
+  if ((n.by || []).length) {
+    const by = el('div', 'hmby');
+    by.appendChild(el('span', 'l', 'Invoqué par'));
+    n.by.forEach((m) => {
+      const b = el('button', 'chip', m.name);
+      b.type = 'button';
+      b.addEventListener('click', () => notify('hunt_open', { id: m.id }));
+      by.appendChild(b);
+    });
+    list.appendChild(by);
+  }
   if ((n.regions || []).length) list.appendChild(el('div', 'hmreg', (n.regions || []).join(' · ')));
   wrap.appendChild(list);
-  wrap.appendChild(map || el('div', 'hmap hmnomap',
-    'Pas de carte : il n’apparaît qu’en donjon ou en faille.'));
+  if (map) {
+    wrap.appendChild(map);
+  } else {
+    // nothing to draw: the list alone, and a word why there is no map
+    wrap.classList.add('nomap');
+    list.appendChild(el('p', 'note', insts.length
+      ? 'Pas de carte : l’entrée de cette instance n’est pas dans le monde ouvert.'
+      : 'Pas de carte : il n’apparaît pas dans le monde ouvert.'));
+  }
   const keep = HUNTMON_ZONE[n.uid];
-  requestAnimationFrame(() => pick(keep && count[keep] ? keep : null));
+  const known = keep && (count[keep] || insts.some((i) => i.t === keep && (i.doors || []).length));
+  requestAnimationFrame(() => pick(known ? keep : null));
   return wrap;
 }
 
@@ -290,6 +322,15 @@ function huntMiniMap(n) {
     vp.appendChild(d);
     return d;
   });
+  (n.insts || []).forEach((i) => (i.doors || []).forEach((p) => {
+    const d = el('div', 'hpin hdoor hd-' + (i.kind === 'Faille' ? 'rift' : 'dungeon'));
+    d.title = i.t;
+    const [px, py] = mapPx(n, p.x, p.y);
+    d.dataset.px = px;
+    d.dataset.py = py;
+    vp.appendChild(d);
+    pins.push(d);
+  }));
   const v = { s: 1, x: 0, y: 0 };
   const apply = () => {
     world.style.transform = 'translate(' + v.x + 'px,' + v.y + 'px) scale(' + v.s + ')';

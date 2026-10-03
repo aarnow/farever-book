@@ -260,8 +260,9 @@ def bestiary_view(ranks, owned=None):
         meta = every.get(uid) or {}
         rows.append({"id": uid, "family": meta.get("family") or "",
                      "tier": meta.get("tier") or "foe",
-                     "regions": [meta["region"]] if meta.get("region")
-                     else [], "zones": []})
+                     "regions": meta.get("regions") or (
+                         [meta["region"]] if meta.get("region") else []),
+                     "zones": meta.get("zones") or []})
     regions = []
     for r in HUNT_REGIONS + ("",):
         n = sum(1 for e in rows if (e.get("regions") or [""])[0] == r)
@@ -322,11 +323,34 @@ def hunt_detail_view(uid, ranks):
     tier = (placed or meta).get("tier") or "foe"
     kills, rank = (ranks.get(uid) or [0, 0])[:2]
     steps = _codex_thresholds().get(tier) or []
-    zones = (placed or {}).get("zones") or []
-    regions = (placed or {}).get("regions") or (
+    zones = (placed or meta).get("zones") or []
+    regions = (placed or meta).get("regions") or (
         [meta["region"]] if meta.get("region") else [])
     spawns = [{"x": x, "y": y, "z": _zone_label(z) if z else ""}
               for x, y, z in (cat.get("spawns") or {}).get(uid) or ()]
+    # the instances it spawns in (a dungeon, a boss's lair, a rift), each
+    # with its entrance in the open world when the world has one, and who
+    # summons it when no level does
+    where = (cat.get("where") or {}).get(uid) or {}
+    insts = []
+    for act in where.get("acts") or ():
+        rift = act.startswith("POI_Rift_")
+        t = (f"Faille {int(act[-2:])}" if rift and act[-2:].isdigit()
+             else dungeon_name(act))
+        insts.append({"t": t, "kind": "Faille" if rift else "Donjon",
+                      "doors": [{"x": x, "y": y}
+                                for x, y, _z in (cat.get("entrances") or {})
+                                .get(act) or ()]})
+    by = [{"id": s, "name": _unit_label(s)} for s in where.get("by") or ()]
+    # what its summoning altar takes (a soulstone)
+    keys = [{"img": item_icon(i), "name": item_label(i)}
+            for i in where.get("items") or ()]
+    note = ""
+    if not zones and not spawns and not insts and not by:
+        note = ("Apparaît lors d’une invasion déclenchée par une pierre "
+                "d’âme." if "Soulstone" in uid else
+                "Source inconnue : il n’apparaît que lors d’événements ou "
+                "comme invocation.")
 
     rows = []
     src_label = {"family": "Famille", "unit": "Ce monstre", "boss": "Boss"}
@@ -357,7 +381,9 @@ def hunt_detail_view(uid, ranks):
             "zones": [_zone_label(z) for z in zones],
             "regions": [_zone_label(r) if r != "rift" else "Failles"
                         for r in regions],
-            "spawns": spawns, "meta": wm.get("meta") or {}, "loot": rows}
+            "spawns": spawns, "insts": insts, "by": by, "keys": keys,
+            "note": note,
+            "meta": wm.get("meta") or {}, "loot": rows}
 
 
 def _farm_view(items, fams, owned):

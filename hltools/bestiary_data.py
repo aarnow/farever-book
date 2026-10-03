@@ -17,7 +17,17 @@ For the hunting log's monster page, two more things:
   have no minimap: their monsters keep their zones only.
 * loot: what a kill can give — the family's table (unitType.lootTable) and
   the unit's own (lootTable, bossLootTable), nested tables flattened, each
-  item with its chance per kill (collection_data._table_items)."""
+  item with its chance per kill (collection_data._table_items).
+* where else: a wave spawner's units (`waveSpawner.group`: the open
+  world's fight stones, the rifts, a boss's adds) count as spawned too, at
+  the spawner; a unit spawned in an instance (dungeon, boss, rift level)
+  keeps that instance's activity, whose entrance in the open world (an
+  element with a `targetActivity`: the instance orbs, the rift entrances)
+  is placed like a spawner; and a unit no level spawns names who summons it
+  (a skill or unit script that refers to it).
+* summoning altars: an element that spawns a unit when used (`spawnUnit`,
+  the soulstone altars) stands where it spawns it, and its `interactible`
+  cost names the item it takes (the soulstone)."""
 import json
 import math
 import re
@@ -57,8 +67,12 @@ def build(game_dir, codex, img_dir=None):
 
     spawned = defaultdict(set)          # unit -> zones
     spots = defaultdict(set)            # unit -> {(x, y, zone)}, open world
+    inside = defaultdict(set)           # unit -> instance levels it spawns in
+    level_act = {}                      # instance level -> its activity
+    doors = defaultdict(set)            # activity -> {(x, y, zone)}, entrance
+    keys = defaultdict(set)             # unit -> items its altar takes
 
-    def walk(o, zone, px, py, rot, world):
+    def walk(o, zone, px, py, rot, world, lvl):
         if isinstance(o, dict):
             props = o.get("props") if isinstance(o.get("props"), dict) else {}
             zone = props.get("zoneBaked") or o.get("zoneBaked") or zone
@@ -68,11 +82,29 @@ def build(game_dir, codex, img_dir=None):
                 c, s = math.cos(math.radians(rot)), math.sin(math.radians(rot))
                 wx, wy = px + x * c - y * s, py + x * s + y * c
                 wr = rot + float(o.get("rotationZ") or 0)
-            if o.get("$cdbtype") == "spawner" or "unitGroup" in o:
+            if o.get("$cdbtype") == "activity" and not world:
+                level_act[lvl] = o.get("id")
+            if world and isinstance(o.get("targetActivity"), str):
+                doors[o["targetActivity"]].add((round(wx), round(wy),
+                                                zone or ""))
+            # an altar: used (and paid), it spawns its unit where it stands
+            altar = o.get("spawnUnit")
+            if isinstance(altar, dict) and isinstance(altar.get("unit"), str):
+                u = altar["unit"]
+                spawned[u].add(zone)
+                if world:
+                    spots[u].add((round(wx), round(wy), zone or ""))
+                for c in ((o.get("interactible") or {}).get("cost") or ()):
+                    if c.get("item"):
+                        keys[u].add(c["item"])
+            wave = o.get("waveSpawner")
+            if o.get("$cdbtype") == "spawner" or "unitGroup" in o \
+                    or isinstance(wave, dict):
                 here = []
                 if isinstance(o.get("unit"), str):
                     here.append(o["unit"])
-                g = groups.get(o.get("unitGroup"))
+                g = groups.get(o.get("unitGroup")
+                               or (wave or {}).get("group"))
                 for c in (g or {}).get("composition") or ():
                     for m in c.get("group") or ():
                         if m.get("unit"):
@@ -81,19 +113,22 @@ def build(game_dir, codex, img_dir=None):
                     spawned[u].add(zone)
                     if world:
                         spots[u].add((round(wx), round(wy), zone or ""))
+                    else:
+                        inside[u].add(lvl)
             for k, v in o.items():
                 # an object's props and children stand where it does
                 if k in ("children", "props"):
-                    walk(v, zone, wx, wy, wr, world)
+                    walk(v, zone, wx, wy, wr, world, lvl)
                 else:
-                    walk(v, zone, px, py, rot, world)
+                    walk(v, zone, px, py, rot, world, lvl)
         elif isinstance(o, list):
             for v in o:
-                walk(v, zone, px, py, rot, world)
+                walk(v, zone, px, py, rot, world, lvl)
 
     for path, level in _levels(game_dir):
         walk(level, None, 0.0, 0.0, 0.0,
-             path.startswith("Level/World/W1_Siagarta.dat/gameplayData/"))
+             path.startswith("Level/World/W1_Siagarta.dat/gameplayData/"),
+             re.sub(r"\.dat/.*|\.prefab$", "", path).split("/")[-1])
 
     no_codex = set(codex.get("noCodex") or ())
     elite, big = set(codex.get("elite") or ()), set(codex.get("big") or ())
@@ -130,10 +165,13 @@ def build(game_dir, codex, img_dir=None):
         if not monster(uid, codex_only=False):
             continue
         m = re.search(r"_Z(\d)", uid)
+        zs = sorted(z for z in spawned.get(uid, ()) if z)
         every[uid] = {"family": units[uid].get("type") or "",
                       "tier": tier(uid),
                       "region": "rift" if "Rift" in uid or "Portal" in uid
-                      else f"Z{m.group(1)}_Region" if m else ""}
+                      else f"Z{m.group(1)}_Region" if m else "",
+                      "zones": zs,
+                      "regions": sorted({r for r in map(region, zs) if r})}
     families = sorted({e["family"] for e in every.values() if e["family"]})
 
     def table(tid):
@@ -165,6 +203,34 @@ def build(game_dir, codex, img_dir=None):
     lvls = {uid: units[uid].get("lvl") for uid in every
             if units[uid].get("lvl")}
 
+    # who summons the units no level spawns: the owners of a skill that
+    # names it, and the units whose script or props name it
+    owners = defaultdict(set)
+    for uid, u in units.items():
+        for sk in u.get("skills") or ():
+            owners[sk.get("skill")].add(uid)
+    loose = [u for u in every if u not in spawned]
+    by = defaultdict(set)
+    for sid, sk in rows("skill").items():
+        text = json.dumps(sk)
+        for u in loose:
+            if f'"{u}"' in text or f"Unit.{u}" in text:
+                by[u] |= owners.get(sid, set())
+    for uid, u in units.items():
+        text = json.dumps(u.get("script") or "") + json.dumps(u.get("props"))
+        for t in loose:
+            if t != uid and (f'"{t}"' in text or f"Unit.{t}" in text):
+                by[t].add(uid)
+    where = {}
+    for uid in every:
+        acts = sorted({level_act.get(lv, lv) for lv in inside.get(uid, ())})
+        sums = sorted(s for s in by.get(uid, ()) if s != uid and s in units)
+        if acts or sums or keys.get(uid):
+            where[uid] = {"acts": acts, "by": sums,
+                          "items": sorted(keys.get(uid, ()))}
+    entrances = {a: sorted([x, y, z] for x, y, z in pts)
+                 for a, pts in doors.items()}
+
     if img_dir is not None:
         type_gfx = {tid: r.get("gfx") for tid, r in rows("unitType").items()}
         gfx = {uid: units[uid].get("gfx") for uid in every}
@@ -172,7 +238,7 @@ def build(game_dir, codex, img_dir=None):
         _images(game_dir, img_dir, gfx)
     return {"placed": placed, "units": every, "families": families,
             "spawns": spawns, "lvl": lvls, "famLoot": fam_loot,
-            "unitLoot": unit_loot}
+            "unitLoot": unit_loot, "where": where, "entrances": entrances}
 
 
 def _images(game_dir, out_dir, gfx):
