@@ -628,6 +628,11 @@ def main():
             print(f"[written] {_OUT_DIR / 'boss_portraits'} ({n} portraits)")
         except Exception as e:
             print(f"[!] boss portraits skipped ({e})")
+        try:
+            extract_title_logo(Path(hlboot).parent, _OUT_DIR / "ui_logo.png")
+            print(f"[written] {_OUT_DIR / 'ui_logo.png'}")
+        except Exception as e:
+            print(f"[!] title logo skipped ({e})")
         aug = extract_augments(Path(hlboot).parent)
         (_OUT_DIR / "augments.json").write_text(json.dumps(aug, indent=0),
                                                 encoding="utf-8")
@@ -1089,6 +1094,25 @@ def dungeon_loot(boss, item_rows, tables, itypes=None):
 
 
 BOSS_PORTRAIT_PX = 192
+
+
+def extract_title_logo(game_dir, out, height=96):
+    """The game's "FAREVER" wordmark (res.pak UI/Window/TitleScreen/
+    title.png), cut to its letters and scaled to `height` pixels, for the
+    window's header. Out of the player's own game files like every other
+    picture: the game's art is never shipped with the app."""
+    import io
+    import pak_extract
+    from PIL import Image
+    raw = pak_extract.read_entry(Path(game_dir) / "res.pak",
+                                 "UI/Window/TitleScreen/title.png")
+    if not raw:
+        raise FileNotFoundError("UI/Window/TitleScreen/title.png")
+    img = Image.open(io.BytesIO(raw)).convert("RGBA")
+    img = img.crop(img.getchannel("A").getbbox())
+    w = round(img.width * height / img.height)
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    img.resize((w, height), Image.LANCZOS).save(out, optimize=True)
 
 
 def extract_boss_portraits(game_dir, bosses, out_dir):

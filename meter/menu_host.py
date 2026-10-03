@@ -604,6 +604,7 @@ def _document():
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
                      "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
                      + ";window.__SHEET__ = " + json.dumps(_sheet_art())
+                     + ";window.__LOGO__ = " + json.dumps(_title_logo())
                      + ";"))
     # WebView2 shows nothing at all for an HTML string over 2 MB.
     if len(html.encode("utf-8")) > 1_800_000:
@@ -630,6 +631,19 @@ def _analysis_images(name):
         except OSError:
             continue
     return out
+
+
+def _title_logo():
+    """The game's wordmark as a data URI (analysis_out/ui_logo.png,
+    extracted by emit_offsets.py), or "" — the header then keeps its text."""
+    import base64
+    path = Path(os.environ.get("FAREVER_ANALYSIS")
+                or HERE.parent / "analysis_out") / "ui_logo.png"
+    try:
+        return "data:image/png;base64," + base64.b64encode(
+            path.read_bytes()).decode()
+    except OSError:
+        return ""
 
 
 def _boss_portraits():

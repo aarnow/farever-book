@@ -784,6 +784,10 @@ def _data_is_current():
         print("[meter] collection.json absent — regenerating for the "
               "Collection tab.", file=sys.stderr)
         return False
+    if not (ANALYSIS / "ui_logo.png").exists():
+        print("[meter] ui_logo.png absent — regenerating for the window's "
+              "header.", file=sys.stderr)
+        return False
     if not (ANALYSIS / "boss_portraits").is_dir():
         print("[meter] boss_portraits absent — regenerating for the dungeon "
               "list.", file=sys.stderr)

@@ -12,11 +12,11 @@ from PIL import Image, ImageDraw
 
 OUT = Path(__file__).resolve().parent.parent / "assets" / "farevermeter.ico"
 
-# The window's emblem (menu.css .emblem): a gold-rimmed shield, an indigo
-# field, a gold star.
-GOLD_HI, GOLD_LO = (246, 212, 106), (185, 138, 34)
-FIELD_HI, FIELD_LO = (62, 58, 114), (30, 28, 54)
-STAR = (251, 224, 138)
+# The window's emblem (menu.css .emblem): a dark-blue-rimmed shield, its
+# field in the French colours — blue, white, red, side by side.
+RIM_HI, RIM_LO = (42, 63, 143), (14, 26, 74)
+BANDS = ((0, 85, 164), (255, 255, 255), (239, 65, 53))
+SHADE = 0.22                # how much darker a band gets at the shield's tip
 
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
@@ -51,18 +51,22 @@ def draw(size: int) -> Image.Image:
 
     mask = Image.new("L", (big, big), 0)
     ImageDraw.Draw(mask).polygon(placed(_shield(w, h)), fill=255)
-    img.paste(_gradient(big, GOLD_HI, GOLD_LO), (0, 0), mask)
+    img.paste(_gradient(big, RIM_HI, RIM_LO), (0, 0), mask)
     rim = max(big * 0.075, 4)
     mask2 = Image.new("L", (big, big), 0)
     ImageDraw.Draw(mask2).polygon(placed(_shield(w, h, rim)), fill=255)
-    img.paste(_gradient(big, FIELD_HI, FIELD_LO), (0, 0), mask2)
-    # the star
-    import math
-    cx, cy, r = big / 2, oy + h * 0.44, big * 0.25
-    star = [(cx + (r if i % 2 == 0 else r * 0.42) * math.sin(math.pi * i / 5),
-             cy - (r if i % 2 == 0 else r * 0.42) * math.cos(math.pi * i / 5))
-            for i in range(10)]
-    ImageDraw.Draw(img).polygon(star, fill=STAR + (255,))
+    # the field: three vertical bands, each a little darker towards the tip
+    field = Image.new("RGBA", (big, big))
+    inner = placed(_shield(w, h, rim))
+    x0 = min(x for x, _ in inner)
+    x1 = max(x for x, _ in inner)
+    for i, col in enumerate(BANDS):
+        dark = tuple(round(c * (1 - SHADE)) for c in col)
+        band = _gradient(big, col, dark)
+        left = round(x0 + (x1 - x0) * i / 3)
+        right = round(x0 + (x1 - x0) * (i + 1) / 3)
+        field.paste(band.crop((left, 0, right, big)), (left, 0))
+    img.paste(field, (0, 0), mask2)
     return img.resize((size, size), Image.LANCZOS)
 
 
