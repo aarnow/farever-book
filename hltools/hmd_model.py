@@ -137,7 +137,7 @@ def read_hmd(raw):
         for _ in range(r.u8()):
             nm = r.name()
             t = r.u8()
-            g["format"].append((nm, t & 15))
+            g["format"].append((nm, t & 15, t >> 4))
         g["vertexPos"] = r.i32()
         n = r.u8()
         if n == 255:
@@ -201,34 +201,52 @@ def read_hmd(raw):
 
 # floats per vertex input, by InputFormat (DFloat..DVec4, DBytes4 = one word)
 _WORDS = {1: 1, 2: 2, 3: 3, 4: 4, 9: 1}
+# its precision (hxd.BufferFormat's InputPrecision): struct code, bytes,
+# scale. Below F32 an input is padded to a whole 4-byte word.
+_PREC = {0: ("f", 4, 1.0), 1: ("e", 2, 1.0), 2: ("B", 1, 1 / 255), 3: ("b", 1, 1 / 127)}
 
 
 def mesh(raw, d, geom=0):
     """One geometry's positions, normals, UVs and per-material triangles."""
     g = d["geoms"][geom]
-    offs, o = {}, 0
-    for nm, t in g["format"]:
-        offs[nm] = o
-        o += _WORDS.get(t, t & 7)
-    if o != g["stride"]:
-        raise ValueError(f"vertex stride {o} != {g['stride']}")
-    n, st = g["vertexCount"], g["stride"]
-    v = struct.unpack_from(f"<{n * st}f", raw, d["dataPos"] + g["vertexPos"])
-    po, no, uo = offs["position"], offs.get("normal"), offs.get("uv")
-    u2 = offs.get("uv2")
-    pos = [v[i * st + po + k] for i in range(n) for k in range(3)]
-    nor = ([v[i * st + no + k] for i in range(n) for k in range(3)]
-           if no is not None else [0.0, 1.0, 0.0] * n)
-    uv = ([v[i * st + uo + k] for i in range(n) for k in range(2)]
-          if uo is not None else [0.0, 0.0] * n)
-    uv2 = ([v[i * st + u2 + k] for i in range(n) for k in range(2)]
-           if u2 is not None else [0.0, 0.0] * n)
-    wo, xo = offs.get("weights"), offs.get("indexes")
+    offs, o, words = {}, 0, 0
+    for nm, t, prec in g["format"]:
+        k = _WORDS.get(t, t & 7)
+        words += k
+        if t == 9:                       # four bytes, whatever the precision
+            offs[nm] = (o, k, "4s", 1.0)
+            o += 4
+            continue
+        code, size, scale = _PREC.get(prec, _PREC[0])
+        offs[nm] = (o, k, code, scale)
+        o += (k * size + 3) // 4 * 4
+    if words != g["stride"]:
+        raise ValueError(f"vertex stride {words} != {g['stride']}")
+    n, bstride = g["vertexCount"], o
+    base = d["dataPos"] + g["vertexPos"]
+
+    def column(name, k, default):
+        if name not in offs:
+            return list(default) * n
+        off, cnt, code, scale = offs[name]
+        cnt = min(cnt, k)
+        fmt = struct.Struct(f"<{cnt}{code}")
+        out = []
+        for i in range(n):
+            vals = fmt.unpack_from(raw, base + i * bstride + off)
+            out.extend(x * scale for x in vals) if scale != 1.0 else out.extend(vals)
+        return out
+
+    pos = column("position", 3, (0.0, 0.0, 0.0))
+    nor = column("normal", 3, (0.0, 1.0, 0.0))
+    uv = column("uv", 2, (0.0, 0.0))
+    uv2 = column("uv2", 2, (0.0, 0.0))
     weights = idx4 = None
-    if wo is not None and xo is not None:
-        base = d["dataPos"] + g["vertexPos"]
-        weights = [v[i * st + wo:i * st + wo + 3] for i in range(n)]
-        idx4 = [raw[base + (i * st + xo) * 4:base + (i * st + xo) * 4 + 4]
+    if "weights" in offs and "indexes" in offs:
+        w = column("weights", 3, (0.0, 0.0, 0.0))
+        weights = [w[i * 3:i * 3 + 3] for i in range(n)]
+        xo = offs["indexes"][0]
+        idx4 = [raw[base + i * bstride + xo:base + i * bstride + xo + 4]
                 for i in range(n)]
     big = n > 0x10000
     ip, subs = d["dataPos"] + g["indexPos"], []
