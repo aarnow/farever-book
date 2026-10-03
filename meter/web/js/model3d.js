@@ -323,7 +323,10 @@ function m3dDraw() {
   const m = M3D.mesh;
   if (!m) return;
   const L = M3D.loc;
-  const d = M3D.radius / Math.sin(0.6 / 2) * 0.92 * M3D.dist;
+  // framed on the narrower of the two angles: the panel is often taller
+  // than wide, and a lizard is long
+  const half = Math.min(0.3, Math.atan(Math.tan(0.3) * w / h));
+  const d = M3D.radius / Math.sin(half) * 0.92 * M3D.dist;
   const cp = Math.cos(M3D.pitch);
   const eye = [M3D.center[0] + d * Math.sin(M3D.yaw) * cp,
     M3D.center[1] + d * Math.sin(M3D.pitch),

@@ -66,7 +66,7 @@ def _sheets(game_dir):
         sh = {s["name"]: s for s in cdb["sheets"]}
         _CDB[key] = {n: {r["id"]: r for r in sh[n].get("lines") or ()
                          if isinstance(r.get("id"), str)}
-                     for n in ("item", "model", "gradient")}
+                     for n in ("item", "model", "gradient", "unit")}
     return _CDB[key]
 
 
@@ -395,7 +395,8 @@ def prefab_parts(game_dir, prefab, depth=0):
 
 
 def item_prefab(game_dir, item_id):
-    """The prefab an item's model comes from, through the model sheet."""
+    """The prefab an item's (or a companion's) model comes from, through
+    the model sheet."""
     sh = _sheets(game_dir)
     it = sh["item"].get(item_id) or {}
     vis = it.get("visuals") or {}
@@ -406,6 +407,10 @@ def item_prefab(game_dir, item_id):
         if str((mdl or {}).get("prefab", "")).endswith(".prefab"):
             return mdl["prefab"]
     ref, seen = vis.get("modelRef"), set()
+    if not it:
+        # a companion is a unit, not an item: its first model names the row
+        unit = sh["unit"].get(item_id) or {}
+        ref = next((m.get("ref") for m in unit.get("models") or () if m.get("ref")), None)
     while ref and ref not in seen:
         seen.add(ref)
         row = sh["model"].get(ref) or {}
