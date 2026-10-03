@@ -327,6 +327,7 @@ function buildList(n, box) {
   const me = el('button', 'btn bme' + (n.me ? '' : ' off'),
     n.me && n.me.wait ? 'Lecture de ' + n.me.n + '…'
       : 'Créer depuis mon personnage' + (n.me ? ' (' + n.me.n + ')' : ''));
+  if (n.me && n.me.when) me.title = 'Le jeu est fermé : ' + n.me.n + ' tel que lu le ' + n.me.when + '.';
   me.type = 'button';
   me.title = n.me ? 'Copie l’équipement, les talents, les compétences et les runes de '
     + n.me.n + ' dans un nouveau build.' : 'Lance le jeu : ton personnage doit être identifié.';

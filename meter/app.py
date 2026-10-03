@@ -27,6 +27,7 @@ from winsys import (
     copy_image_to_clipboard, copy_text_to_clipboard, foreground_pid,
     game_window, quit_requested, start_hotkeys)
 import goals as G
+from me import MeStore
 from gamedata import (
     REGENERATING, _boss_label, _element_done, _fr_names, dungeon_catalogue,
     item_rarity,
@@ -53,6 +54,10 @@ DUNGEON_RUNS_KEPT = 10
 # after the hook last saw our hero they stay up (it reports every 3 s).
 OVERLAY_GRID = 8
 OVERLAY_HERO_SECS = 8.0
+
+
+# How often one's own character is re-read while playing (kept on disk).
+SELF_PROFILE_SECS = 300.0
 
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
@@ -81,6 +86,14 @@ class App:
         self.buildtab = BuildTab(self.menubridge.invalidate, self._toast_msg)
         # the overlays over the game: the group meter and the goals
         self.goals = G.Goals()
+        # one's own last known state, shown with the game closed
+        self.me = MeStore()
+        stock, _at = self.me.got("stock")
+        if isinstance(stock, dict):
+            self.goals.on_stock(stock.get("items"), stock.get("banks"))
+        self._me_name = None                # the hero in game now
+        self._me_auto = None                # (name, since): own profile asked
+        self._me_auto_next = 0.0
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
         self._ov_on = {"meter": True, "goals": True}   # shown, per overlay
@@ -579,8 +592,11 @@ class App:
                     pass
             time.sleep(0.03)
         self._save_window_geom()
+        self.me.flush(force=True)
 
     def _refresh(self):
+        self._auto_self_profile()
+        self.me.flush()
         self._tick_rift()
         self._tick_parse()
         if self.session.epoch != self._last_epoch:
@@ -713,6 +729,10 @@ class App:
                               "premier combat.")})
         out.append(self._detail_node(rows, duration, focus))
         me = self._self_prof if online else None
+        if me is None:
+            # the game closed: the last counters read, if any
+            counters, at = self.me.got("counters")
+            me = dict(counters, at=at) if isinstance(counters, dict) else None
         out.append({"k": "luck", "id": "live_luck",
                     "rows": _profile_luck(me) if me else None,
                     "empty": ("Lecture des compteurs…" if online else
@@ -1040,6 +1060,9 @@ class App:
     def on_stock(self, p):
         """What the hero owns changed (bag, equipment, bank). Hook thread."""
         def done():
+            self.me.put(self._me_name, "stock",
+                        {"items": p.get("items") or {},
+                         "banks": p.get("banks")})
             for g in self.goals.on_stock(p.get("items"), p.get("banks")):
                 self._goal_reached(g)
         self._enqueue(done)()
@@ -1059,9 +1082,36 @@ class App:
     def _goal_add(self, p):
         self.goals.add(p.get("kind"), p.get("ref"), p.get("n"))
 
-    def on_hero_seen(self):
+    def on_hero_seen(self, name, uid=None, acct=None):
         """The hook saw our hero (every 3 s in the world). Hook thread."""
         self._hero_at = time.time()
+
+        def done():
+            self.me.set_account(uid, acct)
+            self.me.set_hero(name)
+            if name != self._me_name:
+                self._me_name = name
+                self._me_auto_next = 0.0    # a new character: read it now
+        self._enqueue(done)()
+
+    def _auto_self_profile(self):
+        """Read one's own character like Inspecter does, on arrival and then
+        every SELF_PROFILE_SECS, so its last state is kept for the game
+        closed. Never over an analysis the player asked for."""
+        name = self._me_name
+        now = time.time()
+        if (not name or not self.game_connected() or now < self._me_auto_next
+                or self._char_wait or self._me_build):
+            return
+        script = self.link.script if self.link is not None else None
+        if script is None:
+            return
+        self._me_auto_next = now + SELF_PROFILE_SECS
+        try:
+            script.post({"type": "analyze", "name": name})
+            self._me_auto = (name, now)
+        except Exception:
+            self._me_auto_next = now + 60
 
     def _ov_moved(self, p):
         """An overlay dropped: anchored to the nearer side of the game's
@@ -1324,6 +1374,8 @@ class App:
         def done():
             if p.get("kind") == "selfprofile":
                 self._self_prof = dict(p.get("profile") or {}, at=time.time())
+                self.me.put(self._me_name, "counters",
+                            p.get("profile") or {})
                 return
             if p.get("kind") == "roster":
                 self._roster = p.get("players") or []
@@ -1332,6 +1384,12 @@ class App:
             self._char_wait = None
             who = p.get("n") or (p.get("profile") or {}).get("n")
             mine = bool(self._me_build) and self._me_build[0] == who
+            auto = bool(self._me_auto) and self._me_auto[0] == who
+            if auto:
+                self._me_auto = None
+                if p.get("missing") or not p.get("profile"):
+                    self._me_auto_next = time.time() + 60
+                    return
             if p.get("missing"):
                 if mine:
                     self._me_build = None
@@ -1349,7 +1407,12 @@ class App:
                   f"{prof.get('weaponSkills')}; secondary "
                   f"{prof.get('secondary')}; statuses "
                   f"{prof.get('statuses')}", file=sys.stderr)
-            # kept for this session only: profiles are never written to disk
+            if name == self._me_name:
+                # one's own character: kept on disk, for the game closed
+                self.me.put(name, "profile", p.get("profile") or {})
+                if auto:
+                    return              # a quiet refresh, nothing to open
+            # others: kept for this session only, never written to disk
             self._profiles_data()[name] = prof
             if mine:
                 # asked from the Build tab: straight into a build, named
@@ -1394,8 +1457,14 @@ class App:
         like any player of Inspecter, then made a build (on_character)."""
         me = self._me()
         if me is None:
-            self._toast_msg("Ton personnage n'est pas encore identifié : "
-                            "lance le jeu et attends quelques secondes.")
+            # the game closed: the character as last read
+            prof = self.me.profiles().get(self.me.last)
+            if prof is None:
+                self._toast_msg("Ton personnage n'a pas encore été lu : lance "
+                                "le jeu une fois avec Farever France ouvert.")
+                return
+            self._set_tab("Build")
+            self.buildtab.import_profile(prof, self.me.last)
             return
         self._me_build = (me["n"], time.time())
         self._analyze(me["n"])
@@ -1406,10 +1475,15 @@ class App:
         wait = self._me_build
         if wait and time.time() - wait[1] > 15:
             self._me_build = wait = None
+        saved = self.me.profiles().get(self.me.last)
         for n in nodes:
             if n.get("k") == "build":
                 n["me"] = ({"n": me["n"], "lvl": me.get("lvl"),
-                            "wait": bool(wait)} if me else None)
+                            "wait": bool(wait)} if me else
+                           {"n": self.me.last, "lvl": saved.get("lvl"),
+                            "wait": False,
+                            "when": date_fr(time.localtime(saved["at"]))}
+                           if saved else None)
         return nodes
 
     def _profile_to_build(self, name):
@@ -1427,6 +1501,8 @@ class App:
         wait = self._char_wait
         if wait and time.time() - wait[1] > 15:
             self._char_wait = wait = None
+        # one's own characters as last read, under any analysed this session
+        profs = {**self.me.profiles(), **profs}
         return [{"k": "character", "id": "character",
                  **character_view(roster, profs, self._char_sel,
                                   wait[0] if wait else None, live)}]

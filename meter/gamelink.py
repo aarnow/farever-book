@@ -438,7 +438,7 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             # screen): the overlays show only then
             ov = _OVERLAY["ref"]
             if ov is not None and name:
-                ov.on_hero_seen()
+                ov.on_hero_seen(name, p.get("uid"), p.get("acct"))
             if name and name != hero_id["name"]:
                 first = hero_id["name"] is None
                 link.step("hero", "ok", name)

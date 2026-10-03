@@ -1664,7 +1664,17 @@ function refreshLocalHero() {
                 const nm = hlStr(h.add(OFF.Hero.name).readPointer());
                 if (nm) partyNames[nm] = 1;   // always include self
                 localName = nm;
-                send({ kind: "hero", name: localName,
+                // the account the character belongs to (Player.uid, .name),
+                // so the app can file what it keeps under it
+                let uid = null, acct = null;
+                try {
+                    const pl = h.add(OFF.Hero.player).readPointer();
+                    if (pl && !pl.isNull() && OFF.Player.uid != null) {
+                        uid = hlStr(pl.add(OFF.Player.uid).readPointer());
+                        acct = hlStr(pl.add(OFF.Player.name).readPointer());
+                    }
+                } catch (e) {}
+                send({ kind: "hero", name: localName, uid: uid, acct: acct,
                        party: Object.keys(partyNames) });
                 return;
             }
