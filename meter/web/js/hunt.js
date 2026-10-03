@@ -121,6 +121,7 @@ function renderHunt(box, n) {
   shown.forEach((it) => {
     const card = el('div', 'hitem' + (it.kills ? ' seen' : '') + (it.rank >= it.max ? ' done' : ''));
     card.title = [it.name, it.fam, it.zones].filter(Boolean).join(' — ');
+    card.addEventListener('click', () => notify('hunt_open', { id: it.id }));
     const pic = el('span', 'pic');
     pic.appendChild(huntImg(it.id));
     if (it.tier) pic.appendChild(el('span', 'tier', it.tier));
@@ -148,6 +149,174 @@ function renderHunt(box, n) {
     qi.focus();
     try { qi.setSelectionRange(caret, caret); } catch (e) { /* ignore */ }
   }
+}
+
+/* ---- one monster's page --------------------------------------------------- */
+/* Who it is, where it spawns in the open world (the Map tab's tiles, framed
+   on its spawns, each one a pin with its portrait) and what a kill gives. */
+function buildHuntMon(n) {
+  const box = el('div', 'huntmon');
+  const head = el('div', 'hmhead' + (n.kills ? ' seen' : ''));
+  const pic = el('span', 'pic');
+  pic.appendChild(huntImg(n.uid));
+  if (n.tier) pic.appendChild(el('span', 'tier', n.tier));
+  head.appendChild(pic);
+  const t = el('div', 'hmt');
+  t.appendChild(el('div', 'hmname', n.name));
+  t.appendChild(el('div', 'fam', [n.fam, n.lvl ? 'niveau ' + n.lvl : '']
+    .filter(Boolean).join(' · ')));
+  const k = el('div', 'kills');
+  k.appendChild(el('b', null, fmtN(n.kills)));
+  k.appendChild(el('span', null, n.kills > 1 ? 'kills' : 'kill'));
+  const pips = el('span', 'pips');
+  for (let i = 0; i < n.max; i++) pips.appendChild(el('i', i < n.rank ? 'on' : ''));
+  pips.appendChild(el('span', null, n.rank >= n.max ? 'maîtrisé'
+    : n.next ? n.kills + ' / ' + n.next : ''));
+  k.appendChild(pips);
+  t.appendChild(k);
+  head.appendChild(t);
+  box.appendChild(head);
+
+  box.appendChild(el('div', 'section', 'Où le trouver'));
+  if (!(n.zones || []).length && !(n.spawns || []).length) {
+    box.appendChild(el('p', 'note', 'Zone inconnue : il n’apparaît que lors d’événements '
+      + '(failles, invasions) ou comme invocation.'));
+  } else {
+    box.appendChild(huntWhere(n));
+  }
+
+  box.appendChild(el('div', 'section', 'Butin'));
+  box.appendChild(el('p', 'note', 'Chance par kill. « Famille » : la table commune à toute sa '
+    + 'famille ; « Ce monstre » et « Boss » : la sienne, en plus.'));
+  const tbl = el('div', 'panel droptable mondrop');
+  const hd = el('div', 'drow dhead');
+  ['', 'Objet', 'Type', 'Source', 'Chance'].forEach((h) => hd.appendChild(el('span', null, h)));
+  tbl.appendChild(hd);
+  (n.loot || []).forEach((r) => {
+    const row = el('div', 'drow' + (r.rk ? ' r-' + r.rk : ''));
+    const ic = el('span', 'ic');
+    if (r.img) {
+      const im = document.createElement('img');
+      im.src = r.img;
+      im.alt = '';
+      ic.appendChild(im);
+    }
+    row.appendChild(ic);
+    row.appendChild(el('span', 'nm', r.name));
+    row.appendChild(el('span', 'dim', r.type));
+    row.appendChild(el('span', 'dim', r.src));
+    row.appendChild(el('span', 'num', r.chance));
+    tbl.appendChild(row);
+  });
+  if (!(n.loot || []).length) tbl.appendChild(el('div', 'empty', 'Aucun butin connu.'));
+  box.appendChild(tbl);
+  return box;
+}
+
+/* The zones in one column, the map in the other. A zone with spawns in the
+   open world frames the map on them; a dungeon or rift zone has no map. The
+   chosen zone is kept per monster, so a state push doesn't lose it. */
+const HUNTMON_ZONE = {};
+function huntWhere(n) {
+  const wrap = el('div', 'hmwhere');
+  const list = el('div', 'hmzlist');
+  const count = {};
+  (n.spawns || []).forEach((p) => { count[p.z] = (count[p.z] || 0) + 1; });
+  const map = (n.spawns || []).length ? huntMiniMap(n) : null;
+  const pick = (z) => {
+    HUNTMON_ZONE[n.uid] = z;
+    list.querySelectorAll('.hmz').forEach((b) => b.classList.toggle('on', b.dataset.z === (z || '')));
+    if (map) map.focusZone(z);
+  };
+  if (map) {
+    const all = el('button', 'hmz', 'Toutes les zones');
+    all.type = 'button';
+    all.dataset.z = '';
+    all.appendChild(el('span', 'n', String((n.spawns || []).length)));
+    all.addEventListener('click', () => pick(null));
+    list.appendChild(all);
+  }
+  (n.zones || []).forEach((z) => {
+    const b = el('button', 'hmz' + (count[z] ? '' : ' off'), z);
+    b.type = 'button';
+    b.dataset.z = z;
+    if (count[z]) {
+      b.appendChild(el('span', 'n', String(count[z])));
+      b.addEventListener('click', () => pick(z));
+    } else {
+      b.title = 'Donjon ou faille : pas de carte';
+      b.appendChild(el('span', 'n', 'instance'));
+    }
+    list.appendChild(b);
+  });
+  if ((n.regions || []).length) list.appendChild(el('div', 'hmreg', (n.regions || []).join(' · ')));
+  wrap.appendChild(list);
+  wrap.appendChild(map || el('div', 'hmap hmnomap',
+    'Pas de carte : il n’apparaît qu’en donjon ou en faille.'));
+  const keep = HUNTMON_ZONE[n.uid];
+  requestAnimationFrame(() => pick(keep && count[keep] ? keep : null));
+  return wrap;
+}
+
+/* The open world around the monster's spawns: the Map tab's tiles, fitted to
+   its spawns (with some room around a lone one). Not draggable nor zoomable:
+   it sits in a scrolling page, and the wheel must scroll the page. The pins
+   are placed in screen pixels, so they keep their size. */
+function huntMiniMap(n) {
+  const m = n.meta || {};
+  const size = m.tile_px || 512;
+  const vp = el('div', 'hmap');
+  const world = el('div', 'mworld');
+  (m.tiles || []).forEach((key) => {
+    const [tx, ty] = key.split('_').map(Number);
+    const im = document.createElement('img');
+    im.className = 'mtile';
+    im.dataset.key = key;
+    im.alt = '';
+    im.style.left = (tx - m.tx[0]) * size + 'px';
+    im.style.top = (ty - m.ty[0]) * size + 'px';
+    im.style.width = im.style.height = (size + 1) + 'px';
+    if (window.__MAP__[key]) im.src = window.__MAP__[key];
+    world.appendChild(im);
+  });
+  vp.appendChild(world);
+  const pins = (n.spawns || []).map((p) => {
+    const d = el('div', 'hpin');
+    d.title = p.z;
+    d.appendChild(huntImg(n.uid));
+    const [px, py] = mapPx(n, p.x, p.y);
+    d.dataset.px = px;
+    d.dataset.py = py;
+    vp.appendChild(d);
+    return d;
+  });
+  const v = { s: 1, x: 0, y: 0 };
+  const apply = () => {
+    world.style.transform = 'translate(' + v.x + 'px,' + v.y + 'px) scale(' + v.s + ')';
+    pins.forEach((d) => {
+      d.style.left = (v.x + d.dataset.px * v.s) + 'px';
+      d.style.top = (v.y + d.dataset.py * v.s) + 'px';
+    });
+  };
+  // frame the map on one zone's spawns (null: all of them), dimming the rest
+  const fit = (zone) => {
+    const sel = pins.filter((d) => !zone || d.title === zone);
+    pins.forEach((d) => d.classList.toggle('dim', !!zone && d.title !== zone));
+    if (!sel.length) return;
+    const xs = sel.map((d) => +d.dataset.px);
+    const ys = sel.map((d) => +d.dataset.py);
+    const span = 420;                       // room around a lone spawn
+    const x0 = Math.min(...xs), x1 = Math.max(...xs);
+    const y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const w = Math.max(x1 - x0, span) * 1.25, h = Math.max(y1 - y0, span) * 1.25;
+    const W = vp.clientWidth || 800, H = vp.clientHeight || 380;
+    v.s = Math.min(W / w, H / h, 3);
+    v.x = W / 2 - (x0 + x1) / 2 * v.s;
+    v.y = H / 2 - (y0 + y1) / 2 * v.s;
+    apply();
+  };
+  vp.focusZone = fit;
+  return vp;
 }
 
 /* The hunting log by family: a family shares its loot table, so its total

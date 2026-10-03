@@ -311,6 +311,55 @@ def bestiary_view(ranks, owned=None):
             "total": sum(i["kills"] for i in items)}
 
 
+def hunt_detail_view(uid, ranks):
+    """One monster's page: who it is, where it spawns in the open world (on
+    the Map tab's tiles), and what a kill can give — its family's table and
+    its own, each item with its chance per kill."""
+    cat = bestiary_catalogue()
+    placed = next((e for e in cat.get("placed") or () if e["id"] == uid), None)
+    meta = (cat.get("units") or {}).get(uid) or {}
+    fam = (placed or meta).get("family") or ""
+    tier = (placed or meta).get("tier") or "foe"
+    kills, rank = (ranks.get(uid) or [0, 0])[:2]
+    steps = _codex_thresholds().get(tier) or []
+    zones = (placed or {}).get("zones") or []
+    regions = (placed or {}).get("regions") or (
+        [meta["region"]] if meta.get("region") else [])
+    spawns = [{"x": x, "y": y, "z": _zone_label(z) if z else ""}
+              for x, y, z in (cat.get("spawns") or {}).get(uid) or ()]
+
+    rows = []
+    src_label = {"family": "Famille", "unit": "Ce monstre", "boss": "Boss"}
+    loot = {i: [p, "family", None]
+            for i, p in ((cat.get("famLoot") or {}).get(fam) or {}).items()}
+    for i, (p, src, need) in ((cat.get("unitLoot") or {}).get(uid)
+                              or {}).items():
+        if i not in loot or p >= loot[i][0]:
+            loot[i] = [p, src, need]
+    for i, (p, src, need) in loot.items():
+        rk = (item_rarity(i) or "").lower()
+        rows.append({"img": item_icon(i), "name": item_label(i), "rk": rk,
+                     "type": item_type_label(item_type(i)) if item_type(i)
+                     else "",
+                     "src": src_label.get(src, src)
+                     + (f" · {DUNGEON_DIFFICULTIES.get(need, '?')}"
+                        if need else ""),
+                     "chance": "garanti" if p >= 1 else _pct(p), "cv": p})
+    # rarest first, then the least likely
+    rows.sort(key=lambda r: (-RARITY_ORDER.get(r["rk"].capitalize(), 0),
+                             r["cv"], r["name"]))
+    wm = world_map()
+    return {"uid": uid, "name": _unit_label(uid), "fam": _family_label(fam),
+            "tier": HUNT_TIERS.get(tier, ""),
+            "lvl": (cat.get("lvl") or {}).get(uid),
+            "kills": int(kills), "rank": int(rank), "max": len(steps) or 3,
+            "next": next((t for t in steps if t > kills), None),
+            "zones": [_zone_label(z) for z in zones],
+            "regions": [_zone_label(r) if r != "rift" else "Failles"
+                        for r in regions],
+            "spawns": spawns, "meta": wm.get("meta") or {}, "loot": rows}
+
+
 def _farm_view(items, fams, owned):
     """The mounts and gliders a monster can drop, each with every monster
     (a whole family, or one unit — a dungeon boss, an elite demon) that can

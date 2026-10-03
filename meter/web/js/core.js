@@ -332,6 +332,7 @@ function buildNode(n) {
     case 'droptable': return buildDropTable(n);
     case 'collection': return buildCollection(n);
     case 'hunt': return buildHunt(n);
+    case 'huntmon': return buildHuntMon(n);
     case 'achievements': return buildAch(n);
     case 'map': return buildMap(n);
     case 'character': return buildCharacter(n);

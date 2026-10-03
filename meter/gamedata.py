@@ -741,6 +741,10 @@ def _data_is_current():
             print("[meter] bestiary.json predates the family view — "
                   "regenerating.", file=sys.stderr)
             return False
+        if "spawns" not in best:
+            print("[meter] bestiary.json predates the monster page — "
+                  "regenerating.", file=sys.stderr)
+            return False
     except (OSError, ValueError):
         pass
     if not (ANALYSIS / "codex_items.json").exists():

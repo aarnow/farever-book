@@ -7,8 +7,19 @@ A monster is a unit some level spawns — a spawner's `unit`, or the units of
 its `unitGroup` — minus what is not a monster: companions (Critter), mounts,
 totems, scenery, and the units data.cdb keeps out of the codex. Each comes
 with its family (unit.type -> unitType), the zones it spawns in and their
-region, and its codex tier (codex_units.json: elite / big / foe)."""
+region, and its codex tier (codex_units.json: elite / big / foe).
+
+For the hunting log's monster page, two more things:
+* spawns: where each spawner of the open world (W1_Siagarta, the level the
+  Map tab draws) stands, in world coordinates — a spawner is the `props` of
+  a level object, so it stands where that object does (its x/y, through its
+  parents' offsets and rotations, as in map_data.py). Dungeon and rift levels
+  have no minimap: their monsters keep their zones only.
+* loot: what a kill can give — the family's table (unitType.lootTable) and
+  the unit's own (lootTable, bossLootTable), nested tables flattened, each
+  item with its chance per kill (collection_data._table_items)."""
 import json
+import math
 import re
 import struct
 from collections import defaultdict
@@ -16,7 +27,7 @@ from pathlib import Path
 
 import imgcache
 import pak_extract
-from collection_data import _levels
+from collection_data import _levels, _table_items
 
 NOT_MONSTERS = {"Critter", "Mount", "Totem", "Environment"}
 IMG_PX = 96
@@ -33,6 +44,7 @@ def build(game_dir, codex, img_dir=None):
                 if isinstance(ln.get("id"), str)}
 
     units, groups, zones = rows("unit"), rows("unitGroup"), rows("zone")
+    tables = rows("lootTable")
 
     def region(z):
         seen = set()
@@ -44,27 +56,44 @@ def build(game_dir, codex, img_dir=None):
         return None
 
     spawned = defaultdict(set)          # unit -> zones
+    spots = defaultdict(set)            # unit -> {(x, y, zone)}, open world
 
-    def walk(o, zone):
+    def walk(o, zone, px, py, rot, world):
         if isinstance(o, dict):
             props = o.get("props") if isinstance(o.get("props"), dict) else {}
             zone = props.get("zoneBaked") or o.get("zoneBaked") or zone
+            x, y = o.get("x"), o.get("y")
+            wx, wy, wr = px, py, rot
+            if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+                c, s = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+                wx, wy = px + x * c - y * s, py + x * s + y * c
+                wr = rot + float(o.get("rotationZ") or 0)
             if o.get("$cdbtype") == "spawner" or "unitGroup" in o:
+                here = []
                 if isinstance(o.get("unit"), str):
-                    spawned[o["unit"]].add(zone)
+                    here.append(o["unit"])
                 g = groups.get(o.get("unitGroup"))
                 for c in (g or {}).get("composition") or ():
                     for m in c.get("group") or ():
                         if m.get("unit"):
-                            spawned[m["unit"]].add(zone)
-            for v in o.values():
-                walk(v, zone)
+                            here.append(m["unit"])
+                for u in here:
+                    spawned[u].add(zone)
+                    if world:
+                        spots[u].add((round(wx), round(wy), zone or ""))
+            for k, v in o.items():
+                # an object's props and children stand where it does
+                if k in ("children", "props"):
+                    walk(v, zone, wx, wy, wr, world)
+                else:
+                    walk(v, zone, px, py, rot, world)
         elif isinstance(o, list):
             for v in o:
-                walk(v, zone)
+                walk(v, zone, px, py, rot, world)
 
-    for _path, level in _levels(game_dir):
-        walk(level, None)
+    for path, level in _levels(game_dir):
+        walk(level, None, 0.0, 0.0, 0.0,
+             path.startswith("Level/World/W1_Siagarta.dat/gameplayData/"))
 
     no_codex = set(codex.get("noCodex") or ())
     elite, big = set(codex.get("elite") or ()), set(codex.get("big") or ())
@@ -107,12 +136,43 @@ def build(game_dir, codex, img_dir=None):
                       else f"Z{m.group(1)}_Region" if m else ""}
     families = sorted({e["family"] for e in every.values() if e["family"]})
 
+    def table(tid):
+        return {i: round(p, 5) for i, p in _table_items(tables, tid).items()
+                if p > 0} if tid else {}
+
+    types = rows("unitType")
+    fam_loot = {f: table(types.get(f, {}).get("lootTable"))
+                for f in families}
+    unit_loot = {}
+    for uid in every:
+        p = units[uid].get("props") or {}
+        own = {}
+        for key, src in (("lootTable", "unit"), ("bossLootTable", "boss")):
+            # a line can require a difficulty (the bosses' infusion
+            # pattern: Heroic only, conditions.difficulty.min = 2)
+            need = {}
+            for ln in (tables.get(p.get(key)) or {}).get("loot") or ():
+                d = (((ln.get("conditions") or {}).get("difficulty") or {})
+                     .get("min") or [None])[0]
+                if ln.get("item") and d:
+                    need[ln["item"]] = d
+            for i, q in table(p.get(key)).items():
+                own[i] = [max(q, (own.get(i) or [0])[0]), src, need.get(i)]
+        if own:
+            unit_loot[uid] = own
+    spawns = {u: sorted([x, y, z] for x, y, z in pts)
+              for u, pts in spots.items() if u in every}
+    lvls = {uid: units[uid].get("lvl") for uid in every
+            if units[uid].get("lvl")}
+
     if img_dir is not None:
         type_gfx = {tid: r.get("gfx") for tid, r in rows("unitType").items()}
         gfx = {uid: units[uid].get("gfx") for uid in every}
         gfx.update({f"family_{f}": type_gfx.get(f) for f in families})
         _images(game_dir, img_dir, gfx)
-    return {"placed": placed, "units": every, "families": families}
+    return {"placed": placed, "units": every, "families": families,
+            "spawns": spawns, "lvl": lvls, "famLoot": fam_loot,
+            "unitLoot": unit_loot}
 
 
 def _images(game_dir, out_dir, gfx):

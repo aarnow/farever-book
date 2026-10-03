@@ -38,8 +38,8 @@ from combat import (
     _overheal_note, _rate, _rate_text, _report_name)
 from views import (
     RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
-    bestiary_view, character_view, collection_view, droptable_view, map_view,
-    rift_rewards_view)
+    bestiary_view, character_view, collection_view, droptable_view,
+    hunt_detail_view, map_view, rift_rewards_view)
 from reports import render_rift_report_image, report_view
 from bridge import MenuBridge, _Scheduler, _parse_help
 from gamelink import GameLink
@@ -125,6 +125,7 @@ class App:
         self._repair_note = None            # (ok, text) once it has run
         self._rift_rewards = False          # the rift rewards page is open
         self._dungeon_kind = None           # the dungeon whose runs are listed
+        self._hunt_sel = None               # the monster whose page is open
         self._dungeon_view = None           # the dungeon run being read
         self._collection_owned = None       # .meter_collection.json, loaded
         self._codex_data = None             # .meter_codex.json, loaded
@@ -497,6 +498,9 @@ class App:
             "open_dungeon_run": lambda p: self._open_dungeon_run(
                 p.get("file", "")),
             "close_dungeon_run": lambda: setattr(self, "_dungeon_view", None),
+            # hunting log
+            "hunt_open": lambda p: setattr(self, "_hunt_sel", p.get("id")),
+            "hunt_close": lambda: setattr(self, "_hunt_sel", None),
             # character
             "char_analyze": lambda p: self._analyze(p.get("name")),
             "char_open": lambda p: setattr(self, "_char_sel", p.get("name")),
@@ -1363,6 +1367,12 @@ class App:
                 "ouvert." if at else
                 "Pas encore lu : lance le jeu avec Farever France ouvert, tes "
                 "kills se rempliront tout seuls.")
+        if self._hunt_sel:
+            return [{"k": "toolbar", "id": "hunt_tools", "btns": [
+                        {"id": "hunt_close", "t": "‹  Tableau de chasse"}]},
+                    {"k": "huntmon", "id": "huntmon",
+                     **hunt_detail_view(self._hunt_sel,
+                                        entry.get("ranks") or {})}]
         return [{"k": "hunt", "id": "hunt", "sync": sync,
                  **bestiary_view(entry.get("ranks") or {},
                                  self._collection())}]
