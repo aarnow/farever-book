@@ -446,11 +446,6 @@ class App:
             if copy_text_to_clipboard(self._report_text(data)):
                 self._toast_msg("Copié en texte.")
 
-    def _copy_rift_text(self):
-        data = self._shown_report()
-        if data and copy_text_to_clipboard(self._report_text(data)):
-            self._toast_msg("Texte copié dans le presse-papiers.")
-
     def _open_log_folder(self):
         try:
             DATA_HOME.mkdir(parents=True, exist_ok=True)
@@ -527,7 +522,6 @@ class App:
             "open_rift": lambda p: self._open_rift_file(p.get("file", "")),
             "close_rift": lambda: setattr(self, "_rift_view", None),
             "copy_rift_image": self._copy_rift_image,
-            "copy_rift_text": self._copy_rift_text,
             "open_parses": self._open_parses,
             "rift_tick": lambda p: self._rift_tick(p.get("file")),
             "rift_tick_all": self._rift_tick_all,
@@ -969,8 +963,7 @@ class App:
         if self._rift_view is not None:
             return [{"k": "toolbar", "id": "rift_tools", "btns": [
                         {"id": "close_rift", "t": "‹  Toutes les failles"},
-                        {"id": "copy_rift_image", "t": "Copier l'image"},
-                        {"id": "copy_rift_text", "t": "Copier le texte"}]},
+                        {"id": "copy_rift_image", "t": "Copier l'image"}]},
                     self._report_node(self._rift_view)]
         # the rifts done, a card each, under the day they were done
         groups = []
@@ -1742,8 +1735,7 @@ class App:
             return [{"k": "toolbar", "id": "dungeon_tools", "btns": [
                         {"id": "close_dungeon_run",
                          "t": "‹  Runs de " + dungeon_name(d.get("kind"))},
-                        {"id": "copy_rift_image", "t": "Copier l'image"},
-                        {"id": "copy_rift_text", "t": "Copier le texte"}]},
+                        {"id": "copy_rift_image", "t": "Copier l'image"}]},
                     node]
         if self._dungeon_kind is not None:
             kind = self._dungeon_kind

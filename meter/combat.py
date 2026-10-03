@@ -721,7 +721,9 @@ class RiftRecorder:
                  "heal_hits": 0,
                  "skills": defaultdict(lambda: [0, 0.0, 0]),
                  "heals": defaultdict(lambda: [0, 0.0, 0, 0.0]),
-                 "elements": defaultdict(lambda: [0, 0.0])}
+                 "elements": defaultdict(lambda: [0, 0.0]),
+                 # each skill's damage by element: its colour in the report
+                 "skillEl": defaultdict(lambda: defaultdict(float))}
             ph["players"][name] = p
         return p
 
@@ -745,6 +747,7 @@ class RiftRecorder:
             s[0] += sign; s[1] += amount; s[2] += sign * int(ev.get("crit", 0))
             e = p["elements"][el]
             e[0] += sign; e[1] += amount
+            p["skillEl"][sid][el] += amount
             tk = ev.get("target")
             if tk:
                 ph["targets"][tk] += amount
@@ -868,6 +871,10 @@ class RiftRecorder:
                     for key in ("skills", "heals", "elements"):
                         p[key] = {k: list(v) for k, v in p[key].items()
                                   if abs(v[1]) > 0.5}
+                    # a skill's element: the one it did the most damage in
+                    p["skillEl"] = {k: max(v, key=v.get)
+                                    for k, v in p["skillEl"].items()
+                                    if k in p["skills"] and v}
                     used_skills.update(p["skills"])
                     used_skills.update(p["heals"])
                 total = sum(p["total"] for p in players)

@@ -465,11 +465,10 @@ html.lt-760 .ltier .lootstrip { flex-wrap: wrap; }
 
 /* rift report */
 .report { padding: 18px 20px 22px; }
-.report .rtitle { display: flex; align-items: baseline; gap: 12px;
-                  margin-bottom: 16px; padding-bottom: 12px;
-                  border-bottom: 1px solid var(--line); }
-.report .rtitle b { font-size: 16px; color: var(--rift); }
-.report .rtitle span { color: var(--dim); }
+.report .rtitle { margin-bottom: 14px; }
+.report .rtitle .rwhen, .report .rtitle .rsub { font-family: inherit; font-size: 12px;
+                                                font-weight: 400; letter-spacing: 0;
+                                                text-transform: none; color: var(--dim); }
 .phases { display: grid;
           grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
           gap: 20px; }
@@ -2627,3 +2626,72 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .column .droptable.lite .drow { grid-template-columns: 34px minmax(120px, 2fr) minmax(90px, 1fr)
                                                        64px minmax(64px, .8fr); }
 .column .drow .nm { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; }
+
+/* ---- reports: each ranking row a bar in its class's colour ----------------- */
+/* the class badge on a dark square, then the bar, filled from the left as far
+   as the player's share against the best */
+.rktbl .rk { grid-template-columns: 30px minmax(0, 1fr); gap: 0; padding: 0; align-items: center; }
+/* the class badge in a small rounded dark square, the bar's colour around it */
+.rktbl .rk .rkic { display: grid; place-items: center; }
+.rktbl .rk.rkfill .rkic span, .rktbl .rk.rkfill .rkic img { position: relative; }
+.rktbl .rk .rkicon { width: 22px; height: 22px; margin: 0; padding: 2px; box-sizing: border-box;
+                     border-radius: 6px; background: rgba(0, 0, 0, .55);
+                     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.rktbl .rk .rkic .cls { font-size: 10px; color: var(--dim); }
+.rktbl .rkbar { display: grid; grid-template-columns: minmax(100px, 1fr) 64px 76px 44px;
+                gap: 8px; padding: 6px 10px 6px 4px; align-items: center; min-width: 0; }
+.rk.rkfill { --cc: #7A7698; }
+.rk.rkfill.c-warrior { --cc: #B8513C; }
+.rk.rkfill.c-mage    { --cc: #3F78D6; }
+.rk.rkfill.c-priest  { --cc: #C9A93E; }
+.rk.rkfill.c-rogue   { --cc: #3E9E66; }
+/* the bar is the whole row, its badge included; one background hovered or not */
+.rk.rkfill, .rk.rkfill:nth-child(odd), .rk.rkfill.click:hover {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--cc) 80%, transparent) 0,
+    color-mix(in srgb, var(--cc) 55%, transparent) var(--fill, 0%),
+    var(--zebra, transparent) var(--fill, 0%));
+}
+.rk.rkfill { transition: filter .12s; }
+.rk.rkfill:hover { filter: brightness(1.18); }
+.rk.rkfill .rkbar > span { text-shadow: 0 1px 2px rgba(0, 0, 0, .75); }
+.rk.rkfill .nm { color: #fff; }
+.rk.rkfill.zero .nm { color: var(--faint); }
+.rk.rkfill + .rk.rkfill { border-top: 1px solid rgba(0, 0, 0, .35); }
+
+/* ---- reports: no frame of their own, the phases are the blocks ------------- */
+.panel.report { background: transparent; border: 0; box-shadow: none; padding: 0; }
+/* the phase's three counts across its whole width; no MVP boxes */
+.phase .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* tables: darker, a row in two a shade lighter, the head darker still */
+.phase .sub.rtab { color: #fff; font-size: 12px; letter-spacing: .6px; }
+.rktbl, .tbl.types { background: rgba(0, 0, 0, .3); border-color: rgba(0, 0, 0, .35); }
+.rktbl .rk.h { background: rgba(0, 0, 0, .5); color: var(--dim); }
+.rktbl .rk.rkfill:nth-child(odd) { --zebra: rgba(255, 255, 255, .045); }
+
+/* a phase's title in white */
+.phase h4 { color: #fff; }
+/* damage by type: a ring, centred, its legend beside it */
+.typepie { display: flex; align-items: center; justify-content: center; gap: 22px;
+           padding: 10px 0 4px; flex-wrap: wrap; }
+.typepie .pie { width: 150px; height: 150px; flex: none;
+                filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .35)); }
+.typepie .pie circle { transition: opacity .15s; }
+.typepie .pie circle.dim { opacity: .18; }
+.pielegend .pl { cursor: default; border-radius: 4px; }
+.pielegend .pl:hover { background: rgba(255, 255, 255, .05); }
+.pielegend { display: grid; gap: 4px; min-width: 150px; }
+.pielegend .pl { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 8px;
+                 font-size: 12px; }
+.pielegend .pl i { width: 12px; height: 12px; border-radius: 3px; }
+.pielegend .pl span { color: var(--text); }
+.pielegend .pl b { font-variant-numeric: tabular-nums; color: #fff; }
+
+/* a player's card: its titles in white, its skill icons in the badge square */
+.pcard .sub2.rtab { color: #fff; }
+.rktbl .rk .rkicon.skic { padding: 0; object-fit: cover; }
+.rktbl .rk span.rkicon { display: block; }
+/* a player's card: its counts across the whole card, darker than it */
+.pcard .facts { display: flex; gap: 8px; }
+.pcard .facts .fact { flex: 1 1 0; min-width: 0; background: rgba(0, 0, 0, .3);
+                      border-color: rgba(0, 0, 0, .35); }

@@ -1,39 +1,100 @@
 /* Rift reports: the report page and a player's card. */
 
 /* ---- rift report -------------------------------------------------------- */
-const players = (n) => n + (n > 1 ? ' joueurs' : ' joueur');
-
 /* The player whose report card is open, and which of their phases. */
 const REPORT_SEL = { name: null, phase: 0, detail: null };
 
+/* A ranking, a bar per player as in the game's meters: the class's badge
+   on a dark square, then the bar — "1. Name" and the numbers — filled from
+   the left in the class's colour, as far as their share against the best. */
 function rankTable(rows, rateLabel) {
-  const box = el('div', 'tbl');
+  const box = el('div', 'tbl rktbl');
   const h = el('div', 'rk h');
-  ['', 'Joueur', rateLabel, 'Total', 'Part'].forEach((t, i) =>
-    h.appendChild(el('span', i > 1 ? 'num' : '', t)));
+  h.appendChild(el('span', 'rkic'));
+  const hb = el('div', 'rkbar');
+  ['Joueur', rateLabel, 'Total', 'Part'].forEach((t, i) => hb.appendChild(el('span', i ? 'num' : '', t)));
+  h.appendChild(hb);
   box.appendChild(h);
   rows.forEach((r) => {
-    const row = el('div', 'rk click' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : ''));
+    const row = el('div', 'rk click rkfill' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : '')
+      + (r.ck ? ' c-' + r.ck : ''));
     row.title = 'Détail de ' + r.name;
     row.addEventListener('click', () => { REPORT_SEL.name = r.name; renderPlayerCard(); });
-    row.appendChild(el('span', null, r.rank));
-    const nm = el('span', 'nm', r.name);
-    if (r.cls || r.ck) nm.appendChild(classEl(r.cls, r.ck, 'cl'));
-    row.appendChild(nm);
-    row.appendChild(el('span', 'num', r.rate));
-    row.appendChild(el('span', 'num', r.total));
-    row.appendChild(el('span', 'num', r.pct));
+    const ic = el('span', 'rkic');
+    if (r.cls || r.ck) ic.appendChild(classEl(r.cls, r.ck, 'rkicon'));
+    row.appendChild(ic);
+    const bar = el('div', 'rkbar');
+    row.style.setProperty('--fill', (r.zero ? 0 : Math.max(0, Math.min(1, r.f || 0)) * 100) + '%');
+    bar.appendChild(el('span', 'nm', r.rank + '. ' + r.name));
+    bar.appendChild(el('span', 'num', r.rate));
+    bar.appendChild(el('span', 'num', r.total));
+    bar.appendChild(el('span', 'num', r.pct));
+    row.appendChild(bar);
     box.appendChild(row);
   });
+  return box;
+}
+
+/* The damage by type: a ring, centred, each type its arc in its colour, and
+   the types listed beside it with their share. */
+function typePie(types) {
+  const box = el('div', 'typepie');
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 120 120');
+  svg.setAttribute('class', 'pie');
+  const r = 46, len = 2 * Math.PI * r;
+  const sum = types.reduce((a, x) => a + (x.s || 0), 0) || 1;
+  let at = 0;
+  const arcs = [];
+  types.forEach((x, i) => {
+    const part = (x.s || 0) / sum;
+    if (part <= 0) return;
+    const arc = document.createElementNS(ns, 'circle');
+    arc.dataset.i = i;
+    arcs.push(arc);
+    arc.setAttribute('cx', 60);
+    arc.setAttribute('cy', 60);
+    arc.setAttribute('r', r);
+    arc.setAttribute('fill', 'none');
+    arc.setAttribute('stroke', x.c);
+    arc.setAttribute('stroke-width', 22);
+    // a hair of gap between arcs, but never more than the arc itself
+    const gap = Math.min(1.2, part * len / 3);
+    arc.setAttribute('stroke-dasharray', (part * len - gap) + ' ' + (len - part * len + gap));
+    arc.setAttribute('stroke-dashoffset', -at * len);
+    arc.setAttribute('transform', 'rotate(-90 60 60)');
+    const tip = document.createElementNS(ns, 'title');
+    tip.textContent = x.t + ' — ' + x.pct;
+    arc.appendChild(tip);
+    svg.appendChild(arc);
+    at += part;
+  });
+  box.appendChild(svg);
+  const legend = el('div', 'pielegend');
+  // a type pointed at in the legend: the others fade in the ring
+  const focus = (i) => arcs.forEach((a) => a.classList.toggle('dim', i != null && a.dataset.i !== String(i)));
+  types.forEach((x, i) => {
+    const row = el('div', 'pl');
+    row.addEventListener('mouseenter', () => focus(i));
+    row.addEventListener('mouseleave', () => focus(null));
+    const dot = el('i');
+    dot.style.background = x.c;
+    row.appendChild(dot);
+    row.appendChild(el('span', null, x.t));
+    row.appendChild(el('b', null, x.pct));
+    legend.appendChild(row);
+  });
+  box.appendChild(legend);
   return box;
 }
 
 function buildReport(n) {
   REPORT_SEL.detail = n.detail || null;
   const p = el('div', 'panel report');
-  const t = el('div', 'rtitle');
-  t.appendChild(el('b', null, n.title));
-  t.appendChild(el('span', null, n.when));
+  // titled like every tab's sections: the yellow diamond, then the date
+  const t = el('div', 'section rtitle', n.title);
+  t.appendChild(el('span', 'rwhen', n.when));
   if (n.sub) t.appendChild(el('span', 'rsub', n.sub));
   p.appendChild(t);
   const cols = el('div', 'phases');
@@ -50,53 +111,18 @@ function buildReport(n) {
       facts.appendChild(f);
     });
     top.appendChild(facts);
-    top.appendChild(el('div', 'totals', ph.totals));
     c.appendChild(top);
-    if (ph.mvp) {
-      const podium = el('div', 'podium');
-      const m = el('div', 'mvpbox');
-      m.appendChild(el('span', 'lbl', 'MVP dégâts'));
-      const mn = el('div', 'mvp', '★ ' + ph.mvp.name + ' ');
-      if (ph.mvp.cls || ph.mvp.ck) mn.appendChild(classEl(ph.mvp.cls, ph.mvp.ck, 'big'));
-      m.appendChild(mn);
-      m.appendChild(el('div', 'v', ph.mvp.v));
-      podium.appendChild(m);
-      if (ph.healer) {
-        const h = el('div', 'mvpbox heal');
-        h.appendChild(el('span', 'lbl', 'MVP soins'));
-        const hn = el('div', 'healer', '✚ ' + ph.healer.name + ' ');
-        if (ph.healer.cls || ph.healer.ck) hn.appendChild(classEl(ph.healer.cls, ph.healer.ck, 'big'));
-        h.appendChild(hn);
-        h.appendChild(el('div', 'v', ph.healer.v));
-        podium.appendChild(h);
-      }
-      c.appendChild(podium);
-    } else {
-      c.appendChild(el('div', 'empty', "rien n'a été enregistré pour cette phase"));
-    }
+    if (!ph.mvp) c.appendChild(el('div', 'empty', "rien n'a été enregistré pour cette phase"));
     if (ph.dmg && ph.dmg.length) {
-      c.appendChild(el('div', 'sub', 'Dégâts — ' + players(ph.dmg.length)));
+      c.appendChild(el('div', 'sub rtab', 'Dégâts'));
       c.appendChild(rankTable(ph.dmg, 'DPS'));
     }
-    c.appendChild(el('div', 'sub', 'Soins' + (ph.heal && ph.heal.length ? ' — ' + players(ph.heal.length) : '')));
+    c.appendChild(el('div', 'sub rtab', 'Soins'));
     if (ph.heal && ph.heal.length) c.appendChild(rankTable(ph.heal, 'HPS'));
     else c.appendChild(el('div', 'empty', 'aucun soin enregistré'));
     if (ph.types && ph.types.length) {
-      c.appendChild(el('div', 'sub', 'Dégâts par type'));
-      const tbox = el('div', 'tbl types');
-      c.appendChild(tbox);
-      ph.types.forEach((x) => {
-        const r = el('div', 'typ');
-        const l = el('span', null, x.t);
-        l.style.color = x.c;
-        r.appendChild(l);
-        const b = el('div', 'b');
-        b.style.background = x.c;
-        b.style.width = (Math.max(0.02, x.f) * 100) + '%';
-        r.appendChild(b);
-        r.appendChild(el('span', 'num', x.pct));
-        tbox.appendChild(r);
-      });
+      c.appendChild(el('div', 'sub rtab', 'Dégâts par type'));
+      c.appendChild(typePie(ph.types));
     }
     cols.appendChild(c);
   });
@@ -145,23 +171,41 @@ function renderPlayerCard() {
   });
   card.appendChild(facts);
 
+  // as the report's tables: each skill a bar in the player's class colour,
+  // filled as far as its share against their best, led by its icon
   const table = (title, rows, cols) => {
-    card.appendChild(el('div', 'sub2', title));
+    card.appendChild(el('div', 'sub2 rtab', title));
     if (!rows.length) { card.appendChild(el('p', 'none', 'rien d’enregistré')); return; }
-    const t = el('div', 'tbl pctbl');
-    const hd = el('div', 'pr h');
-    ['Compétence', ''].concat(cols.map((c) => c[0])).forEach((c, i) =>
-      hd.appendChild(el('span', i > 1 ? 'num' : '', c)));
+    const t = el('div', 'tbl rktbl pctbl');
+    const grid = 'minmax(110px, 1fr) repeat(' + cols.length + ', 62px)';
+    const hd = el('div', 'rk h');
+    hd.appendChild(el('span', 'rkic'));
+    const hb = el('div', 'rkbar');
+    hb.style.gridTemplateColumns = grid;
+    ['Compétence'].concat(cols.map((c) => c[0])).forEach((c, i) => hb.appendChild(el('span', i ? 'num' : '', c)));
+    hd.appendChild(hb);
     t.appendChild(hd);
+    const top = Math.max(...rows.map((r) => r.f || 0)) || 1;
     rows.forEach((r) => {
-      const row = el('div', 'pr');
-      row.appendChild(el('span', 'nm', r.n));
-      const b = el('div', 'bar dmg');
-      const i = el('i', 'all');
-      i.style.width = (Math.max(0.01, r.f) * 100) + '%';
-      b.appendChild(i);
-      row.appendChild(b);
-      cols.forEach((c) => row.appendChild(el('span', 'num', r[c[1]])));
+      const row = el('div', 'rk rkfill' + (d.ck ? ' c-' + d.ck : ''));
+      row.style.setProperty('--fill', (Math.max(0, Math.min(1, (r.f || 0) / top)) * 100) + '%');
+      if (r.c) row.style.setProperty('--cc', r.c);
+      const ic = el('span', 'rkic');
+      const src = (r.ids || []).map((id) => (window.__SKILL__ || {})[id]).find(Boolean);
+      if (src) {
+        const im = el('img', 'rkicon skic');
+        im.src = src;
+        im.alt = '';
+        ic.appendChild(im);
+      } else {
+        ic.appendChild(el('span', 'rkicon'));   // the square, empty
+      }
+      row.appendChild(ic);
+      const bar = el('div', 'rkbar');
+      bar.style.gridTemplateColumns = grid;
+      bar.appendChild(el('span', 'nm', r.n));
+      cols.forEach((c) => bar.appendChild(el('span', 'num', r[c[1]])));
+      row.appendChild(bar);
       t.appendChild(row);
     });
     card.appendChild(t);
@@ -172,21 +216,9 @@ function renderPlayerCard() {
     table('Sources de soins', ph.heals, [['Part', 'pct'], ['Soins', 't'], ['Nombre', 'hits']]);
   }
   if ((ph.elements || []).length) {
-    card.appendChild(el('div', 'sub2', 'Dégâts par type'));
-    const tb = el('div', 'tbl types');
-    ph.elements.forEach((x2) => {
-      const r = el('div', 'typ');
-      const l = el('span', null, x2.t);
-      l.style.color = x2.c;
-      r.appendChild(l);
-      const b = el('div', 'b');
-      b.style.background = x2.c;
-      b.style.width = (Math.max(0.02, x2.f) * 100) + '%';
-      r.appendChild(b);
-      r.appendChild(el('span', 'num', x2.pct));
-      tb.appendChild(r);
-    });
-    card.appendChild(tb);
+    card.appendChild(el('div', 'sub2 rtab', 'Dégâts par type'));
+    // here each type's f is already its share of the player's damage
+    card.appendChild(typePie(ph.elements.map((x2) => Object.assign({}, x2, { s: x2.f }))));
   }
   shade.appendChild(card);
   document.body.appendChild(shade);

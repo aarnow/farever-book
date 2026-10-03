@@ -1,7 +1,6 @@
 """Rift reports: the report page and the shareable image."""
 from __future__ import annotations
 
-import math
 import os
 import time
 from pathlib import Path
@@ -36,6 +35,7 @@ def report_view(data):
 
     def rank(players, key, dur, total):
         out = []
+        top = max((float(p.get(key) or 0) for p in players), default=0)
         for i, p in enumerate(players, 1):
             amt = float(p.get(key) or 0)
             rate = _rate(amt, dur)
@@ -43,7 +43,9 @@ def report_view(data):
                         "cls": cls(p), "ck": class_key(p.get("cls")),
                         "rate": _n(rate) if rate else "—",
                         "total": _n(amt),
-                        "pct": f"{(amt / total * 100) if total else 0:.0f}%"})
+                        "pct": f"{(amt / total * 100) if total else 0:.0f}%",
+                        # the bar behind the row: against the best of them
+                        "f": round(amt / top, 4) if top else 0})
         return out
 
     phases = []
@@ -84,6 +86,8 @@ def report_view(data):
             "types": [{"t": element_label(el),
                        "pct": _pct1(amt / total * 100 if total else 0),
                        "f": round(amt / (ph["elements"][0][1] or 1), 4),
+                       # its share of the whole, for the pie
+                       "s": round(amt / total, 4) if total else 0,
                        "c": element_color(el)}
                       for el, amt in (ph.get("elements") or [])[:8]],
         })
@@ -116,16 +120,27 @@ def _report_players(data):
             heal = float(p.get("heal") or 0)
             # One row per NAME: the game names every step of a basic-attack
             # combo "Attaque", and three "Attaque" rows read as a bug.
-            merged = {}
+            merged, ids, els_of = {}, {}, {}
+            skill_el = p.get("skillEl") or {}
             for sid, v in (p.get("skills") or {}).items():
                 hits, amt, crits = (list(v) + [0, 0, 0])[:3]
                 m = merged.setdefault(label(sid), [0, 0.0, 0])
                 m[0] += hits
                 m[1] += amt
                 m[2] += crits
+                # the skills behind the name, for its icon (skill_img/)
+                ids.setdefault(label(sid), []).append(str(sid).split(":")[-1])
+                if skill_el.get(sid):
+                    w = els_of.setdefault(label(sid), {})
+                    w[skill_el[sid]] = w.get(skill_el[sid], 0) + amt
             skills = []
             for name, (hits, amt, crits) in merged.items():
-                skills.append({"n": name, "t": _n(amt),
+                el_ = (max(els_of[name], key=els_of[name].get)
+                       if els_of.get(name) else None)
+                skills.append({"n": name, "t": _n(amt), "ids": ids[name],
+                               # its bar in its element's colour (reports
+                               # from 1.12 on; older ones keep the class's)
+                               "c": element_color(el_) if el_ else "",
                                "f": round(amt / total, 4) if total else 0,
                                "pct": _pct1(amt / total * 100 if total else 0),
                                "hits": _n(hits),
@@ -134,15 +149,16 @@ def _report_players(data):
                                "avg": _n(amt / hits) if hits else "—",
                                "_a": amt})
             skills.sort(key=lambda s: -s.pop("_a"))
-            hmerged = {}
+            hmerged, hids = {}, {}
             for sid, v in (p.get("heals") or {}).items():
                 hits, amt = (list(v) + [0, 0])[:2]
                 m = hmerged.setdefault(label(sid), [0, 0.0])
                 m[0] += hits
                 m[1] += amt
+                hids.setdefault(label(sid), []).append(str(sid).split(":")[-1])
             heals = []
             for name, (hits, amt) in hmerged.items():
-                heals.append({"n": name, "t": _n(amt),
+                heals.append({"n": name, "t": _n(amt), "ids": hids[name],
                               "f": round(amt / heal, 4) if heal else 0,
                               "pct": _pct1(amt / heal * 100 if heal else 0),
                               "hits": _n(hits), "_a": amt})
@@ -212,58 +228,70 @@ def loot_view(loot):
 
 
 # The rift report as an image. Drawn from the same display data as the Failles
-# page (report_view), in the same palette and layout — cards per phase, framed
-# tables, every player — so a pasted image looks like the window it came from.
-# Drawn rather than screenshotted: pixel-clean, and it works with the window
-# closed (the .png is written the moment a rift ends).
-IMG_BG, IMG_PANEL, IMG_PANEL2 = "#15161C", "#1D1F28", "#242733"
-
-
-IMG_LINE, IMG_TEXT, IMG_DIM, IMG_FAINT = "#2E3240", "#E7E4DC", "#9C988F", "#6E6B65"
-
-
-IMG_ACCENT, IMG_HEAL, IMG_RIFT, IMG_PHASE = "#E2B65B", "#57C08A", "#D65DB1", "#F3C9E5"
-
-
-IMG_COL_W = 560                 # one phase card
-
-
+# page (report_view), in the window's own palette and layout — the title with
+# its gold diamond, a card per phase, every player a bar in their class's
+# colour, the damage by type as a ring — so a pasted image looks like the
+# window it came from. Drawn rather than screenshotted: pixel-clean, and it
+# works with the window closed (the .png is written the moment a rift ends).
+IMG_BG, IMG_CARD, IMG_RAISED = "#211F3A", "#211F3A", "#36335C"
+IMG_LINE, IMG_LINE2 = "#47447A", "#5B5893"
+IMG_TEXT, IMG_DIM, IMG_FAINT = "#EEEBFF", "#ADA9D6", "#7F7BAA"
+IMG_GOLD, IMG_GOLD2 = "#FBE08A", "#D69E2E"
+IMG_TABLE, IMG_HEAD, IMG_ZEBRA = "#171529", "#100F1D", "#1F1D33"
+IMG_CLASS = {"warrior": "#B8513C", "mage": "#3F78D6", "priest": "#C9A93E",
+             "rogue": "#3E9E66"}
+IMG_COL_W = 580                 # one phase card
 IMG_PAD = 24
 
 
+def _hex(c):
+    c = c.lstrip("#")
+    return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _mix(fg, bg, a):
+    """`fg` laid over `bg` at opacity `a`, as an RGB tuple."""
+    f, g = _hex(fg), _hex(bg)
+    return tuple(round(f[i] * a + g[i] * (1 - a)) for i in range(3))
+
+
 def render_rift_report_image(data, path=None):
-    """Draw a rift report as a PIL image; also writes a PNG when `path` is
-    given."""
+    """Draw a rift (or dungeon) report as a PIL image; also writes a PNG
+    when `path` is given."""
     from PIL import Image, ImageDraw
 
     view = report_view(data)
     reg = lambda size: _parse_font("segoeui.ttf", size)     # noqa: E731
     bold = lambda size: _parse_font("segoeuib.ttf", size)   # noqa: E731
-    f_title, f_phase, f_mvp = bold(22), bold(17), bold(18)
-    f_fact_v, f_body_b, f_body = bold(19), bold(14), reg(14)
-    f_small, f_small_b, f_tiny = reg(12), bold(12), reg(11)
+
+    def head(size):
+        f = _parse_font("bahnschrift.ttf", size)
+        try:
+            f.set_variation_by_name("Bold")
+        except Exception:
+            f = bold(size)
+        return f
+    f_title, f_phase, f_sub = head(21), head(16), head(13)
+    f_fact_v, f_fact_l = head(19), reg(11)
+    f_row, f_row_b, f_num, f_tiny = reg(13), bold(13), reg(13), reg(11)
+    f_when, f_leg, f_leg_b = reg(13), reg(13), bold(13)
 
     W = IMG_PAD * 3 + IMG_COL_W * 2
-    img = Image.new("RGBA", (W, 4000), IMG_BG)
+    img = Image.new("RGBA", (W, 5000), IMG_BG)
+    d = ImageDraw.Draw(img)
     icons = {}
 
-    def icon(key, size, faded=False):
+    def icon(key, size):
         """A class icon at `size` px, or None if there is none."""
         if not key:
             return None
-        k = (key, size, faded)
-        if k not in icons:
+        if (key, size) not in icons:
             try:
                 im = Image.open(CLASS_ICON_DIR / f"{key}.png").convert("RGBA")
-                im = im.resize((size, size), Image.LANCZOS)
-                if faded:
-                    a = im.getchannel("A").point(lambda v: v * 45 // 100)
-                    im.putalpha(a)
-                icons[k] = im
+                icons[(key, size)] = im.resize((size, size), Image.LANCZOS)
             except OSError:
-                icons[k] = None
-        return icons[k]
-    d = ImageDraw.Draw(img)
+                icons[(key, size)] = None
+        return icons[(key, size)]
 
     def text(x, y, s, font, fill, anchor="la"):
         d.text((x, y), str(s), font=font, fill=fill, anchor=anchor)
@@ -277,173 +305,182 @@ def render_rift_report_image(data, path=None):
             s = s[:-1]
         return s + "…"
 
-    def star(x, y, r, fill):
-        pts = []
-        for i in range(10):
-            a = -math.pi / 2 + i * math.pi / 5
-            rad = r if i % 2 == 0 else r * 0.42
-            pts.append((x + rad * math.cos(a), y + rad * math.sin(a)))
-        d.polygon(pts, fill=fill)
-
-    def plus(x, y, r, fill):
-        t = max(2, int(r * 0.55))
-        d.rectangle((x - t // 2, y - r, x + t // 2, y + r), fill=fill)
-        d.rectangle((x - r, y - t // 2, x + r, y + t // 2), fill=fill)
+    def gradient(w, h, c0, c1):
+        """A horizontal gradient strip, c0 on the left to c1 on the right."""
+        strip = Image.new("RGB", (max(2, w), 1))
+        px = strip.load()
+        for i in range(strip.width):
+            t = i / (strip.width - 1)
+            px[i, 0] = tuple(round(c0[k] * (1 - t) + c1[k] * t) for k in range(3))
+        return strip.resize((max(1, w), max(1, h)))
 
     def table(x, y, w, rows, rate_label):
-        """A framed ranking: header band, a rule between rows. Returns the
-        y below it."""
-        row_h, head_h = 26, 24
-        cols = (("", 26, "la"), ("JOUEUR", None, "la"), (rate_label, 70, "ra"),
-                ("TOTAL", 86, "ra"), ("PART", 50, "ra"))
-        fixed = sum(c[1] for c in cols if c[1])
-        name_w = w - fixed - 20
+        """A ranking as in the window: a bar per player, filled from the left
+        in their class's colour as far as their share against the best, led
+        by the class badge in a dark rounded square. Returns the y below."""
+        row_h, head_h, ic_w = 30, 26, 32
+        num_w = (64, 80, 50)
         h = head_h + row_h * len(rows)
-        d.rounded_rectangle((x, y, x + w, y + h), 6, fill=IMG_BG,
-                            outline=IMG_LINE)
-        d.rounded_rectangle((x + 1, y + 1, x + w - 1, y + head_h), 5,
-                            fill=IMG_PANEL2)
+        d.rounded_rectangle((x, y, x + w, y + h), 7, fill=IMG_TABLE)
+        d.rounded_rectangle((x, y, x + w, y + head_h), 7, fill=IMG_HEAD)
+        d.rectangle((x, y + head_h - 7, x + w, y + head_h), fill=IMG_HEAD)
 
-        def cells(yy, values, fonts, fills):
-            cx = x + 10
-            for (label, cw, anchor), v, f, fl in zip(cols, values, fonts, fills):
-                cw = cw or name_w
-                if anchor == "ra":
-                    text(cx + cw, yy, v, f, fl, "ra")
-                else:
-                    text(cx, yy, v, f, fl)
-                cx += cw
-
-        cells(y + 6, [c[0] for c in cols], [f_tiny] * 5, [IMG_DIM] * 5)
+        def numbers(yy, vals, font, fill):
+            rx = x + w - 10
+            for v, cw in zip(reversed(vals), reversed(num_w)):
+                text(rx, yy, v, font, fill, "ra")
+                rx -= cw
+        text(x + ic_w + 4, y + 7, "JOUEUR", f_tiny, IMG_DIM)
+        numbers(y + 7, [rate_label, "TOTAL", "PART"], f_tiny, IMG_DIM)
         yy = y + head_h
         for i, r in enumerate(rows):
-            if i % 2:
-                d.rectangle((x + 1, yy, x + w - 1, yy + row_h),
-                            fill="#191B22")
-            d.line((x + 1, yy, x + w - 1, yy), fill=IMG_LINE)
-            zero, top = r.get("zero"), r["rank"] <= 3 and not r.get("zero")
-            ink = IMG_FAINT if zero else IMG_TEXT
-            nfont = f_body_b if top else f_body
-            name = fit(r["name"], nfont, name_w - 50)
-            cells(yy + 5, [r["rank"], name, r["rate"], r["total"], r["pct"]],
-                  [f_body, nfont, f_body, f_body, f_body],
-                  [IMG_FAINT if zero else IMG_DIM, ink, ink, ink, ink])
-            nx = int(x + 10 + 26 + d.textlength(name, font=nfont) + 6)
-            ic = icon(r.get("ck"), 16, zero)
+            zero = bool(r.get("zero"))
+            base = IMG_ZEBRA if i % 2 else IMG_TABLE
+            d.rectangle((x, yy, x + w, yy + row_h), fill=base)
+            f = 0 if zero else max(0.0, min(1.0, float(r.get("f") or 0)))
+            cc = IMG_CLASS.get(r.get("ck") or "", "#7A7698")
+            fw = int(w * f)
+            if fw > 1:
+                img.paste(gradient(fw, row_h, _mix(cc, base, .8),
+                                   _mix(cc, base, .55)), (x, yy))
+            if i:
+                d.line((x, yy, x + w, yy), fill=(0, 0, 0))
+            # the badge: a dark rounded square, the class icon in it
+            sq = 22
+            sx, sy = x + (ic_w - sq) // 2 + 2, yy + (row_h - sq) // 2
+            under = _mix(cc, base, .8) if fw > sx - x + sq else _hex(base)
+            d.rounded_rectangle((sx, sy, sx + sq, sy + sq), 6,
+                                fill=tuple(round(c * .45) for c in under))
+            ic = icon(r.get("ck"), 18)
             if ic is not None:
-                img.alpha_composite(ic, (nx, yy + 5))
-            elif r.get("cls"):
-                text(nx, yy + 7, r["cls"], f_small, IMG_FAINT if zero else IMG_DIM)
+                img.alpha_composite(ic, (sx + 2, sy + 2))
+            top = r["rank"] <= 3 and not zero
+            font = f_row_b if top else f_row
+            name_w = w - ic_w - sum(num_w) - 20
+            label = fit(f"{r['rank']}. {r['name']}", font, name_w)
+            # a soft shadow under the words, as in the window
+            text(x + ic_w + 5, yy + 8, label, font, (0, 0, 0))
+            text(x + ic_w + 4, yy + 7, label, font,
+                 IMG_FAINT if zero else "#FFFFFF")
+            numbers(yy + 7, [r["rate"], r["total"], r["pct"]], f_num,
+                    IMG_FAINT if zero else IMG_TEXT)
             yy += row_h
-        # The frame last, so the row fills cannot paint over its edge.
-        d.rounded_rectangle((x, y, x + w, y + h), 6, outline=IMG_LINE)
+        # the corners rounded again over the rows
+        mask = Image.new("L", (w + 1, h + 1), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, w, h), 7, fill=255)
+        corner = img.crop((x, y, x + w + 1, y + h + 1))
+        bg = Image.new("RGBA", corner.size, IMG_CARD)
+        img.paste(Image.composite(corner, bg, mask), (x, y))
         return y + h
 
+    def ring(cx, cy, types):
+        """The damage by type: a ring, each type its arc in its colour."""
+        S, R, T = 4, 70, 22                         # supersampled
+        size = (R + T) * 2 * S
+        layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        total = sum(float(t.get("s") or 0) for t in types) or 1
+        at = -90.0
+        box = (T * S // 2, T * S // 2, size - T * S // 2, size - T * S // 2)
+        for t in types:
+            part = float(t.get("s") or 0) / total
+            if part <= 0:
+                continue
+            sweep = part * 360
+            gap = min(1.0, sweep / 3)
+            ld.arc(box, at, at + sweep - gap, fill=t["c"], width=T * S)
+            at += sweep
+        layer = layer.resize((size // S, size // S), Image.LANCZOS)
+        img.alpha_composite(layer, (int(cx - size // S / 2),
+                                    int(cy - size // S / 2)))
+
     def phase_card(x, y, ph):
-        w = IMG_COL_W
-        pad = 18
+        w, pad = IMG_COL_W, 18
         ix, iw = x + pad, w - pad * 2
         cy = y + pad
-        text(ix, cy, ph["label"].upper(), f_phase, IMG_PHASE)
-        cy += 32
-        fx = ix
-        for label, value in (("DURÉE", ph["dur"]),
-                             ("DPS", ph["dps"].replace(" DPS", "")),
-                             ("HPS", ph["hps"].replace(" HPS", ""))):
-            fw = max(110, int(d.textlength(value, font=f_fact_v)) + 26)
-            d.rounded_rectangle((fx, cy, fx + fw, cy + 52), 6,
-                                fill=IMG_PANEL2, outline=IMG_LINE)
-            text(fx + 12, cy + 7, label, f_tiny, IMG_DIM)
-            text(fx + 12, cy + 22, value, f_fact_v, IMG_TEXT)
-            fx += fw + 8
-        cy += 62
-        text(ix, cy, ph["totals"], f_small, IMG_DIM)
-        cy += 26
+        text(ix, cy, ph["label"].upper(), f_phase, "#FFFFFF")
+        cy += 30
+        # the three counts across the whole width
+        gap = 8
+        fw = (iw - gap * 2) // 3
+        for i, (label, value) in enumerate(
+                (("DURÉE", ph["dur"]), ("DPS", ph["dps"].replace(" DPS", "")),
+                 ("HPS", ph["hps"].replace(" HPS", "")))):
+            fx = ix + i * (fw + gap)
+            d.rounded_rectangle((fx, cy, fx + fw, cy + 54), 6, fill=IMG_RAISED,
+                                outline=IMG_LINE)
+            text(fx + 12, cy + 8, label, f_fact_l, IMG_DIM)
+            text(fx + 12, cy + 24, value, f_fact_v, IMG_TEXT)
+        cy += 68
         d.line((ix, cy, ix + iw, cy), fill=IMG_LINE)
-        cy += 14
-        if ph.get("mvp"):
-            boxes = [("MVP DÉGÂTS", ph["mvp"], IMG_ACCENT, star)]
-            if ph.get("healer"):
-                boxes.append(("MVP SOINS", ph["healer"], IMG_HEAL, plus))
-            bw = (iw - 10 * (len(boxes) - 1)) // len(boxes)
-            for i, (label, who, colour, mark) in enumerate(boxes):
-                bx = ix + i * (bw + 10)
-                d.rounded_rectangle((bx, cy, bx + bw, cy + 78), 6,
-                                    fill=IMG_PANEL2, outline=IMG_LINE)
-                d.rectangle((bx, cy + 1, bx + 3, cy + 77), fill=colour)
-                text(bx + 14, cy + 8, label, f_tiny, IMG_DIM)
-                mark(bx + 24, cy + 38, 9 if mark is star else 7, colour)
-                name = fit(who["name"], f_mvp, bw - 90)
-                text(bx + 40, cy + 26, name, f_mvp, colour)
-                ix2 = int(bx + 46 + d.textlength(name, font=f_mvp))
-                ic = icon(who.get("ck"), 20)
-                if ic is not None:
-                    img.alpha_composite(ic, (ix2, cy + 30))
-                elif who.get("cls"):
-                    text(ix2, cy + 32, who["cls"], f_small, IMG_DIM)
-                text(bx + 14, cy + 54, who["v"], f_body, IMG_TEXT)
-            cy += 92
-        else:
-            text(ix, cy, "rien n'a été enregistré pour cette phase", f_body,
-                 IMG_FAINT)
-            cy += 30
+        cy += 6
+        if not ph.get("mvp"):
+            text(ix, cy + 10, "rien n'a été enregistré pour cette phase",
+                 f_row, IMG_FAINT)
+            cy += 34
 
         def heading(s):
             nonlocal cy
-            cy += 8
-            text(ix, cy, s.upper(), f_small_b, IMG_RIFT)
+            cy += 14
+            text(ix, cy, s.upper(), f_sub, "#FFFFFF")
             cy += 22
 
         if ph.get("dmg"):
-            n = len(ph["dmg"])
-            heading(f"Dégâts — {n} joueur{'s' if n > 1 else ''}")
-            cy = table(ix, cy, iw, ph["dmg"], "DPS") + 10
-        heals = ph.get("heal") or []
-        n = len(heals)
-        heading("Soins" + (f" — {n} joueur{'s' if n > 1 else ''}" if n else ""))
-        if heals:
-            cy = table(ix, cy, iw, heals, "HPS") + 10
+            heading("Dégâts")
+            cy = table(ix, cy, iw, ph["dmg"], "DPS")
+        heading("Soins")
+        if ph.get("heal"):
+            cy = table(ix, cy, iw, ph["heal"], "HPS")
         else:
-            text(ix, cy, "aucun soin enregistré", f_body, IMG_FAINT)
-            cy += 28
+            text(ix, cy, "aucun soin enregistré", f_row, IMG_FAINT)
+            cy += 24
         if ph.get("types"):
             heading("Dégâts par type")
-            th = 14 + 24 * len(ph["types"])
-            d.rounded_rectangle((ix, cy, ix + iw, cy + th), 6, fill=IMG_BG,
-                                outline=IMG_LINE)
-            ty = cy + 9
-            for t in ph["types"]:
-                text(ix + 12, ty, t["t"], f_small, t["c"])
-                bx0, bx1 = ix + 110, ix + iw - 80
-                bw = max(4, int((bx1 - bx0) * max(0.02, t["f"])))
-                d.rounded_rectangle((bx0, ty + 4, bx0 + bw, ty + 11), 3,
-                                    fill=t["c"])
-                text(ix + iw - 12, ty, t["pct"], f_small, IMG_TEXT, "ra")
-                ty += 24
-            cy += th
+            types = ph["types"]
+            lh = 22
+            leg_h = lh * len(types)
+            block_h = max(184, leg_h)
+            leg_w, ring_w = 190, 184
+            bx = ix + (iw - (ring_w + 26 + leg_w)) // 2
+            ring(bx + ring_w / 2, cy + block_h / 2, types)
+            ly = cy + (block_h - leg_h) // 2
+            lx = bx + ring_w + 26
+            for t in types:
+                d.rounded_rectangle((lx, ly + 5, lx + 12, ly + 17), 3, fill=t["c"])
+                text(lx + 20, ly + 2, t["t"], f_leg, IMG_TEXT)
+                text(lx + leg_w, ly + 2, t["pct"], f_leg_b, "#FFFFFF", "ra")
+                ly += lh
+            cy += block_h + 4
         return cy + pad
 
     # Measure both cards on a scratch pass, so they can share one height.
-    y0 = IMG_PAD + 64
-    bottoms = []
-    for i, ph in enumerate(view["phases"][:2]):
-        bottoms.append(phase_card(IMG_PAD + i * (IMG_COL_W + IMG_PAD), y0, ph))
+    y0 = IMG_PAD + 46
+    bottoms = [phase_card(IMG_PAD + i * (IMG_COL_W + IMG_PAD), y0, ph)
+               for i, ph in enumerate(view["phases"][:2])]
     card_bottom = max(bottoms or [y0 + 40])
 
-    # Draw for real: background panel, title, then the cards over it.
-    d.rectangle((0, 0, W, 4000), fill=IMG_BG)
+    # Draw for real: the title, then the cards.
+    d.rectangle((0, 0, W, 5000), fill=IMG_BG)
     H = card_bottom + IMG_PAD
-    d.rounded_rectangle((8, 8, W - 8, H - 8), 10, fill=IMG_PANEL,
-                        outline=IMG_LINE)
-    text(IMG_PAD, IMG_PAD, view["title"], f_title, IMG_RIFT)
+    # the gold diamond, the title, the date, and the line running off
+    dx, dy = IMG_PAD + 6, IMG_PAD + 13
+    d.polygon([(dx, dy - 7), (dx + 7, dy), (dx, dy + 7), (dx - 7, dy)],
+              fill=IMG_GOLD2)
+    d.polygon([(dx, dy - 5), (dx + 4, dy - 1), (dx, dy + 3), (dx - 4, dy - 1)],
+              fill=IMG_GOLD)
+    tx = IMG_PAD + 20
+    text(tx, IMG_PAD + 1, view["title"], f_title, "#FFFFFF")
+    tx += d.textlength(view["title"], font=f_title) + 12
     after = view["when"] + (f"   ·   {view['sub']}" if view.get("sub") else "")
-    text(IMG_PAD + d.textlength(view["title"], font=f_title) + 14,
-         IMG_PAD + 6, after, f_body, IMG_DIM)
-    d.line((IMG_PAD, IMG_PAD + 44, W - IMG_PAD, IMG_PAD + 44), fill=IMG_LINE)
+    text(tx, IMG_PAD + 6, after, f_when, IMG_DIM)
+    lx0 = int(tx + d.textlength(after, font=f_when) + 14)
+    if lx0 < W - IMG_PAD:
+        img.paste(gradient(W - IMG_PAD - lx0, 1, _hex(IMG_LINE2), _hex(IMG_BG)),
+                  (lx0, IMG_PAD + 13))
     for i, ph in enumerate(view["phases"][:2]):
         x = IMG_PAD + i * (IMG_COL_W + IMG_PAD)
         d.rounded_rectangle((x, y0, x + IMG_COL_W, card_bottom), 10,
-                            fill=IMG_BG, outline=IMG_LINE)
+                            fill=IMG_CARD, outline=IMG_LINE)
         phase_card(x, y0, ph)
     img = img.crop((0, 0, W, H)).convert("RGB")
     if path is not None:
