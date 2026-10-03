@@ -56,7 +56,9 @@ for f in _help:
 # pak_extract is emit_offsets' import for the item-name table (data.cdb out
 # of res.light.pak) — same self-heal argument as the rest.
 for tool in ("build_targets.py", "emit_offsets.py", "hlbc_parser.py",
-             "gamepath.py", "pak_extract.py"):
+             "gamepath.py", "pak_extract.py",
+             # the Collection's 3D viewer converts models on demand
+             "hbson.py", "hmd_model.py"):
     datas.append((str(ROOT / "hltools" / tool), "res/hltools"))
 
 # Pillow is imported inside the parse-image functions rather than at module

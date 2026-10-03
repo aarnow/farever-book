@@ -63,3 +63,7 @@ analysis_out/skill_img/
 .meter_achievements.json
 .meter_goals.json
 .meter_me.json
+
+# The Collection's 3D models, converted from your game files the first time
+# you look at each one. A cache: rebuilt on demand, half a megabyte apiece.
+analysis_out/models/

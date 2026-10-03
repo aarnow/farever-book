@@ -1003,3 +1003,62 @@ def locate_hlboot(pid):
           "unusual.", file=sys.stderr)
     return None
 
+
+
+# ---------------------------------------------------------------------------
+# 3D models, for the Collection's viewer
+# ---------------------------------------------------------------------------
+MODELS_DIR = ANALYSIS / "models"
+MODEL_FORMAT = 1
+_model_lock = threading.Lock()
+
+
+def _game_dir():
+    """The game's folder: the hlboot.dat the data was last built from, else
+    the usual search."""
+    try:
+        src = json.loads(DATA_STAMP.read_text(encoding="utf-8")).get("src")
+        if src and Path(src).is_file():
+            return Path(src).parent
+    except (OSError, ValueError):
+        pass
+    hb = locate_hlboot(None)
+    return hb.parent if hb else None
+
+
+def item_model_json(item_id):
+    """One collectible's model for the viewer, as JSON text — read off the
+    game's files the first time (a second or so), from the cache after. The
+    cache is keyed to res.pak, so a game patch rebuilds it. None when the
+    item has no model this reader understands, or the game isn't found."""
+    if not re.fullmatch(r"[A-Za-z0-9_]+", str(item_id or "")):
+        return None
+    game = _game_dir()
+    if game is None or not (game / "res.pak").is_file():
+        return None
+    st = (game / "res.pak").stat()
+    # the converter's version too: a better one rebuilds what the last made
+    key = f"{MODEL_FORMAT}:{st.st_size}:{int(st.st_mtime)}"
+    cache = MODELS_DIR / f"{item_id}.json"
+    with _model_lock:
+        try:
+            got = json.loads(cache.read_text(encoding="utf-8"))
+            if got.get("key") == key:
+                return json.dumps(got.get("m")) if got.get("m") else None
+        except (OSError, ValueError):
+            pass
+        if str(ROOT / "hltools") not in sys.path:
+            sys.path.insert(0, str(ROOT / "hltools"))
+        try:
+            import hmd_model
+            m = hmd_model.item_model(game, item_id)
+        except Exception as e:
+            # not cached: a fix to the reader should get its chance
+            print(f"[meter] model of {item_id} failed: {e!r}", file=sys.stderr)
+            return None
+        try:
+            MODELS_DIR.mkdir(parents=True, exist_ok=True)
+            cache.write_text(json.dumps({"key": key, "m": m}), encoding="utf-8")
+        except OSError:
+            pass
+        return json.dumps(m) if m else None

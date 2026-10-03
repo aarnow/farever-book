@@ -2263,3 +2263,73 @@ html:not(.lt-1250) .btalents { grid-template-columns: minmax(420px, 640px) minma
   #navink, #nav button, #page.leaving > * { transition: none; }
   #page.enter > *, .fadein { animation: none; }
 }
+
+/* ---- Collection: the list, and the item's panel beside it ------------------ */
+.collmain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 42%);
+            gap: 18px; align-items: start; }
+.colllist .colltools { margin-top: 0; }
+.colllist .collgrid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.citem.sel { border-color: var(--accent);
+             box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(242, 201, 76, .25); }
+.collview {
+  --rar: #57537F;
+  position: sticky; top: 8px; display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #34315A, #2A2849);
+  border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .45);
+}
+.collview.empty { min-height: 320px; }
+.collview.r-uncommon  { --rar: #5FB86F; }
+.collview.r-rare      { --rar: #4F7FE0; }
+.collview.r-epic      { --rar: #A267E6; }
+.collview.r-legendary { --rar: #E8913D; }
+.cvstage { position: relative; aspect-ratio: 1 / .82; max-height: 62vh;
+           background: radial-gradient(ellipse at 50% 58%,
+             color-mix(in srgb, var(--rar) 34%, #34306A), #1A1832 78%);
+           border-bottom: 2px solid color-mix(in srgb, var(--rar) 70%, #000); }
+.cvstage::after { content: ""; position: absolute; left: 18%; right: 18%; bottom: 9%; height: 9%;
+                  border-radius: 50%; pointer-events: none;
+                  background: radial-gradient(closest-side, rgba(0, 0, 0, .38), transparent); }
+.cvpic { position: absolute; inset: 64px 12% 24px; display: grid; place-items: center; }
+.cvpic img { max-width: 100%; max-height: 100%; object-fit: contain;
+             filter: grayscale(.85) brightness(.6); }
+.cvpic.own img { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+.cvpic .noimg { font-size: 48px; color: var(--faint); }
+.cvstage .m3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
+                cursor: grab; touch-action: none; opacity: 0; transition: opacity .25s; }
+.cvstage .m3d:active { cursor: grabbing; }
+.cvstage[data-st="ready"] .m3d { opacity: 1; }
+.cvstage.is3d[data-st="ready"] .cvpic,
+.cvstage.is3d[data-st="loading"] .cvpic { opacity: 0; }
+.cvwait, .cvhint { position: absolute; left: 0; right: 0; text-align: center; z-index: 2;
+                   pointer-events: none; font-size: 11px; color: var(--dim); }
+.cvwait { top: 50%; transform: translateY(-50%); display: none; }
+.cvstage[data-st="loading"] .cvwait { display: block; }
+.cvhint { bottom: 8px; opacity: 0; transition: opacity .2s; }
+.cvstage[data-st="ready"]:hover .cvhint { opacity: .8; }
+.cvhead { position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
+          display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+          padding: 14px 16px 22px;
+          background: linear-gradient(180deg, rgba(20, 18, 40, .75), transparent); }
+.cvhead h3 { margin: 0; font-family: var(--font-head); font-size: 20px; color: #fff;
+             letter-spacing: .3px; text-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
+.collview.r-uncommon .cvhead h3 { color: #7BD88F; }
+.collview.r-rare .cvhead h3 { color: #6E9BF2; }
+.collview.r-epic .cvhead h3 { color: #C08CF2; }
+.collview.r-legendary .cvhead h3 { color: #F2A55E; }
+.cvhead .sub { color: var(--dim); font-size: 12px; }
+.cvhead .chip { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px;
+                border: 1px solid var(--line-2); color: var(--dim); background: rgba(0, 0, 0, .3); }
+.cvhead .chip.own { color: var(--heal); border-color: #2F6B45; }
+.cvinfo { padding: 12px 16px 16px; }
+.cvinfo .desc { color: var(--dim); margin: 0 0 8px; }
+.cvinfo .desc.it { font-style: italic; }
+.cvinfo .sub2 { margin: 10px 0 6px; color: var(--accent); font-size: 11px; font-weight: 700;
+                text-transform: uppercase; letter-spacing: 1px; }
+.cvinfo .srcs { margin: 0; padding-left: 18px; }
+.cvinfo .srcs li { margin: 4px 0; }
+.cvinfo .none { color: var(--faint); margin: 0; }
+html.lt-1000 .collmain { grid-template-columns: minmax(0, 1fr) minmax(280px, 46%); }
+html.lt-760 .collmain { grid-template-columns: minmax(0, 1fr); }
+html.lt-760 .collview { position: static; order: -1; }
+html.lt-760 .cvstage { aspect-ratio: 1 / .62; max-height: 48vh; }

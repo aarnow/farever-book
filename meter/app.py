@@ -32,7 +32,7 @@ from gamedata import (
     REGENERATING, _boss_label, _element_done, _fr_names, dungeon_catalogue,
     item_rarity,
     dungeon_name, forget_loaded_data, item_icon, item_label, item_type,
-    locate_hlboot, regenerate_data, world_map)
+    item_model_json, locate_hlboot, regenerate_data, world_map)
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot,
     _overheal_note, _rate, _rate_text, _report_name)
@@ -498,6 +498,8 @@ class App:
             "open_dungeon_run": lambda p: self._open_dungeon_run(
                 p.get("file", "")),
             "close_dungeon_run": lambda: setattr(self, "_dungeon_view", None),
+            # collection
+            "coll_model": lambda p: self._coll_model(p.get("id")),
             # hunting log
             "hunt_open": lambda p: setattr(self, "_hunt_sel", p.get("id")),
             "hunt_close": lambda: setattr(self, "_hunt_sel", None),
@@ -1539,6 +1541,15 @@ class App:
             except (OSError, ValueError):
                 self._collection_owned = {}
         return self._collection_owned
+
+    def _coll_model(self, item_id):
+        """The viewer asked for a collectible's 3D model: built (or read from
+        the cache) off the Tk thread, and sent on its own channel — half a
+        megabyte that has no business riding along in every state push."""
+        def work():
+            d = item_model_json(item_id)
+            self.menubridge.send({"t": "model", "id": item_id, "d": d})
+        threading.Thread(target=work, daemon=True).start()
 
     def _page_collection(self):
         owned = self._collection()

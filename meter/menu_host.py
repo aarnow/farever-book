@@ -321,6 +321,14 @@ class AppWindow:
         elif t == "ov":
             for o in self.overlays:
                 o.update(msg.get("d") or {})
+        elif t == "model":
+            # Its JSON text, passed as a string argument like the state.
+            try:
+                self.window.evaluate_js(
+                    f"window.addModel({json.dumps(msg.get('id'))}, "
+                    f"{json.dumps(msg.get('d'))})")
+            except Exception as e:
+                _log(f"model push failed: {e!r}")
         elif t == "quit":
             self._closing = True
             try:
@@ -583,8 +591,8 @@ def _rect(hwnd):
 # The page's script, by concern, in the order it is joined: core first (the
 # helpers and the state push everything else uses), boot last (it starts the
 # page once every function and constant above exists).
-JS_FILES = ("core", "frame", "live", "report", "dungeons", "collection",
-            "achievements", "hunt", "map", "character", "build", "boot")
+JS_FILES = ("core", "frame", "live", "report", "dungeons", "model3d",
+            "collection", "achievements", "hunt", "map", "character", "build", "boot")
 
 
 def _document():

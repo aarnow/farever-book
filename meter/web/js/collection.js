@@ -91,6 +91,7 @@ function renderCollection(box, n) {
   });
   box.appendChild(cards);
 
+  const list = el('div', 'colllist');
   const tools = el('div', 'colltools');
   const q = el('input', 'collq');
   q.type = 'text';
@@ -106,7 +107,7 @@ function renderCollection(box, n) {
     seg.appendChild(b);
   });
   tools.appendChild(seg);
-  box.appendChild(tools);
+  list.appendChild(tools);
   const gears = COLL.cat === 'gears';
   const things = COLL.cat === 'items';
   // a filter row: big chips, each led by its icon
@@ -131,11 +132,11 @@ function renderCollection(box, n) {
     return im;
   };
   if (gears && (n.slots || []).length) {
-    box.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.slots.map((sl) => (
+    list.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.slots.map((sl) => (
       { v: sl.v, t: sl.t, icon: art('slot_' + sl.v) }))), COLL.slot, (v) => { COLL.slot = v; }));
   }
   if (gears && (n.classes || []).length) {
-    box.appendChild(chips([{ v: '', t: 'Toutes les classes' }].concat(n.classes.map((c) => (
+    list.appendChild(chips([{ v: '', t: 'Toutes les classes' }].concat(n.classes.map((c) => (
       { v: c.v, t: c.t, icon: classEl(c.t, c.v, 'cfic') }))), COLL.cls, (v) => { COLL.cls = v; }));
   }
   if (things && (n.itemCats || []).length) {
@@ -148,7 +149,7 @@ function renderCollection(box, n) {
       im.classList.add('cfic');
       return im;
     };
-    box.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.itemCats.map((c) => (
+    list.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.itemCats.map((c) => (
       { v: c.v, t: c.t, icon: pick(c.v) }))), COLL.icat, (v) => { COLL.icat = v; }));
   }
 
@@ -160,12 +161,18 @@ function renderCollection(box, n) {
     && (!gears || !COLL.cls || !(it.cls || []).length || it.cls.includes(COLL.cls))
     && (!things || !COLL.icat || it.ic === COLL.icat)
     && (!needle || it.name.toLowerCase().includes(needle)));
-  box.appendChild(el('div', 'collcount', shown.length + ' ' + cat.one + (shown.length > 1 ? 's' : '')));
+  const main = el('div', 'collmain');
+  list.appendChild(el('div', 'collcount', shown.length + ' ' + cat.one + (shown.length > 1 ? 's' : '')));
 
+  // the shown item: the one picked, while the filters keep it, else the first
+  let sel = COLL.open && shown.find((it) => it.id === COLL.open);
+  if (!sel) sel = shown[0] || null;
   const grid = el('div', 'collgrid');
   shown.forEach((it) => {
-    const card = el('button', 'citem' + (it.own ? ' own' : '') + (it.rk ? ' r-' + it.rk : ''));
+    const card = el('button', 'citem' + (it.own ? ' own' : '') + (it.rk ? ' r-' + it.rk : '')
+      + (it === sel ? ' sel' : ''));
     card.type = 'button';
+    card.dataset.id = it.id;
     const pic = el('span', 'pic');
     pic.appendChild(collImg(it.id));
     if (it.own) pic.appendChild(el('span', 'ok', '✓'));
@@ -177,14 +184,26 @@ function renderCollection(box, n) {
       for (let i = 0; i < it.rmax; i++) pips.appendChild(el('i', i < it.rank ? 'on' : ''));
       card.appendChild(pips);
     }
-    card.addEventListener('click', () => { COLL.open = it.id; rerenderCollection(); });
+    // only the panel and the highlight change: rebuilding the whole page
+    // here would cost the list its place
+    card.addEventListener('click', () => {
+      COLL.open = it.id;
+      grid.querySelectorAll('.citem.sel').forEach((x) => x.classList.remove('sel'));
+      card.classList.add('sel');
+      const old = main.querySelector('.collview');
+      const v = buildCollView(it, cat);
+      if (old) old.replaceWith(v); else main.appendChild(v);
+      if (document.documentElement.classList.contains('lt-760')) {
+        v.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    });
     grid.appendChild(card);
   });
   if (!shown.length) grid.appendChild(el('div', 'empty', 'Rien à afficher.'));
-  box.appendChild(grid);
-
-  const open = COLL.open && (n.items || []).find((it) => it.id === COLL.open);
-  if (open) box.appendChild(buildCollDetail(open, cat));
+  list.appendChild(grid);
+  main.appendChild(list);
+  main.appendChild(sel ? buildCollView(sel, cat) : el('div', 'collview empty'));
+  box.appendChild(main);
 
   if (keepQ) {
     const qi = box.querySelector('.collq');
@@ -193,25 +212,32 @@ function renderCollection(box, n) {
   }
 }
 
-function buildCollDetail(it, cat) {
-  const shade = el('div', 'collshade');
-  const close = () => { COLL.open = null; rerenderCollection(); };
-  shade.addEventListener('click', (e) => { if (e.target === shade) close(); });
-  const d = el('div', 'colldetail' + (it.rk ? ' r-' + it.rk : ''));
-  const x = el('button', 'x', '×');
-  x.type = 'button';
-  x.addEventListener('click', close);
-  d.appendChild(x);
-  const head = el('div', 'dhead');
-  const pic = el('span', 'pic' + (it.own ? ' own' : ''));
+/* The panel beside the list: the item's model, turning, when the game has
+   one (mounts, for now), else its picture — and what the game says of it. */
+function buildCollView(it, cat) {
+  const v = el('div', 'collview' + (it.rk ? ' r-' + it.rk : ''));
+  const stage = el('div', 'cvstage');
+  const pic = el('div', 'cvpic' + (it.own ? ' own' : ''));
   pic.appendChild(collImg(it.id));
-  head.appendChild(pic);
-  const t = el('div', 'dt');
-  t.appendChild(el('h3', 'nm', it.name));
-  t.appendChild(el('span', 'sub', [cat.t && cat.t.replace(/s$/, ''), it.slot, it.rar].filter(Boolean).join(' · ')));
-  t.appendChild(el('span', 'chip' + (it.own ? ' own' : ''), it.own ? '✓ Obtenu' : 'Manquant'));
-  head.appendChild(t);
-  d.appendChild(head);
+  stage.appendChild(pic);
+  if (it.c === 'mounts' && m3dSupported()) {
+    const wait = el('div', 'cvwait', 'Chargement du modèle 3D…');
+    const hint = el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer');
+    stage.classList.add('is3d');
+    stage.appendChild(m3dCanvas(it.id, (st) => {
+      stage.dataset.st = st;
+    }));
+    stage.appendChild(wait);
+    stage.appendChild(hint);
+  }
+  const head = el('div', 'cvhead');
+  head.appendChild(el('h3', 'nm', it.name));
+  head.appendChild(el('span', 'sub', [cat.t && cat.t.replace(/s$/, ''), it.slot, it.rar].filter(Boolean).join(' · ')));
+  head.appendChild(el('span', 'chip' + (it.own ? ' own' : ''), it.own ? '✓ Obtenu' : 'Manquant'));
+  stage.appendChild(head);
+  v.appendChild(stage);
+
+  const d = el('div', 'cvinfo');
   if (it.rmax) {
     d.appendChild(el('p', 'desc', 'Obtenu ' + fmtN(it.count || 0) + ' fois · rang '
       + (it.rank || 0) + ' / ' + it.rmax
@@ -221,7 +247,7 @@ function buildCollDetail(it, cat) {
     d.appendChild(el('p', 'desc', [it.lvl ? 'Niveau ' + it.lvl : '',
       it.apt ? 'Classes : ' + it.apt : ''].filter(Boolean).join(' · ')));
   }
-  if (it.desc) d.appendChild(el('p', 'desc', it.desc));
+  if (it.desc) d.appendChild(el('p', 'desc it', it.desc));
   d.appendChild(el('div', 'sub2', "Comment l'obtenir"));
   if (it.src && it.src.length) {
     const ul = el('ul', 'srcs');
@@ -231,10 +257,6 @@ function buildCollDetail(it, cat) {
     d.appendChild(el('p', 'none', "Aucune source dans les données du jeu : récompense "
       + "spéciale (événement, précommande…), boutique, ou pas encore disponible."));
   }
-  shade.appendChild(d);
-  return shade;
+  v.appendChild(d);
+  return v;
 }
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && COLL.open) { COLL.open = null; rerenderCollection(); }
-});
