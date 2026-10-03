@@ -236,9 +236,28 @@ def build(game_dir, codex, img_dir=None):
         gfx = {uid: units[uid].get("gfx") for uid in every}
         gfx.update({f"family_{f}": type_gfx.get(f) for f in families})
         _images(game_dir, img_dir, gfx)
+    # each monster's line of descent (itself, then what it inherits from):
+    # a variant's description and faction are often its base monster's
+    def chain(uid):
+        out, todo = [], [uid]
+        while todo:
+            u = todo.pop(0)
+            if u in out or u not in units:
+                continue
+            out.append(u)
+            todo += [i.get("ref") for i in units[u].get("inherit") or () if i.get("ref")]
+        return out
+    chains = {uid: chain(uid) for uid in every}
+    factions = {}
+    for uid, ch in chains.items():
+        f = next((units[u].get("faction") for u in ch if units[u].get("faction")), None)
+        if f:
+            factions[uid] = f
     return {"placed": placed, "units": every, "families": families,
             "spawns": spawns, "lvl": lvls, "famLoot": fam_loot,
-            "unitLoot": unit_loot, "where": where, "entrances": entrances}
+            "unitLoot": unit_loot, "where": where, "entrances": entrances,
+            "chain": {u: c for u, c in chains.items() if len(c) > 1},
+            "faction": factions}
 
 
 def _images(game_dir, out_dir, gfx):

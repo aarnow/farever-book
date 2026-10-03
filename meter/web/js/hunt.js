@@ -188,7 +188,7 @@ function buildHuntMon(n) {
   head.appendChild(pic);
   const t = el('div', 'hmt');
   t.appendChild(el('div', 'hmname', n.name));
-  t.appendChild(el('div', 'fam', [n.fam, n.lvl ? 'niveau ' + n.lvl : '']
+  t.appendChild(el('div', 'fam', [n.fam, n.faction, n.lvl ? 'niveau ' + n.lvl : '']
     .filter(Boolean).join(' · ')));
   const k = el('div', 'kills');
   k.appendChild(el('b', null, fmtN(n.kills)));
@@ -201,6 +201,7 @@ function buildHuntMon(n) {
   t.appendChild(k);
   head.appendChild(t);
   box.appendChild(head);
+  if (n.desc) box.appendChild(el('p', 'hmdesc', n.desc));
 
   box.appendChild(el('div', 'section', 'Où le trouver'));
   if (n.note) {

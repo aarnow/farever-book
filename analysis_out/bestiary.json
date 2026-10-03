@@ -28666,5 +28666,2828 @@ null
 "Z1_Enripit_Hollow"
 ]
 ]
+},
+"chain": {
+"Warrior": [
+"Warrior",
+"BaseHero"
+],
+"Rogue": [
+"Rogue",
+"BaseHero"
+],
+"Mage": [
+"Mage",
+"BaseHero"
+],
+"Priest": [
+"Priest",
+"BaseHero"
+],
+"Summon_Imp": [
+"Summon_Imp",
+"BaseMob"
+],
+"Nightling_Infusion_Tank": [
+"Nightling_Infusion_Tank",
+"BaseMob"
+],
+"Nightling_Infusion_DPS": [
+"Nightling_Infusion_DPS",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"WanderingMerchant": [
+"WanderingMerchant",
+"W_Base",
+"BaseMob"
+],
+"HildaLambert": [
+"HildaLambert",
+"W_Base",
+"BaseMob"
+],
+"StableMaster": [
+"StableMaster",
+"W_Base",
+"BaseMob"
+],
+"ProfessionTrainer": [
+"ProfessionTrainer",
+"W_Base",
+"BaseMob"
+],
+"DemonHunterRumi": [
+"DemonHunterRumi",
+"W_Base",
+"BaseMob"
+],
+"DemonHunterZoey": [
+"DemonHunterZoey",
+"W_Base",
+"BaseMob"
+],
+"DemonHunterMira": [
+"DemonHunterMira",
+"W_Base",
+"BaseMob"
+],
+"MedalogGloryTrader": [
+"MedalogGloryTrader",
+"W_Base",
+"BaseMob"
+],
+"Abigail": [
+"Abigail",
+"W_Base",
+"BaseMob"
+],
+"HunterShepherd": [
+"HunterShepherd",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Prisoner": [
+"Kobold_Prisoner",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Ogre_Prisoner": [
+"Kobold_Ogre_Prisoner",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Prisonner": [
+"Manfish_Prisonner",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Ogre_Prisoner": [
+"Manfish_Ogre_Prisoner",
+"W_Base",
+"BaseMob"
+],
+"Bee_Prisoner": [
+"Bee_Prisoner",
+"W_Base",
+"BaseMob"
+],
+"Bee_Prisoner1": [
+"Bee_Prisoner1",
+"W_Base",
+"BaseMob"
+],
+"PunchingBag": [
+"PunchingBag",
+"BaseMob"
+],
+"PunchingBagArmor": [
+"PunchingBagArmor",
+"BaseMob"
+],
+"PunchingBagMagicRes": [
+"PunchingBagMagicRes",
+"BaseMob"
+],
+"PunchingBagInvulnerable": [
+"PunchingBagInvulnerable",
+"BaseMob"
+],
+"PunchingBagShield": [
+"PunchingBagShield",
+"BaseMob"
+],
+"Dummy_Runner": [
+"Dummy_Runner",
+"BaseMob"
+],
+"Dummy_Support": [
+"Dummy_Support",
+"BaseHero"
+],
+"Dummy_FX": [
+"Dummy_FX",
+"BaseMob"
+],
+"Boar_Z1W": [
+"Boar_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Boar_Z2W": [
+"Boar_Z2W",
+"W_Base",
+"Boar_Z1W",
+"BaseMob"
+],
+"Boar_Z2W_2": [
+"Boar_Z2W_2",
+"W_Base",
+"Boar_Z1W",
+"BaseMob"
+],
+"Boar_Z2W_U": [
+"Boar_Z2W_U",
+"W_Base_Unique",
+"Boar_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Boar_Z1W_E": [
+"Boar_Z1W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Boar_Z4W_E": [
+"Boar_Z4W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Boar_Z2W_E": [
+"Boar_Z2W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crocopork_Z1W": [
+"Crocopork_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Skunk_Z1W": [
+"Skunk_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Skunk_Z1W_2": [
+"Skunk_Z1W_2",
+"W_Base",
+"Skunk_Z1W",
+"BaseMob"
+],
+"Skunk_Z1W_U": [
+"Skunk_Z1W_U",
+"W_Base_Unique",
+"Skunk_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Skunk_Z1W_FS": [
+"Skunk_Z1W_FS",
+"D_Base",
+"Skunk_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Skunk_Z1W_FS_2": [
+"Skunk_Z1W_FS_2",
+"D_Base",
+"Skunk_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Wolf_Z1W": [
+"Wolf_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Wolf_Z1W_Alpha": [
+"Wolf_Z1W_Alpha",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"Wolf_Z2W": [
+"Wolf_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Wolf_Z2W_2": [
+"Wolf_Z2W_2",
+"W_Base",
+"Wolf_Z2W",
+"BaseMob"
+],
+"Wolf_Z2W_U": [
+"Wolf_Z2W_U",
+"W_Base_Unique",
+"Wolf_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Wolf_Z1W_E": [
+"Wolf_Z1W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Wolf_Z3W": [
+"Wolf_Z3W",
+"W_Base",
+"Wolf_Z1W",
+"BaseMob"
+],
+"Dog_Z2W_Azuram": [
+"Dog_Z2W_Azuram",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W": [
+"Dog_Z3W",
+"W_Base",
+"Dog_Z2W_Azuram",
+"BaseMob"
+],
+"Dog_Z3D": [
+"Dog_Z3D",
+"D_Base",
+"Dog_Z2W_Azuram",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol01": [
+"Dog_Z3W_RamPatrol01",
+"W_Base_Unique",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol02": [
+"Dog_Z3W_RamPatrol02",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol03": [
+"Dog_Z3W_RamPatrol03",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol04": [
+"Dog_Z3W_RamPatrol04",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol05": [
+"Dog_Z3W_RamPatrol05",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol06": [
+"Dog_Z3W_RamPatrol06",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol07": [
+"Dog_Z3W_RamPatrol07",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_RamPatrol08": [
+"Dog_Z3W_RamPatrol08",
+"W_Base_Unique",
+"Dog_Z3W_RamPatrol01",
+"W_Base",
+"BaseMob"
+],
+"Dog_Z3W_E": [
+"Dog_Z3W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_Claws": [
+"Manfish_Z1W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_Claws_2": [
+"Manfish_Z1W_Claws_2",
+"W_Base",
+"Manfish_Z1W_Claws",
+"BaseMob"
+],
+"Manfish_Z1D_Claws": [
+"Manfish_Z1D_Claws",
+"D_Base",
+"Manfish_Z1W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2W_Claws": [
+"Manfish_Z2W_Claws",
+"W_Base",
+"Manfish_Z1W_Claws",
+"BaseMob"
+],
+"Manfish_Z1W_Spear": [
+"Manfish_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_Spear_3": [
+"Manfish_Z1W_Spear_3",
+"W_Base",
+"Manfish_Z1W_Spear",
+"BaseMob"
+],
+"Manfish_Z1D_Spear": [
+"Manfish_Z1D_Spear",
+"D_Base",
+"Manfish_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_E_Spear": [
+"Manfish_Z1W_E_Spear",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2W_E_Spear_2": [
+"Manfish_Z2W_E_Spear_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2D_Spear": [
+"Manfish_Z2D_Spear",
+"D_Base",
+"Manfish_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2W_Spear": [
+"Manfish_Z2W_Spear",
+"W_Base",
+"Manfish_Z1W_Spear",
+"BaseMob"
+],
+"Manfish_Z2W_Sword": [
+"Manfish_Z2W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2D_Tank": [
+"Manfish_Z2D_Tank",
+"D_Base",
+"Manfish_Z2W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2W_FS_Tank": [
+"Manfish_Z2W_FS_Tank",
+"D_Base",
+"Manfish_Z2W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_Caster": [
+"Manfish_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_Caster_3": [
+"Manfish_Z1W_Caster_3",
+"W_Assassin",
+"Manfish_Z1W_Caster",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1D_Caster": [
+"Manfish_Z1D_Caster",
+"D_Assassin",
+"Manfish_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1W_U_Caster": [
+"Manfish_Z1W_U_Caster",
+"W_Base_Unique",
+"Manfish_Z1W_Caster",
+"W_Base",
+"W_Assassin",
+"BaseMob"
+],
+"Manfish_Z1W_FS": [
+"Manfish_Z1W_FS",
+"D_Assassin",
+"Manfish_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2D_Caster": [
+"Manfish_Z2D_Caster",
+"D_Assassin",
+"Manfish_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2W_Caster": [
+"Manfish_Z2W_Caster",
+"W_Assassin",
+"Manfish_Z1W_Caster",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z1D_FS_Healer": [
+"Manfish_Z1D_FS_Healer",
+"D_Assassin",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2D_Healer": [
+"Manfish_Z2D_Healer",
+"D_Assassin",
+"Manfish_Z1D_FS_Healer",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Manfish_Z2W_Healer": [
+"Manfish_Z2W_Healer",
+"W_Assassin",
+"Manfish_Z1D_FS_Healer",
+"W_Base",
+"D_Assassin",
+"BaseMob"
+],
+"Demon_Rift_Claws": [
+"Demon_Rift_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Rift_Claws_Major": [
+"Demon_Rift_Claws_Major",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z3W_Claws": [
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z3W_Claws_FS": [
+"Demon_Z3W_Claws_FS",
+"W_Base",
+"Demon_Z3W_Claws",
+"BaseMob"
+],
+"Demon_Z3W_Claws_Big": [
+"Demon_Z3W_Claws_Big",
+"W_Base_Big",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z3W_Claws_E": [
+"Demon_Z3W_Claws_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z3W_Claws_E_1": [
+"Demon_Z3W_Claws_E_1",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z3W_Spear": [
+"Demon_Z3W_Spear",
+"W_Base",
+"Demon_Z3W_Claws",
+"BaseMob"
+],
+"Demon_Z3W_Spear_Big": [
+"Demon_Z3W_Spear_Big",
+"W_Base_Big",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z3W_Spear_E": [
+"Demon_Z3W_Spear_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Demon_Rift_Spear_Major": [
+"Demon_Rift_Spear_Major",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z1_Spear_Soulstone": [
+"Demon_Z1_Spear_Soulstone",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z2_Spear_Soulstone_Leg": [
+"Demon_Z2_Spear_Soulstone_Leg",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z1_Claws_Soulstone": [
+"Demon_Z1_Claws_Soulstone",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Demon_Z2_Claws_Soulstone": [
+"Demon_Z2_Claws_Soulstone",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"DemonSuperElite": [
+"DemonSuperElite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"DemonSuperElite_Fairy": [
+"DemonSuperElite_Fairy",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"DemonSuperElite_Fairy_FalseClone": [
+"DemonSuperElite_Fairy_FalseClone",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"DemonSuperElite_Fairy_TrueClone": [
+"DemonSuperElite_Fairy_TrueClone",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"DemonSuperElite_Fairy_Guardian": [
+"DemonSuperElite_Fairy_Guardian",
+"D_Base_Small",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Mace": [
+"Kobold_Z1W_Mace",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Mace_2": [
+"Kobold_Z1W_Mace_2",
+"W_Base_Small",
+"Kobold_Z1W_Mace",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1D_Mace": [
+"Kobold_Z1D_Mace",
+"D_Base_Small",
+"Kobold_Z1W_Mace",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z2D_Mace_2": [
+"Kobold_Z2D_Mace_2",
+"D_Base_Small",
+"Kobold_Z1W_Mace",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Mace_U": [
+"Kobold_Z1W_Mace_U",
+"W_Base_Unique",
+"Kobold_Z1W_Mace",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Kobold_Z2W_Mace": [
+"Kobold_Z2W_Mace",
+"W_Base_Small",
+"Kobold_Z1W_Mace",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Daggers": [
+"Kobold_Z1W_Daggers",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Daggers_2": [
+"Kobold_Z1W_Daggers_2",
+"W_Assassin",
+"Kobold_Z1W_Daggers",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1D_Daggers": [
+"Kobold_Z1D_Daggers",
+"D_Base_Small",
+"Kobold_Z1W_Daggers",
+"D_Base",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z2W_Daggers": [
+"Kobold_Z2W_Daggers",
+"W_Assassin",
+"Kobold_Z1W_Daggers",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Caster": [
+"Kobold_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1W_Caster_2": [
+"Kobold_Z1W_Caster_2",
+"W_Assassin",
+"Kobold_Z1W_Caster",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z2W_Caster": [
+"Kobold_Z2W_Caster",
+"W_Assassin",
+"Kobold_Z1W_Caster",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Ratsar_Caster": [
+"Kobold_Ratsar_Caster",
+"D_Assassin",
+"Kobold_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z2D_Caster": [
+"Kobold_Z2D_Caster",
+"D_Assassin",
+"Kobold_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Kobold_Z1D_FS_Caster": [
+"Kobold_Z1D_FS_Caster",
+"D_Assassin",
+"Kobold_Z1W_Caster",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Rift": [
+"ImpDemon_Rift",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Red": [
+"ImpDemon_Red",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_GreyBlue": [
+"ImpDemon_GreyBlue",
+"W_Base_Small",
+"ImpDemon_Red",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Z3W": [
+"ImpDemon_Z3W",
+"W_Base_Small",
+"ImpDemon_Red",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Z3W_FS": [
+"ImpDemon_Z3W_FS",
+"W_Base_Small",
+"ImpDemon_Red",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Summoned": [
+"ImpDemon_Summoned",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Rift_Major": [
+"ImpDemon_Rift_Major",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Elite_Red": [
+"ImpDemon_Elite_Red",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Z1_Soulstone": [
+"ImpDemon_Z1_Soulstone",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"ImpDemon_Z2_Soulstone": [
+"ImpDemon_Z2_Soulstone",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z2W_Peasant": [
+"OgreHuman_Z2W_Peasant",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z2W_Peasant_E": [
+"OgreHuman_Z2W_Peasant_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z3W_Peasant": [
+"OgreHuman_Z3W_Peasant",
+"W_Base_Big",
+"OgreHuman_Z2W_Peasant",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z3W_GM": [
+"OgreHuman_Z3W_GM",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z3W_GM_FS": [
+"OgreHuman_Z3W_GM_FS",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z3D_GM": [
+"OgreHuman_Z3D_GM",
+"D_Base_Big",
+"OgreHuman_Z3W_GM",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreHuman_Z3W_Claws_U": [
+"OgreHuman_Z3W_Claws_U",
+"W_Base_Elite",
+"OgreHuman_Z3W_GM",
+"W_Base",
+"W_Base_Big",
+"BaseMob"
+],
+"OgreHuman_Z3W_GM_E": [
+"OgreHuman_Z3W_GM_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z1W_Claws": [
+"OgreKobold_Z1W_Claws",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z1W_Claws_3": [
+"OgreKobold_Z1W_Claws_3",
+"W_Base_Big",
+"OgreKobold_Z1W_Claws",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z1W_Claws_U": [
+"OgreKobold_Z1W_Claws_U",
+"W_Base_Unique",
+"OgreKobold_Z1W_Claws",
+"W_Base",
+"W_Base_Big",
+"BaseMob"
+],
+"OgreKobold_Z1D_Claws": [
+"OgreKobold_Z1D_Claws",
+"D_Base_Big",
+"OgreKobold_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z2D_Docker": [
+"OgreKobold_Z2D_Docker",
+"D_Base_Big",
+"OgreKobold_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z1D_FS_Claws": [
+"OgreKobold_Z1D_FS_Claws",
+"D_Base_Big",
+"OgreKobold_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z2W_Claws": [
+"OgreKobold_Z2W_Claws",
+"W_Base_Big",
+"OgreKobold_Z1W_Claws",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z1W_E_Claws": [
+"OgreKobold_Z1W_E_Claws",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"OgreKobold_Z2W_GM": [
+"OgreKobold_Z2W_GM",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z1W_Claws": [
+"OgreManfish_Z1W_Claws",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z1W_Claws_U": [
+"OgreManfish_Z1W_Claws_U",
+"W_Base_Unique",
+"OgreManfish_Z1W_Claws",
+"W_Base",
+"W_Base_Big",
+"BaseMob"
+],
+"OgreManfish_Z1D_Claws": [
+"OgreManfish_Z1D_Claws",
+"D_Base_Big",
+"OgreManfish_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z1W_FS_Claws": [
+"OgreManfish_Z1W_FS_Claws",
+"D_Base_Big",
+"OgreManfish_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z2D_Claws": [
+"OgreManfish_Z2D_Claws",
+"D_Base_Big",
+"OgreManfish_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z2W_Claws_E": [
+"OgreManfish_Z2W_Claws_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z2W_Claws": [
+"OgreManfish_Z2W_Claws",
+"W_Base_Big",
+"OgreManfish_Z1W_Claws",
+"W_Base",
+"BaseMob"
+],
+"OgreManfish_Z2W_FS_Claws": [
+"OgreManfish_Z2W_FS_Claws",
+"D_Base_Big",
+"OgreManfish_Z1W_Claws",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"Crab_Z1W": [
+"Crab_Z1W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Crab_Z1W_2": [
+"Crab_Z1W_2",
+"W_Base",
+"Crab_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Crab_Z1W_3": [
+"Crab_Z1W_3",
+"W_Base",
+"Crab_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Crab_Z1W_U": [
+"Crab_Z1W_U",
+"W_Base_Unique",
+"Crab_Z1W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Crab_Z1W_5": [
+"Crab_Z1W_5",
+"W_Base",
+"Crab_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Crawler_Z1W_E": [
+"Crawler_Z1W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crab_Z1D": [
+"Crab_Z1D",
+"W_Base",
+"Crab_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Crab_Z1W_FS": [
+"Crab_Z1W_FS",
+"D_Base",
+"Crab_Z1W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Crab_Z1W_FS_1": [
+"Crab_Z1W_FS_1",
+"D_Base",
+"Crab_Z1W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Crab_Z2D_2": [
+"Crab_Z2D_2",
+"W_Base",
+"Crab_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Crab_Z2W": [
+"Crab_Z2W",
+"W_Base",
+"Crab_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Crab_Z1W_E": [
+"Crab_Z1W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crab_Z1W_E_2": [
+"Crab_Z1W_E_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crab_Z1W_E_3": [
+"Crab_Z1W_E_3",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"GiantCrab_Z1W_U": [
+"GiantCrab_Z1W_U",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crab_Z2W_E": [
+"Crab_Z2W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Bee_Z1W": [
+"Bee_Z1W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Bee_Z1W_2": [
+"Bee_Z1W_2",
+"W_Base",
+"Bee_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Bee_Z1W_3": [
+"Bee_Z1W_3",
+"W_Base",
+"Bee_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Bee_Z1D": [
+"Bee_Z1D",
+"W_Base",
+"Bee_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Bee_Z1W_U": [
+"Bee_Z1W_U",
+"W_Base_Unique",
+"Bee_Z1W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Bee_Z2W_U": [
+"Bee_Z2W_U",
+"W_Base_Unique",
+"Bee_Z1W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Bee_Z1W_E": [
+"Bee_Z1W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Bee_Z1_FS": [
+"Bee_Z1_FS",
+"D_Base_Small",
+"Bee_Z1W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Bee_Z2W": [
+"Bee_Z2W",
+"W_Base",
+"Bee_Z1W",
+"BaseMob",
+"W_Base_Small"
+],
+"Fly_Demon_Rift": [
+"Fly_Demon_Rift",
+"W_Base_Small",
+"Fly_Demon_Z3W",
+"W_Base",
+"BaseMob"
+],
+"Fly_Demon_Z3W": [
+"Fly_Demon_Z3W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1W_Claws": [
+"FaerieBee_Z1W_Claws",
+"W_Base",
+"FaerieBee_Base",
+"BaseMob"
+],
+"FaerieBee_Z1D_Claws": [
+"FaerieBee_Z1D_Claws",
+"D_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Claws",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1W_Claws_E": [
+"FaerieBee_Z1W_Claws_E",
+"W_Base_Elite",
+"FaerieBee_Base",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_Claws": [
+"FaerieBee_Z2W_Claws",
+"W_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Claws",
+"BaseMob"
+],
+"FaerieBee_Z1W_Spear": [
+"FaerieBee_Z1W_Spear",
+"W_Base",
+"FaerieBee_Base",
+"BaseMob"
+],
+"FaerieBee_Z1W_Spear_U": [
+"FaerieBee_Z1W_Spear_U",
+"W_Base_Unique",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1D_Spear": [
+"FaerieBee_Z1D_Spear",
+"D_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_Spear_U": [
+"FaerieBee_Z2W_Spear_U",
+"W_Base_Unique",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_Spear": [
+"FaerieBee_Z2W_Spear",
+"W_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Spear",
+"BaseMob"
+],
+"FaerieBee_Z2_FS_Tank_2": [
+"FaerieBee_Z2_FS_Tank_2",
+"D_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Spear",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1W_GreatMace": [
+"FaerieBee_Z1W_GreatMace",
+"W_Base_Big",
+"FaerieBee_Base",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1D_GreatMace": [
+"FaerieBee_Z1D_GreatMace",
+"D_Base_Big",
+"FaerieBee_Base",
+"FaerieBee_Z1W_GreatMace",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1W_GreatMace_E": [
+"FaerieBee_Z1W_GreatMace_E",
+"W_Base_Elite",
+"FaerieBee_Base",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z1_FS": [
+"FaerieBee_Z1_FS",
+"D_Base_Big",
+"FaerieBee_Base",
+"FaerieBee_Z1W_GreatMace",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_GreatMace": [
+"FaerieBee_Z2W_GreatMace",
+"W_Base_Big",
+"FaerieBee_Base",
+"FaerieBee_Z1W_GreatMace",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_GreatMace_E": [
+"FaerieBee_Z2W_GreatMace_E",
+"W_Base_Elite",
+"FaerieBee_Base",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_GreatMace_U": [
+"FaerieBee_Z2W_GreatMace_U",
+"W_Base_Unique",
+"FaerieBee_Base",
+"FaerieBee_Z1W_GreatMace",
+"W_Base",
+"W_Base_Big",
+"BaseMob"
+],
+"FaerieBee_Z2W_GreatMace_U_2": [
+"FaerieBee_Z2W_GreatMace_U_2",
+"W_Base_Unique",
+"FaerieBee_Base",
+"FaerieBee_Z1W_GreatMace",
+"W_Base",
+"W_Base_Big",
+"BaseMob"
+],
+"FaerieBee_Z1W_Tank": [
+"FaerieBee_Z1W_Tank",
+"W_Base",
+"FaerieBee_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_Tank": [
+"FaerieBee_Z2W_Tank",
+"W_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Tank",
+"BaseMob"
+],
+"FaerieBee_Z2W_FS_Tank": [
+"FaerieBee_Z2W_FS_Tank",
+"D_Base",
+"FaerieBee_Base",
+"FaerieBee_Z1W_Tank",
+"W_Base",
+"BaseMob"
+],
+"FaerieBee_Z2W_Champ_E": [
+"FaerieBee_Z2W_Champ_E",
+"W_Base_Elite",
+"FaerieBee_Base",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Z3W_Caster": [
+"FaerieDemon_Z3W_Caster",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Rift_Caster": [
+"FaerieDemon_Rift_Caster",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Z3W_Caster_E": [
+"FaerieDemon_Z3W_Caster_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Z3W_Caster_E1": [
+"FaerieDemon_Z3W_Caster_E1",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Rift_Caster_Major": [
+"FaerieDemon_Rift_Caster_Major",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Z3W_Caster_Big": [
+"FaerieDemon_Z3W_Caster_Big",
+"W_Base_Big",
+"FaerieBee_Base",
+"FaerieDemon_Z3W_Caster",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Z1_Soulstone_Leg": [
+"FaerieDemon_Z1_Soulstone_Leg",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"FaerieDemon_Z2_Soulstone": [
+"FaerieDemon_Z2_Soulstone",
+"W_Base_Elite",
+"Demon_Z3W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W": [
+"Sprout_Rice_Z2W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Sprout_DarkRice_Z2W": [
+"Sprout_DarkRice_Z2W",
+"W_Base_Small",
+"Sprout_Rice_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_U": [
+"Sprout_Rice_Z2W_U",
+"W_Base_Unique",
+"Sprout_Rice_Z2W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Sprout_Rice_Z2_FS": [
+"Sprout_Rice_Z2_FS",
+"D_Base_Small",
+"Sprout_Rice_Z2W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Onion_Z2W": [
+"Sprout_Onion_Z2W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Onion_Z2_FS": [
+"Sprout_Onion_Z2_FS",
+"D_Base_Small",
+"Sprout_Onion_Z2W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Onion_Z2W_2": [
+"Sprout_Onion_Z2W_2",
+"W_Base_Small",
+"Sprout_Onion_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Garlic_Z2W": [
+"Sprout_Garlic_Z2W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Garlic_Z2W_2": [
+"Sprout_Garlic_Z2W_2",
+"W_Base_Small",
+"Sprout_Garlic_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Turnip_Z2W": [
+"Sprout_Turnip_Z2W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Turnip_Z2W_2": [
+"Sprout_Turnip_Z2W_2",
+"W_Base_Small",
+"Sprout_Turnip_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_E": [
+"Sprout_Rice_Z2W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_Plantivore": [
+"Sprout_Rice_Z2W_Plantivore",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_Plantivore_2": [
+"Sprout_Rice_Z2W_Plantivore_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_Plantivore_3": [
+"Sprout_Rice_Z2W_Plantivore_3",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_Plantivore_4": [
+"Sprout_Rice_Z2W_Plantivore_4",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_Plantivore_5": [
+"Sprout_Rice_Z2W_Plantivore_5",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Sprout_Rice_Z2W_Plantivore_6": [
+"Sprout_Rice_Z2W_Plantivore_6",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1W_Earth": [
+"Elemental_Z1W_Earth",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1W_Earth_2": [
+"Elemental_Z1W_Earth_2",
+"W_Base_Small",
+"Elemental_Z1W_Earth",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1D_Earth": [
+"Elemental_Z1D_Earth",
+"W_Base_Small",
+"Elemental_Z1W_Earth",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1_FS_Earth": [
+"Elemental_Z1_FS_Earth",
+"D_Base_Small",
+"Elemental_Z1W_Earth",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1_FS_Earth_2": [
+"Elemental_Z1_FS_Earth_2",
+"D_Base_Small",
+"Elemental_Z1W_Earth",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1W_Earth_U": [
+"Elemental_Z1W_Earth_U",
+"W_Base_Unique",
+"Elemental_Z1W_Earth",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Elemental_Z3W_Earth_U": [
+"Elemental_Z3W_Earth_U",
+"W_Base_Unique",
+"Elemental_Z1W_Earth",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Elemental_Z1W_Underwater": [
+"Elemental_Z1W_Underwater",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2D_Underwater": [
+"Elemental_Z2D_Underwater",
+"D_Base_Small",
+"Elemental_Z1W_Underwater",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1_FS_Underwater": [
+"Elemental_Z1_FS_Underwater",
+"D_Base_Small",
+"Elemental_Z1W_Underwater",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2W_Underwater": [
+"Elemental_Z2W_Underwater",
+"W_Base_Small",
+"Elemental_Z1W_Underwater",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2W_Underwater_U": [
+"Elemental_Z2W_Underwater_U",
+"W_Base_Unique",
+"Elemental_Z1W_Underwater",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Elemental_Z2W": [
+"Elemental_Z2W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2W_2": [
+"Elemental_Z2W_2",
+"W_Base_Small",
+"Elemental_Z2W",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2_FS": [
+"Elemental_Z2_FS",
+"D_Base_Small",
+"Elemental_Z2W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2W_Lava": [
+"Elemental_Z2W_Lava",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z1D_Lava": [
+"Elemental_Z1D_Lava",
+"W_Base_Small",
+"Elemental_Z2W_Lava",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2W_Lava_2": [
+"Elemental_Z2W_Lava_2",
+"W_Base_Small",
+"Elemental_Z2W_Lava",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2_FS_Lava": [
+"Elemental_Z2_FS_Lava",
+"D_Base_Small",
+"Elemental_Z2W_Lava",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Elemental_Z2_FS_Lava_2": [
+"Elemental_Z2_FS_Lava_2",
+"D_Base_Small",
+"Elemental_Z2W_Lava",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z1W_Earth1": [
+"Golem_Z1W_Earth1",
+"W_Base",
+"Golem_Base",
+"BaseMob"
+],
+"Golem_Z1W_Earth_2": [
+"Golem_Z1W_Earth_2",
+"W_Base",
+"Golem_Base",
+"Golem_Z1W_Earth1",
+"BaseMob"
+],
+"Golem_Z1_FS": [
+"Golem_Z1_FS",
+"D_Base",
+"Golem_Base",
+"Golem_Z1W_Earth1",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z1_FS_2": [
+"Golem_Z1_FS_2",
+"D_Base",
+"Golem_Base",
+"Golem_Z1W_Earth1",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z1W_Earth_E": [
+"Golem_Z1W_Earth_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z1W_Earth_E_2": [
+"Golem_Z1W_Earth_E_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2D_FireExplosive": [
+"Golem_Z2D_FireExplosive",
+"W_Base",
+"Golem_Base",
+"BaseMob"
+],
+"Golem_Z2D_FireExplosive_2": [
+"Golem_Z2D_FireExplosive_2",
+"D_Base",
+"Golem_Base",
+"Golem_Z2D_FireExplosive",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2W_FireExplosive": [
+"Golem_Z2W_FireExplosive",
+"W_Base",
+"Golem_Base",
+"Golem_Z2D_FireExplosive",
+"BaseMob"
+],
+"Golem_Z2W_FireExplosive_2": [
+"Golem_Z2W_FireExplosive_2",
+"W_Base",
+"Golem_Base",
+"Golem_Z2D_FireExplosive",
+"BaseMob"
+],
+"Golem_Z2W_FireExplosive_E": [
+"Golem_Z2W_FireExplosive_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2W_FireExplosive_E_2": [
+"Golem_Z2W_FireExplosive_E_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2_FS_FireExplosive": [
+"Golem_Z2_FS_FireExplosive",
+"D_Base",
+"Golem_Base",
+"Golem_Z2D_FireExplosive",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2_FS_FireExplosive_2": [
+"Golem_Z2_FS_FireExplosive_2",
+"D_Base",
+"Golem_Base",
+"Golem_Z2D_FireExplosive",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2W_Wind1": [
+"Golem_Z2W_Wind1",
+"W_Base",
+"Golem_Base",
+"BaseMob"
+],
+"Golem_Z2W_Wind2": [
+"Golem_Z2W_Wind2",
+"W_Base",
+"Golem_Base",
+"Golem_Z2W_Wind1",
+"BaseMob"
+],
+"Golem_Z2_FS": [
+"Golem_Z2_FS",
+"D_Base",
+"Golem_Base",
+"Golem_Z2W_Wind1",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2_FS_2": [
+"Golem_Z2_FS_2",
+"D_Base",
+"Golem_Base",
+"Golem_Z2W_Wind1",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2W_E": [
+"Golem_Z2W_E",
+"W_Base_Elite",
+"Golem_Base",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2W_E_2": [
+"Golem_Z2W_E_2",
+"W_Base_Elite",
+"Golem_Base",
+"W_Base",
+"BaseMob"
+],
+"Golem_Z2W_U": [
+"Golem_Z2W_U",
+"W_Base_Unique",
+"Golem_Base",
+"Golem_Z2W_Wind1",
+"W_Base",
+"BaseMob"
+],
+"Slime_Demonic_Z3W": [
+"Slime_Demonic_Z3W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Slime_Demonic_Z3W_E": [
+"Slime_Demonic_Z3W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W": [
+"Slime_Z1W",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_2": [
+"Slime_Z1W_2",
+"W_Base_Small",
+"Slime_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_4": [
+"Slime_Z1W_4",
+"W_Base_Small",
+"Slime_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_U": [
+"Slime_Z1W_U",
+"W_Base_Unique",
+"Slime_Z1W",
+"W_Base",
+"W_Base_Small",
+"BaseMob"
+],
+"Slime_Z1W_FS": [
+"Slime_Z1W_FS",
+"D_Base_Small",
+"Slime_Z1W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_FS_2": [
+"Slime_Z1W_FS_2",
+"D_Base_Small",
+"Slime_Z1W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z2W_FS": [
+"Slime_Z2W_FS",
+"D_Base_Small",
+"Slime_Z1W",
+"D_Base",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z3W": [
+"Slime_Z3W",
+"W_Base_Small",
+"Slime_Z1W",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_E": [
+"Slime_Z1W_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_E_2": [
+"Slime_Z1W_E_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1D_U": [
+"Slime_Z1D_U",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1W_Honey": [
+"Slime_Z1W_Honey",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1D_Honey": [
+"Slime_Z1D_Honey",
+"W_Base_Small",
+"Slime_Z1W_Honey",
+"W_Base",
+"BaseMob"
+],
+"Slime_Z1D_Honey_NoXP": [
+"Slime_Z1D_Honey_NoXP",
+"W_Base_Small",
+"Slime_Z1W_Honey",
+"W_Base",
+"BaseMob"
+],
+"Spirit_Z2W_Claws": [
+"Spirit_Z2W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Spirit_Z2W_FS_Claws": [
+"Spirit_Z2W_FS_Claws",
+"D_Base",
+"Spirit_Z2W_Claws",
+"W_Base",
+"BaseMob"
+],
+"Spirit_Z2W_Claws2": [
+"Spirit_Z2W_Claws2",
+"W_Base",
+"Spirit_Z2W_Claws",
+"BaseMob"
+],
+"Spirit_Z3W_Claws": [
+"Spirit_Z3W_Claws",
+"W_Base",
+"Spirit_Z2W_Claws",
+"BaseMob"
+],
+"Spirit_Z2W_Claws_E": [
+"Spirit_Z2W_Claws_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Spirit_Z2W_Claws_E2": [
+"Spirit_Z2W_Claws_E2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Spirit_Z3W_Claws_E": [
+"Spirit_Z3W_Claws_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z1W_Sword": [
+"Crimson_Z1W_Sword",
+"W_Base",
+"Crimson_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Sword": [
+"Crimson_Z2W_Sword",
+"W_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"BaseMob"
+],
+"Crimson_Z2W_Sword_2": [
+"Crimson_Z2W_Sword_2",
+"W_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"BaseMob"
+],
+"Crimson_Z3W_Sword": [
+"Crimson_Z3W_Sword",
+"W_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"BaseMob"
+],
+"Crimson_Z3D_Sword": [
+"Crimson_Z3D_Sword",
+"D_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3_Fist": [
+"Crimson_Z3_Fist",
+"W_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"BaseMob"
+],
+"Crimson_Z3_Fist_U": [
+"Crimson_Z3_Fist_U",
+"W_Base_Unique",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3_Fist_U1": [
+"Crimson_Z3_Fist_U1",
+"W_Base_Unique",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3_Fist_U2": [
+"Crimson_Z3_Fist_U2",
+"W_Base_Unique",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Sword_E": [
+"Crimson_Z3W_Sword_E",
+"W_Base_Elite",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_GA": [
+"Crimson_Z3W_GA",
+"W_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"BaseMob"
+],
+"Crimson_Z3W_GA_2": [
+"Crimson_Z3W_GA_2",
+"W_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"BaseMob"
+],
+"Crimson_Z3D_GA": [
+"Crimson_Z3D_GA",
+"D_Base",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_GA_U": [
+"Crimson_Z3W_GA_U",
+"W_Base_Unique",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_GA_E": [
+"Crimson_Z3W_GA_E",
+"W_Base_Elite",
+"Crimson_Base",
+"Crimson_Z1W_Sword",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z1W_Bow": [
+"Crimson_Z1W_Bow",
+"W_Assassin",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Bow": [
+"Crimson_Z2W_Bow",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z1W_Bow",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Bow_2": [
+"Crimson_Z2W_Bow_2",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z1W_Bow",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Bow": [
+"Crimson_Z3W_Bow",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z1W_Bow",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Bow_FS": [
+"Crimson_Z3W_Bow_FS",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z1W_Bow",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3D_Bow": [
+"Crimson_Z3D_Bow",
+"D_Assassin",
+"Crimson_Base",
+"Crimson_Z1W_Bow",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Daggers": [
+"Crimson_Z3W_Daggers",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z1W_Bow",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Daggers_2": [
+"Crimson_Z3W_Daggers_2",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z3W_Daggers",
+"W_Base",
+"Crimson_Z1W_Bow",
+"BaseMob"
+],
+"Crimson_Z3W_Daggers_FS": [
+"Crimson_Z3W_Daggers_FS",
+"W_Assassin",
+"Crimson_Base",
+"Crimson_Z3W_Daggers",
+"W_Base",
+"Crimson_Z1W_Bow",
+"BaseMob"
+],
+"Crimson_Z3W_Daggers_E": [
+"Crimson_Z3W_Daggers_E",
+"W_Base_Elite",
+"Crimson_Base",
+"Crimson_Z3W_Daggers",
+"W_Base",
+"W_Assassin",
+"Crimson_Z1W_Bow",
+"BaseMob"
+],
+"Crimson_Z2W_Peasant": [
+"Crimson_Z2W_Peasant",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Peasant_E": [
+"Crimson_Z2W_Peasant_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Peasant_2": [
+"Crimson_Z2W_Peasant_2",
+"W_Base",
+"Crimson_Z2W_Peasant",
+"BaseMob"
+],
+"Crimson_Z3W_Peasant": [
+"Crimson_Z3W_Peasant",
+"W_Base",
+"Crimson_Z2W_Peasant",
+"BaseMob"
+],
+"Crimson_Z2W_Peasant_FS": [
+"Crimson_Z2W_Peasant_FS",
+"W_Base",
+"Crimson_Z2W_Peasant",
+"BaseMob"
+],
+"Crimson_Z3W_Peasant_U": [
+"Crimson_Z3W_Peasant_U",
+"W_Base",
+"Crimson_Z2W_Peasant",
+"BaseMob"
+],
+"Crimson_Z1W_Captain_U": [
+"Crimson_Z1W_Captain_U",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z1W_Captain_E": [
+"Crimson_Z1W_Captain_E",
+"W_Base_Elite",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_E": [
+"Crimson_Z2W_Captain_E",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_E_2": [
+"Crimson_Z2W_Captain_E_2",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_U": [
+"Crimson_Z2W_Captain_U",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_U_2": [
+"Crimson_Z2W_Captain_U_2",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_U_3": [
+"Crimson_Z2W_Captain_U_3",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_U_4": [
+"Crimson_Z2W_Captain_U_4",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_U_5": [
+"Crimson_Z2W_Captain_U_5",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Captain_U_6": [
+"Crimson_Z2W_Captain_U_6",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Captain_U": [
+"Crimson_Z3W_Captain_U",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Captain_U_1": [
+"Crimson_Z3W_Captain_U_1",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Captain_U_2": [
+"Crimson_Z3W_Captain_U_2",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3D_Captain": [
+"Crimson_Z3D_Captain",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3D_Captain1": [
+"Crimson_Z3D_Captain1",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3D_Captain2": [
+"Crimson_Z3D_Captain2",
+"W_Base_Unique",
+"Crimson_Base",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Monk": [
+"Crimson_Z2W_Monk",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Monk_2": [
+"Crimson_Z2W_Monk_2",
+"W_Assassin",
+"Crimson_Z2W_Monk",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Beekeeper": [
+"Crimson_Z2W_Beekeeper",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z2W_Beekeeper2": [
+"Crimson_Z2W_Beekeeper2",
+"W_Base",
+"Crimson_Z2W_Beekeeper",
+"BaseMob"
+],
+"Crimson_Z3W_Caster": [
+"Crimson_Z3W_Caster",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Caster_E": [
+"Crimson_Z3W_Caster_E",
+"W_Base_Elite",
+"Crimson_Z3W_Caster",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Monk": [
+"Crimson_Z3W_Monk",
+"W_Assassin",
+"Crimson_Z2W_Monk",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Monk_U": [
+"Crimson_Z3W_Monk_U",
+"W_Assassin_U",
+"Crimson_Z2W_Monk",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Monk_U1": [
+"Crimson_Z3W_Monk_U1",
+"W_Assassin_U",
+"Crimson_Z2W_Monk",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Crimson_Z3W_Monk_U2": [
+"Crimson_Z3W_Monk_U2",
+"W_Assassin_U",
+"Crimson_Z2W_Monk",
+"W_Assassin",
+"W_Base",
+"BaseMob"
+],
+"Swarowl_Bat": [
+"Swarowl_Bat",
+"W_Base",
+"BaseMob"
+],
+"ChaoticPortal": [
+"ChaoticPortal",
+"W_Base",
+"BaseMob"
+],
+"Nepsilon": [
+"Nepsilon",
+"D_Base_Elite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Reblochonk": [
+"Reblochonk",
+"D_Base_Elite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Gatsbee": [
+"Gatsbee",
+"D_Base_Elite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Crabgantua": [
+"Crabgantua",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Crab_Crabgantua": [
+"Crab_Crabgantua",
+"W_Base",
+"BaseMob"
+],
+"Crab_Crabgantua_Summon_Heroic": [
+"Crab_Crabgantua_Summon_Heroic",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"MunsterChuck": [
+"MunsterChuck",
+"W_Base",
+"BaseMob"
+],
+"Mokshi": [
+"Mokshi",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Bees_Mokshi": [
+"Bees_Mokshi",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Mokshi_Heroic_Summon": [
+"Mokshi_Heroic_Summon",
+"D_Base_Big",
+"FaerieBee_Base",
+"FaerieBee_Z1W_GreatMace",
+"D_Base",
+"W_Base_Big",
+"W_Base",
+"BaseMob"
+],
+"SpongeBlob": [
+"SpongeBlob",
+"D_Base_Elite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Golcano": [
+"Golcano",
+"D_Base_Elite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Golcano_Minion": [
+"Golcano_Minion",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Phrixes": [
+"Phrixes",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Phrixes_Crawler": [
+"Phrixes_Crawler",
+"D_Base_Small",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Phrixes_NightGod": [
+"Phrixes_NightGod",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Phrixes_NightGod_NL": [
+"Phrixes_NightGod_NL",
+"W_Base_Elite",
+"W_Base",
+"BaseMob"
+],
+"Phrixes_ChaoticPortal": [
+"Phrixes_ChaoticPortal",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Phrixes_NightGodGate": [
+"Phrixes_NightGodGate",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Ulserous": [
+"Ulserous",
+"BaseMob"
+],
+"Egglektra": [
+"Egglektra",
+"W_Base",
+"BaseMob"
+],
+"Cleodora": [
+"Cleodora",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Queenslayer": [
+"Queenslayer",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Cleodora_ChampionEgg": [
+"Cleodora_ChampionEgg",
+"W_Base_Small",
+"W_Base",
+"BaseMob"
+],
+"Cleodora_Champion": [
+"Cleodora_Champion",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Cleodora_Champion2": [
+"Cleodora_Champion2",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Cleodora_Champion3": [
+"Cleodora_Champion3",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Cleodora_Heroic_Dark_Champion": [
+"Cleodora_Heroic_Dark_Champion",
+"D_Base_Big",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Cleodora_Feeder": [
+"Cleodora_Feeder",
+"D_Base_Small",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"Ratsar": [
+"Ratsar",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"R1KoboldBoss_Sparkling": [
+"R1KoboldBoss_Sparkling",
+"W_Base",
+"BaseMob"
+],
+"RobinHoof": [
+"RobinHoof",
+"D_Base_Elite",
+"D_Base",
+"W_Base",
+"BaseMob"
+],
+"RobinHoofDog01": [
+"RobinHoofDog01",
+"D_Base",
+"W_Base",
+"BaseMob"
+]
+},
+"faction": {
+"Nightling_Infusion_DPS": "Demon",
+"Dog_Z3W_E": "Demon",
+"Manfish_Z1W_Claws": "Manfish",
+"Manfish_Z1W_Claws_2": "Manfish",
+"Manfish_Z1D_Claws": "Manfish",
+"Manfish_Z2W_Claws": "Manfish",
+"Manfish_Z1W_Spear": "Manfish",
+"Manfish_Z1W_Spear_3": "Manfish",
+"Manfish_Z1D_Spear": "Manfish",
+"Manfish_Z1W_E_Spear": "Manfish",
+"Manfish_Z2W_E_Spear_2": "Manfish",
+"Manfish_Z2D_Spear": "Manfish",
+"Manfish_Z2W_Spear": "Manfish",
+"Manfish_Z2W_Sword": "Manfish",
+"Manfish_Z2D_Tank": "Manfish",
+"Manfish_Z2W_FS_Tank": "Manfish",
+"Manfish_Z1W_Caster": "Manfish",
+"Manfish_Z1W_Caster_3": "Manfish",
+"Manfish_Z1D_Caster": "Manfish",
+"Manfish_Z1W_U_Caster": "Manfish",
+"Manfish_Z1W_FS": "Manfish",
+"Manfish_Z2D_Caster": "Manfish",
+"Manfish_Z2W_Caster": "Manfish",
+"Manfish_Z1D_FS_Healer": "Manfish",
+"Manfish_Z2D_Healer": "Manfish",
+"Manfish_Z2W_Healer": "Manfish",
+"Demon_Rift_Claws": "Demon",
+"Demon_Rift_Claws_Major": "Demon",
+"Demon_Z3W_Claws": "Demon",
+"Demon_Z3W_Claws_FS": "Demon",
+"Demon_Z3W_Claws_Big": "Demon",
+"Demon_Z3W_Claws_E": "Demon",
+"Demon_Z3W_Claws_E_1": "Demon",
+"Demon_Z3W_Spear": "Demon",
+"Demon_Z3W_Spear_Big": "Demon",
+"Demon_Z3W_Spear_E": "Demon",
+"Demon_Rift_Spear_Major": "Demon",
+"Demon_Z1_Spear_Soulstone": "Demon",
+"Demon_Z2_Spear_Soulstone_Leg": "Demon",
+"Demon_Z1_Claws_Soulstone": "Demon",
+"Demon_Z2_Claws_Soulstone": "Demon",
+"DemonSuperElite": "Demon",
+"DemonSuperElite_Fairy": "Demon",
+"DemonSuperElite_Fairy_FalseClone": "Demon",
+"DemonSuperElite_Fairy_TrueClone": "Demon",
+"DemonSuperElite_Fairy_Guardian": "Demon",
+"Kobold_Z1W_Mace": "Kobold",
+"Kobold_Z1W_Mace_2": "Kobold",
+"Kobold_Z1D_Mace": "Kobold",
+"Kobold_Z2D_Mace_2": "Kobold",
+"Kobold_Z1W_Mace_U": "Kobold",
+"Kobold_Z2W_Mace": "Kobold",
+"Kobold_Z1W_Daggers": "Kobold",
+"Kobold_Z1W_Daggers_2": "Kobold",
+"Kobold_Z1D_Daggers": "Kobold",
+"Kobold_Z2W_Daggers": "Kobold",
+"Kobold_Z1W_Caster": "Kobold",
+"Kobold_Z1W_Caster_2": "Kobold",
+"Kobold_Z2W_Caster": "Kobold",
+"Kobold_Ratsar_Caster": "Kobold",
+"Kobold_Z2D_Caster": "Kobold",
+"Kobold_Z1D_FS_Caster": "Kobold",
+"ImpDemon_Rift": "Demon",
+"ImpDemon_Red": "Demon",
+"ImpDemon_GreyBlue": "Demon",
+"ImpDemon_Z3W": "Demon",
+"ImpDemon_Z3W_FS": "Demon",
+"ImpDemon_Summoned": "Demon",
+"ImpDemon_Rift_Major": "Demon",
+"ImpDemon_Elite_Red": "Demon",
+"ImpDemon_Z1_Soulstone": "Demon",
+"ImpDemon_Z2_Soulstone": "Demon",
+"OgreKobold_Z1W_Claws": "Kobold",
+"OgreKobold_Z1W_Claws_3": "Kobold",
+"OgreKobold_Z1W_Claws_U": "Kobold",
+"OgreKobold_Z1D_Claws": "Kobold",
+"OgreKobold_Z2D_Docker": "Kobold",
+"OgreKobold_Z1D_FS_Claws": "Kobold",
+"OgreKobold_Z2W_Claws": "Kobold",
+"OgreKobold_Z1W_E_Claws": "Kobold",
+"OgreKobold_Z2W_GM": "Kobold",
+"OgreManfish_Z1W_Claws": "Manfish",
+"OgreManfish_Z1W_Claws_U": "Manfish",
+"OgreManfish_Z1D_Claws": "Manfish",
+"OgreManfish_Z1W_FS_Claws": "Manfish",
+"OgreManfish_Z2D_Claws": "Manfish",
+"OgreManfish_Z2W_Claws_E": "Manfish",
+"OgreManfish_Z2W_Claws": "Manfish",
+"OgreManfish_Z2W_FS_Claws": "Manfish",
+"Bee_Z1W": "Bee",
+"Bee_Z1W_2": "Bee",
+"Bee_Z1W_3": "Bee",
+"Bee_Z1D": "Bee",
+"Bee_Z1W_U": "Bee",
+"Bee_Z2W_U": "Bee",
+"Bee_Z1W_E": "Bee",
+"Bee_Z1_FS": "Bee",
+"Bee_Z2W": "Bee",
+"Fly_Demon_Rift": "Demon",
+"Fly_Demon_Z3W": "Demon",
+"FaerieBee_Z1W_Claws": "Bee",
+"FaerieBee_Z1D_Claws": "Bee",
+"FaerieBee_Z1W_Claws_E": "Bee",
+"FaerieBee_Z2W_Claws": "Bee",
+"FaerieBee_Z1W_Spear": "Bee",
+"FaerieBee_Z1W_Spear_U": "Bee",
+"FaerieBee_Z1D_Spear": "Bee",
+"FaerieBee_Z2W_Spear_U": "Bee",
+"FaerieBee_Z2W_Spear": "Bee",
+"FaerieBee_Z2_FS_Tank_2": "Bee",
+"FaerieBee_Z1W_GreatMace": "Bee",
+"FaerieBee_Z1D_GreatMace": "Bee",
+"FaerieBee_Z1W_GreatMace_E": "Bee",
+"FaerieBee_Z1_FS": "Bee",
+"FaerieBee_Z2W_GreatMace": "Bee",
+"FaerieBee_Z2W_GreatMace_E": "Bee",
+"FaerieBee_Z2W_GreatMace_U": "Bee",
+"FaerieBee_Z2W_GreatMace_U_2": "Bee",
+"FaerieBee_Z1W_Tank": "Bee",
+"FaerieBee_Z2W_Tank": "Bee",
+"FaerieBee_Z2W_FS_Tank": "Bee",
+"FaerieBee_Z2W_Champ_E": "Bee",
+"FaerieDemon_Z3W_Caster": "Demon",
+"FaerieDemon_Rift_Caster": "Demon",
+"FaerieDemon_Z3W_Caster_E": "Demon",
+"FaerieDemon_Z3W_Caster_E1": "Demon",
+"FaerieDemon_Rift_Caster_Major": "Demon",
+"FaerieDemon_Z3W_Caster_Big": "Demon",
+"FaerieDemon_Z1_Soulstone_Leg": "Demon",
+"FaerieDemon_Z2_Soulstone": "Demon",
+"Crimson_Z1W_Sword": "Crimson",
+"Crimson_Z2W_Sword": "Crimson",
+"Crimson_Z2W_Sword_2": "Crimson",
+"Crimson_Z3W_Sword": "Crimson",
+"Crimson_Z3D_Sword": "Crimson",
+"Crimson_Z3_Fist": "Crimson",
+"Crimson_Z3_Fist_U": "Crimson",
+"Crimson_Z3_Fist_U1": "Crimson",
+"Crimson_Z3_Fist_U2": "Crimson",
+"Crimson_Z3W_Sword_E": "Crimson",
+"Crimson_Z3W_GA": "Crimson",
+"Crimson_Z3W_GA_2": "Crimson",
+"Crimson_Z3D_GA": "Crimson",
+"Crimson_Z3W_GA_U": "Crimson",
+"Crimson_Z3W_GA_E": "Crimson",
+"Crimson_Z1W_Bow": "Crimson",
+"Crimson_Z2W_Bow": "Crimson",
+"Crimson_Z2W_Bow_2": "Crimson",
+"Crimson_Z3W_Bow": "Crimson",
+"Crimson_Z3W_Bow_FS": "Crimson",
+"Crimson_Z3D_Bow": "Crimson",
+"Crimson_Z3W_Daggers": "Crimson",
+"Crimson_Z3W_Daggers_2": "Crimson",
+"Crimson_Z3W_Daggers_FS": "Crimson",
+"Crimson_Z3W_Daggers_E": "Crimson",
+"Crimson_Z2W_Peasant": "Crimson",
+"Crimson_Z2W_Peasant_E": "Crimson",
+"Crimson_Z2W_Peasant_2": "Crimson",
+"Crimson_Z3W_Peasant": "Crimson",
+"Crimson_Z2W_Peasant_FS": "Crimson",
+"Crimson_Z3W_Peasant_U": "Crimson",
+"Crimson_Z1W_Captain_U": "Crimson",
+"Crimson_Z1W_Captain_E": "Crimson",
+"Crimson_Z2W_Captain_E": "Crimson",
+"Crimson_Z2W_Captain_E_2": "Crimson",
+"Crimson_Z2W_Captain_U": "Crimson",
+"Crimson_Z2W_Captain_U_2": "Crimson",
+"Crimson_Z2W_Captain_U_3": "Crimson",
+"Crimson_Z2W_Captain_U_4": "Crimson",
+"Crimson_Z2W_Captain_U_5": "Crimson",
+"Crimson_Z2W_Captain_U_6": "Crimson",
+"Crimson_Z3W_Captain_U": "Crimson",
+"Crimson_Z3W_Captain_U_1": "Crimson",
+"Crimson_Z3W_Captain_U_2": "Crimson",
+"Crimson_Z3D_Captain": "Crimson",
+"Crimson_Z3D_Captain1": "Crimson",
+"Crimson_Z3D_Captain2": "Crimson",
+"Crimson_Z2W_Monk": "Crimson",
+"Crimson_Z2W_Monk_2": "Crimson",
+"Crimson_Z2W_Beekeeper": "Crimson",
+"Crimson_Z2W_Beekeeper2": "Crimson",
+"Crimson_Z3W_Caster": "Crimson",
+"Crimson_Z3W_Caster_E": "Crimson",
+"Crimson_Z3W_Monk": "Crimson",
+"Crimson_Z3W_Monk_U": "Crimson",
+"Crimson_Z3W_Monk_U1": "Crimson",
+"Crimson_Z3W_Monk_U2": "Crimson",
+"Nepsilon": "Manfish",
+"Reblochonk": "Kobold",
+"Gatsbee": "Bee",
+"Crabgantua": "Manfish",
+"Crab_Crabgantua": "Manfish",
+"MunsterChuck": "Kobold",
+"Mokshi": "Bee",
+"Bees_Mokshi": "Bee",
+"Mokshi_Heroic_Summon": "Bee",
+"SpongeBlob": "Manfish",
+"Golcano": "Kobold",
+"Phrixes": "Crimson",
+"Phrixes_NightGod": "Demon",
+"Phrixes_NightGod_NL": "Demon",
+"Cleodora": "Bee",
+"Queenslayer": "Bee",
+"Cleodora_ChampionEgg": "Bee",
+"Cleodora_Champion": "Bee",
+"Cleodora_Champion2": "Bee",
+"Cleodora_Champion3": "Bee",
+"Cleodora_Heroic_Dark_Champion": "Bee",
+"Ratsar": "Kobold",
+"R1KoboldBoss_Sparkling": "Kobold",
+"RobinHoof": "Crimson",
+"RobinHoofDog01": "Crimson"
 }
 }

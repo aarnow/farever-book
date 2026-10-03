@@ -383,7 +383,13 @@ def hunt_detail_view(uid, ranks):
                         for r in regions],
             "spawns": spawns, "insts": insts, "by": by, "keys": keys,
             "note": note,
-            "meta": wm.get("meta") or {}, "loot": rows}
+            "meta": wm.get("meta") or {}, "loot": rows,
+            # a variant often has its base monster's words and allegiance
+            "desc": next((_fr_ref(_fr_desc("unit").get(u))
+                          for u in (cat.get("chain") or {}).get(uid) or [uid]
+                          if _fr_desc("unit").get(u)), ""),
+            "faction": _fr_names("faction").get(
+                (cat.get("faction") or {}).get(uid) or "") or ""}
 
 
 def _farm_view(items, fams, owned):

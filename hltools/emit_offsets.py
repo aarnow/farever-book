@@ -774,8 +774,10 @@ def extract_display_names(game_dir):
 FR_SHEETS = ("ach", "activity", "attribute", "faction", "gatherable",
              "item", "itemType", "job", "rarity", "skill", "unit",
              "unitType", "zone")
-# Sheets whose French descriptions the app shows (the collection's details).
-FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc")}
+# Sheets whose French descriptions the app shows (the collection's details,
+# a monster's page).
+FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc"),
+           "unit": ("texts.desc",)}
 
 
 def extract_fr_names(game_dir):

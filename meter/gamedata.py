@@ -467,7 +467,7 @@ def item_type_label(t):
 
 
 def _fr_desc(sheet):
-    """id -> French description for a sheet (ach, item), from
+    """id -> French description for a sheet (ach, item, unit), from
     names_fr.json's "_desc"."""
     _fr_names(sheet)
     return (_FR_NAMES or {}).get("_desc", {}).get(sheet) or {}
@@ -745,6 +745,18 @@ def _data_is_current():
             print("[meter] bestiary.json predates the monster page — "
                   "regenerating.", file=sys.stderr)
             return False
+        if "faction" not in best:
+            print("[meter] bestiary.json predates the monsters' factions — "
+                  "regenerating.", file=sys.stderr)
+            return False
+    except (OSError, ValueError):
+        pass
+    try:
+        fr = json.loads((ANALYSIS / "names_fr.json").read_text(encoding="utf-8"))
+        if "unit" not in (fr.get("_desc") or {}):
+            print("[meter] names_fr.json predates the monsters' descriptions — "
+                  "regenerating.", file=sys.stderr)
+            return False
     except (OSError, ValueError):
         pass
     if not (ANALYSIS / "codex_items.json").exists():
@@ -1009,7 +1021,7 @@ def locate_hlboot(pid):
 # 3D models, for the Collection's viewer
 # ---------------------------------------------------------------------------
 MODELS_DIR = ANALYSIS / "models"
-MODEL_FORMAT = 7
+MODEL_FORMAT = 8
 _model_lock = threading.Lock()
 
 

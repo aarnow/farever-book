@@ -2502,3 +2502,5 @@ html.lt-900 .hmview .cvstage { aspect-ratio: 1 / .6; max-height: 46vh; }
 .huntmain > .farmlist { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
 .huntmain .farmcard .fhead { flex-wrap: wrap; row-gap: 6px; }
 .huntmain .farmcard .fstat { flex: 1 1 100%; max-width: none; text-align: left; }
+/* the monster's own words, from the game, under its name */
+.hmdesc { margin: 12px 2px 4px; color: var(--dim); font-style: italic; line-height: 1.5; }

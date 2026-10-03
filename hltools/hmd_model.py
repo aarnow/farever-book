@@ -24,6 +24,7 @@ PNG, and its shading values with the game's defaults filled in.
 import base64
 import io
 import json
+import math
 import struct
 from pathlib import Path
 
@@ -367,67 +368,118 @@ def _walk(o, fn):
             _walk(v, fn)
 
 
-def prefab_parts(game_dir, prefab, depth=0):
-    """(model file, {material name: gradmat {slots, props}}) of a prefab,
-    following a reference to another prefab when the model sits there."""
+def _gradmat(c):
+    # its settings sit beside the slots, or (older prefabs) under props
+    props = {k: v for k, v in c.items() if isinstance(v, (int, float))}
+    props.update(c.get("props") or {})
+    return {"slots": c.get("slots") or [], "props": props,
+            "offsets": c.get("slotsOffsets") or [],
+            "max": int(c.get("numSlots") or 8),
+            "pattern": c.get("patternPath"), "alpha": c.get("patternAlphaPath")}
+
+
+def _material(o, mats):
+    """One prefab material into `mats`, by the name the model knows it by."""
+    kids = o.get("children") or ()
+    name = o.get("materialName") or o.get("name")
+    pbr = (o.get("props") or {}).get("PBR") or {}
+    for c in kids:
+        if c.get("type") == "gradmat":
+            mats[name] = _gradmat(c)
+    if name not in mats and isinstance(o.get("color"), list):
+        # glass: black underneath, its colour in the Fresnel rim or the toon
+        # highlight
+        shaders = {str(c.get("source", "")).rsplit("/", 1)[-1]: c.get("props") or {}
+                   for c in kids if c.get("type") == "shader"}
+        fr = shaders.get("Fresnel.hx") or {}
+        color = next((c for c in (o["color"], fr.get("color"),
+                                  (shaders.get("ToonSpecular.hx") or {}).get("color"))
+                      if isinstance(c, list) and any(c[:3])), o["color"])
+        entry = {"color": color}
+        if fr:
+            # drawn over the body it duplicates: only its rim shows
+            entry["glass"] = [float(fr.get(k) or 0) for k in ("bias", "scale", "power")]
+        mats[name] = entry
+    if name in mats:
+        # which faces it shows, and how it lays over what is behind
+        mats[name]["cull"] = pbr.get("culling") or "Back"
+        mats[name]["blend"] = pbr.get("blend") or "None"
+
+
+def _local(o):
+    """A prefab object's own transform (hrt Object3D: x y z, rotations in
+    degrees as h3d's Quat.initRotation takes them, scales) as a matrix."""
+    ax, ay, az = (math.radians(float(o.get(k) or 0))
+                  for k in ("rotationX", "rotationY", "rotationZ"))
+    sx, cx = math.sin(ax / 2), math.cos(ax / 2)
+    sy, cy = math.sin(ay / 2), math.cos(ay / 2)
+    sz, cz = math.sin(az / 2), math.cos(az / 2)
+    qx = sx * cy * cz - cx * sy * sz
+    qy = cx * sy * cz + sx * cy * sz
+    qz = cx * cy * sz - sx * sy * cz
+    qw = cx * cy * cz + sx * sy * sz
+    if qw < 0:
+        qx, qy, qz = -qx, -qy, -qz
+    sc = float(o.get("scale") or 1)
+    return _mat([float(o.get("x") or 0), float(o.get("y") or 0), float(o.get("z") or 0),
+                 qx, qy, qz,
+                 float(o.get("scaleX") or 1) * sc, float(o.get("scaleY") or 1) * sc,
+                 float(o.get("scaleZ") or 1) * sc])
+
+
+_IDENTITY = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]]
+
+
+def prefab_models(game_dir, prefab, depth=0):
+    """Every model a prefab is made of: [{source, mats, matrix}] — a boss is
+    a body, an abdomen and its eyes. Each with its own materials and its
+    place in the prefab. A model hung on a bone of another (a constraint:
+    eyes on a head) is left out, its place being where that bone is."""
     raw = _read(Path(game_dir) / "res.pak", prefab)
     if not raw:
-        return None, {}
+        return []
     tree = hbson.loads(raw)
-    found = {"model": None, "mats": {}, "refs": []}
+    hung = set()
+    _walk(tree, lambda o: hung.add(o.get("object")) if o.get("type") == "constraint" else None)
+    out, refs = [], []
 
-    def gradmat(c):
-        # its settings sit beside the slots, or (older prefabs) under props
-        props = {k: v for k, v in c.items() if isinstance(v, (int, float))}
-        props.update(c.get("props") or {})
-        return {"slots": c.get("slots") or [], "props": props,
-                "offsets": c.get("slotsOffsets") or [],
-                "max": int(c.get("numSlots") or 8),
-                "pattern": c.get("patternPath"), "alpha": c.get("patternAlphaPath")}
-
-    def visit(o):
+    def walk(o, parent, path):
         t = o.get("type")
-        kids = o.get("children") or ()
-        if t == "model" and o.get("source") and not found["model"]:
-            found["model"] = o["source"]
-            # a gradmat on the model itself colours all its materials
-            for c in kids:
+        here = ".".join(x for x in (path, o.get("name") or "") if x) if t != "prefab" else ""
+        m = _mul(_local(o), parent) if t not in ("prefab", None) else parent
+        if here in hung:
+            return
+        if t == "model" and o.get("source"):
+            mats = {}
+            for c in o.get("children") or ():
                 if c.get("type") == "gradmat":
-                    found["mats"]["*"] = gradmat(c)
-        elif t == "material":
-            name = o.get("materialName") or o.get("name")
-            pbr = (o.get("props") or {}).get("PBR") or {}
-            for c in kids:
-                if c.get("type") == "gradmat":
-                    found["mats"][name] = gradmat(c)
-            if name not in found["mats"] and isinstance(o.get("color"), list):
-                # glass: black underneath, its colour in the Fresnel rim or
-                # the toon highlight
-                shaders = {str(c.get("source", "")).rsplit("/", 1)[-1]:
-                           c.get("props") or {}
-                           for c in kids if c.get("type") == "shader"}
-                fr = shaders.get("Fresnel.hx") or {}
-                color = next((c for c in (o["color"], fr.get("color"),
-                                          (shaders.get("ToonSpecular.hx") or {}).get("color"))
-                              if isinstance(c, list) and any(c[:3])), o["color"])
-                entry = {"color": color}
-                if fr:
-                    # drawn over the body it duplicates: only its rim shows
-                    entry["glass"] = [float(fr.get(k) or 0) for k in ("bias", "scale", "power")]
-                found["mats"][name] = entry
-            if name in found["mats"]:
-                # which faces it shows, and how it lays over what is behind
-                found["mats"][name]["cull"] = pbr.get("culling") or "Back"
-                found["mats"][name]["blend"] = pbr.get("blend") or "None"
+                    # on the model itself, it colours all its materials
+                    mats["*"] = _gradmat(c)
+                elif c.get("type") == "material":
+                    _material(c, mats)
+            out.append({"source": o["source"], "mats": mats, "matrix": m})
         elif t == "reference" and str(o.get("source", "")).endswith(".prefab"):
-            found["refs"].append(o["source"])
-    _walk(tree, visit)
-    if not found["model"] and depth < 3:
-        for ref in found["refs"]:
-            m, mats = prefab_parts(game_dir, ref, depth + 1)
-            if m:
-                return m, {**mats, **found["mats"]}
-    return found["model"], found["mats"]
+            refs.append((o["source"], m))
+        for c in o.get("children") or ():
+            if c.get("type") != "material":
+                walk(c, m, here)
+    walk(tree, _IDENTITY, "")
+    if not out and depth < 3:
+        for ref, m in refs:
+            got = prefab_models(game_dir, ref, depth + 1)
+            if got:
+                return [dict(g, matrix=_mul(g["matrix"], m)) for g in got]
+    return out
+
+
+def prefab_parts(game_dir, prefab, depth=0):
+    """(first model file, {material name: gradmat}) of a prefab — the
+    materials of all its models."""
+    models = prefab_models(game_dir, prefab, depth)
+    mats = {}
+    for mdl in reversed(models):
+        mats.update(mdl["mats"])
+    return (models[0]["source"] if models else None), mats
 
 
 def item_prefab(game_dir, item_id):
@@ -545,18 +597,9 @@ def _b64(fmt, values):
     return base64.b64encode(struct.pack(f"<{len(values)}{fmt}", *values)).decode()
 
 
-def item_model(game_dir, item_id):
-    """The viewer's payload for one collectible, or None when it has no
-    model this reader can make sense of."""
-    prefab = item_prefab(game_dir, item_id)
-    if not prefab:
-        return None
-    src, gradmats = prefab_parts(game_dir, prefab)
-    if not src:
-        return None
-    raw = _read(Path(game_dir) / "res.pak", src)
-    if not raw or raw[:3] != b"HMD":
-        return None
+def _model_parts(game_dir, raw, gradmats, matrix):
+    """One model file's mesh, in the prefab's space (Z-up), and its parts:
+    (mesh, [(triangles, material)]); None when it has no geometry."""
     d = read_hmd(raw)
     model = next((m for m in d["models"] if m["geom"] >= 0), None)
     if model is None:
@@ -569,10 +612,17 @@ def item_model(game_dir, item_id):
         for t in tris:
             sub_of[t] = mi
     rest_pose(m, sub_of, model)
-    # Heaps is Z-up; the viewer, like WebGL's habits, Y-up
-    for a in (m["pos"], m["nor"]):
-        for i in range(0, len(a), 3):
-            a[i + 1], a[i + 2] = a[i + 2], -a[i + 1]
+    if matrix is not _IDENTITY:
+        M = matrix
+        pos, nor = m["pos"], m["nor"]
+        for i in range(0, len(pos), 3):
+            px, py, pz = pos[i:i + 3]
+            nx, ny, nz = nor[i:i + 3]
+            pos[i:i + 3] = [px * M[0][c] + py * M[1][c] + pz * M[2][c] + M[3][c]
+                            for c in range(3)]
+            v = [nx * M[0][c] + ny * M[1][c] + nz * M[2][c] for c in range(3)]
+            ln = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) ** 0.5 or 1.0
+            nor[i:i + 3] = [v[0] / ln, v[1] / ln, v[2] / ln]
     # a material the prefab names differently from the model (Gradmat1 in
     # the model, Gradmat_12Slots_002 in the prefab) takes the prefab's main
     # gradmat left unclaimed: the one with the most slots
@@ -590,23 +640,59 @@ def item_model(game_dir, item_id):
             continue
         gm = (gradmats.get(mat.get("name")) or gradmats.get("*")
               or (spare[0] if spare else {}))
+        parts.append((tris, gm))
+    return m, parts
+
+
+def item_model(game_dir, item_id):
+    """The viewer's payload for one collectible (or monster), or None when
+    it has no model this reader can make sense of. A prefab of several
+    models comes as one mesh."""
+    prefab = item_prefab(game_dir, item_id)
+    if not prefab:
+        return None
+    pos, nor, uv, uv2, groups = [], [], [], [], []
+    for mdl in prefab_models(game_dir, prefab):
+        raw = _read(Path(game_dir) / "res.pak", mdl["source"])
+        if not raw or raw[:3] != b"HMD":
+            continue
+        got = _model_parts(game_dir, raw, mdl["mats"], mdl["matrix"])
+        if not got:
+            continue
+        m, parts = got
+        base = len(pos) // 3
+        pos += m["pos"]
+        nor += m["nor"]
+        uv += m["uv"]
+        uv2 += m["uv2"]
+        groups += [([t + base for t in tris], gm) for tris, gm in parts]
+    n = len(pos) // 3
+    if not n:
+        return None
+    # Heaps is Z-up; the viewer, like WebGL's habits, Y-up
+    for a in (pos, nor):
+        for i in range(0, len(a), 3):
+            a[i + 1], a[i + 2] = a[i + 2], -a[i + 1]
+    big = n > 0x10000
+    out = []
+    for tris, gm in groups:
         grad, nslots = gradients_png(game_dir, gm.get("slots"), gm.get("color"))
         offs = [float(x or 0) for x in (gm.get("offsets") or [])][:nslots]
-        parts.append({"idx": _b64("I" if m["big"] else "H", tris),
-                      "grad": grad, "slots": nslots,
-                      "max": 1 if gm.get("color") else gm.get("max", 8),
-                      "offs": offs + [0.0] * (nslots - len(offs)),
-                      "pattern": texture_png(game_dir, gm.get("pattern")),
-                      "alpha": texture_png(game_dir, gm.get("alpha")),
-                      "shade": shading(gm),
-                      "glass": gm.get("glass"),
-                      "cull": gm.get("cull", "Back"), "blend": gm.get("blend", "None")})
+        out.append({"idx": _b64("I" if big else "H", tris),
+                    "grad": grad, "slots": nslots,
+                    "max": 1 if gm.get("color") else gm.get("max", 8),
+                    "offs": offs + [0.0] * (nslots - len(offs)),
+                    "pattern": texture_png(game_dir, gm.get("pattern")),
+                    "alpha": texture_png(game_dir, gm.get("alpha")),
+                    "shade": shading(gm),
+                    "glass": gm.get("glass"),
+                    "cull": gm.get("cull", "Back"), "blend": gm.get("blend", "None")})
     # normals as signed bytes: a third of the size, and plenty for shading
-    nor = [max(-127, min(127, round(x * 127))) for x in m["nor"]]
-    return {"id": item_id, "n": m["n"], "big": m["big"],
-            "pos": _b64("f", m["pos"]), "nor": _b64("b", nor),
-            "uv": _b64("f", m["uv"]), "uv2": _b64("f", m["uv2"]),
-            "lines": lines_png(game_dir), "parts": parts}
+    nb = [max(-127, min(127, round(x * 127))) for x in nor]
+    return {"id": item_id, "n": n, "big": big,
+            "pos": _b64("f", pos), "nor": _b64("b", nb),
+            "uv": _b64("f", uv), "uv2": _b64("f", uv2),
+            "lines": lines_png(game_dir), "parts": out}
 
 
 if __name__ == "__main__":
