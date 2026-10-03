@@ -401,6 +401,10 @@ def item_prefab(game_dir, item_id):
     vis = it.get("visuals") or {}
     if vis.get("modelPath", "").endswith(".prefab"):
         return vis["modelPath"]
+    # gliders (and gear worn on the hero) list their prefabs directly
+    for mdl in vis.get("models") or ():
+        if str((mdl or {}).get("prefab", "")).endswith(".prefab"):
+            return mdl["prefab"]
     ref, seen = vis.get("modelRef"), set()
     while ref and ref not in seen:
         seen.add(ref)
@@ -517,11 +521,19 @@ def item_model(game_dir, item_id):
     for a in (m["pos"], m["nor"]):
         for i in range(0, len(a), 3):
             a[i + 1], a[i + 2] = a[i + 2], -a[i + 1]
+    # a material the prefab names differently from the model (Gradmat1 in
+    # the model, Gradmat_12Slots_002 in the prefab) takes the prefab's main
+    # gradmat left unclaimed: the one with the most slots
+    names = {mm.get("name") for mm in d["mats"]}
+    spare = sorted((v for k, v in gradmats.items()
+                    if k not in names and k != "*" and v.get("slots")),
+                   key=lambda v: -len(v["slots"]))
     parts = []
     for k, tris in enumerate(m["subs"]):
         mi = model["mats"][k] if k < len(model["mats"]) else 0
         mat = d["mats"][mi] if mi < len(d["mats"]) else {}
-        gm = gradmats.get(mat.get("name")) or gradmats.get("*") or {}
+        gm = (gradmats.get(mat.get("name")) or gradmats.get("*")
+              or (spare[0] if spare else {}))
         grad, nslots = gradients_png(game_dir, gm.get("slots"), gm.get("color"))
         offs = [float(x or 0) for x in (gm.get("offsets") or [])][:nslots]
         parts.append({"idx": _b64("I" if m["big"] else "H", tris),

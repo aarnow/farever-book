@@ -2,6 +2,8 @@
 
 const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '' };
 let COLL_NODE = null;
+// the categories whose models the meter knows how to read
+const COLL_3D = new Set(['mounts', 'gliders']);
 
 function ring(pct) {
   const r = 22, c = 2 * Math.PI * r;
@@ -238,20 +240,21 @@ function renderCollection(box, n) {
 }
 
 /* The panel beside the list: the item's model, turning, when the game has
-   one (mounts, for now), else its picture — and what the game says of it. */
+   one (mounts and gliders, for now), else its picture — and what the game says of it. */
 function buildCollView(it, cat) {
   const v = el('div', 'collview' + (it.rk ? ' r-' + it.rk : ''));
   const stage = el('div', 'cvstage');
   const pic = el('div', 'cvpic' + (it.own ? ' own' : ''));
   pic.appendChild(collImg(it.id));
   stage.appendChild(pic);
-  if (it.c === 'mounts' && m3dSupported()) {
+  if (COLL_3D.has(it.c) && m3dSupported()) {
     const wait = el('div', 'cvwait', 'Chargement du modèle 3D…');
     const hint = el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer');
     stage.classList.add('is3d');
+    // a glider's wings read best from above
     stage.appendChild(m3dCanvas(it.id, (st) => {
       stage.dataset.st = st;
-    }));
+    }, { pitch: it.c === 'gliders' ? 0.6 : 0.18 }));
     stage.appendChild(wait);
     stage.appendChild(hint);
   }

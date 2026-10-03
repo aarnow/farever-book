@@ -44,15 +44,17 @@ window.addModel = function (id, json) {
 };
 
 /* The canvas, for a panel to hold. `onState(state)` hears 'loading',
-   'ready' or 'none' (no model: the panel shows the picture instead). */
-function m3dCanvas(id, onState) {
+   'ready' or 'none' (no model: the panel shows the picture instead).
+   `opts.pitch`: how far above it the camera starts (gliders: seen from above). */
+function m3dCanvas(id, onState, opts) {
   if (!M3D.canvas) m3dInit();
   M3D.onState = onState;
+  M3D.pitch0 = (opts && opts.pitch) || 0.18;
   if (id !== M3D.cur) {
     M3D.cur = id;
     M3D.spin = true;
     M3D.yaw = 0.65;
-    M3D.pitch = 0.18;
+    M3D.pitch = M3D.pitch0;
     if (id in M3D.models) m3dLoad(id);
     else {
       m3dFree();
@@ -168,7 +170,7 @@ function m3dInit() {
   const up = () => { M3D.drag = null; };
   c.addEventListener('pointerup', up);
   c.addEventListener('pointercancel', up);
-  c.addEventListener('dblclick', () => { M3D.spin = true; M3D.pitch = 0.18; M3D.dist = 1; });
+  c.addEventListener('dblclick', () => { M3D.spin = true; M3D.pitch = M3D.pitch0; M3D.dist = 1; });
   c.addEventListener('wheel', (e) => {
     e.preventDefault();
     M3D.dist = Math.max(0.45, Math.min(2.2, M3D.dist * (e.deltaY > 0 ? 1.1 : 0.9)));
