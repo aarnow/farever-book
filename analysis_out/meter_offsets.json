@@ -53,7 +53,8 @@
   },
   "Loadout": {
     "inventory": 144,
-    "equipment": 128
+    "equipment": 128,
+    "banks": 160
   },
   "Inventory": {
     "content": 128

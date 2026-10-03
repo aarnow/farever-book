@@ -60,3 +60,4 @@ analysis_out/map_tiles/
 analysis_out/skill_img/
 .meter_itemcodex.json
 .meter_achievements.json
+.meter_goals.json

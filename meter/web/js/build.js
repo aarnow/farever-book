@@ -322,14 +322,26 @@ function buildPassives(list) {
 function buildList(n, box) {
   const head = el('div', 'blisthead');
   head.appendChild(el('div', 'section', 'Mes builds'));
+  const btns = el('div', 'bheadbtns');
+  // a quick start: the character in game, copied into a build
+  const me = el('button', 'btn bme' + (n.me ? '' : ' off'),
+    n.me && n.me.wait ? 'Lecture de ' + n.me.n + '…'
+      : 'Créer depuis mon personnage' + (n.me ? ' (' + n.me.n + ')' : ''));
+  me.type = 'button';
+  me.title = n.me ? 'Copie l’équipement, les talents, les compétences et les runes de '
+    + n.me.n + ' dans un nouveau build.' : 'Lance le jeu : ton personnage doit être identifié.';
+  if (n.me && n.me.wait) me.disabled = true;
+  me.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_from_me', {}); });
+  btns.appendChild(me);
   const nb = el('button', 'btn bnew', '+ Nouveau build');
   nb.type = 'button';
   nb.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); });
-  head.appendChild(nb);
+  btns.appendChild(nb);
+  head.appendChild(btns);
   box.appendChild(head);
   if (!(n.list || []).length) {
-    box.appendChild(el('p', 'note', 'Aucun build pour l’instant. Crée-en un, ou pars d’un '
-      + 'joueur analysé dans Inspecter (« Créer un build »).'));
+    box.appendChild(el('p', 'note', 'Aucun build pour l’instant. Crée-en un, copie ton '
+      + 'personnage, ou pars d’un joueur analysé dans Inspecter (« Créer un build »).'));
     return box;
   }
   const grid = el('div', 'bcards');

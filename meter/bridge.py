@@ -123,6 +123,13 @@ class MenuBridge:
         self._last_push = spec
         self.send({"t": "state", "d": spec})
 
+    def push_overlay(self, spec):
+        """The overlays' state, when it changed (their own channel)."""
+        if not self.ready or spec == getattr(self, "_last_ov", None):
+            return
+        self._last_ov = spec
+        self.send({"t": "ov", "d": spec})
+
     def invalidate(self):
         """Force the next push through even if it matches. Used when the panel
         has just appeared and its idea of the state is nothing at all, and by

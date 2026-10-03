@@ -784,6 +784,45 @@ function readContainerKinds(invPtr, into, byKey) {
     return true;
 }
 
+// ---- the stock: what the hero owns, by item kind ----
+// Bag + equipment (already counted for the pickups) + every bank tab, for the
+// goals overlay ("5 copper ores": owned, wherever they are). Loadout.banks is
+// an hxbit.ArrayProxyData; an entry is counted only when it reads as an
+// st.Inventory. Sent when it changes; `banks` says how many tabs were read
+// (-1: no offset), as the bank may only be known once it has been opened.
+let stockSig = null;
+
+function sendStock(loadout, now, info) {
+    try {
+        const all = {}, binfo = {};
+        for (const key in now) {
+            const k = info[key] && info[key].kind;
+            if (k) all[k] = (all[k] || 0) + now[key];
+        }
+        let banks = -1;
+        if (OFF.Loadout.banks != null) {
+            banks = 0;
+            const tabs = proxyItems(loadout.add(OFF.Loadout.banks).readPointer(), 64);
+            for (let i = 0; i < tabs.length; i++) {
+                const nm = typeName(tabs[i]);
+                if (!nm || nm.indexOf("st.Inventory") !== 0) continue;
+                const got = {};
+                if (!readContainerKinds(tabs[i], got, binfo)) continue;
+                banks++;
+                for (const key in got) {
+                    const k = binfo[key] && binfo[key].kind;
+                    if (k) all[k] = (all[k] || 0) + got[key];
+                }
+            }
+        }
+        const sig = banks + "|" + Object.keys(all).sort()
+            .map(function (k) { return k + ":" + all[k]; }).join(",");
+        if (sig === stockSig) return;
+        stockSig = sig;
+        send({ kind: "stock", items: all, banks: banks });
+    } catch (e) {}
+}
+
 // Counting by kind across BOTH containers survives equipping and unequipping
 // (the item moves, the count doesn't): only a real gain moves a count up.
 function sweepInventory() {
@@ -799,6 +838,7 @@ function sweepInventory() {
         const okEq = readContainerKinds(
             loadout.add(OFF.Loadout.equipment).readPointer(), now, info);
         if (!okInv || !okEq) return;
+        sendStock(loadout, now, info);
         if (!invReady) {
             invSeen = now; invReady = true; return;
         }

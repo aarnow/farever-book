@@ -1077,3 +1077,53 @@ def release_instance_lock():
         except OSError:
             pass
 
+
+
+# ---------------------------------------------------------------------------
+# The game's window, for the overlays
+# ---------------------------------------------------------------------------
+def game_window(pid):
+    """(hwnd, (x, y, w, h), minimised) of the largest visible top-level window
+    of process `pid` — the game's — or None. Physical pixels."""
+    if not pid or sys.platform != "win32":
+        return None
+    u = ctypes.windll.user32
+    best = [None, 0]
+    proto = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+    def one(h, _l):
+        if not u.IsWindowVisible(h):
+            return True
+        p = wintypes.DWORD()
+        u.GetWindowThreadProcessId(h, ctypes.byref(p))
+        if p.value != pid:
+            return True
+        r = wintypes.RECT()
+        if not u.GetWindowRect(h, ctypes.byref(r)):
+            return True
+        area = (r.right - r.left) * (r.bottom - r.top)
+        if area > best[1]:
+            best[0], best[1] = (h, (r.left, r.top, r.right - r.left,
+                                    r.bottom - r.top)), area
+        return True
+    try:
+        u.EnumWindows(proto(one), 0)
+    except OSError:
+        return None
+    if best[0] is None:
+        return None
+    h, rect = best[0]
+    return h, rect, bool(u.IsIconic(h))
+
+
+def foreground_pid():
+    """The process whose window has the keyboard focus, or 0."""
+    if sys.platform != "win32":
+        return 0
+    u = ctypes.windll.user32
+    h = u.GetForegroundWindow()
+    if not h:
+        return 0
+    p = wintypes.DWORD()
+    u.GetWindowThreadProcessId(h, ctypes.byref(p))
+    return p.value

@@ -2105,3 +2105,10 @@ body.maxed .grip { display: none; }
 .achstats .achring svg { width: 52px; height: 52px; }
 .achstats .achtx { min-width: 0; }
 .achstats .achstat.badge { border-radius: 50%; }
+
+/* Build list: copy one's own character, beside "Nouveau build" */
+.bheadbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.bme.off { opacity: .55; }
+.blisthead .bheadbtns { flex: none; }
+.blisthead .bheadbtns .btn { width: auto; max-width: none; margin: 0; }
+.blisthead .bme:not(.off) { border-color: var(--accent); color: var(--accent); }

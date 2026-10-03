@@ -24,10 +24,12 @@ from common import (
 from winsys import (
     HK_RESET, REBIND_TO, RESET_BIND, VK_CONTROL, VK_MENU, VK_MOUSE, VK_SHIFT,
     VK_UNBINDABLE, WM_REBIND, _monitor_containing, bind_label,
-    copy_image_to_clipboard, copy_text_to_clipboard, quit_requested,
-    start_hotkeys)
+    copy_image_to_clipboard, copy_text_to_clipboard, foreground_pid,
+    game_window, quit_requested, start_hotkeys)
+import goals as G
 from gamedata import (
     REGENERATING, _boss_label, _element_done, _fr_names, dungeon_catalogue,
+    item_rarity,
     dungeon_name, forget_loaded_data, item_icon, item_label, item_type,
     locate_hlboot, regenerate_data, world_map)
 from combat import (
@@ -45,6 +47,12 @@ from gamelink import GameLink
 
 # Runs kept per dungeon: the 11th removes the oldest (records stay).
 DUNGEON_RUNS_KEPT = 10
+
+
+# The overlays: the grid their distance to the edge snaps to, and how long
+# after the hook last saw our hero they stay up (it reports every 3 s).
+OVERLAY_GRID = 8
+OVERLAY_HERO_SECS = 8.0
 
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
@@ -71,6 +79,12 @@ class App:
         self.root = _Scheduler()            # after()/after_cancel()/quit()
         self.menubridge = MenuBridge(self)
         self.buildtab = BuildTab(self.menubridge.invalidate, self._toast_msg)
+        # the overlays over the game: the group meter and the goals
+        self.goals = G.Goals()
+        self._ov_tab = "dmg"                # the meter overlay's tab
+        self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
+        self._ov_on = {"meter": True, "goals": True}   # shown, per overlay
+        self._hero_at = 0.0                 # last time the hook saw our hero
         self._action_q = []
         self._q_lock = threading.Lock()
         self._stopping = False
@@ -110,6 +124,7 @@ class App:
         self._roster_at = 0.0
         self._profiles = None               # profiles analysed this session
         self._char_sel = None               # the profile being read
+        self._me_build = None               # (name, since): own build asked
         self._char_wait = None              # (name, since) of an analysis
         self._elements_data = None          # .meter_elements.json, loaded
         self._dungeon_cache = {}            # file name -> (mtime, data)
@@ -170,6 +185,24 @@ class App:
                 z = None
         if isinstance(z, int) and 50 <= z <= 200:
             self._zoom = z
+        pos = data.get("overlay_pos")
+        if isinstance(pos, dict):
+            for k, v in pos.items():
+                if isinstance(v, dict) and v.get("ax") in ("l", "r") \
+                        and v.get("ay") in ("t", "b"):
+                    self._ov_pos[k] = {"ax": v["ax"], "ay": v["ay"],
+                                       "dx": int(v.get("dx") or 0),
+                                       "dy": int(v.get("dy") or 0)}
+                elif isinstance(v, list) and len(v) == 2:   # the first form
+                    self._ov_pos[k] = {"ax": "l", "ay": "t",
+                                       "dx": int(v[0]), "dy": int(v[1])}
+        on = data.get("overlay_on")
+        if isinstance(on, dict):
+            for k in self._ov_on:
+                if isinstance(on.get(k), bool):
+                    self._ov_on[k] = on[k]
+        if data.get("overlay_tab") in ("dmg", "heal"):
+            self._ov_tab = data["overlay_tab"]
 
     def _save_settings(self):
         try:
@@ -183,6 +216,9 @@ class App:
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
+                "overlay_pos": self._ov_pos,
+                "overlay_on": self._ov_on,
+                "overlay_tab": self._ov_tab,
             }, indent=2))
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
@@ -454,6 +490,18 @@ class App:
             "char_close": lambda: setattr(self, "_char_sel", None),
             "char_forget": lambda p: self._forget_profile(p.get("name")),
             "char_to_build": lambda p: self._profile_to_build(p.get("name")),
+            "build_from_me": self._build_from_me,
+            # overlays
+            "ov_tab": lambda p: self._ov_set_tab(p.get("tab")),
+            "ov_moved": self._ov_moved,
+            "ov_toggle_meter": lambda: self._ov_toggle("meter"),
+            "ov_toggle_goals": lambda: self._ov_toggle("goals"),
+            "ov_reset": self._ov_reset,
+            "goal_search": lambda p: G.search(p.get("q")),
+            "goal_add": self._goal_add,
+            "goal_del": lambda p: self.goals.remove(p.get("id")),
+            "goal_n": lambda p: self.goals.set_n(p.get("id"), p.get("n")),
+            "goal_clear_done": self.goals.clear_done,
             # settings
             "toggle_heal": self._toggle_heal,
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
@@ -519,6 +567,11 @@ class App:
                 except Exception:
                     import traceback
                     traceback.print_exc()
+                try:
+                    self.menubridge.push_overlay(self._overlay_spec())
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
             elif self.menubridge.dirty():
                 try:
                     self.menubridge.push(self._spec())
@@ -578,7 +631,7 @@ class App:
                    "Map": self._page_map,
                    "Character": self._page_character,
                    "Settings": self._page_settings,
-                   "Build": self.buildtab.page,
+                   "Build": self._page_build,
                    "Help": self._page_help}.get(tab)
         try:
             return builder() if builder else []
@@ -983,6 +1036,109 @@ class App:
                   f"(e.g. {owned['gears'][:3]})", file=sys.stderr)
         self._enqueue(done)()
 
+    # ---- the overlays
+    def on_stock(self, p):
+        """What the hero owns changed (bag, equipment, bank). Hook thread."""
+        def done():
+            for g in self.goals.on_stock(p.get("items"), p.get("banks")):
+                self._goal_reached(g)
+        self._enqueue(done)()
+
+    def on_pickup(self, p):
+        def done():
+            # a weapon's copy says its rarity; anything else is its row's
+            rar = p.get("rarity") or item_rarity(p.get("item"))
+            for g in self.goals.on_pickup(rar, p.get("count")):
+                self._goal_reached(g)
+        self._enqueue(done)()
+
+    def _goal_reached(self, g):
+        self._event(f"Objectif atteint : {g['n']} × {self.goals.label(g)}.",
+                    "ok")
+
+    def _goal_add(self, p):
+        self.goals.add(p.get("kind"), p.get("ref"), p.get("n"))
+
+    def on_hero_seen(self):
+        """The hook saw our hero (every 3 s in the world). Hook thread."""
+        self._hero_at = time.time()
+
+    def _ov_moved(self, p):
+        """An overlay dropped: anchored to the nearer side of the game's
+        window, left or right, top or bottom, at its distance from that
+        edge — so a smaller window keeps it where it was against its side.
+        The distance snaps to a grid of OVERLAY_GRID pixels."""
+        oid = p.get("id")
+        g = p.get("game")
+        r = p.get("rect")
+        if oid not in self._ov_on or not g or not r:
+            return
+        gx, gy, gw, gh = (int(v) for v in g)
+        x, y, w, h = (int(v) for v in r)
+        snap = lambda v: max(0, int(round(v / OVERLAY_GRID)) * OVERLAY_GRID)
+        left, right = x - gx, gx + gw - (x + w)
+        top, bottom = y - gy, gy + gh - (y + h)
+        self._ov_pos[oid] = {
+            "ax": "l" if left <= right else "r",
+            "dx": snap(min(left, right)),
+            "ay": "t" if top <= bottom else "b",
+            "dy": snap(min(top, bottom))}
+        self._save_settings()
+
+    def _ov_toggle(self, oid):
+        if oid in self._ov_on:
+            self._ov_on[oid] = not self._ov_on[oid]
+            self._save_settings()
+
+    def _ov_reset(self):
+        self._ov_pos = {}
+        self._save_settings()
+        self._toast_msg("Overlays remis à leur place par défaut.")
+
+    def _ov_set_tab(self, tab):
+        if tab in ("dmg", "heal"):
+            self._ov_tab = tab
+            self._save_settings()
+
+    def _overlay_spec(self):
+        """What the overlays show, and whether: only over the game, while it
+        (or one of our windows) has the focus."""
+        win = game_window(self.target_pid) if self.game_connected() else None
+        fg = foreground_pid()
+        ours = {self.target_pid, self.menubridge.pid()}
+        # on a character in the world: the menus and loading screens never
+        # see the hero, the world sees it every 3 s
+        in_world = time.time() - self._hero_at < OVERLAY_HERO_SECS
+        show = bool(win and not win[2] and fg and fg in ours and in_world
+                    and any(self._ov_on.values()))
+        spec = {"show": show, "game": list(win[1]) if win else None,
+                "pos": self._ov_pos, "on": dict(self._ov_on)}
+        if not show:
+            return spec
+        rows, duration, _holding, in_combat = self._live
+        group = [p for p in rows if p.in_party] or [p for p in rows
+                                                    if p.is_me]
+        heal = self._ov_tab == "heal"
+        group.sort(key=lambda p: -(p.heal_total if heal else p.total))
+        top = max(((p.heal_total if heal else p.total) for p in group),
+                  default=0.0) or 1.0
+        total = sum((p.heal_total if heal else p.total) for p in group)
+        spec["meter"] = {
+            "tab": self._ov_tab,
+            "time": _mmss(duration) if duration > 0 else "",
+            "fight": bool(in_combat),
+            "total": _n(total) if total else "",
+            "rows": [{"n": p.name, "me": bool(p.is_me),
+                      "ck": class_key(self.world.class_of(p.name)),
+                      "v": _n(p.heal_total if heal else p.total),
+                      "ps": (_n((p.heal_total if heal else p.total) / duration)
+                             if duration > 0 else ""),
+                      "f": round((p.heal_total if heal else p.total) / top, 4)}
+                     for p in group[:8]
+                     if (p.heal_total if heal else p.total) > 0]}
+        spec["goals"] = self.goals.view()
+        return spec
+
     def on_achievements(self, p):
         """The achievements read in game: the account's completion times and
         this character's completed ids and counters. Saved, so the Succès
@@ -1174,7 +1330,13 @@ class App:
                 self._roster_at = time.time()
                 return
             self._char_wait = None
+            who = p.get("n") or (p.get("profile") or {}).get("n")
+            mine = bool(self._me_build) and self._me_build[0] == who
             if p.get("missing"):
+                if mine:
+                    self._me_build = None
+                    self._toast_msg("Ton personnage n'a pas pu être lu.")
+                    return
                 self._toast_msg(f"{p.get('n')} n'est plus à proximité.")
                 return
             prof = dict(p.get("profile") or {}, at=time.time())
@@ -1189,6 +1351,13 @@ class App:
                   f"{prof.get('statuses')}", file=sys.stderr)
             # kept for this session only: profiles are never written to disk
             self._profiles_data()[name] = prof
+            if mine:
+                # asked from the Build tab: straight into a build, named
+                # after the character
+                self._me_build = None
+                self._set_tab("Build")
+                self.buildtab.import_profile(prof, name)
+                return
             self._char_sel = name
         self._enqueue(done)()
 
@@ -1213,6 +1382,35 @@ class App:
         self._profiles_data().pop(name, None)
         if self._char_sel == name:
             self._char_sel = None
+
+    def _me(self):
+        """The local hero in the players around: {n, k, lvl}, or None."""
+        if not self.game_connected() or time.time() - self._roster_at > 30:
+            return None
+        return next((r for r in self._roster if r.get("me")), None)
+
+    def _build_from_me(self):
+        """Build's "Créer depuis mon personnage": the local hero analysed
+        like any player of Inspecter, then made a build (on_character)."""
+        me = self._me()
+        if me is None:
+            self._toast_msg("Ton personnage n'est pas encore identifié : "
+                            "lance le jeu et attends quelques secondes.")
+            return
+        self._me_build = (me["n"], time.time())
+        self._analyze(me["n"])
+
+    def _page_build(self):
+        nodes = self.buildtab.page()
+        me = self._me()
+        wait = self._me_build
+        if wait and time.time() - wait[1] > 15:
+            self._me_build = wait = None
+        for n in nodes:
+            if n.get("k") == "build":
+                n["me"] = ({"n": me["n"], "lvl": me.get("lvl"),
+                            "wait": bool(wait)} if me else None)
+        return nodes
 
     def _profile_to_build(self, name):
         """Inspecter's "Créer un build": the analysed player as a build,
@@ -1590,6 +1788,20 @@ class App:
                                "entrant dans une faille, et revient au groupe "
                                "en sortant. Chaque bascule réinitialise le "
                                "combat."},
+            {"k": "section", "t": "Overlay en jeu"},
+            {"k": "button", "id": "ov_toggle_meter",
+             "t": self._tick(self._ov_on["meter"], "Compteur du groupe")},
+            {"k": "button", "id": "ov_toggle_goals",
+             "t": self._tick(self._ov_on["goals"], "Objectifs")},
+            {"k": "button", "id": "ov_reset",
+             "t": "Remettre les overlays à leur place par défaut"},
+            {"k": "note", "t": "Les overlays s'affichent par-dessus le jeu, "
+                               "seulement sur un personnage (pas dans les "
+                               "menus) et quand Farever est au premier plan. "
+                               "Déplace-les en tirant leur en-tête : chacun "
+                               "s'accroche au bord le plus proche de l'écran "
+                               f"(grille de {OVERLAY_GRID} px) et garde cette "
+                               "distance si la taille du jeu change."},
             {"k": "section", "t": "Raccourci clavier"},
             {"k": "field", "t": "Réinitialiser le combat",
              "c": {"k": "label", "t": ("appuie sur une touche…"

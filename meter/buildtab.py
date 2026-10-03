@@ -83,9 +83,10 @@ class BuildTab:
                                                  p.get("value")),
         }
 
-    def import_profile(self, prof):
-        """Inspecter's "Créer un build" from an analysed player."""
-        b = B.from_profile(prof, f"Build de {prof.get('n') or '?'}")
+    def import_profile(self, prof, name=None):
+        """Inspecter's "Créer un build" from an analysed player (or the
+        Build tab's, from one's own character: named after it)."""
+        b = B.from_profile(prof, name or f"Build de {prof.get('n') or '?'}")
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False
         self._toast(f"Build créé à partir de {prof.get('n')}.")

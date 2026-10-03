@@ -196,7 +196,10 @@ def main():
                  # player including yourself — the entity is the only source.
                  "kind": hero["kind"][0], "level": hero["_level"][0]},
         "Loadout": {"inventory": loadout["inventory"][0],
-                    "equipment": loadout["equipment"][0]},
+                    "equipment": loadout["equipment"][0],
+                    # the bank's tabs (hxbit.ArrayProxyData), for the goals
+                    # overlay's "owned" count; read-only like the rest
+                    "banks": loadout["banks"][0]},
         # content is an ArrayObj of SLOT VIRTUALS, not of items: each entry is
         # a standalone hl vvirtual carrying inline {count:Int, item:st.Item}.
         # The hook reads the `item` field by name out of the virtual's own

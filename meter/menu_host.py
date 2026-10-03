@@ -203,6 +203,12 @@ class AppWindow:
         self.window.events.resized += self._on_geom
         self.window.events.closing += self._on_closing
         pipe.on_message = self._on_message
+        self.overlays = []
+        for oid in OVERLAY_IDS:
+            try:
+                self.overlays.append(Overlay(oid, pipe))
+            except Exception as e:
+                _log(f"overlay {oid} unavailable: {e!r}")
 
     def attach(self):
         """Runs once the native window exists: find its handle, restore the
@@ -224,6 +230,11 @@ class AppWindow:
                 self.hwnd, 0, int(x), int(y),
                 max(int(self._want["w"]), MIN_W),
                 max(int(self._want["h"]), MIN_H), flags)
+        for o in self.overlays:
+            try:
+                o.attach()
+            except Exception as e:
+                _log(f"overlay {o.id} attach failed: {e!r}")
         self.pipe.send({"t": "ready"})
 
     def _on_geom(self, *_a):
@@ -307,6 +318,9 @@ class AppWindow:
             self._push(msg.get("d") or {})
         elif t == "show":
             self.show()
+        elif t == "ov":
+            for o in self.overlays:
+                o.update(msg.get("d") or {})
         elif t == "quit":
             self._closing = True
             try:
@@ -342,6 +356,208 @@ class AppWindow:
                 f"window.applyState({json.dumps(json.dumps(data))})")
         except Exception as e:
             _log(f"state push failed: {e!r}")
+
+
+# ---------------------------------------------------------------------------
+# The overlays over the game
+# ---------------------------------------------------------------------------
+# Two small windows of this same process: the group meter and the goals. Each
+# is borderless, exactly the size of its panel with the corners cut round by a
+# window region (pywebview's "transparent" only clears what the page draws:
+# the rest of the window showed white), always on top, never in the taskbar, and never takes the focus from the game when clicked (pywebview's
+# focus=False is WS_EX_NOACTIVATE) — except while a goal is being typed, when
+# it takes the keyboard and gives it back to the game after. The meter says
+# when they show (on a character, the game or one of our windows in front),
+# which are on, and where the game is; each one is anchored to a side of the
+# game's window (left/right, top/bottom) at a distance from that edge, so it
+# stays put against its side whatever the window's size.
+GWL_EXSTYLE = -20
+WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = 0x80, 0x40000
+WS_EX_NOACTIVATE = 0x08000000
+SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
+HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
+OVERLAY_IDS = ("meter", "goals")
+OVERLAY_BG = "#1D1B33"              # the panel's colour (overlay.css --ov-bg)
+OVERLAY_RADIUS = 10                 # its corners (overlay.css #ov)
+
+
+class OverlayApi:
+    """What an overlay's page can call. Runs on a WebView2 thread."""
+
+    def __init__(self, pipe):
+        self.pipe = pipe
+        self._ov = None                     # private: see Api
+
+    def call(self, method, params=None):
+        return self.pipe.call(method, params)
+
+    def notify(self, method, params=None):
+        self.pipe.send({"t": "call", "id": 0, "m": method, "p": params or {}})
+
+    def ov(self, action, arg=None):
+        o = self._ov
+        return o.act(action, arg) if o is not None else None
+
+
+class Overlay:
+    def __init__(self, oid, pipe):
+        self.id = oid
+        self.pipe = pipe
+        self.api = OverlayApi(pipe)
+        self.api._ov = self
+        self.hwnd = 0
+        self.size = (280, 80)
+        self.shown = False
+        self.dragging = False
+        self.typing = None                  # the window to give the keys back to
+        self._last = None
+        self.game = None
+        self.pos = None
+        self.window = webview.create_window(
+            f"Farever France — {oid}", html=_overlay_document(oid),
+            width=self.size[0], height=self.size[1], x=-4000, y=-4000,
+            frameless=True, easy_drag=False, resizable=False, shadow=False,
+            hidden=True, on_top=True, focus=False,
+            background_color=OVERLAY_BG, js_api=self.api)
+
+    def attach(self):
+        for _ in range(400):
+            if getattr(self.window, "native", None) is not None:
+                break
+            time.sleep(0.025)
+        self.hwnd = _own_hwnd(self.window)
+        if not self.hwnd:
+            _log(f"overlay {self.id}: no window handle")
+            return
+        u = ctypes.windll.user32
+        u.ShowWindow(self.hwnd, SW_HIDE)
+        ex = u.GetWindowLongW(self.hwnd, GWL_EXSTYLE)
+        u.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
+                         (ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)
+                         & ~WS_EX_APPWINDOW)
+
+    # -- the meter's state -------------------------------------------------
+    def update(self, d):
+        if not self.hwnd:
+            return
+        data = d.get(self.id)
+        if d.get("show") and data != self._last:
+            self._last = data
+            try:
+                self.window.evaluate_js(
+                    "window.applyOverlay && window.applyOverlay("
+                    + json.dumps(json.dumps({self.id: data})) + ")")
+            except Exception as e:
+                _log(f"overlay {self.id} push failed: {e!r}")
+        self.game = d.get("game")
+        self.pos = (d.get("pos") or {}).get(self.id)
+        u = ctypes.windll.user32
+        on = (d.get("on") or {}).get(self.id, True)
+        if d.get("show") and on and self.game:
+            if not self.dragging:
+                self._place()
+            if not self.shown:
+                u.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+                self.shown = True
+        elif self.shown and self.typing is None:
+            u.ShowWindow(self.hwnd, SW_HIDE)
+            self.shown = False
+
+    def _place(self):
+        gx, gy, gw, gh = self.game
+        w, h = self.size
+        a = self.pos or (
+            {"ax": "r", "dx": 24, "ay": "t", "dy": gh // 3}   # meter: right
+            if self.id == "meter" else
+            {"ax": "l", "dx": 24, "ay": "t", "dy": gh // 3})  # goals: left
+        x = gx + a["dx"] if a["ax"] == "l" else gx + gw - w - a["dx"]
+        y = gy + a["dy"] if a["ay"] == "t" else gy + gh - h - a["dy"]
+        x = max(gx, min(x, gx + gw - w))
+        y = max(gy, min(y, gy + gh - min(h, 60)))
+        ctypes.windll.user32.SetWindowPos(
+            self.hwnd, HWND_TOPMOST, int(x), int(y), int(w), int(h),
+            SWP_NOACTIVATE)
+        self._shape()
+
+    def _shape(self):
+        """Round the window's corners to the panel's: outside, the game."""
+        w, h = self.size
+        if (w, h) == getattr(self, "_shaped", None):
+            return
+        self._shaped = (w, h)
+        d = OVERLAY_RADIUS * 2
+        rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)
+        # the window owns the region from here on: no DeleteObject
+        ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+
+    # -- what the page asks ------------------------------------------------
+    def act(self, action, arg=None):
+        u = ctypes.windll.user32
+        h = self.hwnd
+        if not h:
+            return None
+        if action == "rect":
+            self.dragging = True
+            got = _rect(h)
+            return list(got) if got else None
+        if action == "move" and arg:
+            u.SetWindowPos(h, HWND_TOPMOST, int(arg[0]), int(arg[1]), 0, 0,
+                           SWP_NOACTIVATE | SWP_NOSIZE)
+            return None
+        if action == "drop":
+            self.dragging = False
+            got = _rect(h)
+            if got and self.game:
+                # the meter anchors it (nearest sides, on the grid) and its
+                # next push places it there
+                self.pipe.send({"t": "call", "id": 0, "m": "ov_moved",
+                                "p": {"id": self.id, "rect": list(got),
+                                      "game": list(self.game)}})
+            return None
+        if action == "size" and arg:
+            self.size = (max(int(arg[0]), 60), max(int(arg[1]), 24))
+            if self.game and not self.dragging:
+                self._place()
+            else:
+                u.SetWindowPos(h, 0, 0, 0, self.size[0], self.size[1],
+                               SWP_NOZORDER | SWP_NOACTIVATE | 0x0002)
+                self._shape()
+            return None
+        if action == "focus":
+            self._focus(bool(arg))
+        return None
+
+    def _focus(self, on):
+        """Typing a goal: the window takes the keyboard (it never does
+        otherwise), then hands it back to whatever had it — the game."""
+        u = ctypes.windll.user32
+        ex = u.GetWindowLongW(self.hwnd, GWL_EXSTYLE)
+        if on and self.typing is None:
+            self.typing = u.GetForegroundWindow() or 0
+            self.window.focus = True
+            u.SetWindowLongW(self.hwnd, GWL_EXSTYLE, ex & ~WS_EX_NOACTIVATE)
+            u.SetForegroundWindow(self.hwnd)
+        elif not on and self.typing is not None:
+            back, self.typing = self.typing, None
+            self.window.focus = False
+            u.SetWindowLongW(self.hwnd, GWL_EXSTYLE, ex | WS_EX_NOACTIVATE)
+            if back and back != self.hwnd:
+                u.SetForegroundWindow(back)
+
+
+def _overlay_document(oid):
+    def read(name):
+        try:
+            return (WEB_DIR / name).read_text(encoding="utf-8")
+        except OSError as e:
+            _log(f"missing web asset {name}: {e}")
+            return ""
+    return ('<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+            "<style>" + read("overlay.css") + "</style></head><body>"
+            '<div id="ov"></div><script>window.__OVERLAY__ = '
+            + json.dumps(oid) + ";window.__ICONS__ = "
+            + json.dumps(_class_icons()) + ";</script><script>"
+            + read("js/overlay.js") + "</script></body></html>")
 
 
 def _own_hwnd(window):

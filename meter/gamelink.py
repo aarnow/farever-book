@@ -434,6 +434,11 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
             # The roster rides along on this message; the minimap needs it to
             # ring group members, including ones who haven't fought yet.
             world.set_hero(name, p.get("party"))
+            # in the world on a character (not the menus, not a loading
+            # screen): the overlays show only then
+            ov = _OVERLAY["ref"]
+            if ov is not None and name:
+                ov.on_hero_seen()
             if name and name != hero_id["name"]:
                 first = hero_id["name"] is None
                 link.step("hero", "ok", name)
@@ -442,6 +447,13 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                       + ("identified." if first else "changed."), file=sys.stderr)
         elif k == "pickup":
             dungeon.pickup(p)
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_pickup(p)
+        elif k == "stock":
+            ov = _OVERLAY["ref"]
+            if ov is not None:
+                ov.on_stock(p)
         elif k == "collection":
             ov = _OVERLAY["ref"]
             if ov is not None:

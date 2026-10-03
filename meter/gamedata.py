@@ -457,8 +457,13 @@ def dungeon_catalogue():
     return _DUNGEONS
 
 
+# the raw materials' types, which the game's translation leaves unnamed
+ITEM_TYPE_FR = {"Ore": "Minerai", "Cloth": "Tissu", "Leather": "Cuir"}
+
+
 def item_type_label(t):
-    return _fr_names("itemType").get(t) or _pretty_id(t)
+    return (_fr_names("itemType").get(t) or ITEM_TYPE_FR.get(t)
+            or _pretty_id(t))
 
 
 def _fr_desc(sheet):
