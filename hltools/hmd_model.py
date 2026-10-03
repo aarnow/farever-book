@@ -444,9 +444,18 @@ def item_prefab(game_dir, item_id):
             return mdl["prefab"]
     ref, seen = vis.get("modelRef"), set()
     if not it:
-        # a companion is a unit, not an item: its first model names the row
-        unit = sh["unit"].get(item_id) or {}
-        ref = next((m.get("ref") for m in unit.get("models") or () if m.get("ref")), None)
+        # a companion or a monster is a unit, not an item: its first model
+        # names the row — its own, or one it inherits
+        todo, done = [item_id], set()
+        while todo and not ref:
+            uid = todo.pop(0)
+            if uid in done:
+                continue
+            done.add(uid)
+            unit = sh["unit"].get(uid) or {}
+            ref = next((m.get("ref") for m in unit.get("models") or ()
+                        if m.get("ref")), None)
+            todo += [i.get("ref") for i in unit.get("inherit") or () if i.get("ref")]
     while ref and ref not in seen:
         seen.add(ref)
         row = sh["model"].get(ref) or {}

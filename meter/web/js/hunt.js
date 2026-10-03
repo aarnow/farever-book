@@ -35,47 +35,68 @@ function renderHunt(box, n) {
   const hunted = items.filter((it) => it.kills > 0).length;
   const mastered = items.filter((it) => it.rank >= it.max).length;
 
-  box.appendChild(el('div', 'section', 'Tableau de chasse'));
-  box.appendChild(el('p', 'note', n.sync || ''));
-  const stats = el('div', 'cards');
-  [['Monstres tués', fmtN(n.total || 0), 'au total'],
-   ['Espèces chassées', hunted + ' / ' + items.length, 'au moins un kill'],
-   ['Codex maîtrisé', mastered + ' / ' + items.length, 'rang maximal atteint']]
-    .forEach(([t, v, s]) => {
-      const c = el('div', 'card');
-      c.appendChild(el('div', 't', t));
-      c.appendChild(el('div', 'v', v));
-      c.appendChild(el('div', 's', s));
+  // the first column, always in view: where the hunt stands, which view,
+  // which region; the second, the list, the only thing that scrolls
+  const side = el('aside', 'huntside');
+  const main = el('div', 'huntmain');
+  box.appendChild(side);
+  box.appendChild(main);
+  side.appendChild(el('div', 'section', 'Tableau de chasse'));
+  if (n.sync) side.appendChild(el('p', 'note', n.sync));
+  const stats = el('div', 'huntstats');
+  [['Monstres tués', fmtN(n.total || 0)],
+   ['Espèces chassées', hunted + ' / ' + items.length],
+   ['Codex maîtrisé', mastered + ' / ' + items.length]]
+    .forEach(([t, v]) => {
+      const c = el('div', 'hs');
+      c.appendChild(el('span', null, t));
+      c.appendChild(el('b', null, v));
       stats.appendChild(c);
     });
-  box.appendChild(stats);
+  side.appendChild(stats);
 
-  const views = el('div', 'seg huntview');
-  [['units', 'Monstres'], ['families', 'Familles'], ['farm', 'Montures']].forEach(([v, t]) => {
-    const b = el('button', HUNT.view === v ? 'on' : '', t);
-    b.type = 'button';
-    b.addEventListener('click', () => { HUNT.view = v; rerenderHunt(); });
-    views.appendChild(b);
-  });
-  box.appendChild(views);
+  const nav = (cls, opts, cur, set) => {
+    const box_ = el('div', 'huntnav ' + cls);
+    opts.forEach((o) => {
+      const b = el('button', cur === o.v ? 'on' : '');
+      b.type = 'button';
+      b.appendChild(el('span', null, o.t));
+      if (o.n != null) b.appendChild(el('small', null, fmtN(o.n)));
+      b.addEventListener('click', () => { set(o.v); rerenderHunt(); });
+      box_.appendChild(b);
+    });
+    return box_;
+  };
+  side.appendChild(nav('views', [{ v: 'units', t: 'Monstres' }, { v: 'families', t: 'Familles' },
+    { v: 'farm', t: 'Montures' }], HUNT.view, (v) => { HUNT.view = v; }));
+
+  // the list keeps its place across rebuilds, not across a change of list
+  const listKey = [HUNT.view, HUNT.reg, HUNT.filter, HUNT.sort, HUNT.q, HUNT.farm].join('|');
+  if (HUNT.listKey !== listKey) { HUNT.listKey = listKey; HUNT.top = 0; }
+  const keepPlace = (list) => {
+    list.addEventListener('scroll', () => { HUNT.top = list.scrollTop; }, { passive: true });
+    if (HUNT.top) {
+      const top = HUNT.top;
+      list.scrollTop = top;
+      requestAnimationFrame(() => { list.scrollTop = top; });
+    }
+  };
   if (HUNT.view === 'families') {
-    renderFamilies(box, n);
+    renderFamilies(main, n);
+    keepPlace(main.lastChild);
     return;
   }
   if (HUNT.view === 'farm') {
-    renderFarm(box, n);
+    renderFarm(main, n);
+    keepPlace(main.lastChild);
     return;
   }
 
-  const chips = el('div', 'huntregs');
-  [{ v: 'all', t: 'Toutes les régions', n: items.length }].concat(n.regions || [])
-    .forEach((r) => {
-      const b = el('button', 'chip' + (HUNT.reg === r.v ? ' on' : ''), r.t + ' · ' + r.n);
-      b.type = 'button';
-      b.addEventListener('click', () => { HUNT.reg = r.v; rerenderHunt(); });
-      chips.appendChild(b);
-    });
-  box.appendChild(chips);
+  side.appendChild(el('div', 'sub2', 'Régions'));
+  side.appendChild(nav('regs', [{ v: 'all', t: 'Toutes', n: items.length }]
+    .concat((n.regions || []).map((r) => ({ v: r.v, t: r.t, n: r.n }))),
+  HUNT.reg, (v) => { HUNT.reg = v; }));
+  box = main;
 
   const tools = el('div', 'colltools');
   const q = el('input', 'collq huntq');
@@ -143,6 +164,7 @@ function renderHunt(box, n) {
   });
   if (!shown.length) grid.appendChild(el('div', 'empty', 'Rien à afficher.'));
   box.appendChild(grid);
+  keepPlace(grid);
 
   if (keepQ) {
     const qi = box.querySelector('.huntq');
@@ -155,7 +177,10 @@ function renderHunt(box, n) {
 /* Who it is, where it spawns in the open world (the Map tab's tiles, framed
    on its spawns, each one a pin with its portrait) and what a kill gives. */
 function buildHuntMon(n) {
-  const box = el('div', 'huntmon');
+  const page = el('div', 'huntmon');
+  const box = el('div', 'hminfo');
+  page.appendChild(box);
+  page.appendChild(huntModel(n));
   const head = el('div', 'hmhead' + (n.kills ? ' seen' : ''));
   const pic = el('span', 'pic');
   pic.appendChild(huntImg(n.uid));
@@ -209,7 +234,25 @@ function buildHuntMon(n) {
   });
   if (!(n.loot || []).length) tbl.appendChild(el('div', 'empty', 'Aucun butin connu.'));
   box.appendChild(tbl);
-  return box;
+  return page;
+}
+
+/* Beside the page, the monster itself, turning (its portrait while the
+   model comes, or when the game has none). */
+function huntModel(n) {
+  const v = el('div', 'collview hmview');
+  const stage = el('div', 'cvstage');
+  const pic = el('div', 'cvpic' + (n.kills ? ' own' : ''));
+  pic.appendChild(huntImg(n.uid));
+  stage.appendChild(pic);
+  if (m3dSupported()) {
+    stage.classList.add('is3d');
+    stage.appendChild(m3dCanvas(n.uid, (st) => { stage.dataset.st = st; }));
+    stage.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
+    stage.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
+  }
+  v.appendChild(stage);
+  return v;
 }
 
 /* The zones in one column, the map in the other. A zone with spawns in the
