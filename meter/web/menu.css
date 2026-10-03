@@ -2333,3 +2333,83 @@ html.lt-1000 .collmain { grid-template-columns: minmax(0, 1fr) minmax(280px, 46%
 html.lt-760 .collmain { grid-template-columns: minmax(0, 1fr); }
 html.lt-760 .collview { position: static; order: -1; }
 html.lt-760 .cvstage { aspect-ratio: 1 / .62; max-height: 48vh; }
+
+/* ---- Collection: a fixed page, only the list scrolls ---------------------- */
+/* the page holds exactly the window: the header, the categories, then the
+   list and the panel share what is left. Below a useful height it scrolls
+   as a whole again rather than squeezing the list to nothing (380 px). */
+#page.page-Collection { display: flex; flex-direction: column; padding-bottom: 14px; }
+#page.page-Collection > .coll { flex: 1 0 auto; height: 100%; min-height: 380px;
+                                display: flex; flex-direction: column; }
+.coll > .section { margin-bottom: 4px; }
+.coll > .note { margin: 0 0 6px; font-size: 12px; }
+.coll > .colltotal { margin-top: 0; }
+.coll > .collbar { margin-bottom: 12px; }
+/* the five categories on one row, compact */
+.coll .collcats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.coll .collcat { min-height: 62px; padding: 7px 10px; gap: 10px; }
+.coll .collcat .rg, .coll .collcat .ring { width: 46px; height: 46px; }
+.coll .collcat .rg span { font-size: 11px; }
+.coll .collcat .th { width: 42px; height: 42px; right: 6px; }
+html.lt-1100 .coll .collcat .th { display: none; }
+html.lt-1100 .coll .collcat .tx small { display: none; }
+html.lt-900 .coll .collcats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.coll .collmain { flex: 1; min-height: 0; align-items: stretch; margin-top: 14px; }
+.coll .colllist { display: flex; flex-direction: column; min-height: 0; }
+.coll .colllist .collgrid { flex: 1; min-height: 0; overflow-y: auto; align-content: start;
+                            padding: 6px 6px 12px 2px; }
+.coll .collview { position: relative; top: 0; max-height: 100%; min-height: 0; }
+.coll .cvstage { flex: 1 1 0; aspect-ratio: auto; min-height: 200px; max-height: none; }
+.coll .cvinfo { flex: 0 1 auto; max-height: 42%; min-height: 0; overflow-y: auto; }
+html.lt-760 #page.page-Collection > .coll { height: auto; min-height: 0; }
+html.lt-760 .coll .colllist .collgrid { overflow: visible; }
+html.lt-760 .coll .collview { max-height: none; }
+html.lt-760 .coll .cvstage { flex: none; aspect-ratio: 1 / .62; max-height: 48vh; }
+html.lt-760 .coll .cvinfo { max-height: none; }
+
+/* ---- Collection: round medallions, numbered, as in the game's collection --- */
+.colllist .collgrid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 14px 8px; }
+.collgrid .citem {
+  --ring: #A8874A;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding: 3px 2px 0; background: none; border: 0; border-radius: 0; box-shadow: none;
+  overflow: visible; transform: none; cursor: pointer;
+}
+.collgrid .citem:hover { transform: none; border: 0; }
+.collgrid .citem .pic {
+  position: relative; width: 100%; max-width: 92px; aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center; overflow: visible; border: 0;
+  background: radial-gradient(circle at 50% 38%,
+    color-mix(in srgb, var(--rar) 32%, #2B4146), #121A22 72%);
+  box-shadow: 0 0 0 2px var(--ring), inset 0 0 0 2px rgba(0, 0, 0, .55),
+              inset 0 -8px 16px rgba(0, 0, 0, .45), 0 3px 8px rgba(0, 0, 0, .5);
+  transition: box-shadow .15s, transform .15s;
+}
+/* the picture clipped to the disc, the badges free to sit on its edge */
+.collgrid .citem .pic img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+                            clip-path: circle(47% at 50% 50%);
+                            filter: grayscale(.9) brightness(.55); }
+.collgrid .citem.own .pic img { filter: none; }
+.collgrid .citem .pic .noimg { color: var(--faint); }
+.collgrid .citem:not(.own) { --ring: #5E5A6E; }
+.collgrid .citem:hover .pic { box-shadow: 0 0 0 2px #E6C178, inset 0 0 0 2px rgba(0, 0, 0, .55),
+                                          inset 0 -8px 16px rgba(0, 0, 0, .45), 0 4px 10px rgba(0, 0, 0, .55);
+                              transform: translateY(-1px); }
+.collgrid .citem.sel .pic { box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(242, 201, 76, .25),
+                                        inset 0 0 0 2px rgba(0, 0, 0, .55), 0 0 16px rgba(242, 201, 76, .35); }
+.collgrid .citem.sel { border: 0; box-shadow: none; }
+.collgrid .citem .ok { position: absolute; left: 2%; bottom: 6%; top: auto; right: auto;
+                       width: 20px; height: 20px; font-size: 11px; z-index: 1;
+                       border: 2px solid #121A22; }
+.collgrid .citem .cnt { position: absolute; right: -2px; top: -2px; left: auto; bottom: auto;
+                        z-index: 1; font-size: 10px; padding: 0 5px; border-radius: 8px; }
+.collgrid .citem .num {
+  position: relative; z-index: 1; margin-top: -11px;
+  padding: 1px 8px 2px; border-radius: 9px; font-size: 12px; font-weight: 800;
+  letter-spacing: .3px; color: #fff; line-height: 1.3;
+  background: linear-gradient(180deg, #2A3340, #161C25);
+  border: 1px solid color-mix(in srgb, var(--ring) 70%, #000);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .8); box-shadow: 0 2px 4px rgba(0, 0, 0, .5);
+}
+.collgrid .citem.sel .num { border-color: var(--accent); color: var(--accent); }
+.collgrid .citem .cpips { padding: 4px 0 0; justify-content: center; }

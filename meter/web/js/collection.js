@@ -45,6 +45,10 @@ function rerenderCollection() {
 }
 
 function renderCollection(box, n) {
+  // the list scrolls on its own now: keep its place across rebuilds (images
+  // arriving, the state moving), not across a change of what it lists
+  const listKey = [COLL.cat, COLL.filter, COLL.q, COLL.slot, COLL.cls, COLL.icat].join('|');
+  if (COLL.listKey !== listKey) { COLL.listKey = listKey; COLL.top = 0; }
   const keepQ = document.activeElement && document.activeElement.classList.contains('collq');
   const caret = keepQ ? document.activeElement.selectionStart : null;
   box.textContent = '';
@@ -168,17 +172,21 @@ function renderCollection(box, n) {
   let sel = COLL.open && shown.find((it) => it.id === COLL.open);
   if (!sel) sel = shown[0] || null;
   const grid = el('div', 'collgrid');
+  // each one numbered by its place in the whole category, as in the game
+  const rank = new Map((n.items || []).filter((it) => it.c === COLL.cat)
+    .map((it, i) => [it.id, '#' + String(i + 1).padStart(3, '0')]));
   shown.forEach((it) => {
     const card = el('button', 'citem' + (it.own ? ' own' : '') + (it.rk ? ' r-' + it.rk : '')
       + (it === sel ? ' sel' : ''));
     card.type = 'button';
     card.dataset.id = it.id;
+    card.title = it.name;
     const pic = el('span', 'pic');
     pic.appendChild(collImg(it.id));
     if (it.own) pic.appendChild(el('span', 'ok', '✓'));
     if (it.count) pic.appendChild(el('span', 'cnt', '×' + fmtN(it.count)));
     card.appendChild(pic);
-    card.appendChild(el('span', 'nm', it.name));
+    card.appendChild(el('span', 'num', rank.get(it.id)));
     if (it.rmax) {
       const pips = el('span', 'cpips');
       for (let i = 0; i < it.rmax; i++) pips.appendChild(el('i', i < it.rank ? 'on' : ''));
@@ -204,6 +212,13 @@ function renderCollection(box, n) {
   main.appendChild(list);
   main.appendChild(sel ? buildCollView(sel, cat) : el('div', 'collview empty'));
   box.appendChild(main);
+  grid.addEventListener('scroll', () => { COLL.top = grid.scrollTop; }, { passive: true });
+  // once in the page (a fresh node is built before it is placed)
+  if (COLL.top) {
+    const top = COLL.top;
+    grid.scrollTop = top;
+    requestAnimationFrame(() => { grid.scrollTop = top; });
+  }
 
   if (keepQ) {
     const qi = box.querySelector('.collq');

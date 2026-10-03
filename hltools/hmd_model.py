@@ -270,8 +270,9 @@ def _mul(a, b):
     return out
 
 
-def rest_pose(m, sub_of_vertex, model):
-    """Positions and normals moved by the skin's default pose, in place."""
+def rest_pose(m, sub_of_vertex, model, skinned=False):
+    """Positions and normals put the right size and way up by the skeleton,
+    in place — fully skinned to its default pose when `skinned`."""
     skin = model.get("skin")
     if not skin or m["weights"] is None:
         return
@@ -283,6 +284,26 @@ def rest_pose(m, sub_of_vertex, model):
         absm[i] = loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]])
         if j["bind"] >= 0:
             palette[j["bind"]] = _mul(_mat(j["trans"]), absm[i])
+    if not skinned:
+        # the mesh as modelled, moved as a whole by the skeleton's root: the
+        # default pose stretches limbs (a crab's eye on its stalk, its claws)
+        depth = [0] * len(joints)
+        for i, j in enumerate(joints):
+            depth[i] = 0 if j["parent"] < 0 else depth[j["parent"]] + 1
+        bound = [i for i, j in enumerate(joints) if j["bind"] >= 0]
+        if not bound:
+            return
+        G = palette[joints[min(bound, key=lambda i: depth[i])]["bind"]]
+        pos, nor = m["pos"], m["nor"]
+        for i in range(0, len(pos), 3):
+            px, py, pz = pos[i:i + 3]
+            nx, ny, nz = nor[i:i + 3]
+            pos[i:i + 3] = [px * G[0][c] + py * G[1][c] + pz * G[2][c] + G[3][c]
+                            for c in range(3)]
+            a = [nx * G[0][c] + ny * G[1][c] + nz * G[2][c] for c in range(3)]
+            ln = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) ** 0.5 or 1.0
+            nor[i:i + 3] = [a[0] / ln, a[1] / ln, a[2] / ln]
+        return
     # with splits, a vertex's indexes count in its material's joint list
     by_mat = {mat: [joints[k]["bind"] for k in ids] for mat, ids in skin["splits"]}
     pos, nor = m["pos"], m["nor"]
