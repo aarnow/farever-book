@@ -53,7 +53,13 @@ function buildDropTable(n) {
       const art = (window.__SHEET__ || {})['dungeon_diff_' + t.d];
       if (art) { const im = document.createElement('img'); im.src = art; im.alt = ''; b.appendChild(im); }
       b.appendChild(el('span', null, t.t));
-      b.addEventListener('click', () => { DROP_DIFF = t.d; draw(); });
+      b.addEventListener('click', () => {
+        if (DROP_DIFF === t.d) return;
+        DROP_DIFF = t.d;
+        draw();
+        const tbl = wrap.querySelector('.droptable');
+        if (tbl) tbl.classList.add('fadein');
+      });
       tabs.appendChild(b);
     });
     if (tables.length > 1) wrap.appendChild(tabs);

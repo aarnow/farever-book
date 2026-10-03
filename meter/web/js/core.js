@@ -406,7 +406,8 @@ window.applyState = function (json) {
     showToast(s.toast.t);
   }
 
-  if (s.tab !== prev.tab) {
+  const changed = s.tab !== prev.tab;
+  if (changed) {
     const page = $('#page');
     page.textContent = '';
     page.className = 'page-' + s.tab;
@@ -420,11 +421,25 @@ window.applyState = function (json) {
   if (s.tab === prev.tab && view !== PAGE_VIEW) $('#page').scrollTop = 0;
   PAGE_VIEW = view;
   renderPage(s.page || []);
+  if (changed) pageEnter();
   renderEvents();
   updateEventsBadge();
   renderLinkSteps();
   renderBuildEditor();
 };
+
+/* A new tab's page comes in softly: its blocks rise and fade in, one
+   after the other. Only on a tab change — the state pushes that redraw a
+   block several times a second must not animate. */
+let PAGE_ENTER = 0;
+function pageEnter() {
+  const page = $('#page');
+  page.classList.remove('leaving', 'enter');
+  void page.offsetWidth;                 // restart the animation
+  page.classList.add('enter');
+  clearTimeout(PAGE_ENTER);
+  PAGE_ENTER = setTimeout(() => page.classList.remove('enter'), 700);
+}
 
 /* The pictures arrive after the page, in batches (menu_host.py). */
 window.__COLL__ = window.__COLL__ || {};

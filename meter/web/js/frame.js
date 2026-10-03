@@ -152,32 +152,90 @@ function svgIcon(d) {
   return svg;
 }
 
+/* The tabs are built once and kept: only which one is active changes, so
+   its colour can ease in and one gold bar (#navink) can slide under it.
+   A click shows the new tab at once; the page follows (core.js). */
+const NAV_BTNS = {};
+let NAV_ACTIVE = null;
+
 function renderTabs(tabs, active) {
   const nav = $('#nav');
-  const sig = JSON.stringify([tabs, active]);
-  if (nav.dataset.sig === sig) return;
-  nav.dataset.sig = sig;
-  nav.textContent = '';
-  const icons = $('#appbtns');
-  icons.textContent = '';
-  tabs.forEach((tab) => {
-    const t = typeof tab === 'string' ? tab : tab.v;
-    const label = typeof tab === 'string' ? tab : tab.t;
-    let b;
-    if (TAB_ICONS[t]) {
-      b = el('button', 'navicon' + (t === active ? ' active' : ''));
-      b.title = label;
-      b.setAttribute('aria-label', label);
-      b.appendChild(svgIcon(TAB_ICONS[t]));
-      icons.appendChild(b);
-    } else {
-      b = el('button', t === active ? 'active' : '', label);
-      nav.appendChild(b);
-    }
-    b.type = 'button';
-    b.addEventListener('click', () => notify('set_tab', { value: t }));
+  const sig = JSON.stringify(tabs);
+  if (nav.dataset.sig !== sig) {
+    nav.dataset.sig = sig;
+    nav.textContent = '';
+    const icons = $('#appbtns');
+    icons.textContent = '';
+    Object.keys(NAV_BTNS).forEach((k) => delete NAV_BTNS[k]);
+    tabs.forEach((tab) => {
+      const t = typeof tab === 'string' ? tab : tab.v;
+      const label = typeof tab === 'string' ? tab : tab.t;
+      let b;
+      if (TAB_ICONS[t]) {
+        b = el('button', 'navicon');
+        b.title = label;
+        b.setAttribute('aria-label', label);
+        b.appendChild(svgIcon(TAB_ICONS[t]));
+        icons.appendChild(b);
+      } else {
+        b = el('button', null, label);
+        nav.appendChild(b);
+      }
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        if (t !== NAV_ACTIVE) {
+          showTab(t);
+          $('#page').classList.add('leaving');
+        }
+        notify('set_tab', { value: t });
+      });
+      NAV_BTNS[t] = b;
+    });
+    nav.appendChild(el('span', null)).id = 'navink';
+    icons.appendChild(eventsButton());
+    NAV_ACTIVE = null;
+  }
+  if (active !== NAV_ACTIVE) showTab(active);
+  watchNav();
+}
+
+function showTab(t) {
+  const first = NAV_ACTIVE === null;
+  NAV_ACTIVE = t;
+  Object.keys(NAV_BTNS).forEach((k) => NAV_BTNS[k].classList.toggle('active', k === t));
+  const ink = $('#navink');
+  const b = NAV_BTNS[t];
+  if (!ink) return;
+  if (!b || b.classList.contains('navicon')) {   // Réglages, Aide: no bar
+    ink.style.opacity = '0';
+    return;
+  }
+  // the first placement does not slide in from the left edge
+  ink.classList.toggle('still', first || ink.style.opacity === '0');
+  // under its tab: on the band's bottom edge when the tabs fit on one line,
+  // right under the tab when they wrap onto two
+  const nav = $('#nav');
+  const rows = new Set(Object.values(NAV_BTNS).filter((x) => x.parentNode === nav)
+    .map((x) => x.offsetTop)).size;
+  const y = rows > 1 ? b.offsetTop + b.offsetHeight - 3 : nav.clientHeight - 3;
+  ink.style.width = Math.max(0, b.offsetWidth - 28) + 'px';
+  ink.style.transform = 'translate(' + (b.offsetLeft + 14) + 'px, ' + y + 'px)';
+  ink.style.opacity = '1';
+}
+
+/* The bar follows its tab when the band reflows: window resized, the
+   interface zoomed, the tabs wrapping onto two lines. */
+let NAV_WATCH = null;
+function watchNav() {
+  if (NAV_WATCH) return;
+  NAV_WATCH = new ResizeObserver(() => {
+    const t = NAV_ACTIVE;
+    if (!t) return;
+    NAV_ACTIVE = null;
+    showTab(t);
+    $('#navink').classList.add('still');      // a reflow is not a move
   });
-  icons.appendChild(eventsButton());
+  NAV_WATCH.observe($('#nav'));
 }
 
 /* The game's state in the title band: Play (launches Farever through
