@@ -248,7 +248,8 @@ function huntModel(n) {
   stage.appendChild(pic);
   if (m3dSupported()) {
     stage.classList.add('is3d');
-    stage.appendChild(m3dCanvas(n.uid, (st) => { stage.dataset.st = st; }));
+    // the monster breathing, its idle animation playing
+    stage.appendChild(m3dCanvas(n.uid, (st) => { stage.dataset.st = st; }, { anim: true }));
     stage.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
     stage.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
   }

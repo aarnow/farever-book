@@ -45,11 +45,13 @@ window.addModel = function (id, json) {
 
 /* The canvas, for a panel to hold. `onState(state)` hears 'loading',
    'ready' or 'none' (no model: the panel shows the picture instead).
-   `opts.pitch`: how far above it the camera starts (gliders: seen from above). */
+   `opts.pitch`: how far above it the camera starts (gliders: seen from above).
+   `opts.anim`: with its idle animation (a monster), where WebGL2 can play it. */
 function m3dCanvas(id, onState, opts) {
   if (!M3D.canvas) m3dInit();
   M3D.onState = onState;
   M3D.pitch0 = (opts && opts.pitch) || 0.18;
+  if (opts && opts.anim && M3D.gl2) id += '@anim';
   if (id !== M3D.cur) {
     M3D.cur = id;
     M3D.spin = true;
@@ -79,12 +81,42 @@ function m3dInit() {
   }
   M3D.canvas = c;
   M3D.gl = gl;
+  // animation needs float textures read from the vertex shader: WebGL2
+  M3D.gl2 = !!gl && typeof WebGL2RenderingContext !== 'undefined'
+    && gl instanceof WebGL2RenderingContext;
   if (!gl) return;
   // prefab.GradMatShader's fragment, as the game's HXSL has it, lit by one
   // light that follows the camera and without cast shadows
+  // skinning: each joint's matrix in a frame is three texels (its columns)
+  // of a float texture, a row per frame; between two frames, a blend
   const vs = `attribute vec3 aP; attribute vec3 aN; attribute vec2 aU; attribute vec2 aU2;
-    uniform mat4 uMVP; varying vec3 vN; varying vec2 vU; varying vec2 vU2;
-    void main() { vN = aN; vU = aU; vU2 = aU2; gl_Position = uMVP * vec4(aP, 1.0); }`;
+    attribute vec4 aJ; attribute vec4 aW;
+    uniform mat4 uMVP; uniform float uAnim; uniform sampler2D uPal;
+    uniform vec2 uPalSize; uniform vec3 uF;
+    varying vec3 vN; varying vec2 vU; varying vec2 vU2;
+    vec4 col(float j, float c, float f) {
+      return texture2D(uPal, vec2((j * 3.0 + c + 0.5) / uPalSize.x, (f + 0.5) / uPalSize.y));
+    }
+    vec4 colAt(float j, float c) { return mix(col(j, c, uF.x), col(j, c, uF.y), uF.z); }
+    void main() {
+      vec3 p = aP, n = aN;
+      if (uAnim > 0.5) {
+        vec4 P = vec4(aP, 1.0), N = vec4(aN, 0.0);
+        vec3 sp = vec3(0.0), sn = vec3(0.0);
+        float tw = 0.0;
+        for (int k = 0; k < 4; k++) {
+          float w = aW[k];
+          if (w > 0.0) {
+            vec4 c0 = colAt(aJ[k], 0.0), c1 = colAt(aJ[k], 1.0), c2 = colAt(aJ[k], 2.0);
+            sp += w * vec3(dot(P, c0), dot(P, c1), dot(P, c2));
+            sn += w * vec3(dot(N, c0), dot(N, c1), dot(N, c2));
+            tw += w;
+          }
+        }
+        if (tw > 0.0) { p = sp / tw; n = sn; }
+      }
+      vN = n; vU = aU; vU2 = aU2; gl_Position = uMVP * vec4(p, 1.0);
+    }`;
   const fs = `precision highp float;
     uniform sampler2D uG; uniform sampler2D uLines;
     uniform float uSlots; uniform float uMax; uniform float uOffs[16];
@@ -156,7 +188,8 @@ function m3dInit() {
   gl.linkProgram(p);
   M3D.prog = p;
   M3D.loc = {};
-  ['aP', 'aN', 'aU', 'aU2'].forEach((k) => { M3D.loc[k] = gl.getAttribLocation(p, k); });
+  ['aP', 'aN', 'aU', 'aU2', 'aJ', 'aW'].forEach((k) => { M3D.loc[k] = gl.getAttribLocation(p, k); });
+  ['uAnim', 'uPal', 'uPalSize', 'uF'].forEach((k) => { M3D.loc[k] = gl.getUniformLocation(p, k); });
   ['uMVP', 'uG', 'uLines', 'uSlots', 'uMax', 'uOffs', 'uPat', 'uAlpha', 'uUse', 'uL', 'uV', 'uCX', 'uCY', 'uA', 'uB', 'uC', 'uD', 'uGlass']
     .forEach((k) => { M3D.loc[k] = gl.getUniformLocation(p, k); });
 
@@ -186,7 +219,8 @@ function m3dFree() {
   const gl = M3D.gl;
   if (gl && M3D.mesh) {
     const m = M3D.mesh;
-    [m.pos, m.nor, m.uv, m.uv2].forEach((b) => gl.deleteBuffer(b));
+    [m.pos, m.nor, m.uv, m.uv2, m.aj, m.aw].forEach((b) => b && gl.deleteBuffer(b));
+    if (m.pal) gl.deleteTexture(m.pal);
     gl.deleteTexture(m.lines);
     m.parts.forEach((p) => {
       gl.deleteBuffer(p.ib);
@@ -249,6 +283,22 @@ function m3dLoad(id) {
   };
   M3D.mesh = mesh;
   mesh.lines = tex(d.lines, loaded);
+  if (d.anim && M3D.gl2) {
+    // the joints' matrices, frame by frame, in a float texture
+    const a = d.anim;
+    mesh.aj = buf(gl.ARRAY_BUFFER, m3dB64(a.j, Uint8Array));
+    mesh.aw = buf(gl.ARRAY_BUFFER, m3dB64(a.w, Uint8Array));
+    mesh.pal = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, mesh.pal);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, a.joints * 3, a.frames, 0, gl.RGBA, gl.FLOAT,
+      m3dB64(a.pal, Float32Array));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    mesh.anim = { fps: a.fps || 15, frames: a.frames, w: a.joints * 3, t0: performance.now() };
+  }
   d.parts.forEach((p) => {
     const idx = m3dB64(p.idx, d.big ? Uint32Array : Uint16Array);
     const sh = p.shade || {};
@@ -361,6 +411,21 @@ function m3dDraw() {
   attr(L.aN, m.nor, 3, gl.BYTE, true);
   attr(L.aU, m.uv, 2, gl.FLOAT, false);
   attr(L.aU2, m.uv2, 2, gl.FLOAT, false);
+  if (m.anim) {
+    attr(L.aJ, m.aj, 4, gl.UNSIGNED_BYTE, false);
+    attr(L.aW, m.aw, 4, gl.UNSIGNED_BYTE, true);
+    const f = ((performance.now() - m.anim.t0) / 1000 * m.anim.fps) % m.anim.frames;
+    const f0 = Math.floor(f);
+    gl.uniform1f(L.uAnim, 1);
+    gl.uniform2f(L.uPalSize, m.anim.w, m.anim.frames);
+    gl.uniform3f(L.uF, f0, (f0 + 1) % m.anim.frames, f - f0);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, m.pal);
+    gl.uniform1i(L.uPal, 4);
+  } else {
+    [L.aJ, L.aW].forEach((loc) => { if (loc >= 0) gl.disableVertexAttribArray(loc); });
+    gl.uniform1f(L.uAnim, 0);
+  }
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_2D, m.lines);
   gl.uniform1i(L.uLines, 1);

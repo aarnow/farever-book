@@ -1042,16 +1042,20 @@ def item_model_json(item_id):
     """One collectible's model for the viewer, as JSON text — read off the
     game's files the first time (a second or so), from the cache after. The
     cache is keyed to res.pak, so a game patch rebuilds it. None when the
-    item has no model this reader understands, or the game isn't found."""
-    if not re.fullmatch(r"[A-Za-z0-9_]+", str(item_id or "")):
+    item has no model this reader understands, or the game isn't found.
+    "<id>@anim" asks for a monster's idle animation with it."""
+    m_ = re.fullmatch(r"([A-Za-z0-9_]+)(@anim)?", str(item_id or ""))
+    if not m_:
         return None
+    anim = bool(m_.group(2))
+    item_id = m_.group(1)
     game = _game_dir()
     if game is None or not (game / "res.pak").is_file():
         return None
     st = (game / "res.pak").stat()
     # the converter's version too: a better one rebuilds what the last made
     key = f"{MODEL_FORMAT}:{st.st_size}:{int(st.st_mtime)}"
-    cache = MODELS_DIR / f"{item_id}.json"
+    cache = MODELS_DIR / f"{item_id}{'_anim' if anim else ''}.json"
     with _model_lock:
         try:
             got = json.loads(cache.read_text(encoding="utf-8"))
@@ -1063,7 +1067,7 @@ def item_model_json(item_id):
             sys.path.insert(0, str(ROOT / "hltools"))
         try:
             import hmd_model
-            m = hmd_model.item_model(game, item_id)
+            m = hmd_model.item_model(game, item_id, anim=anim)
         except Exception as e:
             # not cached: a fix to the reader should get its chance
             print(f"[meter] model of {item_id} failed: {e!r}", file=sys.stderr)

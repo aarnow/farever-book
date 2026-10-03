@@ -197,7 +197,66 @@ def read_hmd(raw):
         if 6 in props:
             for _ in range(r.i32()):
                 r.i32()
+    d["anims"] = []
+    for _ in range(r.i32()):
+        _props(r, ver)
+        a = {"name": r.name(), "frames": r.i32(), "sampling": r.f32(),
+             "speed": r.f32()}
+        flags = r.u8()
+        a["loop"] = bool(flags & 1)
+        a["dataPos"] = r.i32()
+        a["objects"] = []
+        for _ in range(r.i32()):
+            o = {"name": r.name(), "flags": r.u8()}
+            if o["flags"] & 64:                  # HasProps
+                o["props"] = [r.name() for _ in range(r.u8())]
+            a["objects"].append(o)
+        if flags & 2:                            # events
+            for _ in range(r.i32()):
+                r.i32()
+                r.name()
+        d["anims"].append(a)
     return d
+
+
+def anim_frames(raw, d, a):
+    """One animation's joint poses: [{joint name: (pos, quat xyz, scale)}]
+    per frame, as h3d's BufferAnimation lays them out — the objects with a
+    single frame first, then a stride per frame for the others."""
+    def size(o):
+        f = o["flags"]
+        return (3 * bool(f & 1) + 3 * bool(f & 2) + 3 * bool(f & 4) + 2 * bool(f & 8)
+                + bool(f & 16) + (len(o.get("props") or ()) if f & 64 else 0))
+    singles = [o for o in a["objects"] if o["flags"] & 32]
+    others = [o for o in a["objects"] if not o["flags"] & 32]
+    single = sum(size(o) for o in singles)
+    stride = sum(size(o) for o in others)
+    count = single + stride * a["frames"]
+    v = struct.unpack_from(f"<{count}f", raw, d["dataPos"] + a["dataPos"])
+
+    def pose(o, off):
+        f, out = o["flags"], {}
+        if f & 1:
+            out["pos"] = v[off:off + 3]
+            off += 3
+        if f & 2:
+            out["rot"] = v[off:off + 3]
+            off += 3
+        if f & 4:
+            out["scale"] = v[off:off + 3]
+        return out
+    base, off = {}, 0
+    for o in singles:
+        base[o["name"]] = pose(o, off)
+        off += size(o)
+    frames = []
+    for fr in range(a["frames"]):
+        cur, off = dict(base), single + stride * fr
+        for o in others:
+            cur[o["name"]] = pose(o, off)
+            off += size(o)
+        frames.append(cur)
+    return frames
 
 
 # floats per vertex input, by InputFormat (DFloat..DVec4, DBytes4 = one word)
@@ -291,7 +350,8 @@ def _mul(a, b):
 
 def rest_pose(m, sub_of_vertex, model, skinned=False):
     """Positions and normals put the right size and way up by the skeleton,
-    in place — fully skinned to its default pose when `skinned`."""
+    in place — fully skinned to its default pose when `skinned`. Returns
+    the root's matrix it moved them by (None when there is no skin)."""
     skin = model.get("skin")
     if not skin or m["weights"] is None:
         return
@@ -322,7 +382,7 @@ def rest_pose(m, sub_of_vertex, model, skinned=False):
             a = [nx * G[0][c] + ny * G[1][c] + nz * G[2][c] for c in range(3)]
             ln = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) ** 0.5 or 1.0
             nor[i:i + 3] = [a[0] / ln, a[1] / ln, a[2] / ln]
-        return
+        return G
     # with splits, a vertex's indexes count in its material's joint list
     by_mat = {mat: [joints[k]["bind"] for k in ids] for mat, ids in skin["splits"]}
     pos, nor = m["pos"], m["nor"]
@@ -355,6 +415,133 @@ def rest_pose(m, sub_of_vertex, model, skinned=False):
         ln = (ax * ax + ay * ay + az * az) ** 0.5
         if ln > 1e-9:
             nor[i * 3:i * 3 + 3] = (ax / ln, ay / ln, az / ln)
+
+
+# ---- the idle animation ----------------------------------------------------
+# The viewer is sent the mesh already moved by the root (G), the prefab (N)
+# and turned Y-up (S). An animated frame moves a vertex by its joints'
+# matrices P instead of G; what the viewer applies on top of what it has is
+# therefore C = S^-1 N^-1 G^-1 P N S, per joint, per frame.
+_SWAP = [[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]
+ANIM_FPS = 15
+
+
+def _inv(m):
+    """Inverse of a 4x3 row-vector affine matrix."""
+    a, b, c = m[0], m[1], m[2]
+    det = (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
+           + a[2] * (b[0] * c[1] - b[1] * c[0]))
+    if abs(det) < 1e-20:
+        return _IDENTITY
+    r = [[(b[1] * c[2] - b[2] * c[1]) / det, (a[2] * c[1] - a[1] * c[2]) / det,
+          (a[1] * b[2] - a[2] * b[1]) / det],
+         [(b[2] * c[0] - b[0] * c[2]) / det, (a[0] * c[2] - a[2] * c[0]) / det,
+          (a[2] * b[0] - a[0] * b[2]) / det],
+         [(b[0] * c[1] - b[1] * c[0]) / det, (a[1] * c[0] - a[0] * c[1]) / det,
+          (a[0] * b[1] - a[1] * b[0]) / det]]
+    t = m[3]
+    r.append([-(t[0] * r[0][k] + t[1] * r[1][k] + t[2] * r[2][k]) for k in range(3)])
+    return r
+
+
+def _pose_matrix(j, pose):
+    """A joint's local matrix in one frame: what the animation says of it,
+    else its default (h3d: no rotation in the frame is no rotation)."""
+    if pose is None:
+        return _mat(j["pos"])
+    p = pose.get("pos") or j["pos"][:3]
+    q = pose.get("rot") or (0.0, 0.0, 0.0)
+    sc = pose.get("scale") or (1.0, 1.0, 1.0)
+    return _mat([p[0], p[1], p[2], q[0], q[1], q[2], sc[0], sc[1], sc[2]])
+
+
+def skin_animation(model, m, sub_of_vertex, frames, G, N):
+    """(per-vertex 4 joint slots + 4 weights, [frame][slot] C matrices) for a
+    skinned model and an animation's frames; None if they share no joint."""
+    skin = model.get("skin")
+    if not skin or m["weights"] is None or G is None:
+        return None
+    joints = skin["joints"]
+    if not any(j["name"] in frames[0] for j in joints):
+        return None
+    binds = sorted({j["bind"] for j in joints if j["bind"] >= 0})
+    slot = {b: k for k, b in enumerate(binds)}
+    pre = _mul(_inv(_SWAP), _mul(_inv(N), _inv(G)))
+    post = _mul(N, _SWAP)
+    mats = []
+    for fr in frames:
+        absm, row = [None] * len(joints), [None] * len(binds)
+        for i, j in enumerate(joints):
+            loc = _pose_matrix(j, fr.get(j["name"]))
+            absm[i] = loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]])
+            if j["bind"] >= 0:
+                P = _mul(_mat(j["trans"]), absm[i])
+                row[slot[j["bind"]]] = _mul(pre, _mul(P, post))
+        mats.append(row)
+    by_mat = {mat: [joints[k]["bind"] for k in ids] for mat, ids in skin["splits"]}
+    jv, wv = bytearray(), bytearray()
+    for i in range(m["n"]):
+        w3 = m["weights"][i]
+        ws = [w3[0], w3[1], w3[2], max(0.0, 1.0 - w3[0] - w3[1] - w3[2])]
+        remap = by_mat.get(sub_of_vertex[i]) if by_mat else None
+        for k in range(4):
+            b = m["idx4"][i][k]
+            if remap is not None:
+                b = remap[b] if b < len(remap) else -1
+            jv.append(slot.get(b, 0))
+            wv.append(max(0, min(255, round(ws[k] * 255))) if b in slot else 0)
+    return jv, wv, mats
+
+
+def item_rig(game_dir, item_id):
+    """The skeleton a unit's model is animated with (the model sheet's
+    rigName, inherited), or None."""
+    sh = _sheets(game_dir)
+    unit = sh["unit"].get(item_id)
+    if not unit:
+        return None
+    todo, done, ref = [item_id], set(), None
+    while todo and not ref:
+        uid = todo.pop(0)
+        if uid in done:
+            continue
+        done.add(uid)
+        u = sh["unit"].get(uid) or {}
+        ref = next((x.get("ref") for x in u.get("models") or () if x.get("ref")), None)
+        todo += [i.get("ref") for i in u.get("inherit") or () if i.get("ref")]
+    seen = set()
+    while ref and ref not in seen:
+        seen.add(ref)
+        row = sh["model"].get(ref) or {}
+        if row.get("rigName"):
+            return row["rigName"]
+        ref = row.get("inherit")
+    return None
+
+
+def idle_frames(game_dir, rig):
+    """The rig's idle animation, sampled at ANIM_FPS: (frames, fps), or None."""
+    if not rig:
+        return None
+    res = Path(game_dir) / "res.pak"
+    path = f"Anim/{rig}/Anim_{rig}_Common_Idle.fbx"
+    if _read(res, path) is None:
+        # some rigs keep it a folder down (Anim/Human/Common/...)
+        index = next((v[0] for k, v in _DIRS.items() if k[0] == str(res)), {})
+        path = next((p for p in sorted(index) if p.startswith(f"Anim/{rig}/")
+                     and p.endswith(f"Anim_{rig}_Common_Idle.fbx")), None)
+        if not path:
+            return None
+    raw = _read(res, path)
+    if not raw or raw[:3] != b"HMD":
+        return None
+    d = read_hmd(raw)
+    if not d["anims"]:
+        return None
+    a = d["anims"][0]
+    frames = anim_frames(raw, d, a)
+    step = max(1, round((a["sampling"] or 30) / ANIM_FPS))
+    return frames[::step], (a["sampling"] or 30) / step * (a["speed"] or 1)
 
 
 # ---- prefab, model sheet, palettes ----------------------------------------
@@ -597,9 +784,10 @@ def _b64(fmt, values):
     return base64.b64encode(struct.pack(f"<{len(values)}{fmt}", *values)).decode()
 
 
-def _model_parts(game_dir, raw, gradmats, matrix):
-    """One model file's mesh, in the prefab's space (Z-up), and its parts:
-    (mesh, [(triangles, material)]); None when it has no geometry."""
+def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
+    """One model file's mesh, in the prefab's space (Z-up), its parts and,
+    given an animation's frames, how they move it: (mesh, [(triangles,
+    material)], skin_animation or None); None when it has no geometry."""
     d = read_hmd(raw)
     model = next((m for m in d["models"] if m["geom"] >= 0), None)
     if model is None:
@@ -611,7 +799,9 @@ def _model_parts(game_dir, raw, gradmats, matrix):
         mi = model["mats"][k] if k < len(model["mats"]) else 0
         for t in tris:
             sub_of[t] = mi
-    rest_pose(m, sub_of, model)
+    G = rest_pose(m, sub_of, model)
+    anim = (skin_animation(model, m, sub_of, frames, G, matrix)
+            if frames else None)
     if matrix is not _IDENTITY:
         M = matrix
         pos, nor = m["pos"], m["nor"]
@@ -641,25 +831,44 @@ def _model_parts(game_dir, raw, gradmats, matrix):
         gm = (gradmats.get(mat.get("name")) or gradmats.get("*")
               or (spare[0] if spare else {}))
         parts.append((tris, gm))
-    return m, parts
+    return m, parts, anim
 
 
-def item_model(game_dir, item_id):
+def item_model(game_dir, item_id, anim=False):
     """The viewer's payload for one collectible (or monster), or None when
     it has no model this reader can make sense of. A prefab of several
-    models comes as one mesh."""
+    models comes as one mesh. With `anim`, a unit's idle animation too."""
     prefab = item_prefab(game_dir, item_id)
     if not prefab:
         return None
+    idle = idle_frames(game_dir, item_rig(game_dir, item_id)) if anim else None
+    frames = idle[0] if idle else None
     pos, nor, uv, uv2, groups = [], [], [], [], []
+    jv, wv, cols, spans = bytearray(), bytearray(), [], []
     for mdl in prefab_models(game_dir, prefab):
         raw = _read(Path(game_dir) / "res.pak", mdl["source"])
         if not raw or raw[:3] != b"HMD":
             continue
-        got = _model_parts(game_dir, raw, mdl["mats"], mdl["matrix"])
+        got = _model_parts(game_dir, raw, mdl["mats"], mdl["matrix"], frames)
         if not got:
             continue
-        m, parts = got
+        m, parts, am = got
+        if frames:
+            # each model's joints after the ones before; a model the
+            # animation doesn't move hangs on one still joint
+            first = len(cols)
+            if am:
+                jl, wl, mats = am
+                cols.append(mats)
+                jv += bytes(first_slot + j for first_slot, j in
+                            ((sum(len(c[0]) for c in cols[:-1]), j) for j in jl))
+                wv += wl
+            else:
+                cols.append([[_IDENTITY]] * len(frames))
+                base_slot = sum(len(c[0]) for c in cols[:-1])
+                jv += bytes([base_slot, 0, 0, 0] * m["n"])
+                wv += bytes([255, 0, 0, 0] * m["n"])
+            spans.append(first)
         base = len(pos) // 3
         pos += m["pos"]
         nor += m["nor"]
@@ -689,10 +898,25 @@ def item_model(game_dir, item_id):
                     "cull": gm.get("cull", "Back"), "blend": gm.get("blend", "None")})
     # normals as signed bytes: a third of the size, and plenty for shading
     nb = [max(-127, min(127, round(x * 127))) for x in nor]
-    return {"id": item_id, "n": n, "big": big,
-            "pos": _b64("f", pos), "nor": _b64("b", nb),
-            "uv": _b64("f", uv), "uv2": _b64("f", uv2),
-            "lines": lines_png(game_dir), "parts": out}
+    payload = {"id": item_id, "n": n, "big": big,
+               "pos": _b64("f", pos), "nor": _b64("b", nb),
+               "uv": _b64("f", uv), "uv2": _b64("f", uv2),
+               "lines": lines_png(game_dir), "parts": out}
+    if frames and any(any(c is not _IDENTITY for c in col[0]) for col in cols):
+        nj = sum(len(c[0]) for c in cols)
+        if nj <= 255:
+            # [frame][joint] three columns of four: (m0c, m1c, m2c, m3c)
+            flat = []
+            for f in range(len(frames)):
+                for col in cols:
+                    for M in col[f]:
+                        for c in range(3):
+                            flat += (M[0][c], M[1][c], M[2][c], M[3][c])
+            payload["anim"] = {"fps": idle[1], "frames": len(frames), "joints": nj,
+                               "pal": _b64("f", flat),
+                               "j": base64.b64encode(bytes(jv)).decode(),
+                               "w": base64.b64encode(bytes(wv)).decode()}
+    return payload
 
 
 if __name__ == "__main__":
