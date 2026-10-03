@@ -590,7 +590,13 @@ window.addImages = function (ns, json) {
   const into = ns === 'best' ? window.__BEST__ : ns === 'map' ? window.__MAP__
     : ns === 'skill' ? window.__SKILL__ : ns === 'dbg' ? window.__DBG__ : window.__COLL__;
   Object.assign(into, JSON.parse(json));
-  if (ns === 'dbg') { document.querySelectorAll('[data-bg]').forEach(applyBackdrop); return; }
+  if (ns === 'dbg') {
+    document.querySelectorAll('[data-bg]').forEach(applyBackdrop);
+    // the rifts' loading screen, behind the whole Rifts tab
+    const rift = window.__DBG__.Rifts_hd || window.__DBG__.Rifts;
+    if (rift) document.documentElement.style.setProperty('--rift-bg', 'url("' + rift + '")');
+    return;
+  }
   if (ns === 'map') { mapTiles(); return; }
   if (ns === 'skill') { document.querySelectorAll('img.skic[data-id]').forEach((im) => {
     const src = window.__SKILL__[im.dataset.id];

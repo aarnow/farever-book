@@ -2570,3 +2570,15 @@ html.lt-760 .dcards { grid-template-columns: minmax(0, 1fr); }
 .dcloot .loottiers { gap: 5px; }
 .dcloot .ltier .ltl { width: 96px; }
 .dcloot .ltier .lootstrip { flex-wrap: wrap; }
+
+/* ---- Rifts: the rifts' loading screen behind the whole tab ----------------- */
+/* it stays put while the page scrolls over it, darkened, and darker towards
+   the bottom where the lists are */
+#page.page-Rifts {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bg) 58%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 78%, transparent) 45%,
+      color-mix(in srgb, var(--bg) 92%, transparent) 100%),
+    var(--rift-bg, none) center 30% / cover no-repeat;
+}
