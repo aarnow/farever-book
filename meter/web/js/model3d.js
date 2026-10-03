@@ -94,6 +94,7 @@ function m3dInit() {
     uniform vec4 uB;   // specSize, specSmooth, specAlpha, linesBlend
     uniform vec4 uC;   // rimLightAngle (rad), rimLightWidth, rimLightSize, rimLightSmooth
     uniform vec4 uD;   // rimLightSpecMultiplier, emissivePow, specInsideSize, specInsideIntensity
+    uniform vec4 uGlass;  // see-through glass: on, Fresnel bias, scale, power
     varying vec3 vN; varying vec2 vU; varying vec2 vU2;
     vec3 grad(float slot, float col, float v) {
       return texture2D(uG, vec2((slot * 6.0 + col + 0.5) / (uSlots * 6.0), v)).rgb;
@@ -137,7 +138,11 @@ function m3dInit() {
       c = mix(c, albedo + specC * uD.x + vec3(0.15), rim);
       c = overlay(c, lines.rgb, uB.w * lines.a);
       c += emis;
-      gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+      float alpha = 1.0;
+      if (uGlass.x > 0.5) {
+        alpha = clamp(uGlass.y + uGlass.z * pow(1.0 - abs(dot(uV, n)), max(uGlass.w, 0.01)), 0.0, 1.0);
+      }
+      gl_FragColor = vec4(clamp(c, 0.0, 1.0) * alpha, alpha);
     }`;
   const sh = (type, src) => {
     const s = gl.createShader(type);
@@ -152,7 +157,7 @@ function m3dInit() {
   M3D.prog = p;
   M3D.loc = {};
   ['aP', 'aN', 'aU', 'aU2'].forEach((k) => { M3D.loc[k] = gl.getAttribLocation(p, k); });
-  ['uMVP', 'uG', 'uLines', 'uSlots', 'uMax', 'uOffs', 'uPat', 'uAlpha', 'uUse', 'uL', 'uV', 'uCX', 'uCY', 'uA', 'uB', 'uC', 'uD']
+  ['uMVP', 'uG', 'uLines', 'uSlots', 'uMax', 'uOffs', 'uPat', 'uAlpha', 'uUse', 'uL', 'uV', 'uCX', 'uCY', 'uA', 'uB', 'uC', 'uD', 'uGlass']
     .forEach((k) => { M3D.loc[k] = gl.getUniformLocation(p, k); });
 
   // turn it by dragging, closer and further with the wheel
@@ -253,6 +258,8 @@ function m3dLoad(id) {
       ib: buf(gl.ELEMENT_ARRAY_BUFFER, idx), n: idx.length,
       type: d.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT,
       ok: false, slots: p.slots || 1, max: p.max || 8, offs,
+      glass: p.glass ? [1, p.glass[0], p.glass[1], p.glass[2]] : null,
+      cull: p.cull || 'Back', blend: p.blend || 'None',
       a: [sh.shadowBias, sh.shadowSmooth, sh.lightSmooth, sh.terminatorSize],
       b: [sh.specSize, sh.specSmooth, sh.specAlpha, sh.linesBlend],
       c: [(sh.rimLightAngle || 0) * Math.PI / 180, sh.rimLightWidth, sh.rimLightSize, sh.rimLightSmooth],
@@ -336,7 +343,8 @@ function m3dDraw() {
   const l = [0, 1, 2].map((k) => mat.z[k] * 0.7 + mat.y[k] * 0.9 - mat.x[k] * 0.45);
   const ll = Math.hypot(l[0], l[1], l[2]);
   gl.enable(gl.DEPTH_TEST);
-  gl.disable(gl.CULL_FACE);
+  // as Heaps does: a glass shell lies exactly on the body it covers
+  gl.depthFunc(gl.LEQUAL);
   gl.useProgram(M3D.prog);
   gl.uniformMatrix4fv(L.uMVP, false, mat.m);
   gl.uniform3f(L.uL, l[0] / ll, l[1] / ll, l[2] / ll);
@@ -360,8 +368,25 @@ function m3dDraw() {
   gl.uniform1i(L.uAlpha, 3);
   gl.activeTexture(gl.TEXTURE0);
   gl.uniform1i(L.uG, 0);
-  m.parts.forEach((p) => {
+  // the opaque parts, then the see-through glass over them
+  const see = (p) => p.glass || p.blend !== 'None';
+  const order = m.parts.filter((p) => !see(p)).concat(m.parts.filter(see));
+  order.forEach((p) => {
     if (!p.ok) return;
+    // each material's own faces: most show their front only, so a glass's
+    // inner wall shows through its outer one
+    if (p.cull === 'None') gl.disable(gl.CULL_FACE);
+    else {
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(p.cull === 'Front' ? gl.FRONT : gl.BACK);
+    }
+    if (see(p)) {
+      gl.enable(gl.BLEND);
+      if (p.blend === 'Add') gl.blendFunc(gl.ONE, gl.ONE);
+      else gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+    }
+    gl.uniform4fv(L.uGlass, p.glass || [0, 0, 0, 0]);
     gl.bindTexture(gl.TEXTURE_2D, p.tex);
     gl.uniform1f(L.uSlots, p.slots);
     gl.uniform1f(L.uMax, p.max);
@@ -378,5 +403,9 @@ function m3dDraw() {
     gl.uniform4fv(L.uD, p.d);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, p.ib);
     gl.drawElements(gl.TRIANGLES, p.n, p.type, 0);
+    if (see(p)) {
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+    }
   });
 }

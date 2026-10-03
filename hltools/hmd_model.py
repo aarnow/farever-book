@@ -396,11 +396,29 @@ def prefab_parts(game_dir, prefab, depth=0):
                     found["mats"]["*"] = gradmat(c)
         elif t == "material":
             name = o.get("materialName") or o.get("name")
+            pbr = (o.get("props") or {}).get("PBR") or {}
             for c in kids:
                 if c.get("type") == "gradmat":
                     found["mats"][name] = gradmat(c)
             if name not in found["mats"] and isinstance(o.get("color"), list):
-                found["mats"][name] = {"color": o["color"]}
+                # glass: black underneath, its colour in the Fresnel rim or
+                # the toon highlight
+                shaders = {str(c.get("source", "")).rsplit("/", 1)[-1]:
+                           c.get("props") or {}
+                           for c in kids if c.get("type") == "shader"}
+                fr = shaders.get("Fresnel.hx") or {}
+                color = next((c for c in (o["color"], fr.get("color"),
+                                          (shaders.get("ToonSpecular.hx") or {}).get("color"))
+                              if isinstance(c, list) and any(c[:3])), o["color"])
+                entry = {"color": color}
+                if fr:
+                    # drawn over the body it duplicates: only its rim shows
+                    entry["glass"] = [float(fr.get(k) or 0) for k in ("bias", "scale", "power")]
+                found["mats"][name] = entry
+            if name in found["mats"]:
+                # which faces it shows, and how it lays over what is behind
+                found["mats"][name]["cull"] = pbr.get("culling") or "Back"
+                found["mats"][name]["blend"] = pbr.get("blend") or "None"
         elif t == "reference" and str(o.get("source", "")).endswith(".prefab"):
             found["refs"].append(o["source"])
     _walk(tree, visit)
@@ -453,6 +471,8 @@ LINES_TEX = "Character/Common/Texture/UV_Lines.png"
 def shading(gradmat):
     """The shader's values, as syncShaderVars hands them over."""
     sh = dict(GRADMAT_DEFAULTS)
+    if (gradmat or {}).get("color"):
+        sh["linesBlend"] = 0.0      # not a gradmat: no hand-drawn lines
     sh.update({k: v for k, v in ((gradmat or {}).get("props") or {}).items()
                if k in GRADMAT_DEFAULTS and isinstance(v, (int, float))})
     sh["rimLightSize"] *= 0.1
@@ -555,6 +575,10 @@ def item_model(game_dir, item_id):
     for k, tris in enumerate(m["subs"]):
         mi = model["mats"][k] if k < len(model["mats"]) else 0
         mat = d["mats"][mi] if mi < len(d["mats"]) else {}
+        if str(mat.get("name", "")).lower() == "outline":
+            # the inverted hull that draws the cartoon outline, meant to be
+            # seen from inside only: drawn plainly, it hides the object
+            continue
         gm = (gradmats.get(mat.get("name")) or gradmats.get("*")
               or (spare[0] if spare else {}))
         grad, nslots = gradients_png(game_dir, gm.get("slots"), gm.get("color"))
@@ -565,7 +589,9 @@ def item_model(game_dir, item_id):
                       "offs": offs + [0.0] * (nslots - len(offs)),
                       "pattern": texture_png(game_dir, gm.get("pattern")),
                       "alpha": texture_png(game_dir, gm.get("alpha")),
-                      "shade": shading(gm)})
+                      "shade": shading(gm),
+                      "glass": gm.get("glass"),
+                      "cull": gm.get("cull", "Back"), "blend": gm.get("blend", "None")})
     # normals as signed bytes: a third of the size, and plenty for shading
     nor = [max(-127, min(127, round(x * 127))) for x in m["nor"]]
     return {"id": item_id, "n": m["n"], "big": m["big"],

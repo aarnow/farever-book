@@ -2,8 +2,8 @@
 
 const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '' };
 let COLL_NODE = null;
-// the categories whose models the meter knows how to read
-const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears']);
+// the categories whose models the meter knows how to read: all of them
+const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears', 'items']);
 
 function ring(pct) {
   const r = 22, c = 2 * Math.PI * r;
@@ -240,7 +240,7 @@ function renderCollection(box, n) {
 }
 
 /* The panel beside the list: the item's model, turning, when the game has
-   one (mounts, gliders, companions, gear), else its picture — and what the game says of it. */
+   one, else its picture — and what the game says of it. */
 function buildCollView(it, cat) {
   const v = el('div', 'collview' + (it.rk ? ' r-' + it.rk : ''));
   const stage = el('div', 'cvstage');
