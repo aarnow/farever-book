@@ -121,6 +121,64 @@ function showToast(text) {
 function setZoom(pct) {
   const z = Math.max(50, Math.min(200, Number(pct) || 100));
   document.documentElement.style.zoom = (z / 100).toString();
+  widthClasses();
+  headerWrap();
+}
+
+/* The page's real width: the window's, divided by the zoom. A media query
+   only sees the window — at 130 % a 720 px window lays out 554 px of page —
+   so the layout's breakpoints are classes on <html> instead (lt-1100: the
+   page is 1100 px wide or less), set from that real width. */
+const WIDTH_STEPS = [1250, 1100, 1000, 900, 760, 620];
+function widthClasses() {
+  const root = document.documentElement;
+  const w = window.innerWidth / (parseFloat(root.style.zoom) || 1);
+  WIDTH_STEPS.forEach((s) => root.classList.toggle('lt-' + s, w <= s));
+}
+window.addEventListener('resize', widthClasses);
+widthClasses();
+
+/* The header on two lines (its right-hand group gone under the name: a
+   narrow window) is centred, both lines. Measured, not guessed from a width:
+   the group's own width changes (Jouer, En jeu, a long server name). */
+let HEADER_WRAP = 0;
+function headerWrap() {
+  cancelAnimationFrame(HEADER_WRAP);
+  HEADER_WRAP = requestAnimationFrame(() => {
+    const top = $('#top'), right = $('#topright'), brand = $('#top .brand');
+    if (!top || !right || !brand) return;
+    top.classList.remove('wrapped');
+    // on two lines: the group starts below the name's bottom
+    top.classList.toggle('wrapped',
+      right.offsetTop >= brand.offsetTop + brand.offsetHeight - 2);
+  });
+}
+window.addEventListener('resize', headerWrap);
+
+/* A button that floats at the page's bottom right once it is scrolled down,
+   and takes it back to the top. */
+function initToTop() {
+  const page = $('#page');
+  if (!page || document.getElementById('totop')) return;
+  const b = el('button', 'totop');
+  b.id = 'totop';
+  b.type = 'button';
+  b.title = 'Revenir en haut';
+  b.setAttribute('aria-label', 'Revenir en haut');
+  b.addEventListener('click', () => page.scrollTo({ top: 0, behavior: 'smooth' }));
+  page.parentNode.appendChild(b);
+  // the header's right-hand group changes width with the game's state
+  // the header's right-hand group changes width with the game's state, the
+  // name's height once the logo has loaded
+  if (window.ResizeObserver && $('#topright')) {
+    const ro = new ResizeObserver(headerWrap);
+    ro.observe($('#topright'));
+    if ($('#top .brand')) ro.observe($('#top .brand'));
+  }
+  headerWrap();
+  const sync = () => b.classList.toggle('on', page.scrollTop > 400);
+  page.addEventListener('scroll', sync, { passive: true });
+  sync();
 }
 
 /* ---- controls ----------------------------------------------------------- */

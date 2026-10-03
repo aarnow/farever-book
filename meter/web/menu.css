@@ -62,6 +62,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap; row-gap: 10px;
   padding: 10px 18px;
   background: linear-gradient(180deg, #45417A 0%, var(--head) 100%);
   border-bottom: 1px solid #5A5694;
@@ -121,6 +122,13 @@ body {
 .pill.retry { cursor: pointer; }
 .pill.retry:hover { border-color: var(--accent); }
 
+#topright { display: flex; align-items: center; gap: 12px; margin-left: auto; flex: none; }
+/* on two lines (core.js headerWrap): both centred */
+#top.wrapped { justify-content: center; }
+#top.wrapped .spacer { display: none; }
+#top.wrapped #topright { margin-left: 0; flex-basis: 100%; justify-content: center; }
+#topright #riftclock .t, #topright #riftclock .s, .gamestate .gs b, .gamestate .srv,
+.playbtn { white-space: nowrap; }
 /* the rift countdown, compact, in the title band */
 #top #riftclock {
   display: grid; grid-template-columns: auto auto; column-gap: 8px;
@@ -315,6 +323,11 @@ select, input[type=text] {
 .prow .ptext .name { font-size: 15px; }
 .prow .ptext .meta { color: var(--dim); flex: none; }
 .prow .ptext .meta2 { color: var(--text); }
+html.lt-1000 .prow { flex-wrap: wrap; row-gap: 10px; }
+html.lt-1000 .prow .ptext { flex: 1 1 220px; }
+html.lt-1000 .prow .loottiers { order: 5; flex: 1 1 100%; margin-left: 96px; }
+html.lt-760 .prow .loottiers { margin-left: 0; }
+html.lt-760 .ltier .lootstrip { flex-wrap: wrap; }
 .rowbtn {
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -511,6 +524,19 @@ select, input[type=text] {
        gap: 10px; align-items: center; font-size: 12px; margin: 5px 0; }
 .typ .b { height: 6px; border-radius: 3px; }
 
+/* ---- back to the top: floats at the bottom right once the page scrolls -------- */
+.totop { position: fixed; right: 26px; bottom: 26px; z-index: 50; width: 42px; height: 42px;
+         border-radius: 50%; cursor: pointer; padding: 0; display: grid; place-items: center;
+         background: linear-gradient(180deg, #5B5795, #46437A); border: 1px solid #6E6AAE;
+         box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+         opacity: 0; transform: translateY(10px); pointer-events: none;
+         transition: opacity .2s ease, transform .2s ease, border-color .2s ease; }
+.totop::before { content: ""; width: 12px; height: 12px; margin-top: 5px;
+                 border-left: 3px solid #fff; border-top: 3px solid #fff; transform: rotate(45deg); }
+.totop.on { opacity: 1; transform: none; pointer-events: auto; }
+.totop:hover { border-color: var(--accent); }
+.totop:hover::before { border-color: var(--accent); }
+
 /* ---- toast ------------------------------------------------------------------ */
 #toast {
   position: fixed;
@@ -661,7 +687,7 @@ select, input[type=text] {
 .seg button.on { background: var(--panel-2); color: var(--text); font-weight: 700; }
 .collcount { color: var(--dim); font-size: 12px; margin: 4px 0 10px; }
 .collgrid { display: grid; gap: 10px;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 .citem { display: flex; flex-direction: column; background: var(--panel);
          border: 1px solid var(--line); border-radius: 8px; padding: 0;
          overflow: hidden; cursor: pointer; color: var(--text); font: inherit;
@@ -1478,7 +1504,7 @@ select:focus, input[type=text]:focus { outline: none; border-color: var(--accent
                        box-shadow: 0 0 10px rgba(242, 201, 76, .45); }
 
 /* the pages' content, with room on the sides */
-#page { padding: 22px 48px 34px; }
+#page { padding: 22px clamp(14px, 4vw, 48px) 34px; }
 #page.page-Map { padding: 0; }
 
 /* breathing room above and below the title band and the tabs; the active
@@ -1616,9 +1642,11 @@ body.maxed .grip { display: none; }
 .sarms .wsk { display: flex; gap: 6px; margin-top: 8px; }
 .gearlist.one { margin-top: 12px; }
 .sheethint { margin-top: 10px; }
-@media (max-width: 1100px) {
-  .sheet { grid-template-columns: 1fr; }
-}
+/* narrower: attributes beside the gear, the weapons under both; then all
+   in one column */
+html.lt-1100 .sheet { grid-template-columns: 225px minmax(0, 1fr); }
+html.lt-1100 .sheet > :nth-child(3) { grid-column: 1 / -1; }
+html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
 
 /* Inspecter: a picked piece shown in the hero's place */
 .shero .hhint { color: var(--dim); font-size: 11px; margin-top: 6px; }
@@ -1799,7 +1827,7 @@ body.maxed .grip { display: none; }
 .bhead > .blvl { flex: 0 0 210px; }
 .bhead > .bbtns { flex: 0 0 auto; }
 .bband .bnew { width: auto; max-width: none; flex: 0 0 auto; margin-left: auto; }
-@media (max-width: 1000px) { .bhead { flex-wrap: wrap; } }
+html.lt-1000 .bhead { flex-wrap: wrap; }
 .bcheck { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 13px; cursor: pointer; }
 .bcheck input { width: 17px; height: 17px; accent-color: #7FE8FF; cursor: pointer; }
 .bcheck small { color: var(--dim); font-size: 11px; }
@@ -1837,7 +1865,7 @@ body.maxed .grip { display: none; }
 .bsimf input[type=number] { width: 110px; background: var(--bg-2); color: #fff; border: 1px solid var(--line);
                             border-radius: 8px; padding: 6px 8px; font-size: 14px; }
 .bsimgrid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
-@media (max-width: 1100px) { .bsimgrid { grid-template-columns: 1fr; } }
+html.lt-1100 .bsimgrid { grid-template-columns: 1fr; }
 .simtable { width: 100%; border-collapse: collapse; font-size: 13px; }
 .simtable th { text-align: left; color: var(--dim); font-size: 11px; font-weight: 600; letter-spacing: .5px;
                text-transform: uppercase; padding: 4px 8px; border-bottom: 1px solid var(--line); }
@@ -1921,7 +1949,7 @@ body.maxed .grip { display: none; }
 /* the builds by class: four columns, each with its class on top */
 .bcols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
          align-items: start; width: 100%; align-self: stretch; }
-@media (max-width: 1000px) { .bcols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+html.lt-1000 .bcols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .bcol { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 8px;
         background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
         padding: 12px; min-height: 160px; }
@@ -1949,8 +1977,8 @@ body.maxed .grip { display: none; }
 .bedpanel .bedbody { flex: 1; min-height: 0; }
 .bedpanel .bedleft { padding: 10px; }
 .bedpanel .bedright { padding: 12px 14px; }
-@media (max-width: 1250px) { .bedpanel .bedbody { grid-template-columns: 1fr; overflow-y: auto; }
-                             .bedpanel .blist { max-height: 240px; } }
+html.lt-1250 .bedpanel .bedbody { grid-template-columns: 1fr; overflow-y: auto; }
+html.lt-1250 .bedpanel .blist { max-height: 240px; }
 .bedpanel .bedbody { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .bedpanel .bedleft, .bedpanel .bedright { min-width: 0; overflow-x: hidden; }
 .bedpanel .bcheck { flex-wrap: wrap; }
@@ -2113,11 +2141,11 @@ body.maxed .grip { display: none; }
               padding: 10px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); text-align: center; }
 .bruneskill b { color: #fff; font-family: var(--font-head); font-size: 13px; }
 .brunegrid .brunerow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 900px) { .brunegrid .brunerow { grid-template-columns: 1fr; } }
+html.lt-900 .brunegrid .brunerow { grid-template-columns: 1fr; }
 
 /* Talents and runes side by side when there is room */
 .btalents { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
-@media (min-width: 1250px) { .btalents { grid-template-columns: minmax(420px, 640px) minmax(0, 1fr); } }
+html:not(.lt-1250) .btalents { grid-template-columns: minmax(420px, 640px) minmax(0, 1fr); }
 .btleft .ttreew { margin: 0; }
 .bruneswrap { container-type: inline-size; margin-top: 0; }
 @container (max-width: 760px) {

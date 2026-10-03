@@ -25,13 +25,17 @@
     <span id="version"></span>
     <span class="spacer"></span>
     <!-- The rift countdown, always in view whatever the page. -->
-    <div id="riftclock" class="card">
-      <div class="t"></div><div class="v"></div><div class="s"></div>
+    <!-- The right-hand group: it goes under the name, whole, when the
+         window is too narrow for one line. -->
+    <div id="topright">
+      <div id="riftclock" class="card">
+        <div class="t"></div><div class="v"></div><div class="s"></div>
+      </div>
+      <!-- The game's state: a Play button, or "En jeu" over the server. -->
+      <div id="link"></div>
+      <!-- Réglages and Aide, as icons next to the game's state. -->
+      <div id="appbtns"></div>
     </div>
-    <!-- The game's state: a Play button, or "En jeu" over the server. -->
-    <div id="link"></div>
-    <!-- Réglages and Aide, as icons next to the game's state. -->
-    <div id="appbtns"></div>
   </header>
 
   <nav id="nav"></nav>

@@ -9,6 +9,7 @@ function boot() {
   });
   initWindowFrame();
   brandLogo();
+  initToTop();
   notify('boot', {});
 }
 
