@@ -6,6 +6,7 @@
 let BUILD_NODE = null;
 const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents et runes'], ['sim', 'Simulation']];
 let BUILD_VIEW = 'stuff';        // the open build's tab
+let BUILD_FADE = false;         // the next draw follows a tab change
 let BUILD_Q = '';               // the piece editor's search
 // the piece editor's filters: stats the piece must all give, its family
 const BUILD_F = { slot: null, stats: new Set(), fac: '' };
@@ -31,6 +32,7 @@ function buildBuild(n) {
     b.addEventListener('click', () => {
       if (BUILD_VIEW === k) return;
       BUILD_VIEW = k;
+      BUILD_FADE = true;
       if (o.editor) notify('build_slot_close', {});
       const page = buildBuild(BUILD_NODE);
       box.replaceWith(page);
@@ -39,6 +41,7 @@ function buildBuild(n) {
     tabs.appendChild(b);
   });
   main.appendChild(tabs);
+  const shown = main.children.length;     // what comes after the tabs
 
   if (BUILD_VIEW === 'stuff') {
     main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
@@ -57,6 +60,12 @@ function buildBuild(n) {
     main.appendChild(buildSim(o.sim));
   } else {
     main.appendChild(el('p', 'note', 'La simulation a besoin d’une classe et d’un équipement.'));
+  }
+  // a tab change eases in the tab's content only: the head and the tabs
+  // themselves stay put
+  if (BUILD_FADE) {
+    Array.from(main.children).slice(shown).forEach((c) => c.classList.add('fadein'));
+    BUILD_FADE = false;
   }
   box.appendChild(main);
   return box;
@@ -345,19 +354,38 @@ function buildList(n, box) {
       + 'personnage, ou pars d’un joueur analysé dans Inspecter (« Créer un build »).'));
     return box;
   }
-  const grid = el('div', 'bcards');
-  n.list.forEach((b) => {
-    const c = el('button', 'bcard');
-    c.type = 'button';
-    c.appendChild(classEl(b.cls, b.ck, 'big'));
-    const t = el('div', 'bct');
-    t.appendChild(el('b', null, b.name));
-    t.appendChild(el('span', null, b.cls + ' · niveau ' + (b.lvl || '?')));
-    c.appendChild(t);
-    c.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_open', { file: b.file }); });
-    grid.appendChild(c);
+  // one column per class, its icon and name on top, its art faint behind
+  const cols = el('div', 'bcols');
+  const keys = ['warrior', 'rogue', 'mage', 'priest'];
+  n.list.forEach((b) => { if (!keys.includes(b.ck)) keys.push(b.ck); });
+  keys.forEach((ck) => {
+    const mine = n.list.filter((b) => b.ck === ck);
+    const col = el('div', 'bcol');
+    if (CLASS_ICONS[ck]) {
+      const bg = el('img', 'bcolbg');
+      bg.src = CLASS_ICONS[ck];
+      bg.alt = '';
+      col.appendChild(bg);
+    }
+    const h = el('div', 'bcolh');
+    if (CLASS_ICONS[ck]) h.appendChild(classEl('', ck));
+    h.appendChild(el('b', null, CLASS_NAMES[ck] || (mine[0] || {}).cls || 'Autres'));
+    h.appendChild(el('span', 'n', String(mine.length)));
+    col.appendChild(h);
+    mine.forEach((b) => {
+      const c = el('button', 'bcard');
+      c.type = 'button';
+      const t = el('div', 'bct');
+      t.appendChild(el('b', null, b.name));
+      t.appendChild(el('span', null, 'Niveau ' + (b.lvl || '?')));
+      c.appendChild(t);
+      c.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_open', { file: b.file }); });
+      col.appendChild(c);
+    });
+    if (!mine.length) col.appendChild(el('p', 'note bcolnone', 'Aucun build'));
+    cols.appendChild(col);
   });
-  box.appendChild(grid);
+  box.appendChild(cols);
   return box;
 }
 
