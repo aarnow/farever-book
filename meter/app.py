@@ -1759,19 +1759,31 @@ class App:
                               "sub": f"{len(won)} victoire"
                                      f"{'s' if len(won) > 1 else ''}",
                               "tone": "rift" if best else ""})
-            rows = []
+            # the runs, a card each under their day, as the rifts are
+            days = []
             for n, d in mine:
                 best = self._dungeon_best(kind, d.get("difficulty"))
                 star = (d.get("result") == "victoire" and best is not None
                         and abs(d["duration"] - best) < 0.05)
-                group = ", ".join(p.get("name", "?") for p in
-                                  (d["phases"][-1].get("players") or [])[:6])
-                rows.append({"t": date_fr(time.localtime(d.get("at") or 0))
-                                  + ("  ★" if star else ""),
-                             "meta": self._dungeon_sub(d)
-                                     + (f" · {group}" if group else ""),
-                             "btns": [{"id": "open_dungeon_run", "t": "Voir",
-                                       "p": {"file": n}}]})
+                players = d["phases"][-1].get("players") or []
+                at = time.localtime(d.get("at") or 0)
+                day = f"{at.tm_mday} {MONTHS_FR[at.tm_mon - 1]} {at.tm_year}"
+                if not days or days[-1]["t"] != day:
+                    days.append({"t": day, "cards": []})
+                deaths = int(d.get("deaths") or 0)
+                days[-1]["cards"].append({
+                    "file": n, "open": "open_dungeon_run",
+                    "time": time.strftime("%H:%M", at),
+                    "diff": {"d": d.get("difficulty"),
+                             "t": DUNGEON_DIFFICULTIES.get(
+                                 d.get("difficulty"), "difficulté ?")},
+                    "result": str(d.get("result") or "?"),
+                    "star": star,
+                    "facts": [["durée", _mmss(d.get("duration") or 0)],
+                              ["mort" if deaths == 1 else "morts", str(deaths)],
+                              ["joueur" if len(players) == 1 else "joueurs",
+                               str(len(players))]],
+                    "group": ", ".join(p.get("name", "?") for p in players[:6])})
             # what the runs brought back, per difficulty
             got = {k: {} for k in DUNGEON_DIFFICULTIES}
             for _name, d in mine:
@@ -1788,8 +1800,9 @@ class App:
                    {"k": "section", "t": name},
                    {"k": "cards", "id": "dungeon_records", "items": cards},
                    {"k": "gap"},
-                   {"k": "list", "id": "dungeon_runs",
-                    "rows": rows, "empty": "Aucun run pour ce donjon."}]
+                   {"k": "section", "t": "Historique"},
+                   {"k": "riftcards", "id": "dungeon_runs", "groups": days,
+                    "empty": "Aucun run pour ce donjon."}]
             if dg and dg.get("loot"):
                 out += [{"k": "section", "t": "Butin possible"},
                         {"k": "note", "t":

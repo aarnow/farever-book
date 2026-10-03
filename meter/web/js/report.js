@@ -126,8 +126,10 @@ function buildReport(n) {
     }
     cols.appendChild(c);
   });
+  // a dungeon run: its boss phase in one column, what it brought back in
+  // the other
+  if (n.loot) cols.appendChild(buildLoot(n.loot));
   p.appendChild(cols);
-  if (n.loot) p.appendChild(buildLoot(n.loot));
   return p;
 }
 
@@ -233,7 +235,9 @@ document.addEventListener('keydown', (e) => {
 
 /* ---- the rifts done: a small card each, under the day ------------------- */
 /* The whole card opens the rift's report; its corner box ticks it for
-   deletion without opening it. */
+   deletion without opening it. A dungeon's runs use it too: their card
+   says its difficulty (the game's skull) and result, its own facts, and
+   opens with its own action. */
 function buildRiftCards(n) {
   const box = el('div', 'riftdays');
   (n.groups || []).forEach((g) => {
@@ -243,20 +247,41 @@ function buildRiftCards(n) {
       const card = el('div', 'riftcard' + (c.on ? ' on' : ''));
       card.tabIndex = 0;
       card.setAttribute('role', 'button');
-      const open = () => notify('open_rift', { file: c.file });
+      const open = () => notify(c.open || 'open_rift', { file: c.file });
       card.addEventListener('click', open);
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
-      const tick = el('button', 'rtick' + (c.on ? ' on' : ''), c.on ? '✓' : '');
-      tick.type = 'button';
-      tick.title = c.on ? 'Ne plus sélectionner' : 'Sélectionner (pour supprimer)';
-      tick.addEventListener('click', (e) => {
-        e.stopPropagation();
-        notify('rift_tick', { file: c.file });
-      });
-      card.appendChild(tick);
-      card.appendChild(el('div', 'rtime', c.time));
+      if (!c.open) {
+        const tick = el('button', 'rtick' + (c.on ? ' on' : ''), c.on ? '✓' : '');
+        tick.type = 'button';
+        tick.title = c.on ? 'Ne plus sélectionner' : 'Sélectionner (pour supprimer)';
+        tick.addEventListener('click', (e) => {
+          e.stopPropagation();
+          notify('rift_tick', { file: c.file });
+        });
+        card.appendChild(tick);
+      }
+      const tm = el('div', 'rtime', c.time);
+      if (c.star) {
+        const st = el('span', 'rstar', '★');
+        st.title = 'Record de cette difficulté';
+        tm.appendChild(st);
+      }
+      card.appendChild(tm);
+      if (c.diff) {
+        const tag = el('div', 'rdiff d' + c.diff.d + ' r-' + (c.result || '').toLowerCase());
+        const art = (window.__SHEET__ || {})['dungeon_diff_' + c.diff.d];
+        if (art) {
+          const im = document.createElement('img');
+          im.src = art;
+          im.alt = '';
+          tag.appendChild(im);
+        }
+        tag.appendChild(el('span', 'dt', c.diff.t));
+        if (c.result) tag.appendChild(el('span', 'res', c.result));
+        card.appendChild(tag);
+      }
       const facts = el('div', 'rfacts');
       const fact = (label, value) => {
         const f = el('div', 'rfact');
@@ -264,10 +289,19 @@ function buildRiftCards(n) {
         f.appendChild(el('span', null, label));
         facts.appendChild(f);
       };
-      fact('durée', c.dur);
-      fact(c.players > 1 ? 'joueurs' : 'joueur', String(c.players));
-      fact(c.gates === 1 ? 'portail' : 'portails', c.gates == null ? '—' : String(c.gates));
+      if (c.facts) {
+        c.facts.forEach(([label, value]) => fact(label, value));
+      } else {
+        fact('durée', c.dur);
+        fact(c.players > 1 ? 'joueurs' : 'joueur', String(c.players));
+        fact(c.gates === 1 ? 'portail' : 'portails', c.gates == null ? '—' : String(c.gates));
+      }
       card.appendChild(facts);
+      if (c.group) {
+        const g = el('div', 'rgroup', c.group);
+        g.title = c.group;
+        card.appendChild(g);
+      }
       grid.appendChild(card);
     });
     box.appendChild(grid);

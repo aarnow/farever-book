@@ -2706,3 +2706,30 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
     var(--page-bg) center 30% / cover no-repeat;
 }
 .backdrop { display: none; }
+
+/* ---- a dungeon's runs: the rift cards, with difficulty and result --------- */
+.riftcard .rstar { margin-left: 6px; color: var(--accent); font-size: 16px; }
+.riftcard .rdiff { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px;
+                   font-size: 12px; color: var(--dim); }
+.riftcard .rdiff img { width: 22px; height: 22px; flex: none; }
+.riftcard .rdiff .dt { font-weight: 700; color: var(--text); }
+.riftcard .rdiff.d2 .dt { color: #F29A4A; }
+.riftcard .rdiff .res { margin-left: auto; font-size: 11px; font-weight: 700; padding: 1px 8px;
+                        border-radius: 10px; background: rgba(0, 0, 0, .3);
+                        border: 1px solid var(--line); text-transform: capitalize; }
+.riftcard .rdiff.r-victoire .res { color: var(--heal); border-color: #2F6B45; }
+.riftcard .rdiff.r-échec .res { color: var(--warn); border-color: #6B2F2F; }
+.riftcard .rdiff.r-abandon .res { color: var(--faint); }
+.riftcard .rgroup { margin-top: 8px; color: var(--faint); font-size: 11px;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- tables: item names in white, a row in two darker for reading -------- */
+.droptable .drow:not(.dhead) .nm, .lootrow .nm .n { color: #fff; }
+.droptable .drow:not(.dhead):nth-child(odd),
+.tbl.lootlist .lootrow:nth-child(even),
+.list > .row:nth-child(even) { background: rgba(0, 0, 0, .2); }
+
+/* a dungeon run's loot, beside its boss phase: titles in white */
+.phases > .loot { margin-top: 0; align-self: start; }
+.loot h4 { color: #fff; }
+.loot .sub { color: #fff; }
