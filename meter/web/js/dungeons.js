@@ -64,16 +64,19 @@ function buildDropTable(n) {
     });
     if (tables.length > 1) wrap.appendChild(tabs);
     const cur = tables.find((t) => t.d === DROP_DIFF) || tables[0];
-    wrap.appendChild(dropTable(cur.rows || [], draw));
+    wrap.appendChild(dropTable(cur.rows || [], draw, n.lite));
   };
   draw();
   return wrap;
 }
 
-function dropTable(rows, redraw) {
-  const box = el('div', 'panel droptable');
+/* `lite`: the item, its type, its chance and how many — no classes, source
+   nor what we got (the rifts' chests). */
+function dropTable(rows, redraw, lite) {
+  const box = el('div', 'panel droptable' + (lite ? ' lite' : ''));
   const head = el('div', 'drow dhead');
-  ['', 'Objet', 'Type', 'Classes', 'Source', 'Chance', 'Quantité', 'Obtenu'].forEach((h) => {
+  (lite ? ['', 'Objet', 'Type', 'Chance', 'Quantité']
+    : ['', 'Objet', 'Type', 'Classes', 'Source', 'Chance', 'Quantité', 'Obtenu']).forEach((h) => {
     if (h !== 'Chance') { head.appendChild(el('span', null, h)); return; }
     const b = el('button', 'dsort' + (DROP_SORT ? ' on' : ''),
       'Chance' + (DROP_SORT === 1 ? ' ▲' : DROP_SORT === -1 ? ' ▼' : ' ↕'));
@@ -97,13 +100,15 @@ function dropTable(rows, redraw) {
     row.appendChild(ic);
     row.appendChild(el('span', 'nm', r.name));
     row.appendChild(el('span', 'dim', r.type));
-    const cl = el('span', 'apt');
-    (r.apt || []).forEach((k) => cl.appendChild(classEl('', k)));
-    row.appendChild(cl);
-    row.appendChild(el('span', 'dim', r.src));
+    if (!lite) {
+      const cl = el('span', 'apt');
+      (r.apt || []).forEach((k) => cl.appendChild(classEl('', k)));
+      row.appendChild(cl);
+      row.appendChild(el('span', 'dim', r.src));
+    }
     row.appendChild(el('span', 'num', r.chance));
     row.appendChild(el('span', 'dim', r.qty));
-    row.appendChild(el('span', 'num', r.got ? '×' + r.got : '—'));
+    if (!lite) row.appendChild(el('span', 'num', r.got ? '×' + r.got : '—'));
     box.appendChild(row);
   });
   if (!list.length) box.appendChild(el('div', 'empty', 'Rien de connu pour cette difficulté.'));

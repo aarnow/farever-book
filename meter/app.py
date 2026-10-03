@@ -38,9 +38,9 @@ from gamedata import (
     item_model_json, locate_hlboot, regenerate_data, world_map)
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot,
-    _overheal_note, _rate, _rate_text, _report_name)
+    _overheal_note, _rate_text, _report_name)
 from views import (
-    RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
+    RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
     hunt_detail_view, map_view, rift_rewards_view)
 from reports import render_rift_report_image, report_view
@@ -61,6 +61,9 @@ OVERLAY_HERO_SECS = 8.0
 
 # How often one's own character is re-read while playing (kept on disk).
 SELF_PROFILE_SECS = 300.0
+
+MONTHS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+             "août", "septembre", "octobre", "novembre", "décembre")
 
 
 def _dungeon_backdrop(kind, boss, region=""):
@@ -150,7 +153,10 @@ class App:
         self._repairing = False             # Réparer is running
         self._self_prof = None              # own luck counters (hook, 1 min)
         self._repair_note = None            # (ok, text) once it has run
-        self._rift_rewards = False          # the rift rewards page is open
+        # a rift's gates: the game's running count when it began, and the
+        # report waiting for the count after it (see _rift_gates_seen)
+        self._rift_gates0 = None
+        self._rift_gates_for = None
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._hunt_sel = None               # the monster whose page is open
         self._dungeon_view = None           # the dungeon run being read
@@ -340,7 +346,14 @@ class App:
         """A rift's boss died. Called from the hook thread."""
         def done():
             self._report_data = report
-            self._save_rift_report(report)
+            saved = self._save_rift_report(report)
+            # its gates closed: the game's running count, read again now
+            # that it is over, against the one read when it began
+            if saved and isinstance(self._rift_gates0, (int, float)):
+                self._rift_gates_for = saved
+                self._me_auto_next = 0.0
+            else:
+                self._rift_gates0 = None
             best = (report.get("phases") or [{}])[-1].get("players") or []
             who = f" — MVP {best[0]['name']}" if best else ""
             seen = (" (victoire non vue : rapport à la fin de la faille)"
@@ -373,6 +386,12 @@ class App:
         self._rift_seen = in_rift
         self._event("Entrée dans une faille." if in_rift
                     else "Sortie de la faille.", "rift")
+        if in_rift:
+            # the game's count of gates closed, read now: the rift's own
+            # gates are what it has grown by when the boss dies
+            self._rift_gates0 = "wait"
+            self._rift_gates_for = None
+            self._me_auto_next = 0.0
         if self._rift_auto_view:
             self._apply_rift_view("enter" if in_rift else "leave")
 
@@ -507,9 +526,6 @@ class App:
             # rifts
             "open_rift": lambda p: self._open_rift_file(p.get("file", "")),
             "close_rift": lambda: setattr(self, "_rift_view", None),
-            "open_rift_rewards": lambda: setattr(self, "_rift_rewards", True),
-            "close_rift_rewards": lambda: setattr(self, "_rift_rewards",
-                                                  False),
             "copy_rift_image": self._copy_rift_image,
             "copy_rift_text": self._copy_rift_text,
             "open_parses": self._open_parses,
@@ -924,7 +940,8 @@ class App:
         return data
 
     def _rift_summary(self, path):
-        """(title, meta) for one saved rift, cached by modification time."""
+        """One saved rift's card — its day, hour, length, players and gates
+        closed (recorded since 1.12) — cached by modification time."""
         try:
             mtime = path.stat().st_mtime
         except OSError:
@@ -939,34 +956,24 @@ class App:
         dur = sum(float(ph.get("duration") or 0) for ph in phases)
         boss = phases[-1] if phases else {}
         players = boss.get("players") or []
-        mvp = ""
-        if players:
-            rate = _rate(players[0].get("total", 0), boss.get("duration", 0))
-            mvp = (f"MVP {players[0].get('name', '?')}"
-                   + (f" ({_n(rate)} DPS)" if rate else ""))
-        title = date_fr(time.localtime(data.get("at") or 0))
-        meta = " · ".join(x for x in (f"durée {_mmss(dur)}",
-                                      f"{len(players)} joueurs", mvp) if x)
-        out = (title, meta)
+        at = time.localtime(data.get("at") or 0)
+        gates = data.get("gates")
+        out = {"day": f"{at.tm_mday} {MONTHS_FR[at.tm_mon - 1]} {at.tm_year}",
+               "time": time.strftime("%H:%M", at),
+               "dur": _mmss(dur), "players": len(players),
+               "gates": int(gates) if isinstance(gates, (int, float)) else None}
         self._rift_cache[path.name] = (mtime, out)
         return out
 
     def _page_rifts(self):
-        if self._rift_rewards:
-            data = self._achievements()
-            entry = (data.get("heroes") or {}).get(data.get("last")) or {}
-            return [{"k": "toolbar", "id": "rift_reward_tools", "btns": [
-                        {"id": "close_rift_rewards",
-                         "t": "‹  Toutes les failles"}]},
-                    *rift_rewards_view(entry.get("counters") or {},
-                                       entry.get("luckUntil") or {})]
         if self._rift_view is not None:
             return [{"k": "toolbar", "id": "rift_tools", "btns": [
                         {"id": "close_rift", "t": "‹  Toutes les failles"},
                         {"id": "copy_rift_image", "t": "Copier l'image"},
                         {"id": "copy_rift_text", "t": "Copier le texte"}]},
                     self._report_node(self._rift_view)]
-        rows = []
+        # the rifts done, a card each, under the day they were done
+        groups = []
         files = self._rift_files()
         names = {p.name for p in files}
         self._rift_sel &= names
@@ -974,11 +981,12 @@ class App:
             got = self._rift_summary(path)
             if got is None:
                 continue
-            rows.append({"t": got[0], "meta": got[1],
-                         "check": {"id": "rift_tick", "p": {"file": path.name},
-                                   "on": path.name in self._rift_sel},
-                         "btns": [{"id": "open_rift", "t": "Voir",
-                                   "p": {"file": path.name}}]})
+            if not groups or groups[-1]["t"] != got["day"]:
+                groups.append({"t": got["day"], "cards": []})
+            groups[-1]["cards"].append(
+                {"file": path.name, "time": got["time"], "dur": got["dur"],
+                 "players": got["players"], "gates": got["gates"],
+                 "on": path.name in self._rift_sel})
         n = len(self._rift_sel)
         all_on = bool(names) and names <= self._rift_sel
         bottom = [{"id": "open_parses", "t": "Ouvrir le dossier des rapports"},
@@ -997,16 +1005,17 @@ class App:
         keep = [0, 10, 20, 30, 50, 100]
         if self._rift_keep not in keep:
             keep = sorted(keep + [self._rift_keep])
+        data = self._achievements()
+        entry = (data.get("heroes") or {}).get(data.get("last")) or {}
         return [
-            {"k": "toolbar", "id": "rift_list_tools", "btns": [
-                {"id": "open_rift_rewards",
-                 "t": "Récompenses des failles et chances"}]},
             *self._rift_stat_cards(),
+            *rift_rewards_view(entry.get("counters") or {},
+                               entry.get("luckUntil") or {}),
             {"k": "section", "t": "Failles réalisées"},
             {"k": "note", "t": "Chaque faille terminée (boss vaincu) est "
                                "enregistrée ici avec son classement complet. "
-                               "Clique sur « Voir » pour la relire."},
-            {"k": "list", "id": "rifts", "grow": True, "rows": rows,
+                               "Clique sur une faille pour la relire."},
+            {"k": "riftcards", "id": "rifts", "groups": groups,
              "empty": "Aucune faille enregistrée pour l'instant."},
             {"k": "toolbar", "id": "rift_bottom", "btns": bottom},
             {"k": "field", "t": "Failles conservées",
@@ -1031,7 +1040,8 @@ class App:
                 counters = entry["counters"]
         if not counters:
             return []
-        items = [{"title": label, "value": _n(counters[k]), "sub": ""}
+        items = [{"title": label, "value": _n(counters[k]), "sub": "",
+                  "icon": RIFT_STAT_ICONS.get(k)}
                  for k, label in RIFT_STAT_LABELS
                  if isinstance(counters.get(k), (int, float))]
         return [{"k": "cards", "id": "rift_stats", "items": items}] \
@@ -1413,6 +1423,7 @@ class App:
         def done():
             if p.get("kind") == "selfprofile":
                 self._self_prof = dict(p.get("profile") or {}, at=time.time())
+                self._rift_gates_seen((p.get("profile") or {}).get("counters"))
                 self.me.put(self._me_name, "counters",
                             p.get("profile") or {})
                 return
@@ -2026,10 +2037,12 @@ class App:
         the parse screenshots. Never fatal, and each format fails alone: no
         Pillow costs the picture, not the data."""
         base = f"rift-{time.strftime('%Y%m%d-%H%M%S')}"
+        saved = None
         try:
             RIFTS_DIR.mkdir(parents=True, exist_ok=True)
             (RIFTS_DIR / f"{base}.json").write_text(json.dumps(report),
                                                      encoding="utf-8")
+            saved = f"{base}.json"
             (RIFTS_DIR / f"{base}.txt").write_text(self._report_text(report),
                                                     encoding="utf-8")
             print(f"[meter] rift report saved to {RIFTS_DIR / base}.json/.txt",
@@ -2041,6 +2054,36 @@ class App:
             render_rift_report_image(report, RIFTS_DIR / f"{base}.png")
         except Exception as e:
             print(f"[meter] couldn't render the rift report image: {e}",
+                  file=sys.stderr)
+        return saved
+
+    def _rift_gates_seen(self, counters):
+        """A fresh read of one's counters: the gates count when a rift began,
+        or, its report saved, the gates it closed — written into the report
+        (rift cards show it). A rift with no read at its start gets none."""
+        c = (counters or {}).get("Rift_NbGatesClosed")
+        if not isinstance(c, (int, float)):
+            return
+        if self._rift_gates0 == "wait":
+            if self._rift_gates_for is None:
+                self._rift_gates0 = c
+            else:
+                self._rift_gates0 = self._rift_gates_for = None
+            return
+        name = self._rift_gates_for
+        if name is None or not isinstance(self._rift_gates0, (int, float)):
+            return
+        gates = int(c - self._rift_gates0)
+        self._rift_gates0 = self._rift_gates_for = None
+        if gates < 0:
+            return
+        try:
+            path = RIFTS_DIR / name
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["gates"] = gates
+            path.write_text(json.dumps(data), encoding="utf-8")
+        except (OSError, ValueError) as e:
+            print(f"[meter] couldn't note the rift's gates: {e}",
                   file=sys.stderr)
         self._prune_rifts()
 

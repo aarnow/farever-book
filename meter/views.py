@@ -733,6 +733,11 @@ RIFT_STAT_LABELS = (("Rift_NbCompleted", "Failles terminées"),
                     ("Rift_NbGatesClosed", "Portails de faille fermés"),
                     ("Rift_NbGatesClosed_InOneRift",
                      "Record de portails fermés en une faille"))
+# ...each led by a badge of the game's (assets/charsheet): the rift's, as on
+# the map; a portal's swirl; the red crest
+RIFT_STAT_ICONS = {"Rift_NbCompleted": "rift_done",
+                   "Rift_NbGatesClosed": "rift_portal",
+                   "Rift_NbGatesClosed_InOneRift": "rift_record"}
 
 
 STAT_LABELS = (("Gold_TotalEarned", "Or gagné"),
@@ -981,32 +986,6 @@ def achievements_view(account, counters, owned, states):
             "n": sum(c["n"] for c in out_cats)}
 
 
-RARITY_ORDER_IDS = ("Common", "Uncommon", "Rare", "Epic", "Legendary")
-
-
-def weapon_rarity_odds(level, luck_bonus=0.0):
-    """A dropped weapon's rarity, at least Rare, as ent.Hero.makeLootItem
-    draws it: the rarity sheet's generationChance at the player's level;
-    the Legendary share first (plus the luck bonus, when the offering is
-    on), then Epic / Rare by weight. {rarity: probability}."""
-    rr = rift_rewards_data().get("rarities") or {}
-    w = {}
-    for rid in RARITY_ORDER_IDS[2:]:
-        for g in rr.get(rid) or ():
-            if g.get("minLevel", 0) <= level <= g.get("maxLevel", 10 ** 6):
-                w[rid] = g.get("chance") or 0
-    total = sum(w.values())
-    if not total:
-        return {}
-    leg = min(1.0, w.get("Legendary", 0) / total
-              + (luck_bonus if w.get("Legendary") else 0))
-    rest = total - w.get("Legendary", 0)
-    out = {"Legendary": leg}
-    for rid in ("Epic", "Rare"):
-        out[rid] = (1 - leg) * (w.get(rid, 0) / rest if rest else 0)
-    return out
-
-
 def _luck_bonus(counter_id, counters):
     p = luck_data().get(counter_id) or {}
     n = counters.get(counter_id) or 0
@@ -1016,20 +995,15 @@ def _luck_bonus(counter_id, counters):
 
 
 def rift_rewards_view(counters, luck_until):
-    """The rift rewards page: what each gate tier unlocks, the chests'
-    contents with their chances, and the weapon's rarity odds at the
-    player's level, with and without the Soulwell offering."""
+    """The rifts' loot, for the Failles tab: what each gate tier unlocks, and
+    the chests' contents with their chances."""
     d = rift_rewards_data()
     if not d:
         return [{"k": "note", "t": "Données des failles absentes : relance "
                                    "Farever France avec le jeu ouvert pour les "
                                    "générer."}]
-    level = counters.get("HeroLevel") if isinstance(
-        counters.get("HeroLevel"), (int, float)) else 25
     now = time.time()
     on = {k for k, t in (luck_until or {}).items() if t > now}
-    left = {k: max(0, round((t - now) / 60)) for k, t in
-            (luck_until or {}).items() if t > now}
 
     def names(ls):
         return ", ".join(item_label(ln["item"]) for ln in ls if ln.get("item"))
@@ -1045,22 +1019,6 @@ def rift_rewards_view(counters, luck_until):
     rows = [{"t": f"{int(t['gates'])} portails fermés",
              "meta": tier_txt.get(i, "Un coffre bonus de plus")}
             for i, t in enumerate(d.get("tiers") or ())]
-
-    leg_bonus, leg_n = _luck_bonus("Luck_LegendaryWeapon", counters)
-    base = weapon_rarity_odds(level)
-    lucky = weapon_rarity_odds(level, leg_bonus)
-    leg_on = "Luck_LegendaryWeapon_Status" in on
-    cards = [
-        {"title": "Arme légendaire", "value": _pct(base.get("Legendary", 0)),
-         "sub": f"par arme, sans offrande (niv. {int(level)})"},
-        {"title": "Avec l'offrande", "value": _pct(lucky.get("Legendary", 0)),
-         "sub": (f"active · {left.get('Luck_LegendaryWeapon_Status', 0)} min"
-                 if leg_on else "si tu en fais une")
-                + f" · compteur {leg_n}",
-         "tone": "rift" if leg_on else ""},
-        {"title": "Arme épique",
-         "value": _pct((lucky if leg_on else base).get("Epic", 0)),
-         "sub": "sinon rare"}]
 
     def luck_note(item):
         """A mount's / glider's own luck counter, when its offering is on."""
@@ -1116,28 +1074,21 @@ def rift_rewards_view(counters, luck_until):
     boss_rows += [row(ln["item"], "Coffre du boss · 15 portails")
                   for ln in d.get("tier6") or () if ln.get("item")]
     return [
-        {"k": "section", "t": "Récompenses des failles"},
+        {"k": "section", "t": "Butin"},
         {"k": "note", "t": "D'après le code et les données du jeu. Chaque "
                            "joueur reçoit sa propre part de chaque coffre. Le "
                            "coffre du boss s'ouvre une fois 3 portails "
                            "fermés ; chaque palier suivant ajoute un coffre "
                            "bonus ou une récompense garantie."},
         {"k": "list", "id": "rift_tiers", "rows": rows},
-        {"k": "section", "t": "Rareté de l'arme du boss"},
-        {"k": "note", "t": "Chaque joueur reçoit une des deux armes du boss "
-                           "de la faille. Sa rareté est tirée à ton niveau, "
-                           "rare au minimum : la légendaire d'abord, puis "
-                           "épique ou rare. Pendant l'offrande d'arme "
-                           "légendaire du Puits des âmes, ton compteur "
-                           "s'ajoute à la chance : +1 %, puis +0,5 % par "
-                           "arme non légendaire (jusqu'à +25 %), et il "
-                           "revient à 0 quand une légendaire tombe."},
-        {"k": "cards", "id": "rift_weapon_odds", "items": cards},
-        {"k": "section", "t": "Coffre du boss"},
-        {"k": "droptable", "id": "rift_boss_chest", "rows": boss_rows},
-        {"k": "section", "t": "Coffre bonus (5, 9 et 14 portails)"},
-        {"k": "droptable", "id": "rift_bonus_chest",
-         "rows": chest_rows(d.get("bonusChest") or [], "Coffre bonus")},
+        # the two chests side by side
+        {"k": "columns", "id": "rift_chests", "cols": [
+            [{"k": "sub", "t": "Coffre du boss"},
+             {"k": "droptable", "id": "rift_boss_chest", "rows": boss_rows,
+              "lite": True}],
+            [{"k": "sub", "t": "Coffre bonus (5, 9 et 14 portails)"},
+             {"k": "droptable", "id": "rift_bonus_chest", "lite": True,
+              "rows": chest_rows(d.get("bonusChest") or [], "Coffre bonus")}]]},
     ]
 
 

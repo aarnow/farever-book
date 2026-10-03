@@ -398,6 +398,17 @@ function buildNode(n) {
     case 'section': return el('div', 'section', n.t);
     case 'note': return el('p', 'note' + (n.warn ? ' warn' : ''), n.t);
     case 'dcards': return buildDungeonCards(n);
+    case 'riftcards': return buildRiftCards(n);
+    case 'columns': {
+      // blocks side by side, each a list of nodes (the rifts' two chests)
+      const row = el('div', 'columns');
+      (n.cols || []).forEach((nodes) => {
+        const col = el('div', 'column');
+        nodes.forEach((c) => col.appendChild(buildNode(c)));
+        row.appendChild(col);
+      });
+      return row;
+    }
     case 'prose': return inline(el('p', 'prose'), n.t);
     case 'bullets': {
       const ul = el('ul', 'bullets');
@@ -455,9 +466,20 @@ function buildNode(n) {
         const art = c.art && (window.__SHEET__ || {})[c.art];
         if (art) { const im = document.createElement('img'); im.src = art; im.alt = ''; t.appendChild(im); }
         t.appendChild(document.createTextNode(c.title));
-        card.appendChild(t);
-        card.appendChild(el('div', 'v', c.value));
-        card.appendChild(el('div', 's', c.sub || ''));
+        // a badge before the whole count (title and value), when it has one
+        const icon = c.icon && (window.__SHEET__ || {})[c.icon];
+        const body = icon ? el('div', 'cbody') : card;
+        if (icon) {
+          card.classList.add('withicon');
+          const im = el('img', 'cicon');
+          im.src = icon;
+          im.alt = '';
+          card.appendChild(im);
+          card.appendChild(body);
+        }
+        body.appendChild(t);
+        body.appendChild(el('div', 'v', c.value));
+        body.appendChild(el('div', 's', c.sub || ''));
         box.appendChild(card);
       });
       return box;

@@ -198,3 +198,48 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.pcshade').forEach((x) => x.remove());
   }
 });
+
+/* ---- the rifts done: a small card each, under the day ------------------- */
+/* The whole card opens the rift's report; its corner box ticks it for
+   deletion without opening it. */
+function buildRiftCards(n) {
+  const box = el('div', 'riftdays');
+  (n.groups || []).forEach((g) => {
+    box.appendChild(el('div', 'sub riftday', g.t));
+    const grid = el('div', 'riftcards');
+    g.cards.forEach((c) => {
+      const card = el('div', 'riftcard' + (c.on ? ' on' : ''));
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      const open = () => notify('open_rift', { file: c.file });
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+      });
+      const tick = el('button', 'rtick' + (c.on ? ' on' : ''), c.on ? '✓' : '');
+      tick.type = 'button';
+      tick.title = c.on ? 'Ne plus sélectionner' : 'Sélectionner (pour supprimer)';
+      tick.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notify('rift_tick', { file: c.file });
+      });
+      card.appendChild(tick);
+      card.appendChild(el('div', 'rtime', c.time));
+      const facts = el('div', 'rfacts');
+      const fact = (label, value) => {
+        const f = el('div', 'rfact');
+        f.appendChild(el('b', null, value));
+        f.appendChild(el('span', null, label));
+        facts.appendChild(f);
+      };
+      fact('durée', c.dur);
+      fact(c.players > 1 ? 'joueurs' : 'joueur', String(c.players));
+      fact(c.gates === 1 ? 'portail' : 'portails', c.gates == null ? '—' : String(c.gates));
+      card.appendChild(facts);
+      grid.appendChild(card);
+    });
+    box.appendChild(grid);
+  });
+  if (!(n.groups || []).length) box.appendChild(el('div', 'empty', n.empty || ''));
+  return box;
+}

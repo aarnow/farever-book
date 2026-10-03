@@ -19,6 +19,9 @@ page by menu_host, nothing loaded at runtime).
                                       (Normal, Vétéran, Héroïque)
     UI/icons/Steam_Achievments/Steam_Achievments_unlocked2.png
                                       the achievement badge (Succès tab)
+    UI/icons/activities.png           128 px cells: the activities' badges —
+                                      the rift's (as on the map), a portal's
+                                      swirl, the red crest (Failles tab)
 
 Usage: python build_charsheet_art.py [--pak PATH]
 """
@@ -34,6 +37,11 @@ import pak_extract
 from gamepath import find_hlboot
 
 OUT = Path(__file__).resolve().parent.parent / "assets" / "charsheet"
+
+# activities.png (128 px cells, 8 a row): the Failles tab's three counts —
+# rifts done, portals closed, the most closed in one rift
+ACTIVITY_CELLS = {"rift_done": (2, 0), "rift_portal": (5, 0),
+                  "rift_record": (3, 2)}
 
 # gear_slots.png, row by row (54 px cells)
 SLOT_CELLS = {"Chest": (0, 0), "Hands": (1, 0), "Waist": (2, 0),
@@ -76,6 +84,9 @@ def main():
     badge = img("UI/icons/Steam_Achievments/Steam_Achievments_unlocked2.png")
     badge.resize((64, 64), Image.LANCZOS).save(OUT / "ach_badge.png",
                                                optimize=True)
+    acts = img("UI/icons/activities.png")
+    for name, (cx, cy) in ACTIVITY_CELLS.items():
+        acts.crop((cx * 128, cy * 128, cx * 128 + 128, cy * 128 + 128))             .resize((64, 64), Image.LANCZOS).save(OUT / f"{name}.png", optimize=True)
     print(f"written to {OUT}")
 
 

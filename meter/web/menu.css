@@ -2582,3 +2582,48 @@ html.lt-760 .dcards { grid-template-columns: minmax(0, 1fr); }
       color-mix(in srgb, var(--bg) 92%, transparent) 100%),
     var(--rift-bg, none) center 30% / cover no-repeat;
 }
+/* a count led by a badge (the Failles tab's) */
+.card.withicon { display: flex; align-items: center; gap: 14px; }
+.card.withicon .cicon { width: 52px; height: 52px; flex: none;
+                        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .45)); }
+.card.withicon .cbody { min-width: 0; }
+.droptable.lite .drow { grid-template-columns: 34px minmax(160px, 2fr) minmax(110px, 1fr)
+                                               80px minmax(90px, 1fr); }
+
+/* ---- Rifts: the rifts done, a small card each, under its day -------------- */
+.riftdays { margin-bottom: 10px; }
+.riftday { margin-top: 14px; }
+.riftcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+             gap: 10px; }
+.riftcard { position: relative; cursor: pointer; padding: 12px 14px 12px;
+            border-radius: 12px; border: 1px solid var(--line);
+            background: linear-gradient(180deg,
+              color-mix(in srgb, var(--panel-2) 92%, transparent),
+              color-mix(in srgb, var(--panel) 92%, transparent));
+            box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
+            transition: border-color .15s, transform .15s; }
+.riftcard:hover, .riftcard:focus-visible { border-color: var(--accent); transform: translateY(-2px);
+                                            outline: none; }
+.riftcard.on { border-color: #B5523E; box-shadow: 0 0 0 1px #B5523E; }
+.riftcard .rtime { font-family: var(--font-head); font-size: 20px; color: #fff;
+                   letter-spacing: .5px; margin-bottom: 8px; }
+.riftcard .rfacts { display: flex; gap: 14px; }
+.riftcard .rfact { display: flex; flex-direction: column; }
+.riftcard .rfact b { font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
+.riftcard .rfact span { color: var(--faint); font-size: 10px; text-transform: uppercase;
+                        letter-spacing: .6px; }
+.riftcard .rtick { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px;
+                   padding: 0; border-radius: 6px; border: 1px solid var(--line-2);
+                   background: rgba(0, 0, 0, .3); color: #fff; font-size: 12px;
+                   line-height: 18px; cursor: pointer; opacity: .55; }
+.riftcard:hover .rtick, .riftcard .rtick.on { opacity: 1; }
+.riftcard .rtick.on { background: #B5523E; border-color: #B5523E; }
+
+/* blocks side by side (the rifts' two chests); one under the other when narrow */
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;
+           align-items: start; }
+.column { min-width: 0; }
+html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
+.column .droptable.lite .drow { grid-template-columns: 34px minmax(120px, 2fr) minmax(90px, 1fr)
+                                                       64px minmax(64px, .8fr); }
+.column .drow .nm { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; }

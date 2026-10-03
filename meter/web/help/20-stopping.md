@@ -25,7 +25,9 @@ seul à la prochaine session.
 * **En direct** — le compteur de dégâts et de soins, le détail du joueur
   sélectionné (clique sur une ligne du compteur) et les événements : kills de
   boss, records, fins de faille.
-* **Failles** — toutes les failles terminées, avec leur classement complet.
+* **Failles** — le butin des failles (paliers de portails, coffre du boss,
+  coffre bonus), puis toutes les failles terminées, jour par jour, avec leur
+  classement complet.
 * **Donjons** — chaque donjon, avec l'historique de tes runs : difficulté,
   résultat (victoire, échec, abandon), temps, morts, groupe, et le rapport
   complet de chaque run (exploration puis boss), avec le butin ramassé et le
