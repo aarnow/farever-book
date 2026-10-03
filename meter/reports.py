@@ -27,7 +27,14 @@ def _parse_font(name, size):
 
 
 def report_view(data):
-    """A saved rift report, as display-ready data for the page."""
+    """A saved rift report, as display-ready data for the page. A dungeon
+    run keeps only its boss phase (its exploration too, if it never got
+    there)."""
+    if data.get("kind"):
+        boss = [ph for ph in data.get("phases") or ()
+                if "boss" in str(ph.get("label") or "").lower()]
+        if boss:
+            data = dict(data, phases=boss)
     def cls(p):
         # Reports saved before the translation carry English tags.
         c = p.get("cls") or ""
@@ -276,7 +283,8 @@ def render_rift_report_image(data, path=None):
     f_row, f_row_b, f_num, f_tiny = reg(13), bold(13), reg(13), reg(11)
     f_when, f_leg, f_leg_b = reg(13), reg(13), bold(13)
 
-    W = IMG_PAD * 3 + IMG_COL_W * 2
+    ncol = max(1, min(2, len(view["phases"])))
+    W = IMG_PAD * (ncol + 1) + IMG_COL_W * ncol
     img = Image.new("RGBA", (W, 5000), IMG_BG)
     d = ImageDraw.Draw(img)
     icons = {}

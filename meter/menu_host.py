@@ -345,8 +345,19 @@ class AppWindow:
                            ("best", "bestiary_img"), ("map", "map_tiles"),
                            ("skill", "skill_img"), ("dbg", "dungeon_bg")):
             imgs = list(_analysis_images(folder).items())
-            for i in range(0, len(imgs), 40):
-                chunk = json.dumps(dict(imgs[i:i + 40]))
+            # batches of at most 40 pictures and about 600 KB: the
+            # full-size dungeon screens are 100 KB and more each
+            batches, cur, size = [], [], 0
+            for k, v in imgs:
+                if cur and (len(cur) >= 40 or size + len(v) > 600_000):
+                    batches.append(cur)
+                    cur, size = [], 0
+                cur.append((k, v))
+                size += len(v)
+            if cur:
+                batches.append(cur)
+            for batch in batches:
+                chunk = json.dumps(dict(batch))
                 try:
                     self.window.evaluate_js(
                         f"window.addImages('{ns}', {json.dumps(chunk)})")

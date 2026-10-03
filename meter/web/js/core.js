@@ -246,6 +246,15 @@ function buildRow(r) {
   return row;
 }
 
+/* The picture a page asked to stand behind it, once the pictures are in. */
+function applyPageBackdrop() {
+  const page = $('#page');
+  const src = page.dataset.pbg && (window.__DBG__ || {})[page.dataset.pbg];
+  if (src) page.style.setProperty('--page-bg', 'url("' + src + '")');
+  else page.style.removeProperty('--page-bg');
+  page.classList.toggle('withbg', !!src);
+}
+
 /* A dungeon's loading screen behind its card, once the pictures are in. */
 function applyBackdrop(node) {
   const src = (window.__DBG__ || {})[node.dataset.bg];
@@ -398,6 +407,7 @@ function buildNode(n) {
     case 'section': return el('div', 'section', n.t);
     case 'note': return el('p', 'note' + (n.warn ? ' warn' : ''), n.t);
     case 'dcards': return buildDungeonCards(n);
+    case 'backdrop': return el('div', 'backdrop');      // read by renderPage
     case 'riftcards': return buildRiftCards(n);
     case 'columns': {
       // blocks side by side, each a list of nodes (the rifts' two chests)
@@ -528,6 +538,10 @@ function renderPage(nodes) {
   });
   NODES.forEach((v, k) => { if (!next.has(k)) v.el.remove(); });
   NODES = next;
+  // a page may ask for a picture behind it (a dungeon's screen)
+  const bg = nodes.find((n) => n.k === 'backdrop');
+  page.dataset.pbg = (bg && bg.bg) || '';
+  applyPageBackdrop();
 }
 
 /* Which view a page shows: its first block (a list's toolbar or a detail's
@@ -617,6 +631,7 @@ window.addImages = function (ns, json) {
     // the rifts' loading screen, behind the whole Rifts tab
     const rift = window.__DBG__.Rifts_hd || window.__DBG__.Rifts;
     if (rift) document.documentElement.style.setProperty('--rift-bg', 'url("' + rift + '")');
+    applyPageBackdrop();
     return;
   }
   if (ns === 'map') { mapTiles(); return; }

@@ -255,9 +255,9 @@ def build(game_dir, codex, img_dir=None):
         named = {e.path for e in _pak_entries(game_dir)
                  if e.path.startswith("UI/Window/LoadingScreen/Background/")
                  and not re.search(r"/(loading_screen\d+|Default)\.png$", e.path)}
-        _backdrops(game_dir, Path(img_dir).parent / "dungeon_bg",
-                   set(loading.values()) | named | set(region_art.values()),
-                   full={p for a, p in loading.items() if "Rift" in a})
+        screens = set(loading.values()) | named | set(region_art.values())
+        _backdrops(game_dir, Path(img_dir).parent / "dungeon_bg", screens,
+                   full=screens)
     # each monster's line of descent (itself, then what it inherits from):
     # a variant's description and faction are often its base monster's
     def chain(uid):
@@ -300,8 +300,8 @@ def _pak_entries(game_dir):
 def _backdrops(game_dir, out_dir, paths, full=()):
     """The loading screens (1920x1080), halved and in WebP: backgrounds for
     the app's dungeon cards, under the app's 2 MB page. Those in `full` get
-    a full-size copy too, "<name>_hd" — the rifts', behind a whole tab,
-    blurs at half size."""
+    a full-size copy too, "<name>_hd", for behind a whole page (the Rifts
+    tab, a dungeon's): at half size it blurs."""
     import io
     from PIL import Image
     out_dir = Path(out_dir)

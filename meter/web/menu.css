@@ -2695,3 +2695,14 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .pcard .facts { display: flex; gap: 8px; }
 .pcard .facts .fact { flex: 1 1 0; min-width: 0; background: rgba(0, 0, 0, .3);
                       border-color: rgba(0, 0, 0, .35); }
+
+/* ---- a page with a picture behind it (a dungeon's page) -------------------- */
+#page.withbg {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bg) 35%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 66%, transparent) 45%,
+      color-mix(in srgb, var(--bg) 90%, transparent) 100%),
+    var(--page-bg) center 30% / cover no-repeat;
+}
+.backdrop { display: none; }

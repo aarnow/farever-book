@@ -1726,6 +1726,13 @@ class App:
             bits.append(f"{d['wipes']} wipe{'s' if d['wipes'] > 1 else ''}")
         return " · ".join(bits)
 
+    @staticmethod
+    def _dungeon_backdrop_node(kind):
+        """The dungeon's loading screen, full size, behind its whole page."""
+        dg = next((x for x in dungeon_catalogue() if x["kind"] == kind), {})
+        bg = _dungeon_backdrop(kind, dg.get("boss"), dg.get("region"))
+        return {"k": "backdrop", "id": "page_bg", "bg": f"{bg}_hd" if bg else ""}
+
     def _page_dungeons(self):
         runs = self._dungeon_runs()
         if self._dungeon_view is not None:
@@ -1736,6 +1743,7 @@ class App:
                         {"id": "close_dungeon_run",
                          "t": "‹  Runs de " + dungeon_name(d.get("kind"))},
                         {"id": "copy_rift_image", "t": "Copier l'image"}]},
+                    self._dungeon_backdrop_node(d.get("kind")),
                     node]
         if self._dungeon_kind is not None:
             kind = self._dungeon_kind
@@ -1776,6 +1784,7 @@ class App:
             out = [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
                        {"id": "close_dungeon_kind",
                         "t": "‹  Tous les donjons"}]},
+                   self._dungeon_backdrop_node(kind),
                    {"k": "section", "t": name},
                    {"k": "cards", "id": "dungeon_records", "items": cards},
                    {"k": "gap"},
