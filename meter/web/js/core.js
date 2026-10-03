@@ -246,6 +246,10 @@ function buildRow(r) {
   return row;
 }
 
+/* The game's pictures behind some tabs, full size. */
+const TAB_BACKDROPS = { Collection: 'loading_screen6_hd', Hunt: 'loading_screen1_hd',
+  Achievements: 'loading_screen8_hd', Build: 'splashArt_hd' };
+
 /* The picture a page asked to stand behind it, once the pictures are in. */
 function applyPageBackdrop() {
   const page = $('#page');
@@ -538,9 +542,11 @@ function renderPage(nodes) {
   });
   NODES.forEach((v, k) => { if (!next.has(k)) v.el.remove(); });
   NODES = next;
-  // a page may ask for a picture behind it (a dungeon's screen)
+  // a page may ask for a picture behind it (a dungeon's screen); some tabs
+  // always have theirs
   const bg = nodes.find((n) => n.k === 'backdrop');
-  page.dataset.pbg = (bg && bg.bg) || '';
+  const tab = (page.className.match(/page-(\w+)/) || [])[1];
+  page.dataset.pbg = (bg && bg.bg) || TAB_BACKDROPS[tab] || '';
   applyPageBackdrop();
 }
 

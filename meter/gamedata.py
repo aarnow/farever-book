@@ -750,7 +750,7 @@ def _data_is_current():
                   "regenerating.", file=sys.stderr)
             return False
         if "regionArt" not in best or not (
-                ANALYSIS / "dungeon_bg" / "Rifts_hd.webp").exists():
+                ANALYSIS / "dungeon_bg" / "splashArt_hd.webp").exists():
             print("[meter] bestiary.json predates the dungeon backgrounds — "
                   "regenerating.", file=sys.stderr)
             return False

@@ -2723,8 +2723,7 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .riftcard .rgroup { margin-top: 8px; color: var(--faint); font-size: 11px;
                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---- tables: item names in white, a row in two darker for reading -------- */
-.droptable .drow:not(.dhead) .nm, .lootrow .nm .n { color: #fff; }
+/* ---- tables: a row in two darker for reading ------------------------------ */
 .droptable .drow:not(.dhead):nth-child(odd),
 .tbl.lootlist .lootrow:nth-child(even),
 .list > .row:nth-child(even) { background: rgba(0, 0, 0, .2); }
@@ -2733,3 +2732,14 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .phases > .loot { margin-top: 0; align-self: start; }
 .loot h4 { color: #fff; }
 .loot .sub { color: #fff; }
+
+/* ---- items in loot tables: the name in its rarity's colour, the icon framed
+   in it, a thicker frame ------------------------------------------------------ */
+.drow .ic, .lootrow .ic { --rf: #5A5850; border: 2px solid var(--rf);
+                          box-shadow: 0 0 6px color-mix(in srgb, var(--rf) 35%, transparent); }
+.drow .ic img, .lootrow .ic img { width: 28px; height: 28px; }
+.drow.r-uncommon .ic, .lootrow.r-uncommon .ic { --rf: #4FA866; }
+.drow.r-rare .ic, .lootrow.r-rare .ic { --rf: #4A78D8; }
+.drow.r-epic .ic, .lootrow.r-epic .ic { --rf: #9A62D8; }
+.drow.r-legendary .ic, .lootrow.r-legendary .ic { --rf: #E0873C; }
+.drow.r-common .ic, .lootrow.r-common .ic { --rf: #8A867C; }

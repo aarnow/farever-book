@@ -255,7 +255,8 @@ def build(game_dir, codex, img_dir=None):
         named = {e.path for e in _pak_entries(game_dir)
                  if e.path.startswith("UI/Window/LoadingScreen/Background/")
                  and not re.search(r"/(loading_screen\d+|Default)\.png$", e.path)}
-        screens = set(loading.values()) | named | set(region_art.values())
+        screens = (set(loading.values()) | named | set(region_art.values())
+                   | set(TAB_SCREENS))
         _backdrops(game_dir, Path(img_dir).parent / "dungeon_bg", screens,
                    full=screens)
     # each monster's line of descent (itself, then what it inherits from):
@@ -287,6 +288,12 @@ def build(game_dir, codex, img_dir=None):
 
 
 BACKDROP_W = 960
+# the full-size pictures behind some of the app's tabs (Collection, Codex,
+# Succès, Build), besides the dungeons' and the rifts'
+TAB_SCREENS = ("UI/Window/LoadingScreen/Background/loading_screen6.png",
+               "UI/Window/LoadingScreen/Background/loading_screen1.png",
+               "UI/Window/LoadingScreen/Background/loading_screen8.png",
+               "UI/Window/TitleScreen/splashArt.png")
 
 
 def _pak_entries(game_dir):
@@ -318,6 +325,10 @@ def _backdrops(game_dir, out_dir, paths, full=()):
         imgcache.save(img.resize((BACKDROP_W, h), Image.LANCZOS),
                       out_dir / f"{Path(path).stem}.webp", quality=70, method=6)
         if path in full:
+            # full size, but no wider than a screen (the title art is 5000)
+            if img.width > 1920:
+                img = img.resize((1920, round(img.height * 1920 / img.width)),
+                                 Image.LANCZOS)
             imgcache.save(img, out_dir / f"{Path(path).stem}_hd.webp",
                           quality=82, method=6)
 
