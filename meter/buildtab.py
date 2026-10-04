@@ -47,6 +47,7 @@ class BuildTab:
         self.slot = None            # the slot whose editor is open
         self.confirm_delete = False
         self.cmp = None                 # {a, b}: two builds compared
+        self.imaging = False            # the build's picture being made
 
     # ---- actions ---------------------------------------------------------
     def actions(self):
@@ -63,6 +64,7 @@ class BuildTab:
             "build_cmp_close": lambda: setattr(self, "cmp", None),
             "build_cmp_armor": lambda p: self._cmp_armor(p.get("value")),
             "build_share": self._share,
+            "build_image": self._image,
             "build_import": lambda p: self._import_code(p.get("code")),
             "build_delete": self._delete,
             "build_delete_many": lambda p: self._delete_many(p.get("files")),
@@ -142,6 +144,48 @@ class BuildTab:
                         "colle-le à qui tu veux.")
         else:
             self._toast("Copie impossible : le presse-papiers est occupé.")
+
+    def _image(self):
+        """The open build as a picture to share (buildcard.py), made in the
+        background (the hero's 3D render takes some seconds): saved in
+        Images\\Farever France and put on the clipboard."""
+        if not self.build or self.imaging:
+            return
+        import re
+        import threading
+        import sys
+        import buildcard
+        o = self._open_view()
+        name = self.build["name"]
+        self.imaging = True
+
+        def work():
+            try:
+                folder = buildcard.pictures_dir()
+                folder.mkdir(parents=True, exist_ok=True)
+                stem = re.sub(r'[\\/:*?"<>|]+', " ", name).strip() or "Build"
+                png = folder / f"{stem}.png"
+                buildcard.render(o, png)
+                copied = False
+                try:
+                    from PIL import Image
+                    from winsys import copy_image_to_clipboard
+                    with Image.open(png) as im:
+                        copy_image_to_clipboard(im)
+                    copied = True
+                except Exception as e:
+                    print(f"[meter] build image copy failed: {e}",
+                          file=sys.stderr)
+                self._toast(("Image du build copiée : colle-la où tu veux. "
+                             if copied else "Image du build créée. ")
+                            + f"Elle est aussi enregistrée dans {png}.")
+            except Exception as e:
+                print(f"[meter] build image failed: {e!r}", file=sys.stderr)
+                self._toast(f"L'image n'a pas pu être créée : {e}")
+            finally:
+                self.imaging = False
+                self._invalidate()
+        threading.Thread(target=work, daemon=True, name="build-image").start()
 
     def _import_code(self, code):
         try:
@@ -666,6 +710,7 @@ class BuildTab:
             "lvl": b["lvl"], "maxLvl": d.get("maxLevel") or 25,
             "classes": [{"v": c, "t": CLASS_FR[c]} for c in B.CLASSES],
             "confirmDelete": self.confirm_delete,
+            "imaging": self.imaging,
             "sheet": o.get("sheet"), "atbs": o.get("atbs"),
             "infusions": o.get("infusions"), "gear": o.get("gear"),
             "points": {"used": sum(t["rank"] for t in talents.values()

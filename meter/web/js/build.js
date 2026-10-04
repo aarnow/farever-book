@@ -941,6 +941,13 @@ function buildHead(o) {
   share.title = 'Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.';
   share.addEventListener('click', () => notify('build_share', {}));
   btns.appendChild(share);
+  const pic = el('button', 'rowbtn', o.imaging ? 'Création de l’image…' : 'Image à partager');
+  pic.type = 'button';
+  pic.title = 'Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
+    + 'presse-papiers et enregistrée dans Images › Farever France.';
+  pic.disabled = !!o.imaging;
+  pic.addEventListener('click', () => notify('build_image', {}));
+  btns.appendChild(pic);
   const dup = el('button', 'rowbtn', 'Dupliquer');
   dup.type = 'button';
   dup.addEventListener('click', () => notify('build_dup', {}));
