@@ -330,9 +330,9 @@ HELP_DIR = (ROOT / "web" / "help") if FROZEN else (
 
 # Which heading each article sits under on the index. Anything not named here
 # lands in the last group, so a new file appears rather than disappearing.
-HELP_GROUPS = (
-    ("Pour commencer", ("10-steam", "20-stopping")),
-)
+# The index's groups of articles. None for now: the help tab shows the
+# repair alone ("Pour commencer" will come back in another form).
+HELP_GROUPS = ()
 
 
 # Minimum widths, at 100%. They're pixel values, so the scale slider has to

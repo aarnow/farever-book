@@ -34,7 +34,7 @@ from gamedata import (
     REGENERATING, _boss_label, _element_done, _fr_names, bestiary_catalogue,
     dungeon_catalogue,
     item_rarity,
-    dungeon_name, forget_loaded_data, item_icon, item_label, item_type,
+    dungeon_name, item_icon, item_label, item_type,
     item_model_json, locate_hlboot, regenerate_data, world_map,
     DATA_GENERATION, DATA_CONSENT, GENERATED_GROUPS, GENERATED_PICTURES,
     GENERATED_PICTURE_COST,
@@ -155,10 +155,8 @@ class App:
         self._help_open = None
         self._rift_view = None              # the rift report being read
         self._launching_until = 0           # Play was clicked: until then
-        self._repairing = False             # Réparer is running
         self._setup = None                  # the welcome screen's state
         self._self_prof = None              # own luck counters (hook, 1 min)
-        self._repair_note = None            # (ok, text) once it has run
         # a rift's gates: the game's running count when it began, and the
         # report waiting for the count after it (see _rift_gates_seen)
         self._rift_gates0 = None
@@ -482,7 +480,10 @@ class App:
                 "contient Farever.exe et hlboot.dat (souvent "
                 "Steam\\steamapps\\common\\Farever)."))
         else:
-            self._setup = {"stage": "ask", "path": str(hb.parent)}
+            self._setup = {"stage": "ask", "path": str(hb.parent),
+                           "mode": self._setup.get("mode")}
+            if self._setup["mode"] == "repair":
+                self._setup_start()
 
     def _setup_start(self):
         """The player agreed: read the game's data, step by step."""
@@ -491,6 +492,7 @@ class App:
             return
         DATA_CONSENT.set()
         path = self._setup.get("path")
+        mode = self._setup.get("mode")
         hb = Path(path) / "hlboot.dat"
         written = set()
         running = threading.Event()
@@ -548,19 +550,29 @@ class App:
             try:
                 ok = regenerate_data(hb, force=True, on_progress=progress)
             except Exception as e:
-                print(f"[meter] first data read failed: {e!r}",
+                print(f"[meter] game data read failed: {e!r}",
                       file=sys.stderr)
             running.clear()
-            self._setup = ({"stage": "done"} if ok else
-                           {"stage": "error", "path": path})
+            # a repair also rebuilds the hook from the new data
+            if ok and mode == "repair" and self.link is not None:
+                self.link.reconnect()
+            self._setup = ({"stage": "done", "mode": mode} if ok else
+                           {"stage": "error", "path": path, "mode": mode})
             self.menubridge.invalidate()
         rows, _pct = lines()
-        self._setup = {"stage": "run", "path": path, "rows": rows, "pct": 0}
+        self._setup = {"stage": "run", "path": path, "rows": rows, "pct": 0,
+                       "mode": mode}
         threading.Thread(target=work, daemon=True, name="first-data").start()
         threading.Thread(target=poll, daemon=True, name="first-data-count").start()
 
     def _setup_finish(self):
-        if self._setup and self._setup.get("stage") == "done":
+        """Into the app: after the first launch, its first tab; after a
+        repair (done or given up), back to the Help tab."""
+        st = self._setup or {}
+        if st.get("mode") == "repair" and st.get("stage") != "run":
+            self._setup = None
+            self._menu_tab = "Help"
+        elif st.get("stage") == "done":
             self._setup = None
             self._menu_tab = APP_TAB_DEFAULT
 
@@ -575,44 +587,20 @@ class App:
         return {"k": "welcome", "id": "welcome", **st}
 
     def _repair(self):
-        """Réparer (Aide): what a game patch needs, by hand — read the game's
-        data again from scratch, forget everything loaded from the old files,
-        and reconnect with a hook built from the new ones. No restart: the
-        hook's source and every table are re-read when they are next used."""
-        if self._repairing:
+        """Réparer (Aide): what a game patch needs, by hand — the game's data
+        read again from scratch, on the first launch's progress screen, then
+        the hook rebuilt from it (the game link reconnects). No restart."""
+        if self._setup:
             return
-        self._repairing = True
-        self._repair_note = None
-        self.menubridge.invalidate()
-
-        def work():
-            ok = False
-            try:
-                pid = self.link.status()[2] if self.link is not None else None
-                hlboot = locate_hlboot(pid) if pid else None
-                print("[meter] repair: regenerating the game data ...",
-                      file=sys.stderr)
-                ok = regenerate_data(hlboot, force=True)
-                forget_loaded_data()
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                print(f"[meter] repair failed: {e}", file=sys.stderr)
-
-            def done():
-                self._repairing = False
-                self._repair_note = (
-                    (True, "Données du jeu relues. Reconnexion au jeu en "
-                           "cours si Farever est ouvert.")
-                    if ok else
-                    (False, "La relecture des données a échoué : le détail "
-                            "est dans le journal (Réglages › Ouvrir le "
-                            "dossier du journal)."))
-                if ok and self.link is not None:
-                    self.link.reconnect()
-                self.menubridge.invalidate()
-            self._enqueue(done)()
-        threading.Thread(target=work, daemon=True, name="repair").start()
+        hb = locate_hlboot(self.link.status()[2] if self.link is not None
+                           else None)
+        if hb is None:
+            # nowhere to read from: the screen asks for the game's folder
+            self._setup = {"stage": "locate", "mode": "repair"}
+            return
+        self._setup = {"stage": "ask", "mode": "repair",
+                       "path": str(Path(hb).parent)}
+        self._setup_start()
 
     def _set_tab(self, name):
         if name not in APP_TABS:
@@ -2608,7 +2596,8 @@ class App:
                           "t": "‹  Tous les sujets d'aide"},
                          {"k": "section", "t": art["title"]}]
                         + art["blocks"])
-        # ...or the index, the repair first.
+        # ...or the index: the repair (the articles' list will come back
+        # in another form)
         seen, out = set(), self._repair_nodes()
         for heading, ids in HELP_GROUPS:
             rows = [a for a in arts if a["id"] in ids]
@@ -2621,7 +2610,8 @@ class App:
                  "btns": [{"id": "help_open", "t": "Lire",
                            "p": {"id": a["id"]}}]}
                 for a in rows]})
-        rest = [a for a in arts if a["id"] not in seen]
+        rest = [a for a in arts if a["id"] not in seen] if HELP_GROUPS \
+            else []
         if rest:
             out.append({"k": "section", "t": "Autres"})
             out.append({"k": "list", "id": "help:more", "rows": [
@@ -2633,22 +2623,15 @@ class App:
 
 
     def _repair_nodes(self):
-        out = [{"k": "section", "t": "Après une mise à jour du jeu"},
-               {"k": "note",
-                "t": "Farever France relit les données du jeu tout seul quand "
-                     "Farever change. Si une page reste vide ou que la "
-                     "connexion échoue après une mise à jour, Réparer refait "
-                     "cette lecture depuis zéro puis se reconnecte au jeu, "
-                     "sans relancer l'application. Compte quelques secondes "
-                     "(plusieurs minutes la toute première fois)."},
-               {"k": "button", "id": "repair_data",
-                "t": "Réparation en cours…" if self._repairing
-                     else "Réparer",
-                "tone": "disabled" if self._repairing else None}]
-        if self._repair_note and not self._repairing:
-            ok, text = self._repair_note
-            out.append({"k": "note", "warn": not ok, "t": text})
-        return out
+        return [{"k": "section", "t": "Un problème ?"},
+                {"k": "note",
+                 "t": "Farever France relit les données du jeu tout seul quand "
+                      "Farever change. Si une page reste vide, que des images "
+                      "manquent ou que la connexion au jeu échoue, Réparer "
+                      "réanalyse le jeu depuis zéro puis se reconnecte, sans "
+                      "relancer l'application. Une trentaine de secondes."},
+                {"k": "button", "id": "repair_data", "t": "Réparer",
+                 "tone": "go"}]
 
     @staticmethod
     def _tick(on, label):
@@ -2720,12 +2703,11 @@ class App:
         if state == GameLink.CONNECTED:
             self._launching_until = 0
             return {"state": "ingame", "t": "En jeu"}
-        if REGENERATING.is_set() and not self._repairing \
-                and not self._setup:
+        if REGENERATING.is_set() and not self._setup:
             return {"state": "connecting", "t": "Mise à jour…",
                     "tip": "lecture des données du jeu (images, icônes, "
-                           "modèles), quelques minutes au premier lancement"}
-        if state == GameLink.CONNECTING or self._repairing:
+                           "modèles), une trentaine de secondes"}
+        if state == GameLink.CONNECTING:
             if REGENERATING.is_set():
                 return {"state": "connecting", "t": "Mise à jour…",
                         "tip": "relecture des données du jeu"}

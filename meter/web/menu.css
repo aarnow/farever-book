@@ -3143,3 +3143,17 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .wrows li.wrun .wmark { border-color: rgba(242, 201, 76, .25); border-top-color: var(--accent);
                         animation: wspin .8s linear infinite; }
 .wgame { margin: 0 0 20px; color: var(--text); font-family: var(--font-head); font-size: 18px; }
+.wback { display: block; margin: 14px auto 0; }
+
+/* Réparer (Aide): the Jouer button's look, in green */
+.btn.go { display: inline-flex; align-items: center; justify-content: center; width: auto; max-width: none;
+          padding: 9px 26px; border-radius: 8px; cursor: pointer;
+          background: linear-gradient(180deg, #C4E66A, var(--lime) 45%, var(--lime-2));
+          border: 1px solid #D6F08E; color: #1F2A06;
+          font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 1.6px;
+          text-transform: uppercase; text-shadow: 0 1px 0 rgba(255, 255, 255, .3);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 6px rgba(0, 0, 0, .4); }
+/* in the Help tab's centred column, at its left edge like the text */
+#page.page-Help > .btn.go { display: flex; width: fit-content; margin-left: calc(50% - min(400px, 50%)); }
+.btn.go:hover { filter: brightness(1.08); border-color: #E2F7A6;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(166, 210, 59, .5); }

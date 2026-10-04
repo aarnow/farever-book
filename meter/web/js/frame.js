@@ -405,6 +405,23 @@ function buildWelcome(n) {
     return b;
   };
 
+  const repair = n.mode === 'repair';
+  if (repair) {
+    if (n.stage === 'done') {
+      card.appendChild(el('h1', null, 'Réparation terminée'));
+      card.appendChild(el('p', 'wlead', 'Les données du jeu ont été relues et la connexion au jeu '
+        + 'relancée.'));
+      card.appendChild(el('p', 'wtext', 'Si le problème persiste, contactez @Aarnow sur Discord.'));
+      card.appendChild(btn('Revenir à l’application', 'wgo', () => notify('setup_finish', {})));
+      box.appendChild(card);
+      return box;
+    }
+    card.appendChild(el('h1', null, n.stage === 'error' ? 'La réparation n’a pas abouti'
+      : 'Réparation de Farever France'));
+    card.appendChild(el('p', 'wlead', n.stage === 'error'
+      ? 'La nouvelle analyse du jeu s’est arrêtée avant la fin.'
+      : 'Nouvelle analyse du jeu pour résoudre les problèmes rencontrés.'));
+  }
   if (n.stage === 'done') {
     card.appendChild(el('h1', null, 'Tout est prêt !'));
     card.appendChild(el('p', 'wlead', 'Merci d’utiliser Farever France. Les images, les icônes et les '
@@ -415,8 +432,10 @@ function buildWelcome(n) {
     return box;
   }
 
-  card.appendChild(el('h1', null, 'Bienvenue sur Farever France'));
-  card.appendChild(el('p', 'wlead', 'L’outil qui vous accompagne dans vos aventures sur Farever !'));
+  if (!repair) {
+    card.appendChild(el('h1', null, 'Bienvenue sur Farever France'));
+    card.appendChild(el('p', 'wlead', 'L’outil qui vous accompagne dans vos aventures sur Farever !'));
+  }
 
   if (n.stage === 'run') {
     // a ring that always turns, the percentage in it: something is moving
@@ -446,17 +465,19 @@ function buildWelcome(n) {
     return box;
   }
 
-  card.appendChild(el('p', 'wtext', 'Pour accéder aux divers modules, nous avons besoin d’accéder '
-    + 'au dossier du jeu Farever afin d’y récupérer :'));
-  const ul = el('ul', 'wneeds');
-  (n.needs || []).forEach((t) => ul.appendChild(el('li', null, t)));
-  card.appendChild(ul);
-  card.appendChild(el('p', 'wsafe', 'Le jeu est seulement lu : rien n’y est modifié, et rien ne '
-    + 'quitte votre ordinateur.'));
+  if (!repair) {
+    card.appendChild(el('p', 'wtext', 'Pour accéder aux divers modules, nous avons besoin d’accéder '
+      + 'au dossier du jeu Farever afin d’y récupérer :'));
+    const ul = el('ul', 'wneeds');
+    (n.needs || []).forEach((t) => ul.appendChild(el('li', null, t)));
+    card.appendChild(ul);
+    card.appendChild(el('p', 'wsafe', 'Le jeu est seulement lu : rien n’y est modifié, et rien ne '
+      + 'quitte votre ordinateur.'));
+  }
 
   if (n.stage === 'error') {
     card.appendChild(el('p', 'werr', 'La récupération n’a pas abouti. Vérifiez que Farever est à '
-      + 'jour, puis réessayez. Le détail est dans le journal (Réglages, Dossier du journal).'));
+      + 'jour, puis réessayez. Si le problème persiste, contactez @Aarnow sur Discord.'));
   }
   if (n.stage === 'locate') {
     card.appendChild(el('p', 'wwarn', 'Nous n’avons pas trouvé Farever sur cet ordinateur. '
@@ -473,6 +494,11 @@ function buildWelcome(n) {
     if (n.err) card.appendChild(el('p', 'werr', n.err));
     card.appendChild(btn(n.stage === 'error' ? 'Réessayer' : 'Autoriser et commencer', 'wgo',
       () => notify('setup_start', {})));
+  }
+  if (repair) {
+    // a repair can always be left: the app was working before it
+    const back = btn('Revenir à l’application', 'wlink wback', () => notify('setup_finish', {}));
+    card.appendChild(back);
   }
   box.appendChild(card);
   return box;
