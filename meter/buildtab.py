@@ -65,6 +65,7 @@ class BuildTab:
             "build_share": self._share,
             "build_import": lambda p: self._import_code(p.get("code")),
             "build_delete": self._delete,
+            "build_delete_many": lambda p: self._delete_many(p.get("files")),
             "build_delete_cancel": lambda: setattr(self, "confirm_delete",
                                                    False),
             "build_rename": lambda p: self._edit(
@@ -161,6 +162,18 @@ class BuildTab:
         B.delete_build(self.file)
         self._toast(f"Build « {self.build['name']} » supprimé.")
         self._close()
+
+    def _delete_many(self, files):
+        """The builds the player picked in the list, once confirmed."""
+        names = {f: b.get("name") for f, b in B.list_builds()}
+        gone = [names[f] for f in files or () if f in names
+                and B.delete_build(f)]
+        if self.file and self.file in (files or ()):
+            self._close()
+        if gone:
+            self._toast(f"{len(gone)} build{'s' if len(gone) > 1 else ''} "
+                        f"supprimé{'s' if len(gone) > 1 else ''} : "
+                        + ", ".join(f"« {n} »" for n in gone) + ".")
 
     def _edit(self, change):
         if not self.build:
@@ -534,7 +547,8 @@ class BuildTab:
         b, score, mode, plan = self._guide_optimise(b, p or {})
         cls = CLASS_FR.get(b["cls"], b["cls"])
         n = sum(1 for _ in B.list_builds() if True) + 1
-        b["name"] = f"{cls} guidé {n}"
+        b["name"] = str((p or {}).get("name") or "").strip()[:60] or \
+            f"{cls} guidé {n}"
         self.cmp = None
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False

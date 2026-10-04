@@ -439,7 +439,7 @@ function buildCompare(c, box) {
    what the build is for (its infusions), a summary; the meter composes
    the build (builds.guided_build). */
 const GUIDE = { step: 0, opts: null, cls: null, lvl: null, main: null, off: null, ars: null,
-  atbs: [null, null], stats: [null, null, null], role: null, goal: 'max' };
+  atbs: [null, null], stats: [null, null, null], role: null, goal: 'max', name: '' };
 const GUIDE_STEPS = ['Classe', 'Niveau', 'Armes', 'Arsenal', 'Attributs', 'Statistiques', 'Objectif', 'Résumé'];
 
 /* The goals, worded for the main attribute's role (builds.GUIDE_GOALS):
@@ -472,7 +472,7 @@ function openGuide() {
   window.pywebview.api.call('build_guide_options', {}).then((o) => {
     if (!o) return;
     Object.assign(GUIDE, { step: 0, opts: o, cls: null, lvl: o.maxLvl, main: null, off: null,
-      ars: null, atbs: [null, null], stats: [null, null, null], role: null, goal: 'max' });
+      ars: null, atbs: [null, null], stats: [null, null, null], role: null, goal: 'max', name: '' });
     drawGuide();
   });
 }
@@ -488,6 +488,7 @@ function guideReady(step) {
   if (step === 3) return !!GUIDE.ars;
   if (step === 4) return !!GUIDE.atbs[0];
   if (step === 5) return !!GUIDE.stats[0];
+  if (step === 7) return !!GUIDE.name.trim();
   return true;
 }
 
@@ -606,6 +607,23 @@ function drawGuide() {
       + 'compte pour les paliers, l’imprégnation retenue est celle qui donne le plus de dégâts (de '
       + 'soins et de dégâts pour le rôle Soins), celle de survie la plus résistante.'));
   } else {
+    body.appendChild(el('h3', null, 'Comment s’appelle ton build ?'));
+    const nm = el('input', 'bname bgname');
+    nm.type = 'text';
+    nm.maxLength = 60;
+    nm.placeholder = 'Nom du build';
+    nm.value = GUIDE.name;
+    nm.addEventListener('input', () => {
+      GUIDE.name = nm.value;
+      const go = $('#guidemodal .bgnext');
+      if (go) go.disabled = !nm.value.trim();
+    });
+    nm.addEventListener('keydown', (e) => {
+      const go = $('#guidemodal .bgnext');
+      if (e.key === 'Enter' && go && !go.disabled) go.click();
+    });
+    body.appendChild(nm);
+    setTimeout(() => nm.focus(), 0);
     body.appendChild(el('h3', null, 'Ton build'));
     const name = (list, v) => ((list || []).find((x) => x.v === v) || {}).t || '—';
     const lines = [
@@ -652,7 +670,7 @@ function drawGuide() {
     if (!last) { GUIDE.step++; drawGuide(); return; }
     BUILD_VIEW = 'stuff';
     notify('build_guided', { cls: GUIDE.cls, lvl: GUIDE.lvl, main: GUIDE.main, off: GUIDE.off,
-      ars: GUIDE.ars, atbs: GUIDE.atbs, stats: GUIDE.stats, role: guideRole(), goal: GUIDE.goal });
+      ars: GUIDE.ars, atbs: GUIDE.atbs, stats: GUIDE.stats, role: guideRole(), goal: GUIDE.goal, name: GUIDE.name.trim() });
     back.remove();
   });
   nav.appendChild(next);
@@ -698,6 +716,88 @@ function importCodeDialog() {
   setTimeout(() => ta.focus(), 0);
 }
 
+/* The builds the player is picking to delete (a Set of files), or null. */
+let BUILD_DEL = null;
+
+function redrawBuildList(box, n) {
+  const page = buildList(n, el('div', 'buildpage'));
+  box.replaceWith(page);
+  NODES.forEach((v) => { if (v.el === box) v.el = page; });   // core.js keeps the page's nodes
+}
+
+/* A small modal: a title, a body, its buttons ([text, class, action]). */
+function buildModal(id, title, fill, buttons) {
+  if ($('#' + id)) return null;
+  const back = el('div', 'modalback');
+  back.id = id;
+  const box = el('div', 'spanel bdialog');
+  box.appendChild(el('div', 'sptitle', title));
+  fill(box);
+  const close = () => { back.remove(); document.removeEventListener('keydown', esc); };
+  const esc = (e) => { if (e.key === 'Escape') close(); };
+  if (buttons.length) {
+    const row = el('div', 'bbtns');
+    buttons.forEach(([t, cls, act]) => {
+      const b = el('button', cls, t);
+      b.type = 'button';
+      b.addEventListener('click', () => { close(); if (act) act(); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+  }
+  back.appendChild(box);
+  back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+  document.addEventListener('keydown', esc);
+  document.body.appendChild(back);
+  return close;
+}
+
+/* "+ Nouveau build": by hand, or step by step with the guide. */
+function newBuildDialog() {
+  let close = null;
+  const pick = (title, text, act) => {
+    const c = el('button', 'bnewpick');
+    c.type = 'button';
+    c.appendChild(el('b', null, title));
+    c.appendChild(el('span', null, text));
+    c.addEventListener('click', () => { if (close) close(); act(); });
+    return c;
+  };
+  close = buildModal('newbuildmodal', 'Nouveau build', (box) => {
+    const row = el('div', 'bnewpicks');
+    row.appendChild(pick('Manuellement', 'Un build vide : tu choisis toi-même chaque pièce, '
+      + 'les talents et les compétences.', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); }));
+    row.appendChild(pick('Avec assistance', 'Quelques questions (classe, armes, attributs, '
+      + 'statistiques, objectif) et le build est composé pour toi.', openGuide));
+    box.appendChild(row);
+  }, [['Annuler', 'rowbtn', null]]);
+}
+
+/* The builds picked for deletion, listed, and a last confirmation. */
+function deleteBuildsDialog(list, box, n) {
+  if (!list.length) return;
+  const many = list.length > 1;
+  buildModal('delbuildsmodal', many ? 'Supprimer ' + list.length + ' builds ?' : 'Supprimer ce build ?', (b) => {
+    const ul = el('ul', 'bdellist');
+    list.forEach((x) => {
+      const li = el('li');
+      if (CLASS_ICONS[x.ck]) li.appendChild(classEl('', x.ck));
+      li.appendChild(el('b', null, x.name));
+      li.appendChild(el('span', null, (CLASS_NAMES[x.ck] || x.cls || '') + ' · niveau ' + (x.lvl || '?')));
+      ul.appendChild(li);
+    });
+    b.appendChild(ul);
+    b.appendChild(el('p', 'note', 'Es-tu vraiment sûr ? ' + (many ? 'Ces builds seront supprimés' : 'Ce build sera supprimé')
+      + ' définitivement.'));
+  }, [['Annuler', 'rowbtn', null],
+      ['Supprimer définitivement', 'btn bdelok', () => {
+        const files = list.map((x) => x.file);
+        BUILD_DEL = null;
+        notify('build_delete_many', { files });
+        redrawBuildList(box, n);
+      }]]);
+}
+
 /* The builds, as cards: a click opens one. */
 function buildList(n, box) {
   const head = el('div', 'blisthead');
@@ -718,22 +818,43 @@ function buildList(n, box) {
   imp.type = 'button';
   imp.addEventListener('click', importCodeDialog);
   btns.appendChild(imp);
-  const guide = el('button', 'btn bguidebtn', 'Build guidé');
-  guide.type = 'button';
-  guide.title = 'Compose un build étape par étape, selon tes armes et tes priorités.';
-  guide.addEventListener('click', openGuide);
-  btns.appendChild(guide);
   const cmp = el('button', 'btn bcmpbtn', 'Comparer');
   cmp.type = 'button';
   cmp.title = 'Compare deux builds de la même classe, côte à côte.';
   cmp.addEventListener('click', () => notify('build_cmp_open', {}));
   btns.appendChild(cmp);
+  // deleting: a first click to pick the builds, a second to confirm them
+  const files = new Set((n.list || []).map((b) => b.file));
+  if (BUILD_DEL) BUILD_DEL.forEach((f) => { if (!files.has(f)) BUILD_DEL.delete(f); });
+  if ((n.list || []).length) {
+    const del = el('button', 'btn bdelbtn' + (BUILD_DEL ? ' armed' : ''),
+      BUILD_DEL ? 'Confirmer la suppression' + (BUILD_DEL.size ? ' (' + BUILD_DEL.size + ')' : '')
+        : 'Supprimer un build');
+    del.type = 'button';
+    if (BUILD_DEL && !BUILD_DEL.size) del.disabled = true;
+    del.addEventListener('click', () => {
+      if (!BUILD_DEL) { BUILD_DEL = new Set(); redrawBuildList(box, n); return; }
+      deleteBuildsDialog(n.list.filter((b) => BUILD_DEL.has(b.file)), box, n);
+    });
+    btns.appendChild(del);
+    if (BUILD_DEL) {
+      const no = el('button', 'btn bdelno', 'Annuler');
+      no.type = 'button';
+      no.addEventListener('click', () => { BUILD_DEL = null; redrawBuildList(box, n); });
+      btns.appendChild(no);
+    }
+  }
   const nb = el('button', 'btn bnew', '+ Nouveau build');
   nb.type = 'button';
-  nb.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); });
+  nb.addEventListener('click', newBuildDialog);
   btns.appendChild(nb);
   head.appendChild(btns);
   box.appendChild(head);
+  if (BUILD_DEL) {
+    box.appendChild(el('p', 'note bdelnote', BUILD_DEL.size
+      ? 'Clique sur d’autres builds pour les ajouter, ou sur un build choisi pour le retirer.'
+      : 'Clique sur les builds à supprimer.'));
+  }
   if (!(n.list || []).length) {
     box.appendChild(el('p', 'note', 'Aucun build pour l’instant. Crée-en un, copie ton '
       + 'personnage, ou pars d’un joueur analysé dans Inspecter (« Créer un build »).'));
@@ -758,13 +879,23 @@ function buildList(n, box) {
     h.appendChild(el('span', 'n', String(mine.length)));
     col.appendChild(h);
     mine.forEach((b) => {
-      const c = el('button', 'bcard');
+      const picked = BUILD_DEL && BUILD_DEL.has(b.file);
+      const c = el('button', 'bcard' + (BUILD_DEL ? ' bpick' : '') + (picked ? ' bdel' : ''));
       c.type = 'button';
       const t = el('div', 'bct');
       t.appendChild(el('b', null, b.name));
       t.appendChild(el('span', null, 'Niveau ' + (b.lvl || '?')));
       c.appendChild(t);
-      c.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_open', { file: b.file }); });
+      if (BUILD_DEL) c.appendChild(el('i', 'bdelmark', picked ? '✓' : ''));
+      c.addEventListener('click', () => {
+        if (BUILD_DEL) {
+          if (BUILD_DEL.has(b.file)) BUILD_DEL.delete(b.file); else BUILD_DEL.add(b.file);
+          redrawBuildList(box, n);
+          return;
+        }
+        BUILD_VIEW = 'stuff';
+        notify('build_open', { file: b.file });
+      });
       col.appendChild(c);
     });
     if (!mine.length) col.appendChild(el('p', 'note bcolnone', 'Aucun build'));
