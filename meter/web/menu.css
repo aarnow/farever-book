@@ -2148,7 +2148,9 @@ html.lt-900 .brunegrid .brunerow { grid-template-columns: 1fr; }
 /* Talents and runes side by side when there is room */
 .btalents { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
 html:not(.lt-1250) .btalents { grid-template-columns: minmax(420px, 640px) minmax(0, 1fr); }
-.btleft .ttreew { margin: 0; }
+.btleft .ttreew { margin: 0 auto; }
+/* the Talents tab: the tree alone, centred with its title and help */
+.btleft { max-width: 640px; margin: 0 auto; }
 .bruneswrap { container-type: inline-size; margin-top: 0; }
 @container (max-width: 760px) {
   .brunegrid { grid-template-columns: 120px 1fr; }
