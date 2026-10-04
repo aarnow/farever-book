@@ -30,40 +30,41 @@ def dungeon_name(kind):
     return " ".join(s.split()) or "Donjon"
 
 
-_COLLECTION = None
+
+# The tables of analysis_out/, each read once, when first needed.
+_TABLES = {}
+
+
+def _table(name, empty=dict, shape=None, warn=None):
+    """analysis_out/<name>, parsed (then shaped), read once; `empty()` when
+    it is absent or unreadable — said in the log when `warn` says what that
+    costs."""
+    got = _TABLES.get(name)
+    if got is None:
+        try:
+            got = json.loads((ANALYSIS / name).read_text(encoding="utf-8"))
+        except Exception as e:
+            got = empty()
+            if warn:
+                print(f"[meter] {name} unavailable ({e}): {warn}",
+                      file=sys.stderr)
+        if shape:
+            got = shape(got)
+        _TABLES[name] = got
+    return got
 
 
 def collection_catalogue():
     """{"mounts": [...], "gliders": [...], "pets": [...]}: every collectible
     with how it is obtained, from analysis_out/collection.json (built from the
     game's data and levels by hltools/collection_data.py). {} when absent."""
-    global _COLLECTION
-    if _COLLECTION is None:
-        try:
-            _COLLECTION = json.loads(
-                (ANALYSIS / "collection.json").read_text(encoding="utf-8"))
-        except Exception:
-            _COLLECTION = {}
-    return _COLLECTION
-
-
-_CODEX_ITEMS = None
-
+    return _table("collection.json")
 
 def codex_items_catalogue():
     """[{id, rarity, type, src, uses}]: the items the game's item codex
     counts (crafting components, ores, cloth, leather), from
     analysis_out/codex_items.json (hltools/codex_items.py)."""
-    global _CODEX_ITEMS
-    if _CODEX_ITEMS is None:
-        try:
-            _CODEX_ITEMS = json.loads(
-                (ANALYSIS / "codex_items.json").read_text(encoding="utf-8"))
-        except Exception:
-            _CODEX_ITEMS = []
-    return _CODEX_ITEMS
-
-
+    return _table("codex_items.json", list)
 # The game's generic [terms] (skill kinds), named in no sheet.
 # (singular, plural): the texts write "[WeaponSkill]s".
 FR_TERMS = {"Skill": ("compétence", "compétences"),
@@ -96,56 +97,24 @@ def _unit_label(u):
             or _pretty_id(u or ""))
 
 
-_SPARK = None
-
 
 def _spark_units():
-    global _SPARK
-    if _SPARK is None:
-        try:
-            _SPARK = set(json.loads((ANALYSIS / "unit_traits.json")
-                                    .read_text(encoding="utf-8"))["spark"])
-        except Exception:
-            _SPARK = set()
-    return _SPARK
-
-
-_BESTIARY = None
-
+    return _table("unit_traits.json",
+                  shape=lambda d: set(d["spark"]) if d else set())
 
 def bestiary_catalogue():
     """{"placed": [{id, family, tier, zones, regions, lvl}] — every monster
     the levels place —, "units": {id: {family, tier, region}} — every monster
     of the game —, "families": [...]}, from analysis_out/bestiary.json
     (hltools/bestiary_data.py)."""
-    global _BESTIARY
-    if _BESTIARY is None:
-        try:
-            _BESTIARY = json.loads(
-                (ANALYSIS / "bestiary.json").read_text(encoding="utf-8"))
-        except Exception:
-            _BESTIARY = {}
-        if isinstance(_BESTIARY, list):         # before the family view
-            _BESTIARY = {"placed": _BESTIARY}
-    return _BESTIARY
-
-
-_CODEX_SETS = None
-
+    # a list before the family view
+    return _table("bestiary.json", shape=lambda d: {"placed": d}
+                  if isinstance(d, list) else d)
 
 def _codex_thresholds():
     """tier -> the kill counts of the codex's three ranks (the game's own
     numbers, analysis_out/codex_units.json)."""
-    global _CODEX_SETS
-    if _CODEX_SETS is None:
-        try:
-            _CODEX_SETS = json.loads((ANALYSIS / "codex_units.json")
-                                     .read_text(encoding="utf-8"))
-        except Exception:
-            _CODEX_SETS = {}
-    return _CODEX_SETS.get("thresholds") or {}
-
-
+    return _table("codex_units.json").get("thresholds") or {}
 def _family_label(fam):
     if fam == "Demon_Rift":             # "Démons" too in the game's text
         return "Démons des failles"
@@ -154,118 +123,41 @@ def _family_label(fam):
     return (_fr_names("unitType").get(fam) or _pretty_id(fam)) if fam else ""
 
 
-_ITEM_TYPES = None
-
 
 def item_type(kind):
-    global _ITEM_TYPES
-    if _ITEM_TYPES is None:
-        try:
-            _ITEM_TYPES = json.loads(
-                (ANALYSIS / "item_types.json").read_text(encoding="utf-8"))
-        except Exception:
-            _ITEM_TYPES = {}
-    return _ITEM_TYPES.get(kind) or ""
-
-
-_AUGMENTS = None
-
+    return _table("item_types.json").get(kind) or ""
 
 def _augments_data():
-    global _AUGMENTS
-    if _AUGMENTS is None:
-        try:
-            _AUGMENTS = json.loads(
-                (ANALYSIS / "augments.json").read_text(encoding="utf-8"))
-        except Exception:
-            _AUGMENTS = {}
-    return _AUGMENTS
-
-
+    return _table("augments.json")
 def _skill_label(sid):
     return _fr_names("skill").get(sid) or _pretty_id(sid)
 
-
-_TALENTS = None
 
 
 def talent_data():
     """{"trees": {class: {root, talents: [{s, tier, branch, max}]}},
     "runes": {rune: skill}} from analysis_out/talents.json
     (hltools/skills_data.py)."""
-    global _TALENTS
-    if _TALENTS is None:
-        try:
-            _TALENTS = json.loads(
-                (ANALYSIS / "talents.json").read_text(encoding="utf-8"))
-        except Exception:
-            _TALENTS = {}
-    return _TALENTS
-
-
-_LUCK = None
-
+    return _table("talents.json")
 
 def luck_data():
-    global _LUCK
-    if _LUCK is None:
-        try:
-            _LUCK = json.loads((ANALYSIS / "luck.json").read_text(
-                encoding="utf-8"))
-        except Exception:
-            _LUCK = {}
-    return _LUCK
-
-
-_ACHIEVEMENTS = None
-
+    return _table("luck.json")
 
 def achievements_catalogue():
     """{"categories": [{id, parent}], "achievements": [{id, cat, parent,
     points, obj, reward, copyDesc, consts}]} from analysis_out/
     achievements.json (hltools/achievements_data.py)."""
-    global _ACHIEVEMENTS
-    if _ACHIEVEMENTS is None:
-        try:
-            _ACHIEVEMENTS = json.loads((ANALYSIS / "achievements.json")
-                                       .read_text(encoding="utf-8"))
-        except Exception:
-            _ACHIEVEMENTS = {}
-    return _ACHIEVEMENTS
-
-
-_RIFT_REWARDS = None
-
+    return _table("achievements.json")
 
 def rift_rewards_data():
     """analysis_out/rift_rewards.json (emit_offsets.extract_rift_rewards)."""
-    global _RIFT_REWARDS
-    if _RIFT_REWARDS is None:
-        try:
-            _RIFT_REWARDS = json.loads((ANALYSIS / "rift_rewards.json")
-                                       .read_text(encoding="utf-8"))
-        except Exception:
-            _RIFT_REWARDS = {}
-    return _RIFT_REWARDS
-
-
-_INFUSIONS = None
-
+    return _table("rift_rewards.json")
 
 def infusion_data():
     """{"infusions": {skill: {f, role, name, pattern, t2, t4, t6}},
     "item_faction": {item: faction}} from analysis_out/infusions.json
     (hltools/infusions_data.py)."""
-    global _INFUSIONS
-    if _INFUSIONS is None:
-        try:
-            _INFUSIONS = json.loads(
-                (ANALYSIS / "infusions.json").read_text(encoding="utf-8"))
-        except Exception:
-            _INFUSIONS = {}
-    return _INFUSIONS
-
-
+    return _table("infusions.json")
 def _infusion_id(raw):
     """The infusion skill a gear's `infusion` field names (the skill, or
     the pattern that teaches it)."""
@@ -280,21 +172,10 @@ def _infusion_id(raw):
     return raw
 
 
-_OFFSETS = None
-
 
 def _offsets():
     """analysis_out/meter_offsets.json, read once."""
-    global _OFFSETS
-    if _OFFSETS is None:
-        try:
-            _OFFSETS = json.loads(
-                (ANALYSIS / "meter_offsets.json").read_text(encoding="utf-8"))
-        except Exception:
-            _OFFSETS = {}
-    return _OFFSETS
-
-
+    return _table("meter_offsets.json")
 def faction_label(f):
     """A faction's French name (the faction sheet: Apix, Nepsides, Béliers
     écarlates...), else its monster family's."""
@@ -311,52 +192,19 @@ def _item_flag(bits, name):
 
 
 # ---- gear stats: the game's own computation (hltools/gear_stats_data.py) --
-_GEAR_STATS = None
-
 
 def gear_stats_data():
-    global _GEAR_STATS
-    if _GEAR_STATS is None:
-        try:
-            _GEAR_STATS = json.loads((ANALYSIS / "gear_stats.json").read_text(
-                encoding="utf-8"))
-        except Exception:
-            _GEAR_STATS = {}
-    return _GEAR_STATS
-
-
-_BUILD_DATA = None
-
+    return _table("gear_stats.json")
 
 def build_data():
     """The Build tab's catalogue and rules: analysis_out/build_data.json
     (hltools/build_data.py)."""
-    global _BUILD_DATA
-    if _BUILD_DATA is None:
-        try:
-            _BUILD_DATA = json.loads((ANALYSIS / "build_data.json").read_text(
-                encoding="utf-8"))
-        except Exception:
-            _BUILD_DATA = {}
-    return _BUILD_DATA
-
-
-_WORLD_MAP = None
-
+    return _table("build_data.json")
 
 def world_map():
     """{"meta": tiles and transform, "points": [{c, id, x, y, zone,
     region}]} from analysis_out/map.json (hltools/map_data.py)."""
-    global _WORLD_MAP
-    if _WORLD_MAP is None:
-        try:
-            _WORLD_MAP = json.loads(
-                (ANALYSIS / "map.json").read_text(encoding="utf-8"))
-        except Exception:
-            _WORLD_MAP = {}
-    return _WORLD_MAP
-
-
+    return _table("map.json")
 def _element_done(states, eid):
     """Whether a world element has been completed (chest opened, orb picked
     up, obelisk discovered): Progress.elements has it, with a time. A value
@@ -366,8 +214,6 @@ def _element_done(states, eid):
         v = v[-1] if v else None
     return isinstance(v, (int, float)) and v > 0
 
-
-_UNIT_NAMES = None
 
 
 def _unit_names():
@@ -379,49 +225,18 @@ def _unit_names():
     is routinely NOT the name the game shows (measured: 'Cleodora' displays as
     'Queen Honeyzabeth', 'Phrixes' as 'High Inquisitor Chakram' — the kind
     often names the LAIR, not the boss)."""
-    global _UNIT_NAMES
-    if _UNIT_NAMES is None:
-        try:
-            _UNIT_NAMES = json.loads(
-                (ANALYSIS / "unit_names.json").read_text(encoding="utf-8"))
-        except Exception:
-            _UNIT_NAMES = {}
-    return _UNIT_NAMES
-
-
-_FR_NAMES = None
-
+    return _table("unit_names.json")
 
 def _fr_names(sheet):
     """id -> French display name for one of the game's sheets (activity,
     item, rarity, unit), from analysis_out/names_fr.json — the game's own
     translation, extracted by emit_offsets.py. {} when absent."""
-    global _FR_NAMES
-    if _FR_NAMES is None:
-        try:
-            _FR_NAMES = json.loads(
-                (ANALYSIS / "names_fr.json").read_text(encoding="utf-8"))
-        except Exception:
-            _FR_NAMES = {}
-    return _FR_NAMES.get(sheet) or {}
-
-
-_ITEM_RARITY = None
-
+    return _table("names_fr.json").get(sheet) or {}
 
 def item_rarity(kind):
     """An item's base rarity from its sheet row (analysis_out/
     item_rarity.json); a weapon's own copy rarity overrides it."""
-    global _ITEM_RARITY
-    if _ITEM_RARITY is None:
-        try:
-            _ITEM_RARITY = json.loads(
-                (ANALYSIS / "item_rarity.json").read_text(encoding="utf-8"))
-        except Exception:
-            _ITEM_RARITY = {}
-    return _ITEM_RARITY.get(kind)
-
-
+    return _table("item_rarity.json").get(kind)
 _ITEM_ICONS = {}
 
 
@@ -443,22 +258,11 @@ def item_icon(kind):
     return _ITEM_ICONS[kind]
 
 
-_DUNGEONS = None
-
 
 def dungeon_catalogue():
     """Every dungeon in the game, [{kind, boss, region}], from
     analysis_out/dungeons.json (the game's achievements). [] when absent."""
-    global _DUNGEONS
-    if _DUNGEONS is None:
-        try:
-            _DUNGEONS = json.loads(
-                (ANALYSIS / "dungeons.json").read_text(encoding="utf-8"))
-        except Exception:
-            _DUNGEONS = []
-    return _DUNGEONS
-
-
+    return _table("dungeons.json", list)
 # the raw materials' types, which the game's translation leaves unnamed
 ITEM_TYPE_FR = {"Ore": "Minerai", "Cloth": "Tissu", "Leather": "Cuir"}
 
@@ -471,8 +275,7 @@ def item_type_label(t):
 def _fr_desc(sheet):
     """id -> French description for a sheet (ach, item, unit), from
     names_fr.json's "_desc"."""
-    _fr_names(sheet)
-    return (_FR_NAMES or {}).get("_desc", {}).get(sheet) or {}
+    return _table("names_fr.json").get("_desc", {}).get(sheet) or {}
 
 
 def item_label(kind):
@@ -497,8 +300,6 @@ def rarity_label(r):
     return _fr_names("rarity").get(r) or RARITY_FR.get(r) or (r or "")
 
 
-_HEAL_SPECS = None
-
 
 def _heal_specs():
     """skill id -> {step: [heal effect spec]}, from analysis_out/heal_specs.json.
@@ -507,19 +308,8 @@ def _heal_specs():
     Without it every heal on a full-health target is unsizeable and healing
     collapses back to "health actually restored" — so its absence is logged
     rather than swallowed."""
-    global _HEAL_SPECS
-    if _HEAL_SPECS is None:
-        try:
-            _HEAL_SPECS = json.loads(
-                (ANALYSIS / "heal_specs.json").read_text(encoding="utf-8"))
-        except Exception as e:
-            print(f"[meter] heal_specs.json unavailable ({e}) — healing falls "
-                  "back to what each skill has been seen to restore",
-                  file=sys.stderr)
-            _HEAL_SPECS = {}
-    return _HEAL_SPECS
-
-
+    return _table("heal_specs.json", warn="healing falls back to what "
+                  "each skill has been seen to restore")
 def _boss_label(kind):
     """The boss's real display name, falling back to the prettified kind for
     anything the unit sheet doesn't carry."""
@@ -869,15 +659,13 @@ def _data_is_current():
 def forget_loaded_data():
     """Drop every table loaded from analysis_out/, so the next use reads the
     files a regenerate just wrote (Réparer)."""
-    g = globals()
+    _TABLES.clear()
     _ITEM_ICONS.clear()                 # a missing icon was cached as ""
     for mod, name in (("bosssheet", "_DATA"), ("bosssheet", "_PLACEHOLDER"),
                       ("goals", "_TYPES")):
         m = sys.modules.get(mod)
         if m is not None:
             setattr(m, name, None)
-    for name in ("_BUILD_DATA", "_GEAR_STATS", "_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
-        g[name] = None
 
 
 def regenerate_data(hlboot=None, force=False, on_step=None,

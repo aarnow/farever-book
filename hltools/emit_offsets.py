@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from hlbc_parser import HLCode, HOBJ, HSTRUCT, HVIRTUAL
+from hlbc_parser import HLCode, HOBJ, HSTRUCT
 from gamepath import find_hlboot
 
 # Overridable for the same reason as build_targets.py's: the installed meter
@@ -33,7 +33,17 @@ FIELD_RENAMES = {
 def main():
     hlboot = find_hlboot()
     print(f"[*] parsing {hlboot}")
-    code = HLCode(hlboot).parse()
+    layout = hook_layout(HLCode(hlboot).parse())
+    OUT.write_text(json.dumps(layout, indent=2), encoding="utf-8")
+    print(f"[written] {OUT}")
+    write_tables(Path(hlboot).parent)
+    print(json.dumps(layout, indent=2))
+
+
+def hook_layout(code):
+    """Where the hook finds each field it reads: offsets in the game's
+    objects, read off its bytecode, so a patch that moves a field moves
+    them too."""
     byname = {t.name: t for t in code.types
               if t.kind in (HOBJ, HSTRUCT) and t.name}
 
@@ -487,206 +497,144 @@ def main():
         "SkillRow": {"id_vidx": vidx(row, "id"), "texts_vidx": vidx(row, "texts")},
         "Texts": {"name_vidx": vidx(texts, "name"), "desc_vidx": vidx(texts, "desc")},
     }
-    OUT.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    print(f"[written] {OUT}")
+    return meta
 
-    # Display names, from the game's own data.cdb (res.light.pak, found
-    # 2026-08-01 — NOT res.pak, which only carries assets and the non-English
-    # lang exports). Units name the boss kill toast and every combat history
-    # dataset — a unit's kind is routinely NOT the name on the bar (measured
-    # 2026-08-02: 'Cleodora' displays 'Queen Honeyzabeth', 'Phrixes' displays
-    # 'High Inquisitor Chakram').
-    # Cosmetic, so a failure costs the labels and nothing else — but it is
-    # still reported, because "it shows ids again" should be explainable from
-    # the log.
-    try:
-        unit_names = extract_display_names(Path(hlboot).parent)
-        out_units = _OUT_DIR / "unit_names.json"
-        out_units.write_text(json.dumps(unit_names, ensure_ascii=False,
-                                        indent=0), encoding="utf-8")
-        print(f"[written] {out_units} ({len(unit_names)} units)")
-        specs = extract_heal_specs(Path(hlboot).parent)
-        out_heal = _OUT_DIR / "heal_specs.json"
-        out_heal.write_text(json.dumps(specs, indent=0), encoding="utf-8")
-        print(f"[written] {out_heal} ({len(specs)} heal skills)")
-        codex = extract_codex_units(Path(hlboot).parent)
-        out_codex = _OUT_DIR / "codex_units.json"
-        out_codex.write_text(json.dumps(codex, indent=0), encoding="utf-8")
-        print(f"[written] {out_codex} ({len(codex['noCodex'])} excluded, "
-              f"{len(codex['elite'])} elite/boss, {len(codex['big'])} big, "
-              f"thresholds {codex['thresholds']})")
-        traits = extract_unit_traits(Path(hlboot).parent)
-        out_traits = _OUT_DIR / "unit_traits.json"
-        out_traits.write_text(json.dumps(traits, indent=0), encoding="utf-8")
-        print(f"[written] {out_traits} ({len(traits['critter'])} critters, "
-              f"{len(traits['spark'])} sparkling)")
-        fr = extract_fr_names(Path(hlboot).parent)
-        out_fr = _OUT_DIR / "names_fr.json"
-        out_fr.write_text(json.dumps(fr, ensure_ascii=False, indent=0),
-                          encoding="utf-8")
-        print(f"[written] {out_fr} ("
-              + ", ".join(f"{len(v)} {k}" for k, v in fr.items()) + ")")
+
+# ---- the tables: what the app shows, read off the game's files ------------
+class Table:
+    """One output of the data folder: a JSON file built from the game, or a
+    folder (or file) of pictures its builder writes itself (dump None).
+    `summary` says what was written, after "[written] <path>" (the app's
+    progress reads those lines). A table that fails is reported and
+    skipped, the others are still written."""
+
+    def __init__(self, out, build, summary=None, dump=None, label=None):
+        self.out, self.build, self.summary = out, build, summary
+        self.dump, self.label = dump, label or out
+
+
+# how each JSON is written (kept as each table always was)
+PLAIN = {"indent": 0}
+TEXT = {"ensure_ascii": False, "indent": 0}
+COMPACT = {"ensure_ascii": False, "separators": (",", ":")}
+
+
+def _module(name):
+    """A generator module of hltools, imported when its table is built."""
+    import importlib
+    return importlib.import_module(name)
+
+
+def _cdb(game):
+    import pak_extract
+    return json.loads(pak_extract.read_entry(game / "res.light.pak",
+                                             "data.cdb"))
+
+
+def _n(key):
+    return lambda d: f"{len(d[key])}"
+
+
+# In the app's order (meter/gamedata.py GENERATED_GROUPS lists the same).
+# A builder gets (game folder, data folder, the tables built so far).
+TABLES = (
+    Table("unit_names.json", lambda g, o, t: extract_display_names(g),
+          lambda d: f"{len(d)} units", TEXT, "display names"),
+    Table("heal_specs.json", lambda g, o, t: extract_heal_specs(g),
+          lambda d: f"{len(d)} heal skills", PLAIN),
+    Table("codex_units.json", lambda g, o, t: extract_codex_units(g),
+          lambda d: (f"{len(d['noCodex'])} excluded, {len(d['elite'])} "
+                     f"elite/boss, {len(d['big'])} big, "
+                     f"thresholds {d['thresholds']}"), PLAIN),
+    Table("unit_traits.json", lambda g, o, t: extract_unit_traits(g),
+          lambda d: (f"{len(d['critter'])} critters, "
+                     f"{len(d['spark'])} sparkling"), PLAIN),
+    Table("names_fr.json", lambda g, o, t: extract_fr_names(g),
+          lambda d: ", ".join(f"{len(v)} {k}" for k, v in d.items()), TEXT),
+    Table("collection.json",
+          lambda g, o, t: _module("collection_data").build(
+              g, o / "collection_img"),
+          lambda d: ", ".join(f"{len(v)} {k}" for k, v in d.items()), PLAIN,
+          "collection catalogue"),
+    Table("talents.json",
+          lambda g, o, t: _module("skills_data").build(g, o / "skill_img"),
+          lambda d: f"{len(d['trees'])} trees, {len(d['runes'])} runes",
+          PLAIN, "talent trees"),
+    Table("achievements.json",
+          lambda g, o, t: _module("achievements_data").build(
+              g, o / "collection_img"),
+          lambda d: f"{len(d['achievements'])} achievements", TEXT),
+    Table("infusions.json",
+          lambda g, o, t: _module("infusions_data").build(g),
+          lambda d: f"{len(d['infusions'])} infusions", TEXT),
+    Table("build_data.json", lambda g, o, t: _module("build_data").build(g),
+          lambda d: f"{len(d['items'])} gear items", COMPACT, "build data"),
+    Table("gear_stats.json",
+          lambda g, o, t: _module("gear_stats_data").build(g),
+          lambda d: f"{len(d['items'])} items", COMPACT, "gear stats"),
+    Table("codex_items.json",
+          lambda g, o, t: _module("codex_items").build(
+              g, o / "collection_img"),
+          lambda d: f"{len(d)} items", PLAIN, "item codex catalogue"),
+    Table("bestiary.json",
+          lambda g, o, t: _module("bestiary_data").build(
+              g, t["codex_units.json"], o / "bestiary_img"),
+          lambda d: f"{len(d)} monsters", PLAIN, "bestiary"),
+    Table("map.json",
+          lambda g, o, t: _module("map_data").build(g, o / "map_tiles"),
+          lambda d: (f"{len(d['points'])} points, "
+                     f"{len(d['meta']['tiles'])} tiles"), PLAIN, "world map"),
+    Table("dungeons.json", lambda g, o, t: extract_dungeons(g),
+          lambda d: f"{len(d)} dungeons", PLAIN),
+    Table("boss_sheets.json",
+          lambda g, o, t: _module("boss_sheets").build(
+              _cdb(g), [d["boss"] for d in t["dungeons.json"]
+                        if d.get("boss")]),
+          lambda d: f"{len(d['bosses'])} bosses", PLAIN, "boss sheets"),
+    Table("boss_portraits",
+          lambda g, o, t: extract_boss_portraits(
+              g, [d["boss"] for d in t["dungeons.json"]], o / "boss_portraits"),
+          lambda n: f"{n} portraits", label="boss portraits"),
+    Table("ui_logo.png",
+          lambda g, o, t: extract_title_logo(g, o / "ui_logo.png"),
+          label="title logo"),
+    Table("augments.json", lambda g, o, t: extract_augments(g),
+          lambda d: f"{len(d)} augments", PLAIN),
+    Table("rift_rewards.json", lambda g, o, t: extract_rift_rewards(g),
+          lambda d: f"{len(d['bosses'])} bosses", PLAIN),
+    Table("luck.json", lambda g, o, t: extract_luck(g),
+          lambda d: f"{len(d)} counters", PLAIN),
+    Table("item_types.json", lambda g, o, t: extract_item_types(g),
+          lambda d: f"{len(d)} items", PLAIN),
+    Table("item_rarity.json", lambda g, o, t: extract_item_rarity(g),
+          lambda d: f"{len(d)} items", PLAIN),
+    Table("item_icons",
+          lambda g, o, t: extract_item_icons(g, o / "item_icons"),
+          lambda n: f"{n} icons", label="item icons"),
+    Table("status_meta.json", lambda g, o, t: extract_status_meta(g),
+          lambda d: (f"{len(d['status'])} statuses, "
+                     f"{sum(1 for r in d['status'].values() if r.get('name'))}"
+                     f" named, {len(d['types'])} types, "
+                     f"{len(d['items'])} status-granting items"), TEXT),
+)
+
+
+def write_tables(game):
+    """Every table, in order, into the data folder."""
+    built = {}
+    for table in TABLES:
+        path = _OUT_DIR / table.out
         try:
-            import collection_data
-            coll = collection_data.build(Path(hlboot).parent,
-                                         _OUT_DIR / "collection_img")
-            out_coll = _OUT_DIR / "collection.json"
-            out_coll.write_text(json.dumps(coll, indent=0),
+            data = table.build(game, _OUT_DIR, built)
+            if table.dump is not None:
+                path.write_text(json.dumps(data, **table.dump),
                                 encoding="utf-8")
-            print(f"[written] {out_coll} ("
-                  + ", ".join(f"{len(v)} {k}" for k, v in coll.items())
-                  + ")")
         except Exception as e:
-            print(f"[!] collection catalogue skipped ({e})")
-        try:
-            import skills_data
-            tal = skills_data.build(Path(hlboot).parent,
-                                    _OUT_DIR / "skill_img")
-            (_OUT_DIR / "talents.json").write_text(json.dumps(tal, indent=0),
-                                                   encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'talents.json'} "
-                  f"({len(tal['trees'])} trees, {len(tal['runes'])} runes)")
-        except Exception as e:
-            print(f"[!] talent trees skipped ({e})")
-        try:
-            import achievements_data
-            ach = achievements_data.build(Path(hlboot).parent,
-                                          _OUT_DIR / "collection_img")
-            (_OUT_DIR / "achievements.json").write_text(
-                json.dumps(ach, ensure_ascii=False, indent=0),
-                encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'achievements.json'} "
-                  f"({len(ach['achievements'])} achievements)")
-        except Exception as e:
-            print(f"[!] achievements skipped ({e})")
-        try:
-            import infusions_data
-            inf = infusions_data.build(Path(hlboot).parent)
-            (_OUT_DIR / "infusions.json").write_text(
-                json.dumps(inf, ensure_ascii=False, indent=0),
-                encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'infusions.json'} "
-                  f"({len(inf['infusions'])} infusions)")
-        except Exception as e:
-            print(f"[!] infusions skipped ({e})")
-        try:
-            import build_data
-            bd = build_data.build(Path(hlboot).parent)
-            (_OUT_DIR / "build_data.json").write_text(
-                json.dumps(bd, ensure_ascii=False, separators=(",", ":")),
-                encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'build_data.json'} "
-                  f"({len(bd['items'])} gear items)")
-        except Exception as e:
-            print(f"[!] build data skipped ({e})")
-        try:
-            import gear_stats_data
-            gs = gear_stats_data.build(Path(hlboot).parent)
-            (_OUT_DIR / "gear_stats.json").write_text(
-                json.dumps(gs, ensure_ascii=False, separators=(",", ":")),
-                encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'gear_stats.json'} "
-                  f"({len(gs['items'])} items)")
-        except Exception as e:
-            print(f"[!] gear stats skipped ({e})")
-        try:
-            import codex_items
-            ci = codex_items.build(Path(hlboot).parent,
-                                   _OUT_DIR / "collection_img")
-            (_OUT_DIR / "codex_items.json").write_text(
-                json.dumps(ci, indent=0), encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'codex_items.json'} "
-                  f"({len(ci)} items)")
-        except Exception as e:
-            print(f"[!] item codex catalogue skipped ({e})")
-        try:
-            import bestiary_data
-            best = bestiary_data.build(Path(hlboot).parent, codex,
-                                       _OUT_DIR / "bestiary_img")
-            out_best = _OUT_DIR / "bestiary.json"
-            out_best.write_text(json.dumps(best, indent=0), encoding="utf-8")
-            print(f"[written] {out_best} ({len(best)} monsters)")
-        except Exception as e:
-            print(f"[!] bestiary skipped ({e})")
-        try:
-            import map_data
-            wmap = map_data.build(Path(hlboot).parent, _OUT_DIR / "map_tiles")
-            out_map = _OUT_DIR / "map.json"
-            out_map.write_text(json.dumps(wmap, indent=0), encoding="utf-8")
-            print(f"[written] {out_map} ({len(wmap['points'])} points, "
-                  f"{len(wmap['meta']['tiles'])} tiles)")
-        except Exception as e:
-            print(f"[!] world map skipped ({e})")
-        dungeons = extract_dungeons(Path(hlboot).parent)
-        out_dg = _OUT_DIR / "dungeons.json"
-        out_dg.write_text(json.dumps(dungeons, indent=0), encoding="utf-8")
-        print(f"[written] {out_dg} ({len(dungeons)} dungeons)")
-        try:
-            import boss_sheets
-            import pak_extract
-            cdb_bs = json.loads(pak_extract.read_entry(
-                Path(hlboot).parent / "res.light.pak", "data.cdb"))
-            bs = boss_sheets.build(cdb_bs, [d["boss"] for d in dungeons
-                                            if d.get("boss")])
-            (_OUT_DIR / "boss_sheets.json").write_text(
-                json.dumps(bs, indent=0), encoding="utf-8")
-            print(f"[written] {_OUT_DIR / 'boss_sheets.json'} "
-                  f"({len(bs['bosses'])} bosses)")
-        except Exception as e:
-            print(f"[!] boss sheets skipped ({e})")
-        try:
-            n = extract_boss_portraits(Path(hlboot).parent,
-                                       [d["boss"] for d in dungeons],
-                                       _OUT_DIR / "boss_portraits")
-            print(f"[written] {_OUT_DIR / 'boss_portraits'} ({n} portraits)")
-        except Exception as e:
-            print(f"[!] boss portraits skipped ({e})")
-        try:
-            extract_title_logo(Path(hlboot).parent, _OUT_DIR / "ui_logo.png")
-            print(f"[written] {_OUT_DIR / 'ui_logo.png'}")
-        except Exception as e:
-            print(f"[!] title logo skipped ({e})")
-        aug = extract_augments(Path(hlboot).parent)
-        (_OUT_DIR / "augments.json").write_text(json.dumps(aug, indent=0),
-                                                encoding="utf-8")
-        print(f"[written] {_OUT_DIR / 'augments.json'} ({len(aug)} augments)")
-        rift = extract_rift_rewards(Path(hlboot).parent)
-        (_OUT_DIR / "rift_rewards.json").write_text(json.dumps(rift, indent=0),
-                                                    encoding="utf-8")
-        print(f"[written] {_OUT_DIR / 'rift_rewards.json'} "
-              f"({len(rift['bosses'])} bosses)")
-        luck = extract_luck(Path(hlboot).parent)
-        (_OUT_DIR / "luck.json").write_text(json.dumps(luck, indent=0),
-                                            encoding="utf-8")
-        print(f"[written] {_OUT_DIR / 'luck.json'} ({len(luck)} counters)")
-        types = extract_item_types(Path(hlboot).parent)
-        (_OUT_DIR / "item_types.json").write_text(json.dumps(types, indent=0),
-                                                  encoding="utf-8")
-        print(f"[written] {_OUT_DIR / 'item_types.json'} ({len(types)} items)")
-        rar = extract_item_rarity(Path(hlboot).parent)
-        out_rar = _OUT_DIR / "item_rarity.json"
-        out_rar.write_text(json.dumps(rar, indent=0), encoding="utf-8")
-        print(f"[written] {out_rar} ({len(rar)} items)")
-        try:
-            n = extract_item_icons(Path(hlboot).parent,
-                                   _OUT_DIR / "item_icons")
-            print(f"[written] {_OUT_DIR / 'item_icons'} ({n} icons)")
-        except Exception as e:
-            print(f"[!] item icons skipped ({e}) — the loot list shows "
-                  f"names only")
-        smeta = extract_status_meta(Path(hlboot).parent)
-        out_status = _OUT_DIR / "status_meta.json"
-        out_status.write_text(json.dumps(smeta, ensure_ascii=False, indent=0),
-                              encoding="utf-8")
-        named = sum(1 for r in smeta["status"].values() if r.get("name"))
-        print(f"[written] {out_status} ({len(smeta['status'])} statuses, "
-              f"{named} named, {len(smeta['types'])} types, "
-              f"{len(smeta['items'])} status-granting items)")
-    except Exception as e:
-        print(f"[!] display names skipped ({e}) — boss toasts and history "
-              f"dataset names fall back to ids")
-
-    print(json.dumps(meta, indent=2))
+            print(f"[!] {table.label} skipped ({e})")
+            continue
+        built[table.out] = data
+        print(f"[written] {path}"
+              + (f" ({table.summary(data)})" if table.summary else ""))
 
 
 # skill@steps@effects.effect is an enum; "5:Damage,Heal,Shield,GainAtb,Status"
