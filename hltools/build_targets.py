@@ -56,31 +56,14 @@ SHORTLIST = (
 # The functions the hook attaches to, by group: (its key in the file, the
 # functions, what a missing one costs).
 TARGETS = (
-    # every game window opened or closed (escape menu, inventory, map...):
-    # the overlay follows the game's UI; onRemove catches windows torn down
-    # without removeWindow
-    ("ui_targets", ("ui.BaseUI.displayWindow", "ui.BaseUI.removeWindow",
-                    "ui.win.BaseWindow.onRemove"), "UI target"),
-    # the live camera (the minimap turns with it): its per-frame method,
-    # hooked on the base class so whichever camera drives the view is caught
+    # the camera's per-frame method: the hook's clock on the game's own
+    # thread; on the base class, so whichever camera drives the view
     ("cam_targets", ("client.BaseCamera.postUpdate",), "camera target"),
     # the boss bar's own refresh (twice a second): `this` holds the bars
     ("boss_targets", ("ui.hud.BossesInfo.fetchBosses",), "boss target"),
     # a bar is raised for elites too: these tell a boss. Foe.shouldShowBossInfo
     # is not among them: it throws when called with `this` only
     ("boss_fns", ("ent.Unit.isBoss", "ent.Unit.isElite"), "boss target"),
-    # the codex, on a kill, client-side, in this order (the count is already
-    # up when the kill arrives): CodexDiscovered / CodexCompleted (rank 2,
-    # despite the name) / CodexMastered, the rank, then the kill. The
-    # wrappers without __impl are the senders and never fire here.
-    ("codex_targets", ("st.Player.notifyUnitKilled__impl",
-                       "st.Player.notifyCodexUnit__impl",
-                       "st.Player.onUnitCodexRankProgress__impl"),
-     "codex target", "codex popups will not fire"),
-    # a critter capture's result: only a cue to read the collection again
-    ("pet_targets", ("ent.Hero.notifyCapture__impl",
-                     "ent.Hero.notifyCaptureMiss__impl"), "capture target",
-     "the collected-critter mirror will only refresh on its timer"),
 )
 # The local player, through the game's singletons.
 SINGLETON_FNS = ("GameApp.getCameraHero", "ui.Console.getMyHero",
@@ -136,10 +119,8 @@ def resolve(code):
 
 def report(payload):
     """What was found, and each function this build lacks."""
-    ui = payload["ui_targets"]
     print(f"anchors={len(payload['anchors'])}  "
-          f"candidates={len(payload['candidates'])}  "
-          f"ui_targets={len(ui)}/{len(TARGETS[0][1])}")
+          f"candidates={len(payload['candidates'])}")
     for key, wanted, label, *cost in TARGETS:
         for nm in wanted:
             if nm not in payload[key]:

@@ -30,7 +30,6 @@ from __future__ import annotations
 from gamedata import _skill_label, build_data, gear_stats_data
 from gearstats import _atb_level_scaling
 
-PERCENT = 4                         # attribute flag: stored in %
 CLASS_APTITUDE = 1                  # aptitude props flag: a class's
 
 

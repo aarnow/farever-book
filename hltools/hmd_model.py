@@ -680,15 +680,6 @@ def prefab_models(game_dir, prefab, depth=0):
     return out
 
 
-def prefab_parts(game_dir, prefab, depth=0):
-    """(first model file, {material name: gradmat}) of a prefab — the
-    materials of all its models."""
-    models = prefab_models(game_dir, prefab, depth)
-    mats = {}
-    for mdl in reversed(models):
-        mats.update(mdl["mats"])
-    return (models[0]["source"] if models else None), mats
-
 
 def item_prefab(game_dir, item_id):
     """The prefab an item's (or a companion's) model comes from, through

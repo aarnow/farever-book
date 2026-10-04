@@ -23,7 +23,7 @@ from common import (
     PARSE_LENGTH_SECS, PARSE_PREROLL_SECS, POSITION_CACHE, REFRESH_MS,
     RIFTS_DIR, RIFT_PORTAL_SECS, RIFT_STYLE_SECS, SETTINGS_CACHE, VERSION,
     _class_tag, _mmss, _n, _pct1, _pretty_id, class_key, date_fr,
-    element_color, element_label, message_box, phase_label)
+    element_color, element_label, message_box)
 from winsys import (
     HK_RESET, REBIND_TO, RESET_BIND, VK_CONTROL, VK_MENU, VK_MOUSE, VK_SHIFT,
     VK_UNBINDABLE, WM_REBIND, _monitor_containing, bind_label,
@@ -42,14 +42,15 @@ from gamedata import (
     game_folder_hlboot, generated_pictures,
     needs_first_data)
 from combat import (
-    DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot,
-    _overheal_note, _rate_text, _report_name)
+    DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot)
 from bosssheet import boss_sheet_view
 from views import (
     LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
     hunt_detail_view, map_view, rift_rewards_view)
-from reports import render_rift_report_image, report_view
+from reports import (
+    _overheal_note, _rate_text, _report_name, render_rift_report_image,
+    report_view)
 from updater import RELEASES_URL, Updater, clean_downloads
 from bridge import MenuBridge, _Scheduler, _parse_help
 from gamelink import GameLink
@@ -703,9 +704,6 @@ class App:
         acts.update(self.buildtab.actions())
         return acts
 
-
-    def _panel_typing(self, on):
-        pass
 
     def _panel_closed(self):
         """The window was closed: that is quitting the program."""
@@ -2323,7 +2321,7 @@ class App:
             # different number than the picture would be its own bug report.
             dps = _rate_text(ph["total"], dur, "DPS")
             hps = _rate_text(ph["heal"], dur, "HPS")
-            out.append(f"== {phase_label(ph['label'])} — {self._mmss(dur)}, "
+            out.append(f"== {ph['label']} — {self._mmss(dur)}, "
                        f"{dps or '— DPS'}, {hps or '— HPS'} "
                        f"({_n(ph['total'])} dégâts, {_n(ph['heal'])} soins"
                        + _overheal_note(ph, ", {:.0f}% de soin en excès")
@@ -2358,10 +2356,6 @@ class App:
     def _mmss(secs):
         m, s = divmod(int(max(0, secs)), 60)
         return f"{m}:{s:02d}"
-
-    @staticmethod
-    def _elide_name(name, width=14):
-        return name if len(name) <= width else name[:width - 1] + "…"
 
     def _toggle_parse(self):
         if self._parse_state is None and not self.game_connected():
@@ -2750,9 +2744,6 @@ class App:
 
     def _on_game_disconnected(self):
         self.target_pid = None
-        # The hook died with the game: what it said about the game's UI is
-        # stale.
-        self.ui_state.clear()
         # A parse whose data source just died is not a sample of anything.
         if self._parse_state is not None:
             self._stop_parse()

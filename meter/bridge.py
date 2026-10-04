@@ -115,9 +115,6 @@ class MenuBridge:
     def show(self):
         self.send({"t": "show"})
 
-    def hide(self):
-        self.send({"t": "hide"})
-
     def push(self, spec):
         """Send the panel its state, if it has changed.
 
@@ -208,9 +205,6 @@ class MenuBridge:
                 # file each time would be sixty writes a second. The overlay
                 # notices the stamp and saves once the gesture has settled.
                 self.geom_at = time.monotonic()
-        elif t == "typing":
-            self.overlay._enqueue(
-                lambda on=bool(msg.get("on")): self.overlay._panel_typing(on))()
         elif t == "call":
             self._dispatch(msg)
         elif t == "closed":

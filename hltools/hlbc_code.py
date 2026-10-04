@@ -45,7 +45,6 @@ OPCODES = [
     # argument count found by decoding Farever's whole file (2026-10-01).
     ("Catch", 1),
 ]
-OP = {name: i for i, (name, _n) in enumerate(OPCODES)}
 JUMPS = {"JTrue", "JFalse", "JNull", "JNotNull", "JAlways", "JSLt", "JSGte",
          "JSGt", "JSLte", "JULt", "JUGte", "JNotLt", "JNotGte", "JEq",
          "JNotEq", "Trap"}

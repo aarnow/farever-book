@@ -169,9 +169,6 @@ class Api:
         """Fire and forget: a toggle whose only answer is the next state push."""
         self.pipe.send({"t": "call", "id": 0, "m": method, "p": params or {}})
 
-    def typing(self, on):
-        """Kept for the page's search boxes; nothing depends on it now."""
-
     def pick_folder(self):
         """The welcome screen's Parcourir: Windows' folder picker, over the
         window. The folder, or "" when cancelled."""

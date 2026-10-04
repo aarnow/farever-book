@@ -82,23 +82,18 @@ def hook_layout(code):
     hero = offs("ent.Hero")
     layer = offs("st.GameLayer")
     tstate = offs("TimeState")
-    wevents = offs("st.event.WorldEvents")
-    wevent = offs("st.event.WorldEvent")
     player = offs("st.Player")
     group = offs("st.Group")
     base = offs("st.skill.BaseSkill")
     step = offs("st.skill.SkillStep")
     string = offs("String")
-    entity = offs("ent.Entity")
     state = offs("st.State")
-    inter = offs("ent.Interactible")
     activity = offs("st.Activity")
     arrobj = offs("hl.types.ArrayObj")
     foe = offs("ent.Foe")
     unit = offs("ent.Unit")
     status = offs("st.skill.Status")
     elem = offs("ent.Element")
-    cam = offs("client.BaseCamera")
     bosses = offs("ui.hud.BossesInfo")
     bossinfo = offs("ui.hud.BossInfo")
     loadout = offs("st.Loadout")
@@ -107,7 +102,6 @@ def hook_layout(code):
     item = offs("st.Item")
     weapon = offs("st.item.Weapon")
     world = offs("world.World")
-    gath = offs("ent.interactible.Gatherable")
     aproxy = offs("hxbit.ArrayProxyData")
     adyn = offs("hl.types.ArrayDyn")
     progress = offs("st.player.Progress")
@@ -144,17 +138,6 @@ def hook_layout(code):
             f"st.Inventory.content@{inv['content'][0]} — the containers no "
             "longer share a layout; fix the inventory sweep before shipping.")
 
-    # skill display-name chain: BaseSkill.inf (a virtual) -> texts -> name.
-    # The virtual is found through the field's own type: its index moves with
-    # every patch (#963 before the 2026-09-30 one).
-    inf_ti = next(f.type_index
-                  for t in code._super_chain(byname["st.skill.BaseSkill"].index)
-                  for f in getattr(t, "fields", ()) if f.name == "inf")
-    row = code.types[inf_ti]
-    texts_ti = next(f.type_index for f in row.vfields if f.name == "texts")
-    texts = code.types[texts_ti]
-    vidx = lambda vt, nm: next(i for i, f in enumerate(vt.vfields) if f.name == nm)
-
     meta = {
         "String": {"bytes": string["bytes"][0], "length": string["length"][0]},
         # `blocker` and `effect` are read for the nullified-hit diagnostic: the
@@ -164,9 +147,8 @@ def hook_layout(code):
         # these ship so the hook can report them from normal play instead of
         # needing a probe session timed to an immune phase.
         "DamageResult": {k: dr[k][0] for k in
-            ["_amount", "affinity", "_critical", "_kill", "_hitCount",
-             "_block", "blocker", "effect", "target", "serverSource", "ctx",
-             "baseSkill"]},
+            ["_amount", "affinity", "_critical", "_kill", "_block",
+             "blocker", "effect", "target", "baseSkill"]},
         # dynVal1-3 are how MOST player heal skills carry their amount: the
         # cdb's skill@steps@effects rows name `dynVal` rather than a baseVal or
         # a scaling ratio, and these three f64s are hxbit-replicated, so the
@@ -195,11 +177,8 @@ def hook_layout(code):
         "Hero": {"name": hero["name"][0], "player": hero["player"][0],
                  "isInCombat": hero["isInCombat"][0],
                  "layer": hero["layer"][0],
-                 # Legendary-pickup cue: the hero's containers, plus the
-                 # equipped weapon (which is the same st.item.Weapon pointer
-                 # the equipment slot holds — measured).
+                 # the hero's containers (pickups, the goals' counts)
                  "loadout": hero["loadout"][0],
-                 "weaponInHand": hero["weaponInHand"][0],
                  # The class ("Warrior"/"Priest"/"Rogue"/"Mage") and level, for
                  # the Social tab's roster. st.player.HeroData would be the
                  # tidier home for both, but it is null on the client for every
@@ -243,24 +222,13 @@ def hook_layout(code):
                       # from the zone, which is layer.world.level below.
                       "serverName": layer["serverName"][0],
                       "mainActivity": layer["mainActivity"][0],
-                      "worldEvents": layer["worldEvents"][0],
                       "time": layer["_time"][0],
                       # world -> world.World, whose `level` string is the
                       # honest zone/world identity. Main.getMapId() — the old
                       # zone signal — turned out to return the MACHINE NAME.
                       "world": layer["world"][0],
-                      # Minimap: the layer keeps these lists built already, so
-                      # the sweep is a walk of three arrays rather than a
-                      # search. units = heroes + foes, interactibles = chests /
-                      # orbs / obelisks / respawn points, entities = the widest
-                      # net and the only place activities show up.
-                      "units": layer["units"][0],
-                      "interactibles": layer["interactibles"][0],
-                      "entities": layer["entities"][0],
-                      # The whole-shard roster — every player the client has
-                      # state for, not merely the ones streamed in around you.
-                      # This is what the Social tab lists; `units` would only
-                      # ever show your neighbours.
+                      # the whole shard's roster: every player the client
+                      # holds, not only those streamed in around you
                       "players": layer["players"][0]},
         # The loaded level's identity, for the zone signal and the map
         # backdrop. `level` is the primary; name/branchName/_isWorldMap ship
@@ -270,25 +238,12 @@ def hook_layout(code):
                   "name": world["name"][0],
                   "branchName": world["branchName"][0],
                   "_isWorldMap": world["_isWorldMap"][0]},
-        # Every drawable thing descends from ent.Entity, so one set of position
-        # offsets serves heroes, foes, interactibles and activities alike.
-        # rotationZ is radians (measured: observed values span ~2*pi).
-        "Entity": {"posx": entity["posx"][0], "posy": entity["posy"][0],
-                   "posz": entity["posz"][0],
-                   "rotationZ": entity["rotationZ"][0],
-                   "radius": entity["radius"][0]},
         # Despawned-but-still-listed entries. Filtered out of the sweep.
         "State": {"removed": state["removed"][0]},
-        # `enabled` is reported per interactible rather than filtered on, so
-        # whether a looted chest flips this flag or leaves the array entirely
-        # stays a display decision instead of an assumption baked into the hook.
-        "Interactible": {"enabled": inter["enabled"][0],
-                         "isOffScreen": inter["isOffScreen"][0]},
         "Activity": {"kind": activity["kind"][0],
                      "globalCtx": activity["globalCtx"][0],
                      "contexts": activity["contexts"][0]},
-        "Dungeon": {"bossId": dact["bossId"][0],
-                    "bossPhaseReached": dact["bossPhaseReached"][0]},
+        "Dungeon": {"bossId": dact["bossId"][0]},
         "DungeonCtx": {"dungeonState": dctx["dungeonState"][0],
                        "lastStateChanged": dctx["lastStateChanged"][0],
                        "startActivity": dctx["startActivity"][0],
@@ -297,28 +252,9 @@ def hook_layout(code):
                        "step": dctx["step"][0]},
         "InstanceLobby": {"activityId": lobby["activityId"][0],
                           "difficulty": lobby["difficulty"][0]},
-        # Every placed world object is an ent.Element. `kind` is its id
-        # ("Z1_World_Greenlands_WorldChest_60", "RedOrb_World_140") and
-        # `stateId` its state machine — measured: chests read Closed or Locked,
-        # obelisks Closed, orbs Enabled. currentVisualState is NOT the same
-        # thing: it reads "Opened" on chests that are plainly shut.
-        "Element": {"kind": elem["kind"][0], "stateId": elem["stateId"][0],
-                    "currentVisualState": elem["currentVisualState"][0]},
-        # Ore/herb nodes (ent.interactible.Gatherable, an Element subclass).
-        # hitPoints is the replicated "gatherable right now" signal — measured
-        # 2026-08-01: each gather tick steps it down (200..0), depletion flips
-        # enabled 1->0 and NOTHING else (stateId stays "None"), and the respawn
-        # arrives as hp back at max. gatherInf is the CDB row; its texts.type
-        # ("Ore" | "Plant") and texts.name resolve on the game thread the same
-        # way foe nameplates do.
-        "Gatherable": {"hitPoints": gath["hitPoints"][0],
-                       "gatherInf": gath["gatherInf"][0]},
-        # curDirection is the camera yaw actually being rendered; `direction`
-        # is the value it is easing towards. Following the eased one would make
-        # the minimap lead the view it is supposed to match.
-        "Camera": {"direction": cam["direction"][0],
-                   "curDirection": cam["curDirection"][0],
-                   "distance": cam["distance"][0]},
+        # every placed world object (chest, orb, obelisk) is an ent.Element,
+        # `kind` its id ("Z1_World_Greenlands_WorldChest_60")
+        "Element": {"kind": elem["kind"][0]},
         # A foe with a summonOwner is somebody's pet, not a mob. That's the
         # only reliable way to tell them apart — they're the same class.
         # `kind` is the internal id ("Crimson_Z2W_Sword"); `inf` is the CDB row
@@ -329,55 +265,25 @@ def hook_layout(code):
                  # fight (measured), so health is only good for "did it die",
                  # never for a percentage.
                  "attr": unit["attr"][0],
-                 # The buff tracker's source. An hxbit proxy array of
-                 # st.skill.Status — same ArrayProxyData -> ArrayDyn -> ArrayObj
-                 # chain as Collection.pets, so it is plain pointer reads and
-                 # safe from a timer rather than needing the game thread.
+                 # an hxbit proxy array of st.skill.Status (plain pointer
+                 # reads, safe from a timer)
                  "statuses": unit["statuses"][0]},
-        # One live buff/debuff. Status extends BaseSkill, so these are resolved
-        # off the SUBCLASS — the inherited fields land at the same offsets, but
-        # asking the subclass is what guarantees it.
-        #
-        # Measured 2026-08-08 (frida/run_status.py), and none of it is what the
-        # field names suggest:
-        #   * stopTime is -1 on every status. It is not a clock. The expiry is
-        #     startTime + duration.
-        #   * duration GROWS on every refresh while startTime stays put (a
-        #     Zealot was watched going 15.00 -> 64.03), so duration is
-        #     lifetime-at-expiry and NOT the length of the buff.
-        #   * refreshDuration IS the nominal length and stays constant, which
-        #     makes it the only correct denominator for a clock-swipe.
-        #   * refreshDuration == 0 means the status has no timer at all —
-        #     Dash, UnderWater, "Surge of Violence". Those end on an event.
-        #   * stacks is 1-based and climbs on ONE entry; a status does not
-        #     appear once per stack.
-        #   * originItem is the only way to tell two ItemStatuses apart: every
-        #     one of them reports the literal kind "ItemStatus".
+        # One live buff/debuff, resolved off the Status subclass. Measured:
+        # stopTime is -1 on every status (not a clock): it ends at startTime
+        # + duration, and duration grows on every refresh.
         "Status": {"kind": status["kind"][0],
-                   "stacks": status["stacks"][0],
                    "startTime": status["startTime"][0],
                    "stopTime": status["stopTime"][0],
                    "duration": status["duration"][0],
-                   "refreshDuration": status["refreshDuration"][0],
-                   "originItem": status["originItem"][0],
                    "removed": status["removed"][0]},
-        "Foe": {"summonOwner": foe["summonOwner"][0],
-                "persistantSummon": foe["persistantSummon"][0]},
+        "Foe": {"summonOwner": foe["summonOwner"][0]},
         # hl.types.ArrayObj: length, then a pointer to an hl_varray whose
         # ELEMENTS START AT +24, past its (t, at, size, pad) header. Reading
         # from +0 yields the header as your first entity and faults instantly.
         "ArrayObj": {"length": arrobj["length"][0], "array": arrobj["array"][0],
                      "data": 24},
-        # Rift countdown: worldEvents.currentEvents is an hxbit proxy array
-        # (same shape as Group.players), holding st.event.WorldEvent objects.
-        # startTime and serverNow share the server clock.
-        "TimeState": {"serverNow": tstate["serverNow"][0],
-                      "serverStart": tstate["serverStart"][0]},
-        "WorldEvents": {"currentEvents": wevents["currentEvents"][0]},
-        "WorldEvent": {"kind": wevent["kind"][0],
-                       "creationTime": wevent["creationTime"][0],
-                       "startTime": wevent["startTime"][0],
-                       "stopTime": wevent["stopTime"][0]},
+        # the server's clock (statuses' times are on it)
+        "TimeState": {"serverNow": tstate["serverNow"][0]},
         # `uid` is the player's STEAM ACCOUNT ID, not an internal handle:
         # "S" + the id's bytes as hex in LITTLE-ENDIAN order, trailing zero
         # bytes trimmed. Measured 2026-08-02 (frida/steamid_probe.js) and
@@ -417,7 +323,7 @@ def hook_layout(code):
         # party roster is the reason they are here.
         "ArrayProxyData": {"array": aproxy["array"][0]},
         "ArrayDyn": {"array": adyn["array"][0]},
-        "Group": {"groupId": group["groupId"][0], "players": group["players"][0],
+        "Group": {"players": group["players"][0],
                   "instanceLobbies": group["instanceLobbies"][0]},
         # The codex (hunting log), measured 2026-08-05. The
         # whole thing is replicated to the client and reachable by plain
@@ -493,9 +399,6 @@ def hook_layout(code):
         # classes descend from ent.Unit (heroes, foes, bosses and the two
         # vehicles), so this is the same small closed set foeClasses is.
         "unitClasses": descendants("ent.Unit"),
-        # HL virtual field indices for the skill display name
-        "SkillRow": {"id_vidx": vidx(row, "id"), "texts_vidx": vidx(row, "texts")},
-        "Texts": {"name_vidx": vidx(texts, "name"), "desc_vidx": vidx(texts, "desc")},
     }
     return meta
 
@@ -547,8 +450,7 @@ TABLES = (
                      f"elite/boss, {len(d['big'])} big, "
                      f"thresholds {d['thresholds']}"), PLAIN),
     Table("unit_traits.json", lambda g, o, t: extract_unit_traits(g),
-          lambda d: (f"{len(d['critter'])} critters, "
-                     f"{len(d['spark'])} sparkling"), PLAIN),
+          lambda d: f"{len(d['spark'])} sparkling", PLAIN),
     Table("names_fr.json", lambda g, o, t: extract_fr_names(g),
           lambda d: ", ".join(f"{len(v)} {k}" for k, v in d.items()), TEXT),
     Table("collection.json",
@@ -611,11 +513,6 @@ TABLES = (
     Table("item_icons",
           lambda g, o, t: extract_item_icons(g, o / "item_icons"),
           lambda n: f"{n} icons", label="item icons"),
-    Table("status_meta.json", lambda g, o, t: extract_status_meta(g),
-          lambda d: (f"{len(d['status'])} statuses, "
-                     f"{sum(1 for r in d['status'].values() if r.get('name'))}"
-                     f" named, {len(d['types'])} types, "
-                     f"{len(d['items'])} status-granting items"), TEXT),
 )
 
 
@@ -957,8 +854,6 @@ def extract_dungeons(game_dir):
 
 
 # Armour slots: the dungeon's faction set, which no loot table lists.
-ARMOUR_TYPES = {"Head", "Shoulders", "Chest", "Hands", "Waist", "Legs",
-                "Feet", "Back"}
 APTITUDE_CLASS = {"Fighter": "warrior", "Wizard": "mage",
                   "Assassin": "rogue", "Cleric": "priest"}
 
@@ -1272,23 +1167,8 @@ def extract_codex_units(game_dir):
 
 
 def extract_unit_traits(game_dir):
-    """Two per-unit traits the minimap wants, straight out of data.cdb.
-
-      critter - `unit.type == "Critter"`, which the game's own unitType sheet
-                calls "Companions". 74 of them, and they are NOT foes in any
-                sense that matters on a map: they wander, they don't fight, and
-                drawing them as red dots among real mobs is what this fixes.
-      spark   - the `Spark` unit FLAG (bit 22, read off the column definition
-                rather than hardcoded). 36 units carry it and every one of them
-                is named "Sparkling ..." in the cdb: Sparkling Grassflopper,
-                Sparktail, Sparkling Skunk, Sparkling Crab. Ten are critters;
-                the rest are the rare `_U` variants of ordinary mobs.
-
-    `Base_Critter` is excluded — it is the inherit template every critter
-    derives from, not something that spawns.
-
-    Emitted as two id lists. Anything not listed has neither trait.
-    """
+    """{"spark": [unit ids]}: the units carrying the `Spark` flag (its bit
+    read off the column definition), the rare "Sparkling ..." variants."""
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
     e = next(x for x in entries if x.path.endswith("data.cdb"))
@@ -1304,191 +1184,13 @@ def extract_unit_traits(game_dir):
         raise ValueError("unit flags column has no Spark bit")
     spark_bit = bits["Spark"]
 
-    critters, spark = [], []
+    spark = []
     for ln in sheets["unit"]["lines"]:
         uid = ln.get("id")
-        if not isinstance(uid, str) or uid == "Base_Critter":
-            continue
         fl = ln.get("flags")
-        fl = fl if isinstance(fl, int) else 0
-        if ln.get("type") == "Critter":
-            critters.append(uid)
-        if (fl >> spark_bit) & 1:
+        if isinstance(uid, str) and isinstance(fl, int) and (fl >> spark_bit) & 1:
             spark.append(uid)
-    return {"critter": sorted(critters), "spark": sorted(spark)}
-
-
-# Statuses whose `kind` is not a cdb id. Measured 2026-08-08 (frida/run_status.py,
-# resting dump on a Warrior): every st.skill.ItemStatus reports the literal
-# string "ItemStatus", so food and potions are one indistinguishable kind as far
-# as the array is concerned. The tracker identifies those from originItem
-# instead; this list is what tells it which kinds to stop looking up here.
-CLASS_KINDS = ("ItemStatus",)
-
-# The statusType flags column, whose BIT INDICES are read off the column
-# definition rather than hardcoded — same reasoning as the unit `Spark` flag
-# above: a patch inserting a flag would otherwise silently re-point every one.
-STATUS_TYPE_FLAGS = ("DoT", "CrowdControl", "HardCC", "HoT")
-
-# What makes a `skill` row a status. Measured 2026-08-08: filtering on
-# props.status finds 250 rows and MISSES 43 real ones — a probe session on a
-# Warrior turned up "Surge of Violence", "Resilience of the Unkillable Demon
-# King" and PhysicalBlock_Status_WellTimed on the hero, all named, all with
-# icons, none carrying props.status. `nature == Status` finds 293 and is a
-# strict superset of the props.status set, so props.status is only good for the
-# extra columns (maxStacks, types) and not for deciding what counts.
-STATUS_NATURE = "Status"
-
-
-def _status_nature_index(skill_sheet):
-    """Which `nature` enum index means Status, read off the column definition
-    rather than hardcoded — a patch inserting a nature above it would otherwise
-    silently re-point the whole filter, exactly as the heal-effect index and
-    the unit Spark bit are guarded."""
-    for c in skill_sheet["columns"]:
-        if c.get("name") == "nature" and isinstance(c.get("typeStr"), str):
-            names = c["typeStr"].split(":", 1)[-1].split(",")
-            if STATUS_NATURE in names:
-                return names.index(STATUS_NATURE)
-    raise ValueError("skill.nature column has no Status entry")
-
-
-def extract_status_meta(game_dir):
-    """Everything the buff tracker needs to NAME and CLASSIFY a status, from
-    data.cdb — so the picker can offer every buff in the game rather than only
-    the ones you happen to have proc'd, and so a name never costs an HL call.
-
-    A status is a `skill` row whose `nature` is Status (see STATUS_NATURE for
-    why that and not props.status); its `kind` at runtime IS that row's id
-    (measured: Enchant_Zealot_Status, GA_Demon_Combo_Status). 293 rows in this
-    build.
-
-    Per status:
-      name        display name, or absent when the cdb never gave it one (the
-                  internal plumbing — Dash_Status and friends — mostly has none,
-                  which is exactly how the picker knows to hide them)
-      desc        tooltip text, for the picker's list
-      max         the cdb's maxStacks. ADVISORY ONLY, and specifically NOT a
-                  denominator: measured 2026-08-08, GA_Demon_Combo_Status is
-                  maxStacks 3 in the cdb and was observed live at 5 stacks —
-                  gear and talents raise the ceiling, which is why Status has a
-                  computed getMaxStacks() rather than reading this. A tracker
-                  that renders "5/3" is worse than one that renders "5".
-      dur         the cdb's default duration in seconds. NOT authoritative — the
-                  live Status carries its own, which affixes and ranks change —
-                  but it is what lets the picker's preview show a plausible
-                  sweep before you have ever had the buff.
-      types       statusType ids (Buff, Debuff, Bleed, Stun, ...)
-      cc/dot/hot  rolled up from those types' flags, for the picker's filters
-      color       the first type's colour as #rrggbb, which is what a status
-                  with no icon falls back to being drawn as
-
-    Plus a `types` table naming and colouring each category. Icons are NOT here:
-    they come off an atlas in res.pak (857MB) and are a committed asset built by
-    build_status_icons.py, not something to extract on every self-heal.
-    """
-    import pak_extract
-    data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
-    e = next(x for x in entries if x.path.endswith("data.cdb"))
-    cdb = json.loads(data[data_off + e.pos: data_off + e.pos + e.size])
-    sheets = {s["name"]: s for s in cdb["sheets"]}
-
-    def text(node, field):
-        """cdb text columns are sometimes a bare string and sometimes {"v": ...}
-        — both shapes appear in this one file (the unit sheet's names are bare,
-        statusType's are wrapped), so neither may be assumed."""
-        v = (node or {}).get(field)
-        if isinstance(v, dict):
-            v = v.get("v")
-        return v if isinstance(v, str) and v else None
-
-    bits = {}
-    for c in sheets["statusType"]["columns"]:
-        if c["name"] == "flags" and isinstance(c.get("typeStr"), str):
-            names = c["typeStr"].split(":", 1)[-1].split(",")
-            bits = {n: i for i, n in enumerate(names)}
-    missing = [f for f in STATUS_TYPE_FLAGS if f not in bits]
-    if missing:
-        raise ValueError(f"statusType flags column has no {missing} bit(s)")
-
-    types = {}
-    for ln in sheets["statusType"]["lines"]:
-        tid = ln.get("id")
-        if not isinstance(tid, str):
-            continue
-        fl = ln.get("flags") if isinstance(ln.get("flags"), int) else 0
-        col = ln.get("color")
-        entry = {"name": text(ln.get("texts"), "name") or tid}
-        if isinstance(col, int):
-            entry["color"] = f"#{col & 0xFFFFFF:06x}"
-        for f in STATUS_TYPE_FLAGS:
-            if (fl >> bits[f]) & 1:
-                entry[f] = 1
-        types[tid] = entry
-
-    nature_status = _status_nature_index(sheets["skill"])
-    out = {}
-    for ln in sheets["skill"]["lines"]:
-        sid = ln.get("id")
-        if not isinstance(sid, str) or ln.get("nature") != nature_status:
-            continue
-        # Optional: 43 of the 293 statuses have no props.status block at all,
-        # and they are ordinary buffs, not leftovers. Everything read out of it
-        # is therefore a bonus rather than a requirement.
-        props = (ln.get("props") or {}).get("status")
-        props = props if isinstance(props, dict) else {}
-        tids = [t.get("type") for t in (props.get("types") or [])
-                if isinstance(t.get("type"), str)]
-        row = {}
-        nm = text(ln.get("texts"), "name")
-        if nm:
-            row["name"] = nm
-        ds = text(ln.get("texts"), "desc")
-        if ds:
-            row["desc"] = ds
-        if isinstance(props.get("maxStacks"), int):
-            row["max"] = props["maxStacks"]
-        if isinstance(ln.get("duration"), (int, float)):
-            row["dur"] = ln["duration"]
-        if tids:
-            row["types"] = tids
-            for f, key in (("DoT", "dot"), ("HoT", "hot")):
-                if any(types.get(t, {}).get(f) for t in tids):
-                    row[key] = 1
-            if any(types.get(t, {}).get("CrowdControl")
-                   or types.get(t, {}).get("HardCC") for t in tids):
-                row["cc"] = 1
-            col = next((types[t]["color"] for t in tids
-                        if t in types and "color" in types[t]), None)
-            if col:
-                row["color"] = col
-        out[sid] = row
-
-    # Items that grant a status, by name. Needed because every ItemStatus
-    # reports the same kind, so "Beggar's Garbure" and "Minor Alchemist
-    # Cauldron" are one indistinguishable string until the originItem names
-    # them. Scoped to the items that actually grant one rather than reviving
-    # the whole item table, which was dropped from the bundle in 2c67b5a for
-    # its size — this is a few dozen rows, not a thousand.
-    #
-    # props.effects is a LIST of effect blocks, each of which may carry its own
-    # `status` list. It is emphatically not a dict, and treating it as one
-    # silently matches nothing at all.
-    items = {}
-    for ln in sheets["item"]["lines"]:
-        iid = ln.get("id")
-        if not isinstance(iid, str):
-            continue
-        effects = (ln.get("props") or {}).get("effects")
-        if not isinstance(effects, list):
-            continue
-        if not any(isinstance(b, dict) and b.get("status") for b in effects):
-            continue
-        nm = text(ln.get("texts"), "name")
-        if nm:
-            items[iid] = nm
-    return {"status": out, "types": types, "items": items,
-            "classKinds": list(CLASS_KINDS)}
+    return {"spark": sorted(spark)}
 
 
 if __name__ == "__main__":

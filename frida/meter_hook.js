@@ -1171,19 +1171,6 @@ function mapHandle(md) {
     return inner.add(OFF.StringMap.h).readPointer();
 }
 
-function mapKeys(h, max) {
-    const out = [];
-    if (!h || h.isNull() || !hbKeys) return out;
-    const keys = hbKeys(h);
-    if (!keys || keys.isNull()) return out;
-    const n = keys.add(16).readS32();
-    for (let i = 0; i < n && i < max; i++) {
-        const kb = keys.add(24 + i * 8).readPointer();
-        if (kb && !kb.isNull()) out.push(kb.readUtf16String());
-    }
-    return out;
-}
-
 // A StringMap's entries: [[key, value pointer], ...].
 function mapEntries(h, max) {
     const out = [];

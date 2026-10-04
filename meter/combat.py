@@ -9,8 +9,8 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 
 from common import (
-    BOSS_PULL_BACKLAG_SECS, COMBAT_TIMEOUT_SECS, HISTORY_MIN_EVENTS,
-    HISTORY_MIN_SECS, RECENT_EVENT_MAX, _OVERLAY, _class_tag, _n)
+    BOSS_PULL_BACKLAG_SECS, COMBAT_TIMEOUT_SECS, RECENT_EVENT_MAX, _OVERLAY,
+    _class_tag)
 from gamedata import _summon_label, dungeon_name
 
 
@@ -18,21 +18,10 @@ from gamedata import _summon_label, dungeon_name
 # Aggregation
 # ---------------------------------------------------------------------------
 def _skill_ident(ev):
-    """(breakdown key, display name) for one hit or heal event.
-
-    A summon's hit carries `pet` — its raw Unit.kind. The damage already
-    merged into the owner's row upstream, so the breakdown is the only place
-    left that can show a pet was responsible for part of it.
-
-    The KEY is prefixed with the raw kind (stable, and the same on a
-    non-English client), which also keeps a pet's ability separate from an
-    identically named one of the player's own. The NAME gets the sheet's
-    display name — "Nightling Terror: Attack".
-
-    Module-level because the rift recorder now keeps its own per-skill tables
-    for the history dataset, and two copies of this rule is two places for a
-    pet's damage to end up filed under the player's own ability.
-    """
+    """(breakdown key, display name) for one hit or heal event. A summon's
+    hit carries `pet` (its Unit.kind): its damage is the owner's, its skill
+    keyed by the pet so it stays apart from the owner's own of that name, and
+    named after it ("Nightling Terror: Attack")."""
     sid = ev.get("skill", "?")
     nm = ev.get("name")
     pet = ev.get("pet")
@@ -44,59 +33,11 @@ def _skill_ident(ev):
 
 
 def _stamp_report_classes(report, world):
-    """Freeze each player's class acronym into a finished rift report.
-
-    Done once, at the kill, because the report is saved to disk and re-opened
-    later — by then the world sweep has long forgotten a stranger who was in
-    the rift, and the card would show a row of blanks. A player the sweep never
-    saw gets "" and simply has no acronym."""
+    """Each player's class tag frozen into a finished report: it is saved
+    and reopened later, when the shard no longer holds those players."""
     for ph in report.get("phases", ()):
         for p in ph.get("players", ()):
             p["cls"] = _class_tag(world.class_of(p.get("name")))
-
-
-def _report_name(p):
-    """`Brudr (War)` for the report — the acronym only when one is known."""
-    name = p.get("name") or "?"
-    return f"{name} ({p['cls']})" if p.get("cls") else name
-
-
-def _overheal_note(d, fmt=" ({:.0f}% en excès)"):
-    """The overheal clause for a report dict, or "" when there is none to give.
-
-    Rift reports are reloaded from JSON on disk, and a file written before
-    healing meant RAW healing carries `heal` but no `heal_landed`. Treating
-    that absence as zero would stamp every archived report 100% overheal, so
-    an old report simply says nothing about overhealing — which is the truth
-    about what it recorded."""
-    landed = d.get("heal_landed")
-    heal = d.get("heal") or 0.0
-    if landed is None or heal <= 0.5:
-        return ""
-    return fmt.format(_overheal_pct(heal, landed))
-
-
-# A window shorter than this has no rate worth showing. The boss-phase
-# rewind can leave a phase a few milliseconds long, and dividing by that
-# produces a seven-figure DPS that is not a number about anything.
-RATE_MIN_SECS = 0.5
-
-
-def _rate(amount, duration):
-    """`amount` per second, or None when the window is too short to divide by.
-
-    None rather than 0.0, because "no rate" and "a rate of zero" are different
-    facts and the card renders them differently — one shows the total instead,
-    the other shows a real zero."""
-    if not duration or duration < RATE_MIN_SECS:
-        return None
-    return (amount or 0.0) / duration
-
-
-def _rate_text(amount, duration, unit):
-    """"12 345 DPS", or None when there is no rate to state."""
-    r = _rate(amount, duration)
-    return None if r is None else f"{_n(r)} {unit}"
 
 
 def _overheal_pct(total, landed):
@@ -280,7 +221,6 @@ class PlayerAgg:
     heal_total: float = 0.0     # raw healing (see HealSizeEstimator)
     heal_landed: float = 0.0    # ...of which actually restored health
     heal_self: float = 0.0      # ...and of which the healer was the target
-    heal_hits: int = 0
     # skill -> [hits, total, crits]  (damage)
     skills: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0]))
     # skill -> [hits, total, crits, self_total]  (healing). The fourth column
@@ -289,18 +229,8 @@ class PlayerAgg:
     heals: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0, 0.0]))
     # element -> [hits, total]
     elements: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0]))
-    # unit kind -> damage THIS player dealt to it. Per player rather than per
-    # session because a history dataset can be filtered down to your party,
-    # and a session-wide tally would then claim the whole shard's damage on a
-    # boss above rows that only add up to your group's share.
-    targets: dict[str, float] = field(default_factory=lambda: defaultdict(float))
-    first_time: float = 0.0
-    last_time: float = 0.0
 
-    def record(self, skill, element, amount, crit, kill, now, target=None):
-        if self.first_time == 0.0:
-            self.first_time = now
-        self.last_time = now
+    def record(self, skill, element, amount, crit, kill):
         self.total += amount
         self.hits += 1
         if crit:
@@ -311,15 +241,10 @@ class PlayerAgg:
         s[0] += 1; s[1] += amount; s[2] += crit
         e = self.elements[element]
         e[0] += 1; e[1] += amount
-        # Absent on a hit whose target wasn't a unit the hook could name; the
-        # dataset then falls back to its zone name, which is still true.
-        if target:
-            self.targets[target] += amount
 
     def record_heal(self, skill, amount, crit, landed=0.0, is_self=False):
         self.heal_total += amount
         self.heal_landed += landed
-        self.heal_hits += 1
         if is_self:
             self.heal_self += amount
         s = self.heals[skill]
@@ -360,22 +285,9 @@ class PartySession:
         self.capture_until = None   # parse mode's hard cutoff (None = no limit)
         self.capture_start = None   # ...and when that window opened
         # (timestamp, "hit"|"heal", event) for the last few seconds, so a
-        # boss-pull reset can rewind instead of wiping. Only what was actually
-        # recorded goes in here — anything the capture window rejected was never
-        # part of the encounter and must not reappear.
+        # boss-pull reset can rewind instead of wiping: only what was
+        # recorded, never what the capture window rejected
         self._recent: deque = deque(maxlen=RECENT_EVENT_MAX)
-        # Called with the finished encounter, as plain data, every time one is
-        # thrown away. Set by the overlay when combat history is on; None means
-        # a reset is exactly what it always was. Never called under the lock —
-        # the receiver writes a file, and holding the data path open across
-        # disk IO would stall the damage hook.
-        self.archive_hook = None
-        # Which players belong in an archived dataset — the meter's party/all
-        # mode, supplied by the overlay. Applied inside _freeze, BEFORE any
-        # total is summed, so a party dataset's totals, event count, target
-        # tally and minimum-size floor all describe the same set of people.
-        # None keeps everyone (which is what a rift report does deliberately).
-        self.archive_filter = None
 
     def set_capture_window(self, seconds):
         """Parse mode: take data for exactly `seconds` from now, then stop.
@@ -403,7 +315,7 @@ class PartySession:
             return max(0.001, min(now, self.capture_until) - self.capture_start)
         return max(0.001, self._duration(now)) if self.enc_start else 0.0
 
-    def _reset(self, now):
+    def _reset(self):
         self.players.clear()
         self.enc_start = 0.0
         self.active_accum = 0.0
@@ -437,7 +349,7 @@ class PartySession:
             # encounter, and wiping 40 seconds in would ruin the run.
             if (self.capture_until is None and self.last_hit
                     and (now - self.last_hit) > self.timeout):
-                self._reset(now)          # new encounter after a long lull
+                self._reset()             # new encounter after a long lull
             if self.enc_start == 0.0:
                 self.enc_start = now
             self.last_hit = now
@@ -449,7 +361,7 @@ class PartySession:
         lands exactly where the live one did."""
         p.record(self._skill_of(ev), ev.get("element", "?"),
                  float(ev.get("amount", 0.0)), int(ev.get("crit", 0)),
-                 int(ev.get("kill", 0)), ts, ev.get("target"))
+                 int(ev.get("kill", 0)))
 
     def record_heal(self, ev: dict):
         # Heals are recorded but never drive encounter boundaries: an
@@ -485,97 +397,15 @@ class PartySession:
                 self.active_since = None
             self.in_combat = active
 
-    def _freeze(self, now):
-        """The live encounter as plain, JSON-safe data — or None when there
-        isn't enough of one to be worth keeping.
-
-        Called with the lock held and returning nothing but built-ins, so the
-        caller can hand it to a disk writer on another thread without the
-        aggregates moving underneath it.
-        """
-        if not self.players:
-            return None
-        # Filter FIRST. Every number below is summed over `rows`, so a party
-        # dataset is internally consistent — including the floor, which then
-        # asks "did YOUR GROUP fight for long enough", not "did anything
-        # happen on this shard".
-        rows = sorted(self.players.values(), key=lambda p: -p.total)
-        if self.archive_filter is not None:
-            try:
-                rows = list(self.archive_filter(rows))
-            except Exception as e:
-                print(f"[meter] archive filter failed ({e}); keeping every "
-                      "player", file=sys.stderr)
-        if not rows:
-            return None
-        duration = self._effective_duration(now)
-        events = sum(p.hits + p.heal_hits for p in rows)
-        if duration < HISTORY_MIN_SECS or events < HISTORY_MIN_EVENTS:
-            return None
-        targets: dict[str, float] = defaultdict(float)
-        for p in rows:
-            for kind, amt in p.targets.items():
-                targets[kind] += amt
-        return {
-            "at": now,
-            "start": self.enc_start or now,
-            "duration": duration,
-            "events": events,
-            "total": sum(p.total for p in rows),
-            "heal": sum(p.heal_total for p in rows),
-            "heal_landed": sum(p.heal_landed for p in rows),
-            "targets": {k: v for k, v in targets.items() if v > 0.5},
-            # Only the names this encounter actually used: skill_names is
-            # never cleared (a display name is a fact about the game, not
-            # about the fight), and shipping the whole session's table with
-            # every dataset would grow every file for nothing.
-            "skill_names": {
-                sid: nm for sid, nm in self.skill_names.items()
-                if any(sid in p.skills or sid in p.heals for p in rows)},
-            "players": [{
-                "name": p.name,
-                "is_me": bool(p.is_me),
-                "in_party": bool(p.in_party),
-                "total": p.total, "hits": p.hits, "crits": p.crits,
-                "kills": p.kills,
-                "heal": p.heal_total, "heal_landed": p.heal_landed,
-                "heal_self": p.heal_self, "heal_hits": p.heal_hits,
-                "first": p.first_time, "last": p.last_time,
-                "skills": {k: list(v) for k, v in p.skills.items()},
-                "heals": {k: list(v) for k, v in p.heals.items()},
-                "elements": {k: list(v) for k, v in p.elements.items()},
-                # Per player as well as summed above: it answers who was on
-                # the boss and who was on the adds, and it makes the file
-                # self-checking — the dataset's `targets` must be the sum of
-                # these, whatever filter produced it.
-                "targets": dict(p.targets),
-            } for p in rows],
-        }
-
-    def _emit_archive(self, frozen):
-        """Hand a finished encounter to the archive, outside the lock. A
-        broken hook costs the dataset, never the reset that was asked for."""
-        if frozen is None or self.archive_hook is None:
-            return
-        try:
-            self.archive_hook(frozen)
-        except Exception as e:
-            print(f"[meter] couldn't archive the encounter: {e}",
-                  file=sys.stderr)
-
     def reset(self):
-        frozen = None
         with self.lock:
-            now = time.time()
-            frozen = self._freeze(now)
-            self._reset(now)
+            self._reset()
             self.last_hit = 0.0
             self.in_combat = False
-            # A reset always returns to live capture — and so to in-combat DPS.
+            # back to live capture, and so to in-combat DPS
             self.capture_until = self.capture_start = None
             self._recent.clear()
             self.epoch += 1
-        self._emit_archive(frozen)
 
     def reset_keeping_recent(self, backlag=BOSS_PULL_BACKLAG_SECS):
         """Reset the encounter but carry the last `backlag` seconds forward.
@@ -589,22 +419,10 @@ class PartySession:
         a burst that took four seconds as instantaneous.
 
         Returns how many events were carried over, for the log."""
-        frozen = None
         with self.lock:
-            now = time.time()
-            cutoff = now - backlag
+            cutoff = time.time() - backlag
             keep = [e for e in self._recent if e[0] >= cutoff]
-            # The trash phase, archived before the pull takes the meter. The
-            # carried events are counted in BOTH this dataset and the next
-            # one: they are already in these aggregates and there is no exact
-            # way to subtract them back out of a PlayerAgg. `carried` says so
-            # in the file rather than leaving a few seconds of overlap for
-            # someone to discover by adding two datasets up.
-            frozen = self._freeze(now)
-            if frozen is not None:
-                frozen["carried"] = len(keep)
-                frozen["carried_secs"] = backlag
-            self._reset(now)
+            self._reset()
             self.last_hit = 0.0
             self.in_combat = False
             self.capture_until = self.capture_start = None
@@ -631,7 +449,6 @@ class PartySession:
             if self.enc_start:
                 self.active_since = self.enc_start
                 self.in_combat = True
-        self._emit_archive(frozen)
         return len(keep)
 
     def _duration(self, now):
@@ -703,22 +520,18 @@ class RiftRecorder:
 
     @staticmethod
     def _new_phase():
-        # `skills`/`heals` are per player (below); `elements` and `targets`
-        # are per phase, because "what did this phase consist of" is a
-        # question about the phase and not about any one player.
+        # skills / heals per player (below), elements per phase
         return {"players": {}, "elements": defaultdict(float),
-                "targets": defaultdict(float), "start": 0.0, "end": 0.0}
+                "start": 0.0, "end": 0.0}
 
     @staticmethod
     def _player_of(ph, name):
         p = ph["players"].get(name)
         if p is None:
-            # The per-skill tables carry the same [hits, total, crits] (plus
-            # the healing self-share) shape PlayerAgg uses, so a rift dataset
-            # and an ordinary encounter dataset render through one code path.
+            # the per-skill tables: [hits, total, crits] (+ the healing's
+            # self-share), PlayerAgg's shape
             p = {"name": name, "total": 0.0, "hits": 0, "crits": 0,
                  "kills": 0, "heal": 0.0, "heal_landed": 0.0,
-                 "heal_hits": 0,
                  "skills": defaultdict(lambda: [0, 0.0, 0]),
                  "heals": defaultdict(lambda: [0, 0.0, 0, 0.0]),
                  "elements": defaultdict(lambda: [0, 0.0]),
@@ -748,13 +561,9 @@ class RiftRecorder:
             e = p["elements"][el]
             e[0] += sign; e[1] += amount
             p["skillEl"][sid][el] += amount
-            tk = ev.get("target")
-            if tk:
-                ph["targets"][tk] += amount
         else:
             p["heal"] += amount
             p["heal_landed"] += sign * float(ev.get("landed", 0.0))
-            p["heal_hits"] += sign
             h = p["heals"][sid]
             h[0] += sign; h[1] += amount; h[2] += sign * int(ev.get("crit", 0))
             h[3] += amount if ev.get("self") else 0.0
@@ -844,7 +653,7 @@ class RiftRecorder:
 
     def on_boss_kill(self):
         """The kill that ended the fight. Returns the finished report as plain
-        data (safe to hand to the Tk thread), or None if nothing was recording.
+        data (safe to hand to another thread), or None if nothing was recording.
         One report per rift: taking it stops the recording, so the walk to the
         exit portal can't dribble into the boss column."""
         with self.lock:
@@ -888,12 +697,8 @@ class RiftRecorder:
                                "duration": max(0.0, end - start),
                                "players": players, "total": total,
                                "heal": heal, "heal_landed": heal_landed,
-                               "elements": elements,
-                               "targets": {k: v for k, v
-                                           in ph["targets"].items()
-                                           if v > 0.5}})
-            # `skill_names` outlives one rift, so only the names this report
-            # can actually use are written into it — see PartySession._freeze.
+                               "elements": elements})
+            # `skill_names` outlives one rift: only this report's names
             return {"at": now, "phases": phases,
                     "skill_names": {sid: nm for sid, nm
                                     in self.skill_names.items()
@@ -1051,27 +856,14 @@ class DungeonTracker:
 
 
 class WorldSnapshot:
-    """Who you are, who is in your group, and which class every player is.
-
-    Fed by two hook messages: `hero` (the local hero plus the group roster the
-    meter's party filter reads) and `shard` (every player the client holds
-    state for, each with its class). The meter's own rows come from damage
-    events, which carry no class, so this is where the class tag comes from."""
+    """Which class every player is: damage events carry none. Fed by the
+    hook's `shard` message (every player the client holds, with its class);
+    a player who leaves keeps their tag while their damage is on the
+    meter."""
 
     def __init__(self):
         self._lock = threading.Lock()
-        self.party = frozenset()
-        self.local = None
-        # name -> class ("Warrior", "Mage", ...). Kept rather than replaced
-        # wholesale: a player who leaves the layer shouldn't lose their tag on
-        # the meter while their damage is still on it.
-        self.classes = {}
-
-    def set_hero(self, name, party):
-        with self._lock:
-            if name:
-                self.local = name
-            self.party = frozenset(party or ())
+        self.classes = {}           # name -> "Warrior", "Mage"...
 
     def set_shard(self, rows):
         with self._lock:
@@ -1079,79 +871,28 @@ class WorldSnapshot:
                 if r.get("n") and r.get("k"):
                     self.classes[r["n"]] = r["k"]
 
-    def who(self):
-        with self._lock:
-            return self.local, self.party
-
     def class_of(self, name):
         with self._lock:
             return self.classes.get(name)
 
 
 class GameUIState:
-    """Which of the game's own UI windows are open, streamed by the hook.
-
-    The hook watches ui.BaseUI.displayWindow/removeWindow — the game's window
-    manager — and reports each window class as it opens and closes. That lets
-    the overlay react to the game's UI (escape menu open => unlock) instead of
-    making the player remember a key."""
+    """What the hook says about the game: whether a rift is on, and which
+    shard (st.GameLayer.serverName, e.g. "Sfojuxa3386_6601_na": a server,
+    an instance, the region; stored raw, it is compared, not shown)."""
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._open: set[str] = set()
         self._rift = False
-        self._unlock_at = None         # when the game's escape menu opened
-        self._boss_bar = 0
-        self._zone_sig = None
-        # The game's own `World._isWorldMap`. None until a zone message has
-        # carried it — which is not the same as False, and a history dataset
-        # would otherwise call an unknown zone a dungeon.
-        self._zone_world_map = None
-        # Which shard the character is on — st.GameLayer.serverName, sent by
-        # the hook once at attach and then on every change. None until it
-        # arrives, which is a real state worth distinguishing from "no shard":
-        # the settings panel says "..." rather than claiming to know.
-        self._server = None
-
-    def set_zone(self, sig, world_map=None):
-        """layer.world.level from the hook — the loaded level's name, sent
-        once at attach and then on every change. (Its predecessor,
-        Main.getMapId(), turned out to return the machine hostname.)
-
-        `world_map` is the same message's `_isWorldMap`: 1 in an overworld
-        region, 0 in a dungeon or a rift. It is what lets a history dataset
-        say "Siagarta Overworld" without pattern-matching the path."""
-        with self._lock:
-            self._zone_sig = sig or None
-            self._zone_world_map = (None if world_map is None
-                                    else bool(world_map))
+        self._server = None         # None until the hook reports it
 
     def set_server(self, name):
-        """st.GameLayer.serverName from the hook — which shard you are on.
-
-        Measured 2026-08-05: reads "Sfojuxa3386_6601_na", and a relog to
-        character select and back moved it to "Snitura2642_6306_na" while the
-        zone stayed "World/W1_Siagarta" throughout. So it names the shard, not
-        the zone, and the trailing "_na" is the server region.
-
-        Stored raw. Prettifying it would risk two genuinely different shards
-        rendering the same, and the whole use of this string is comparing it
-        with somebody else's."""
         with self._lock:
             self._server = name or None
 
     def server(self):
-        """The shard name, or None if the hook hasn't reported one yet."""
         with self._lock:
             return self._server
-
-
-    def zone(self):
-        """(sig, world_map) together — read as a pair because a history
-        dataset names itself from both, and reading them one lock at a time
-        could straddle a loading screen."""
-        with self._lock:
-            return self._zone_sig, self._zone_world_map
 
     def set_rift(self, state: bool):
         with self._lock:
@@ -1160,21 +901,3 @@ class GameUIState:
     def in_rift(self) -> bool:
         with self._lock:
             return self._rift
-
-    def set_boss_bar(self, count: int):
-        """How many of the game's own boss/elite healthbars are on screen.
-
-        The hook reads ui.hud.BossesInfo, so this counts bars the player can
-        actually see — it goes to zero when they walk away and the boss resets,
-        not just when something dies."""
-        with self._lock:
-            self._boss_bar = max(0, int(count))
-
-
-    def clear(self):
-        with self._lock:
-            self._open.clear()
-            # A loading screen tears the HUD down with it, so a bar that was up
-            # on the way out must not leave the compass hidden in the new zone.
-            self._boss_bar = 0
-

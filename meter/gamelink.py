@@ -12,7 +12,7 @@ from common import (
     _mmss)
 from winsys import _process_age, _window_rect_of_pid
 from gamedata import (
-    DATA_CONSENT, _boss_label, _zone_label, build_script_source,
+    DATA_CONSENT, _zone_label, build_script_source,
     locate_hlboot, regenerate_data)
 from combat import DungeonTracker, _stamp_report_classes
 
@@ -70,7 +70,6 @@ class GameSession:
     fed to the meter until the game closes or the meter stops. Runs on
     GameLink's thread, telling the window each step through GameLink."""
 
-    TARGET_LOG_MAX = 40         # distinct hit targets named in the log
     REPORT_EVERY = 30.0         # seconds between the diagnostics' tallies
     ATTEMPTS = 3                # hook bring-ups before giving up
     BOOTING_GRACE = 120.0       # a game still booting is retried meanwhile
@@ -112,7 +111,6 @@ class GameSession:
         self.nullified_at = 0.0
         self.heal_log_at = 0.0
         self.pet_seen = set()
-        self.target_seen = set()
         self.handlers = {
             "hit": self._on_hit, "heal": self._on_heal,
             "combat": self._on_combat, "rift": self._on_rift,
@@ -356,17 +354,6 @@ class GameSession:
                 self.pet_seen.add(sig)
                 print(f"[meter] summon damage: pet={sig[0]!r} "
                       f"credited to {sig[1]!r}", file=sys.stderr)
-        tgt = p.get("target")
-        if tgt and tgt not in self.target_seen:
-            # what combat history names a fight after, measurable in the log
-            n = len(self.target_seen)
-            if n < self.TARGET_LOG_MAX:
-                print(f"[meter] hit target: {tgt!r} -> "
-                      f"{_boss_label(tgt)!r}", file=sys.stderr)
-            elif n == self.TARGET_LOG_MAX:
-                print(f"[meter] ({self.TARGET_LOG_MAX} distinct hit targets "
-                      "named; no longer listing them)", file=sys.stderr)
-            self.target_seen.add(tgt)
         if not dropped:
             # a hit the target never took is not damage: dropped before it
             # can start or extend a fight
@@ -438,7 +425,6 @@ class GameSession:
         the edge into a boss bar and ends only on a kill of the LAST boss
         bar, a loading screen or the bars staying down: "no bar right now"
         is not an end (the Nightqueen drops hers and raises copies')."""
-        self.ui_state.set_boss_bar(p.get("n") or 0)
         boss_up = bool(p.get("boss"))
         if boss_up and not self.boss_fight_on:
             self._boss_pulled(p)
@@ -518,14 +504,10 @@ class GameSession:
             self.zone_seen = True
             self.link.step("zone", "ok", _zone_label(
                 str(p.get("sig") or "").split("/")[-1]))
-            self.ui_state.set_zone(p.get("sig"), p.get("world_map"))
             print(f"[meter] zone identified ({p.get('sig')!r}"
                   + (f"; {extra}" if extra else "") + ")", file=sys.stderr)
             return
-        self.ui_state.clear()           # the UI is rebuilt across it
-        # reset first: the fight being dropped is filed under the zone left
         self.session.reset()
-        self.ui_state.set_zone(p.get("sig"), p.get("world_map"))
         if self.rift_rec.on_zone():     # a wipe or a walk-out, not a run
             print("[meter] rift recording dropped (zone change)",
                   file=sys.stderr)
@@ -552,7 +534,6 @@ class GameSession:
         """The local hero, re-reported every 3 s with the group: only a new
         one is logged, and never by name (the log is often on screen)."""
         name = p.get("name")
-        self.world.set_hero(name, p.get("party"))
         ov = _overlay()
         if ov is not None and name:
             ov.on_hero_seen(name, p.get("uid"), p.get("acct"))

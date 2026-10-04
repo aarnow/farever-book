@@ -32,7 +32,7 @@ from pathlib import Path
 
 from common import (
     HAS_CONSOLE, LOG_FILE, MENU_FLAG, STOP, TOOL_FLAG, _OVERLAY,
-    _move_rift_reports, message_box, request_stop, run_bundled_tool,
+    message_box, request_stop, run_bundled_tool,
     seed_analysis, setup_logging)
 from winsys import (
     TrayIcon, claim_single_instance, declare_dpi_awareness, display_scale,
@@ -52,7 +52,6 @@ def main():
           f"(display at {display_scale():.2f}x)", file=sys.stderr)
     seed_analysis()
     claim_single_instance()
-    _move_rift_reports()        # after claiming: one instance tidies
     # Only after claiming: before it, the flag on disk may still be the one
     # aimed at the instance we just displaced.
     watch_for_quit_request()

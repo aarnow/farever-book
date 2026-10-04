@@ -6,11 +6,44 @@ import time
 from pathlib import Path
 
 from common import (
-    CLASS_ICON_DIR, OLD_CLASS_TAGS, _mmss, _n, _pct1, _pretty_id, class_key,
-    date_fr, element_color, element_label, phase_label)
+    CLASS_ICON_DIR, _mmss, _n, _pct1, _pretty_id, class_key, date_fr,
+    element_color, element_label)
 from gamedata import (
     RARITY_ORDER, item_icon, item_label, item_rarity, rarity_label)
-from combat import _overheal_note, _rate, _rate_text
+from combat import _overheal_pct
+
+# A window shorter than this has no rate worth showing: a boss phase a few
+# milliseconds long would give a seven-figure DPS.
+RATE_MIN_SECS = 0.5
+
+
+def _rate(amount, duration):
+    """`amount` per second, or None when the window is too short: "no rate"
+    and "a rate of zero" show differently."""
+    if not duration or duration < RATE_MIN_SECS:
+        return None
+    return (amount or 0.0) / duration
+
+
+def _rate_text(amount, duration, unit):
+    """"12 345 DPS", or None when there is no rate to state."""
+    r = _rate(amount, duration)
+    return None if r is None else f"{_n(r)} {unit}"
+
+
+def _report_name(p):
+    """"Aarnow (Prê)": the class's tag when it is known."""
+    name = p.get("name") or "?"
+    return f"{name} ({p['cls']})" if p.get("cls") else name
+
+
+def _overheal_note(d, fmt=" ({:.0f}% en excès)"):
+    """The share of the healing that restored nothing, or "" without
+    healing."""
+    heal = d.get("heal") or 0.0
+    if heal <= 0.5:
+        return ""
+    return fmt.format(_overheal_pct(heal, d.get("heal_landed", heal)))
 
 
 def _parse_font(name, size):
@@ -36,9 +69,7 @@ def report_view(data):
         if boss:
             data = dict(data, phases=boss)
     def cls(p):
-        # Reports saved before the translation carry English tags.
-        c = p.get("cls") or ""
-        return OLD_CLASS_TAGS.get(c, c)
+        return p.get("cls") or ""
 
     def rank(players, key, dur, total):
         out = []
@@ -64,7 +95,7 @@ def report_view(data):
                          key=lambda p: -p["heal"])
         mvp = players[0] if players else None
         phases.append({
-            "label": phase_label(ph.get("label") or "Phase"),
+            "label": (ph.get("label") or "Phase"),
             "dur": _mmss(dur),
             "dps": _rate_text(total, dur, "DPS") or "— DPS",
             "hps": _rate_text(heal, dur, "HPS") or "— HPS",
@@ -184,12 +215,10 @@ def _report_players(data):
             hits = int(p.get("hits") or 0)
             entry = out.setdefault(who, {"name": who,
                                          "ck": class_key(p.get("cls")),
-                                         "cls": OLD_CLASS_TAGS.get(
-                                             p.get("cls") or "",
-                                             p.get("cls") or ""),
+                                         "cls": p.get("cls") or "",
                                          "phases": []})
             entry["phases"].append({
-                "label": phase_label(ph.get("label") or "Phase"),
+                "label": (ph.get("label") or "Phase"),
                 "facts": [
                     ["Dégâts", _n(total)],
                     ["DPS", _n(_rate(total, dur)) if _rate(total, dur)

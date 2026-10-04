@@ -70,38 +70,8 @@ SETTINGS_CACHE = _WRITABLE / ".meter_settings.json"
 BEST_TIMES_CACHE = _WRITABLE / ".meter_besttimes.json"
 
 
-# The rift reports (.json data, .txt, .png), in a folder of their own
-# (gitignored). They used to share parses/ with the parse images, which are
-# no longer saved: _move_rift_reports() moves what is left there.
+# The rift reports (.json data, .txt, .png)
 RIFTS_DIR = _WRITABLE / "failles"
-
-
-OLD_PARSES_DIR = _WRITABLE / "parses"
-
-
-def _move_rift_reports():
-    """Once: the rift reports out of the old shared parses/ folder into
-    failles/, the parse images (no longer saved) deleted, and parses/ removed
-    when nothing else is left in it."""
-    if not OLD_PARSES_DIR.is_dir():
-        return
-    try:
-        RIFTS_DIR.mkdir(parents=True, exist_ok=True)
-        moved = dropped = 0
-        for f in list(OLD_PARSES_DIR.iterdir()):
-            if f.name.startswith("rift-") and f.suffix in (".json", ".txt",
-                                                           ".png"):
-                f.replace(RIFTS_DIR / f.name)
-                moved += 1
-            elif f.name.startswith("parse-") and f.suffix == ".png":
-                f.unlink()
-                dropped += 1
-        if not any(OLD_PARSES_DIR.iterdir()):
-            OLD_PARSES_DIR.rmdir()
-        print(f"[meter] {moved} rift report file(s) moved to {RIFTS_DIR}, "
-              f"{dropped} parse image(s) deleted", file=sys.stderr)
-    except OSError as e:
-        print(f"[meter] couldn't tidy {OLD_PARSES_DIR}: {e}", file=sys.stderr)
 
 
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
@@ -210,33 +180,6 @@ COMBAT_TIMEOUT_SECS = 25.0
 NULLIFIED_BLOCKERS = frozenset({"InvulnerableHit"})
 
 
-# ---------------------------------------------------------------------------
-# Patch quirks
-# ---------------------------------------------------------------------------
-# Things this build of Farever does that the meter has to work around, kept in
-# one block so they can be removed in one edit when a patch fixes them. Nothing
-# else in the file should grow a special case for a single skill: it goes here,
-# or it doesn't go in.
-#
-# --- RETIRED in 3.4.0: the BOOST column ---
-# "Swarmstrike Accord" buffs every ally in range and the game credits the bonus
-# damage to the BUFF'S CASTER rather than to whoever swung, so a wielder's row
-# filled up with the group's damage. 3.3.3 answered that by pulling those hits
-# into a BOOST column that belonged to nobody.
-#
-# That is gone, because the damage turned out to be attributable after all. The
-# blessing is a status instantiated PER ALLY, and the hook now credits the hit
-# to `DamageResult.baseSkill.owner` — the ally carrying the status, i.e. the
-# player who actually swung. Measured 2026-08-04 with frida/boost_probe.js.
-# The fix lives in the agent, so by the time a
-# hit reaches this file it already carries the right player and nothing here
-# needs to know the skill exists.
-#
-# (For the record, since 3.3.3's note named it wrongly: the weapon is
-# Wingsabers, `DS_Z1RBee_AssWiz` — not Beefury/`Sword_Swarm` — and the id that
-# carries the damage is `DS_Bladeleaf_Skill2_Status`.)
-
-
 # How much damage a boss-pull reset keeps rather than wiping.
 #
 # The reset is driven by the game's boss healthbar, and that bar is refreshed on
@@ -277,23 +220,16 @@ PARSE_PREROLL_SECS = 8
 PARSE_LENGTH_SECS = 60
 
 
-# The canvas is redrawn at roughly twice the sweep rate. Matching them exactly
-# would beat against the hook's timer and drop or double frames; drawing a bit
-# faster than the data arrives keeps motion even.
-
-
 # Short class tags for the meter. The game's own names come off ent.Unit.kind,
 # which for a hero is its class rather than a creature id.
 CLASS_ABBR = {"Warrior": "Gue", "Mage": "Mag", "Priest": "Prê", "Rogue": "Vol"}
 
 
-# The class icon for a player, keyed by what the meter knows about them: the
-# game's class name ("Warrior") live, or the abbreviation saved in a rift
-# report — in French or, for reports older than the translation, in English.
+# The class icon for a player: by the game's class name ("Warrior") live,
+# by its tag in a saved report.
 CLASS_KEYS = {"Warrior": "warrior", "Mage": "mage", "Priest": "priest",
-              "Rogue": "rogue", "Gue": "warrior", "War": "warrior",
-              "Mag": "mage", "Prê": "priest", "Pst": "priest",
-              "Vol": "rogue", "Rog": "rogue"}
+              "Rogue": "rogue", "Gue": "warrior", "Mag": "mage",
+              "Prê": "priest", "Vol": "rogue"}
 
 
 CLASS_ICON_DIR = ROOT / "assets" / "classes"
@@ -320,10 +256,6 @@ RIFT_PORTAL_SECS = 180
 RIFT_STYLE_SECS = 900       # ...and turn the box rift-coloured at 15
 
 
-# Big mono while counting; smaller and quieter for the idle placeholder, which
-# is only ever on screen so the window can be dragged into place.
-
-
 # The Help tab's articles, as markdown beside the panel's other web assets.
 # Files rather than string constants so they stay writable prose — and the
 # numeric prefix is the running order, so inserting one is a rename rather than
@@ -337,32 +269,6 @@ HELP_DIR = (ROOT / "web" / "help") if FROZEN else (
 # The index's groups of articles. None for now: the help tab shows the
 # repair alone ("Pour commencer" will come back in another form).
 HELP_GROUPS = ()
-
-
-# Minimum widths, at 100%. They're pixel values, so the scale slider has to
-# scale them too or scaling down just hits the floor and nothing moves.
-# The menu is wide because its tabs run down the LEFT rather than across the
-# top: the navbar eats a fixed strip, and what is left has to still be a
-# comfortable page. It also has to fit the Social tab's widest row — a name, a
-# class, a level and two buttons — without that row deciding the window size on
-# its own.
-# The meter grew by one 6-cell column (OVER%) when healing stopped meaning
-# "health restored" and started meaning "healing done", and the floor had to
-# grow with it or the new column would be drawn off the right edge of every
-# window narrow enough to be at the old minimum.
-MIN_W = {"meter": 404, "detail": 320, "menu": 620, "prompt": 320}
-
-
-# ---- combat history ----
-# The floor a finished encounter has to clear to be worth keeping. Both, not
-# either: a single crit on a passing boar clears the event count in one hit,
-# and standing in a damage aura for ten seconds clears the duration without
-# anything happening. Deliberately low — this exists to keep mis-clicks and
-# walk-bys out of the list, not to judge which fights were interesting.
-HISTORY_MIN_SECS = 5.0
-
-
-HISTORY_MIN_EVENTS = 5
 
 
 # The game's affinity vocabulary as it actually arrives off
@@ -395,15 +301,6 @@ ELEMENT_LABELS = {
 def element_label(el):
     """The French name of an affinity, or the raw value for a new one."""
     return ELEMENT_LABELS.get(el, str(el))
-
-
-# Rift report phases. New reports are written with the French labels; this
-# also translates the English ones in reports saved before the translation.
-PHASE_LABELS_FR = {"Rift phase": "Phase de faille", "Boss phase": "Phase du boss"}
-
-
-def phase_label(label):
-    return PHASE_LABELS_FR.get(label, label)
 
 
 # Month names for dates shown on screen, so they do not depend on the
@@ -591,32 +488,6 @@ def message_box(text, title="Farever France", flags=0x40):
         pass
 
 
-# Finishing the update is the INSTALLER's job, not a helper's.
-#
-# This used to hand off to a detached, hidden PowerShell script that polled
-# until this process died, ran the installer with /SILENT /SUPPRESSMSGBOXES,
-# and relaunched the replaced exe. Every one of those steps is a step malware
-# takes, and Windows Defender agreed: it quarantined FareverMeter.exe (its name then) as
-# `Behavior:Win32/DefenseEvasion.A!ml` — a BEHAVIOURAL detection, on more than
-# one machine, each time right after an update.
-#
-# Hidden PowerShell with -ExecutionPolicy Bypass is the single most flagged
-# pattern in Windows telemetry (ATT&CK T1059.001, and "defense evasion" is
-# literally what the detection was named). Waiting for a parent to exit so you
-# can overwrite its binary, then silently running an installer and relaunching
-# it, is the rest of the same story.
-#
-# None of it was ever necessary. The helper existed only because a /SILENT run
-# REFUSES to proceed while the meter is running (see AskToStopMeter in
-# FareverFrance.iss — a silent run has nobody to answer its prompt, so it bails
-# rather than hang), so something had to wait for us to die first. Run the
-# installer the way a person would — visibly — and Inno asks politely on its
-# own, and its [Run] entry offers to start the meter again afterwards. That
-# entry is flagged `skipifsilent`, so under the old flow it never once ran.
-#
-# What is left is one ShellExecute of a file the user just agreed to install.
-
-
 def _pretty_id(sid: str) -> str:
     """Readable fallback for skills the CDB has no display name for."""
     return sid.replace("_", " ") if sid and sid != "?" else sid
@@ -661,8 +532,6 @@ SETTINGS_TOPICS = {"meter": "DPS Meter", "overlay": "Overlay",
                    "display": "Affichage", "config": "Configuration"}
 
 
-# Class tags written into reports before the interface was translated.
-OLD_CLASS_TAGS = {"War": "Gue", "Pst": "Prê", "Rog": "Vol"}
 
 
 EVENTS_MAX = 40             # lines kept in the live page's event feed
