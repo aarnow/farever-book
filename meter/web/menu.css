@@ -196,10 +196,13 @@ body {
 
 /* the scrollbars, thin and mauve */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
+/* the track stops short of the ends, clear of a box's rounded corners; the
+   thumb's border is see-through, so it sits on any ground */
+::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+::-webkit-scrollbar-track:horizontal { margin: 0 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px;
-                            border: 2px solid var(--bg); }
-::-webkit-scrollbar-thumb:hover { background: var(--line-2); }
+                            border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--line-2); background-clip: padding-box; }
 
 /* ---- the live page's layout: meter and detail side by side ----------------- */
 /* Side by side when there is room for both, stacked otherwise — decided by
@@ -2743,3 +2746,31 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .drow.r-epic .ic, .lootrow.r-epic .ic { --rf: #9A62D8; }
 .drow.r-legendary .ic, .lootrow.r-legendary .ic { --rf: #E0873C; }
 .drow.r-common .ic, .lootrow.r-common .ic { --rf: #8A867C; }
+
+/* ---- an open build: its content on a dark ground, the picture behind ------ */
+.buildpage > .charmain { background: color-mix(in srgb, var(--bg) 88%, transparent);
+                         border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+
+/* ---- Carte: the title fixed, the body under it darker and scrolling ------- */
+.mpanel { display: flex; flex-direction: column; overflow: hidden; padding: 0;
+          background: rgba(26, 24, 46, .97); }
+.mpanel .mtitle { flex: none; margin: 0; border-radius: 0;
+                  box-shadow: 0 2px 8px rgba(0, 0, 0, .35); position: relative; z-index: 1; }
+.mpanel .mbody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px; }
+.mpanel .mbody::-webkit-scrollbar-track { margin: 6px 0 10px; }
+.mpanel .mcat { background: var(--panel); border-color: var(--line); }
+
+/* ---- a build's hero in 3D, in the sheet's middle ---------------------------- */
+.shero.is3d .m3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
+                   cursor: grab; touch-action: none; opacity: 0; transition: opacity .25s; }
+.shero.is3d .m3d:active { cursor: grabbing; }
+.shero.is3d[data-st="ready"] .m3d { opacity: 1; }
+.shero.is3d[data-st="loading"] .cvwait { display: block; top: auto; bottom: 16px; transform: none; }
+.shero.is3d .cvhint { top: 10px; bottom: auto; }
+.shero.is3d[data-st="ready"]:hover .cvhint { opacity: .8; }
+.shero.is3d[data-st="ready"] .hid { justify-content: flex-end; position: relative; z-index: 2;
+                                     pointer-events: none; padding-bottom: 12px; gap: 2px;
+                                     background: linear-gradient(0deg, rgba(20, 18, 38, .75), transparent 22%); }
+.shero.is3d[data-st="ready"] .hid .clsicon,
+.shero.is3d[data-st="ready"] .hid .hhint,
+.shero.is3d[data-st="loading"] .hid .hhint { display: none; }

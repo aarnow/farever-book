@@ -4,7 +4,7 @@
    (meter/buildtab.py); this only draws it and sends the changes. */
 
 let BUILD_NODE = null;
-const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents et runes'], ['sim', 'Simulation']];
+const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'], ['sim', 'Simulation']];
 let BUILD_VIEW = 'stuff';        // the open build's tab
 let BUILD_FADE = false;         // the next draw follows a tab change
 let BUILD_Q = '';               // the piece editor's search
@@ -24,7 +24,7 @@ function buildBuild(n) {
   const main = el('div', 'charmain');
   main.appendChild(buildHead(o));
 
-  // the build in three tabs: the gear, the talents and runes, the simulation
+  // the build in four tabs: the gear, the talents, the runes, the simulation
   const tabs = el('div', 'btabs');
   BUILD_VIEWS.forEach(([k, t]) => {
     const b = el('button', 'btab' + (BUILD_VIEW === k ? ' on' : ''), t);
@@ -49,6 +49,7 @@ function buildBuild(n) {
                                (slot) => notify('build_slot', { slot: slot }),
                                { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
                                  center: o.editor ? editorPanel(o.editor) : null,
+                                 model: o.model,
                                  active: o.editor ? o.editor.slot : null }));
     if ((o.infusions || []).length) {
       main.appendChild(el('div', 'sub2', 'Imprégnations'));
@@ -56,6 +57,8 @@ function buildBuild(n) {
     }
   } else if (BUILD_VIEW === 'talents') {
     buildTalents(o, main);
+  } else if (BUILD_VIEW === 'runes') {
+    main.appendChild(runesSection((o.sim && o.sim.runes) || []));
   } else if (o.sim) {
     main.appendChild(buildSim(o.sim));
   } else {
@@ -71,11 +74,8 @@ function buildBuild(n) {
   return box;
 }
 
-/* The talents tab: the tree, then the runes of the skills on the bar. */
+/* The talents tab: the points spent, then the tree. */
 function buildTalents(o, main) {
-  // the tree on the left, the runes on the right (one under the other
-  // when the window is narrow)
-  const cols = el('div', 'btalents');
   const left = el('div', 'btleft');
   const th = el('div', 'sub2 bsub');
   th.appendChild(document.createTextNode('Talents — ' + o.points.used + ' / '
@@ -97,9 +97,7 @@ function buildTalents(o, main) {
     left.appendChild(talentTree(o.tree, true,
       (id, delta) => notify('build_talent', { id: id, delta: delta })));
   }
-  cols.appendChild(left);
-  cols.appendChild(runesSection((o.sim && o.sim.runes) || []));
-  main.appendChild(cols);
+  main.appendChild(left);
 }
 
 /* The simulation: what the build deals and heals against a target whose

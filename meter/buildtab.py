@@ -274,6 +274,9 @@ class BuildTab:
                        "total": B.talent_points(b),
                        "from": d.get("talentsFrom") or 10},
             "tree": tree, "bar": bar, "passives": passives,
+            # the hero in 3D, wearing the build's armour
+            "model": "hero:" + ".".join(
+                (b["gear"].get(s) or {}).get("id") or "" for s in HERO_SLOTS),
             "sim": self._sim_view(b, (o.get("atbs") or {}).get("raw")),
             "editor": self._editor_view(o) if self.slot else None}
 
@@ -527,6 +530,9 @@ FILTER_STAT_ORDER = ("Vitality", "Strength", "Dexterity", "Faith", "Intellect",
                      "ArmorPenetrationRating", "SpellPenetrationRating")
 ROLE_FR = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 
+
+# the pieces the hero model wears
+HERO_SLOTS = ("Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
 
 def _infusion_options():
     """The infusions, by faction then role, each named with both: the

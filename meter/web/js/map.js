@@ -78,8 +78,12 @@ function mapIcons() {
 }
 
 function mapPanel(n) {
-  const p = el('div', 'mpanel');
-  p.appendChild(el('div', 'mtitle', 'Carte de Siagarta'));
+  // the title stays put, the body under it scrolls (its bar clear of the
+  // panel's rounded corners)
+  const panel = el('div', 'mpanel');
+  panel.appendChild(el('div', 'mtitle', 'Carte de Siagarta'));
+  const p = el('div', 'mbody');
+  panel.appendChild(p);
   const inReg = (pt) => MAP.reg === 'all' || pt.r === MAP.reg;
   const pts = n.points || [];
   // "found / total" when the progress has been read, the total otherwise
@@ -149,12 +153,17 @@ function mapPanel(n) {
     grid.appendChild(b);
   });
   p.appendChild(el('div', 'mhint', 'Glisser pour déplacer · molette pour zoomer · clic sur un point pour le détail'));
-  return p;
+  return panel;
 }
 
 function mapRefreshPanel() {
   const old = document.querySelector('.mpanel');
-  if (old && MAP.node) old.replaceWith(mapPanel(MAP.node));
+  if (!old || !MAP.node) return;
+  // a click in the list keeps it where it was scrolled
+  const top = (old.querySelector('.mbody') || {}).scrollTop || 0;
+  const panel = mapPanel(MAP.node);
+  old.replaceWith(panel);
+  panel.querySelector('.mbody').scrollTop = top;
 }
 
 function mapFit() {

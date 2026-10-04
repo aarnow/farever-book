@@ -852,12 +852,44 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
     return m, parts, anim
 
 
-def item_model(game_dir, item_id, anim=False):
+# the hero as the game dresses it: a body in parts, each worn piece in place
+# of the bare part it covers; the face the game gives a new character
+HERO_BODY = "Character/Hero/Body/"
+HERO_BARE = {"Chest": "Chest_Naked", "Legs": "Legs_Naked",
+             "Hands": "Hands_Naked", "Feet": "Feet_Naked"}
+HERO_FACE = ("MainHead_Naked", "Eyes/Eyes_01_A", "Eyebrows/Eyebrows_01_A")
+
+
+def hero_models(game_dir, item_ids):
+    """The models of a hero wearing these pieces (armour: the weapons and
+    jewels are left out), for item_model."""
+    items = _sheets(game_dir)["item"]
+    prefabs, covered = [], set()
+    worn = [items.get(i) or {} for i in item_ids]
+    if any((it.get("visuals") or {}).get("hideLegs") for it in worn):
+        # a long robe: no legs under it
+        covered.add("Legs")
+        worn = [it for it in worn if it.get("type") != "Legs"]
+    for it in worn:
+        path = (it.get("visuals") or {}).get("modelPath") or ""
+        if it.get("type") in HERO_BARE or it.get("type") in (
+                "Head", "Shoulders", "Back", "Waist"):
+            if path.endswith(".prefab"):
+                prefabs.append(path)
+                covered.add(it.get("type"))
+    prefabs += [HERO_BODY + p + ".prefab" for p in HERO_FACE]
+    prefabs += [HERO_BODY + bare + ".prefab" for t, bare in HERO_BARE.items()
+                if t not in covered]
+    return [m for p in prefabs for m in prefab_models(game_dir, p)]
+
+
+def item_model(game_dir, item_id, anim=False, models=None):
     """The viewer's payload for one collectible (or monster), or None when
     it has no model this reader can make sense of. A prefab of several
-    models comes as one mesh. With `anim`, a unit's idle animation too."""
-    prefab = item_prefab(game_dir, item_id)
-    if not prefab:
+    models comes as one mesh. With `anim`, a unit's idle animation too.
+    `models` instead of the item's: a dressed hero (hero_models)."""
+    prefab = item_prefab(game_dir, item_id) if models is None else None
+    if not prefab and models is None:
         return None
     mount = (_sheets(game_dir)["item"].get(item_id) or {}).get("type") == "Mount"
     idle = (idle_frames(game_dir, item_rig(game_dir, item_id),
@@ -866,7 +898,7 @@ def item_model(game_dir, item_id, anim=False):
     frames = idle[0] if idle else None
     pos, nor, uv, uv2, groups = [], [], [], [], []
     jv, wv, cols, spans = bytearray(), bytearray(), [], []
-    for mdl in prefab_models(game_dir, prefab):
+    for mdl in prefab_models(game_dir, prefab) if models is None else models:
         raw = _read(Path(game_dir) / "res.pak", mdl["source"])
         if not raw or raw[:3] != b"HMD":
             continue

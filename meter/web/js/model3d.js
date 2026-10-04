@@ -16,7 +16,7 @@ const M3D = {
   cur: null,           // the id shown
   gl: null, canvas: null, prog: null, loc: null,
   mesh: null,          // GPU buffers of the shown model
-  yaw: 0.65, pitch: 0.18, dist: 1, center: [0, 0, 0], radius: 1,
+  yaw: 0.65, pitch: 0.18, dist: 1, dist0: 1, lift: 0, center: [0, 0, 0], radius: 1,
   spin: true, drag: null, raf: 0, onState: null,
 };
 
@@ -46,11 +46,16 @@ window.addModel = function (id, json) {
 /* The canvas, for a panel to hold. `onState(state)` hears 'loading',
    'ready' or 'none' (no model: the panel shows the picture instead).
    `opts.pitch`: how far above it the camera starts (gliders: seen from above).
-   `opts.anim`: with its idle animation (a monster), where WebGL2 can play it. */
+   `opts.anim`: with its idle animation (a monster), where WebGL2 can play it.
+   `opts.dist`: how far back the camera starts (1: the model fills the view);
+   `opts.lift`: how much higher than the middle the model stands, in radii
+   (room under it for a caption). */
 function m3dCanvas(id, onState, opts) {
   if (!M3D.canvas) m3dInit();
   M3D.onState = onState;
   M3D.pitch0 = (opts && opts.pitch) || 0.18;
+  M3D.dist0 = (opts && opts.dist) || 1;
+  M3D.lift = (opts && opts.lift) || 0;
   if (opts && opts.anim && M3D.gl2) id += '@anim';
   if (id !== M3D.cur) {
     M3D.cur = id;
@@ -208,7 +213,7 @@ function m3dInit() {
   const up = () => { M3D.drag = null; };
   c.addEventListener('pointerup', up);
   c.addEventListener('pointercancel', up);
-  c.addEventListener('dblclick', () => { M3D.spin = true; M3D.pitch = M3D.pitch0; M3D.dist = 1; });
+  c.addEventListener('dblclick', () => { M3D.spin = true; M3D.pitch = M3D.pitch0; M3D.dist = M3D.dist0; });
   c.addEventListener('wheel', (e) => {
     e.preventDefault();
     M3D.dist = Math.max(0.45, Math.min(2.2, M3D.dist * (e.deltaY > 0 ? 1.1 : 0.9)));
@@ -250,7 +255,8 @@ function m3dLoad(id) {
   }
   M3D.center = [0, 1, 2].map((k) => (mn[k] + mx[k]) / 2);
   M3D.radius = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2 || 1;
-  M3D.dist = 1;
+  M3D.center[1] -= M3D.lift * M3D.radius;
+  M3D.dist = M3D.dist0;
   const buf = (target, data) => {
     const b = gl.createBuffer();
     gl.bindBuffer(target, b);

@@ -298,6 +298,13 @@ function charSheet(o, onSlot, extra) {
     hid.appendChild(el('span', 'hhint', onSlot
       ? 'Clique sur un emplacement pour choisir ou régler une pièce.'
       : 'Clique sur une pièce pour voir son détail ici.'));
+    // a build: the hero in 3D, wearing it; the name over its feet
+    if (extra && extra.model && m3dSupported()) {
+      hero.classList.add('is3d');
+      hero.appendChild(m3dCanvas(extra.model, (st) => { hero.dataset.st = st; }, { pitch: 0.12, dist: 1.12, lift: 0.1 }));
+      hero.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
+      hero.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
+    }
     hero.appendChild(hid);
   }
   doll.appendChild(colL);

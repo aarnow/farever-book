@@ -610,7 +610,7 @@ def _pretty_id(sid: str) -> str:
 # Bump this on every release, and tag the repo with the same string — it's the
 # left-hand side of the comparison below, so a release that forgets it tells
 # everyone they're out of date forever.
-VERSION = "1.12.4"
+VERSION = "1.13.0"
 
 
 # ---------------------------------------------------------------------------
