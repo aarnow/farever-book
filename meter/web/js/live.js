@@ -184,3 +184,48 @@ function buildEvents(n) {
   });
   return p;
 }
+
+
+/* The tab with the game off: what it shows once Farever runs. */
+function buildLiveIntro(n) {
+  const box = el('div', 'lintro');
+  const head = el('div', 'lihead');
+  head.appendChild(el('h1', null, 'En jeu'));
+  head.appendChild(el('p', null, 'Ce module fonctionne en direct, pendant que vous jouez à Farever.'));
+  box.appendChild(head);
+  const grid = el('div', 'ligrid');
+  const card = (cls, icon, title, text, extra) => {
+    const c = el('div', 'licard ' + cls);
+    const ic = el('span', 'liic');
+    ic.innerHTML = icon;
+    c.appendChild(ic);
+    c.appendChild(el('h3', null, title));
+    c.appendChild(el('p', null, text));
+    if (extra) c.appendChild(extra);
+    grid.appendChild(c);
+  };
+  const tags = (list) => {
+    const t = el('div', 'litags');
+    list.forEach((x) => t.appendChild(el('span', null, x)));
+    return t;
+  };
+  card('fight',
+    '<svg viewBox="0 0 24 24"><path d="M6.9 18.5 4 21.4 2.6 20l2.9-2.9-1.4-1.4 1.4-1.4 1.8 1.8L15.7 7.7l-.4-2.9 '
+    + '3.5-2.2 2.6 2.6-2.2 3.5-2.9-.4-8.4 8.4 1.8 1.8-1.4 1.4-1.4-1.4Z"/></svg>',
+    'Vos performances en combat',
+    'Les dégâts et les soins, en DPS et en HPS, pour vous-même et pour votre groupe, combat par combat. '
+    + 'Un clic sur un joueur détaille ses sorts, ses coups critiques, ses éléments et ses soins en excès.',
+    tags(['Dégâts et DPS', 'Soins et HPS', 'Votre groupe', 'Détail par joueur']));
+  card('luck',
+    '<svg viewBox="0 0 24 24"><path d="M12 2 14.6 8.6 21.6 9.2 16.3 13.8 17.9 20.7 12 17 6.1 20.7 7.7 13.8 2.4 9.2 '
+    + '9.4 8.6Z"/></svg>',
+    'Vos chances de butin',
+    'Les chances de butin de votre personnage. Elles augmentent à chaque échec, jusqu’à leur maximum, '
+    + 'sur plusieurs sujets :',
+    tags(n.luck || []));
+  box.appendChild(grid);
+  const foot = el('div', 'lifoot');
+  foot.appendChild(el('span', null, 'Lancez Farever : tout apparaît ici dès que le jeu est détecté.'));
+  box.appendChild(foot);
+  return box;
+}

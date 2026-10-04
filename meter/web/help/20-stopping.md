@@ -22,7 +22,7 @@ seul à la prochaine session.
 
 ## Les pages
 
-* **En direct** — le compteur de dégâts et de soins, le détail du joueur
+* **En jeu** — le compteur de dégâts et de soins, le détail du joueur
   sélectionné (clique sur une ligne du compteur) et les événements : kills de
   boss, records, fins de faille.
 * **Failles** — le butin des failles (paliers de portails, coffre du boss,

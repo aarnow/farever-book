@@ -15,6 +15,7 @@ from buildtab import BuildTab
 
 from common import (
     ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
+    SETTINGS_TOPICS,
     APP_TAB_LABELS,
     BEST_TIMES_CACHE, CODEX_FILE, COLLECTION_FILE, DATA_HOME, DUNGEONS_DIR,
     ELEMENTS_FILE, EVENTS_MAX, FAREVER_STEAM_APPID, HELP_DIR, HELP_GROUPS,
@@ -45,7 +46,7 @@ from combat import (
     _overheal_note, _rate_text, _report_name)
 from bosssheet import boss_sheet_view
 from views import (
-    RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
+    LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
     hunt_detail_view, map_view, rift_rewards_view)
 from reports import render_rift_report_image, report_view
@@ -156,6 +157,7 @@ class App:
         self._rift_view = None              # the rift report being read
         self._launching_until = 0           # Play was clicked: until then
         self._setup = None                  # the welcome screen's state
+        self._settings_topic = "meter"      # Réglages: the subject shown
         self._self_prof = None              # own luck counters (hook, 1 min)
         # a rift's gates: the game's running count when it began, and the
         # report waiting for the count after it (see _rift_gates_seen)
@@ -674,6 +676,10 @@ class App:
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "open_log": self._open_log_folder,
+            "settings_topic": lambda p: setattr(
+                self, "_settings_topic",
+                p.get("id") if p.get("id") in SETTINGS_TOPICS
+                else self._settings_topic),
             # help
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),
             "help_close": lambda: setattr(self, "_help_open", None),
@@ -823,6 +829,10 @@ class App:
     def _page_live(self):
         rows, duration, holding, in_combat = self._live
         online = self.game_connected()
+        if not online:
+            # the game is off: what the tab does once it runs
+            return [{"k": "liveintro", "id": "liveintro",
+                     "luck": [t for _k, t in LUCK_LABELS]}]
         parsing = self._parse_state is not None
         tools = [
             {"id": "toggle_mode", "on": self.mode == "all",
@@ -1874,8 +1884,7 @@ class App:
                 cards.append({"title": label, "art": f"dungeon_diff_{diff}",
                               "value": _mmss(best) if best else "—",
                               "sub": f"{len(won)} victoire"
-                                     f"{'s' if len(won) > 1 else ''}",
-                              "tone": "rift" if best else ""})
+                                     f"{'s' if len(won) > 1 else ''}"})
             # the runs, a card each under their day, as the rifts are
             days = []
             for n, d in mine:
@@ -2040,6 +2049,17 @@ class App:
 
     # ---- settings
     def _page_settings(self):
+        """A menu of subjects on the left, the chosen one's settings."""
+        topic = (self._settings_topic if self._settings_topic
+                 in SETTINGS_TOPICS else "meter")
+        nav = {"k": "setnav", "id": "setnav", "on": topic,
+               "items": [{"id": k, "t": t} for k, t in SETTINGS_TOPICS.items()]}
+        return [nav] + {"meter": self._settings_meter,
+                        "overlay": self._settings_overlay,
+                        "display": self._settings_display,
+                        "config": self._settings_config}[topic]()
+
+    def _settings_meter(self):
         return [
             {"k": "section", "t": "Compteur"},
             {"k": "button", "id": "toggle_heal",
@@ -2054,6 +2074,21 @@ class App:
                                "entrant dans une faille, et revient au groupe "
                                "en sortant. Chaque bascule réinitialise le "
                                "combat."},
+            {"k": "section", "t": "Raccourci clavier"},
+            {"k": "field", "t": "Réinitialiser le combat",
+             "c": {"k": "label", "t": ("appuie sur une touche…"
+                                       if self._binding_now
+                                       else bind_label())}},
+            {"k": "button", "id": "begin_bind", "t": "Changer cette touche"},
+            {"k": "note", "t": "Le raccourci ne fonctionne que lorsque Farever "
+                               "est au premier plan, et n'affiche rien dans le "
+                               "jeu. Il faut Ctrl, Maj ou Alt, sauf pour les "
+                               "touches F1 à F24 et les boutons de souris. "
+                               "Échap annule."},
+        ]
+
+    def _settings_overlay(self):
+        return [
             {"k": "section", "t": "Overlay en jeu"},
             {"k": "button", "id": "ov_toggle_meter",
              "t": self._tick(self._ov_on["meter"], "Compteur du groupe")},
@@ -2068,21 +2103,18 @@ class App:
                                "s'accroche au bord le plus proche de l'écran "
                                f"(grille de {OVERLAY_GRID} px) et garde cette "
                                "distance si la taille du jeu change."},
-            {"k": "section", "t": "Raccourci clavier"},
-            {"k": "field", "t": "Réinitialiser le combat",
-             "c": {"k": "label", "t": ("appuie sur une touche…"
-                                       if self._binding_now
-                                       else bind_label())}},
-            {"k": "button", "id": "begin_bind", "t": "Changer cette touche"},
-            {"k": "note", "t": "Le raccourci ne fonctionne que lorsque Farever "
-                               "est au premier plan, et n'affiche rien dans le "
-                               "jeu. Il faut Ctrl, Maj ou Alt, sauf pour les "
-                               "touches F1 à F24 et les boutons de souris. "
-                               "Échap annule."},
+        ]
+
+    def _settings_display(self):
+        return [
             {"k": "section", "t": "Fenêtre"},
             {"k": "field", "t": "Taille de l'interface",
              "c": {"k": "slider", "id": "set_zoom", "v": int(self._zoom),
                    "min": 50, "max": 200, "step": 5, "unit": "%"}},
+        ]
+
+    def _settings_config(self):
+        return [
             {"k": "section", "t": "Fichiers"},
             {"k": "button", "id": "open_parses",
              "t": "Dossier des rapports de faille"},

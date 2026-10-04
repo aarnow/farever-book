@@ -639,7 +639,7 @@ APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 
 
-APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
+APP_TAB_LABELS = {"Live": "En jeu", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
                   "Hunt": "Codex", "Map": "Carte",
                   "Achievements": "Succès",
@@ -650,6 +650,11 @@ APP_TAB_LABELS = {"Live": "En direct", "Rifts": "Failles",
 
 
 APP_TAB_DEFAULT = "Live"
+
+
+# Réglages: its subjects, in the menu on its left
+SETTINGS_TOPICS = {"meter": "DPS Meter", "overlay": "Overlay",
+                   "display": "Affichage", "config": "Configuration"}
 
 
 # Class tags written into reports before the interface was translated.

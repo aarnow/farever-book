@@ -503,3 +503,31 @@ function buildWelcome(n) {
   box.appendChild(card);
   return box;
 }
+
+
+/* Réglages: the subjects, a menu down the page's left. */
+const SETNAV_ICONS = {
+  meter: '<svg viewBox="0 0 24 24"><path d="M3 20h18v2H3zM5 11h3v8H5zm5.5-5h3v13h-3zM16 14h3v5h-3z"/></svg>',
+  overlay: '<svg viewBox="0 0 24 24"><path d="M3 4h18v12H3zm2 2v8h14V6zm3 12h8v2H8z"/>'
+    + '<path d="M12 7h5v4h-5z"/></svg>',
+  display: '<svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5 2 3h-4zm0 20-2-3h4zM2 12l3-2v4zm20 '
+    + '0-3 2v-4z"/></svg>',
+  config: '<svg viewBox="0 0 24 24"><path d="M3 5h7l2 2h9v12H3zm2 4v8h14V9z"/></svg>',
+};
+
+function buildSetNav(n) {
+  const nav = el('nav', 'setnav');
+  (n.items || []).forEach((it) => {
+    const b = el('button', 'setitem' + (it.id === n.on ? ' on' : ''));
+    b.type = 'button';
+    const ic = el('span', 'setic');
+    ic.innerHTML = SETNAV_ICONS[it.id] || '';
+    b.appendChild(ic);
+    b.appendChild(el('span', null, it.t));
+    b.addEventListener('click', () => {
+      if (it.id !== n.on) notify('settings_topic', { id: it.id });
+    });
+    nav.appendChild(b);
+  });
+  return nav;
+}

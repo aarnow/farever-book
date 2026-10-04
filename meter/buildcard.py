@@ -264,7 +264,7 @@ def card_html(o, hero_uri=""):
             else f'<img class="heroico" src="{cls_icon}">')
     return f'''<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
 :root {{ --bg:#211F3A; --bg2:#1A1930; --panel:#2B2949; --panel2:#36335C; --line:#47447A; --line2:#5B5893;
-  --text:#EEEBFF; --dim:#ADA9D6; --faint:#7F7BAA; --gold:#F2C94C; --hot:#F29A4A; --dmg:#6C9CF5; --heal:#57C08A;
+  --text:#EEEBFF; --dim:#ADA9D6; --faint:#7F7BAA; --gold:#F2C94C; --green:#A6D23B; --hot:#F29A4A; --dmg:#6C9CF5; --heal:#57C08A;
   --fh:"Bahnschrift","Segoe UI Variable Display","Segoe UI",sans-serif; }}
 * {{ box-sizing:border-box; }}
 html,body {{ margin:0; background:var(--bg); }}
@@ -305,8 +305,8 @@ h1 {{ margin:10px 0 6px; font-family:var(--fh); font-size:58px; line-height:1.02
 .at span {{ color:var(--dim); font-size:12px; }}
 .body {{ padding:4px 48px 28px; }}
 .sec {{ display:flex; align-items:center; gap:10px; margin:22px 0 12px; font-family:var(--fh); font-size:19px; font-weight:700; }}
-.sec::before {{ content:""; width:12px; height:12px; transform:rotate(45deg); background:var(--gold); border-radius:2px;
-  box-shadow:0 0 10px rgba(242,201,76,.5); }}
+.sec::before {{ content:""; width:12px; height:12px; transform:rotate(45deg); background:var(--green); border-radius:2px;
+  box-shadow:0 0 10px rgba(166,210,59,.5); }}
 .sec::after {{ content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }}
 .sts {{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }}
 .ss {{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; }}
@@ -337,7 +337,7 @@ h1 {{ margin:10px 0 6px; font-family:var(--fh); font-size:58px; line-height:1.02
 .prism {{ font-style:normal; margin-left:8px; padding:0 7px; border-radius:6px; font-size:11px; font-weight:600;
   color:#8FE3F0; border:1px solid #4FB6C8; background:rgba(79,182,200,.12); text-shadow:0 0 4px rgba(42,184,224,.6); }}
 .inf {{ font-size:12px; color:var(--text); margin-top:1px; display:flex; align-items:center; gap:6px; }}
-.inf i {{ width:7px; height:7px; transform:rotate(45deg); background:var(--gold); flex:none; }}
+.inf i {{ width:7px; height:7px; transform:rotate(45deg); background:var(--green); flex:none; }}
 .inf b {{ color:var(--gold); font-weight:600; }}
 .inf.off {{ color:var(--faint); }}
 .chips {{ display:flex; gap:4px; flex:none; }}

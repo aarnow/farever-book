@@ -1527,16 +1527,17 @@ select:focus, input[type=text]:focus { outline: none; border-color: var(--accent
 .playbtn {
   display: inline-flex; align-items: center; gap: 9px;
   padding: 8px 20px 8px 16px; border-radius: 8px; cursor: pointer;
-  background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, #D9A92E);
-  border: 1px solid #FBE08A; color: #3A2A06;
+  /* green, like Réparer: the main action */
+  background: linear-gradient(180deg, #C4E66A, var(--lime) 45%, var(--lime-2));
+  border: 1px solid #D6F08E; color: #1F2A06;
   font-family: var(--font-head); font-size: 14px; font-weight: 700;
   letter-spacing: 1.6px; text-transform: uppercase;
   text-shadow: 0 1px 0 rgba(255, 255, 255, .3);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 6px rgba(0, 0, 0, .4);
 }
-.playbtn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(242, 201, 76, .5); }
+.playbtn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(166, 210, 59, .5); }
 .playbtn .tri { width: 0; height: 0; border-style: solid; border-width: 7px 0 7px 11px;
-                border-color: transparent transparent transparent #3A2A06; }
+                border-color: transparent transparent transparent #1F2A06; }
 .playbtn.retry { background: linear-gradient(180deg, #F08A6E, #C0503A); border-color: #F5A08A;
                  color: #2E0E06; }
 .gamestate {
@@ -3066,13 +3067,26 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .blisthead { width: 100%; }
 .blisthead .section { flex: none; }
 .blisthead .bheadbtns { flex: 1; align-items: center; }
-.blisthead .bheadbtns .bnew { background: var(--dmg); border-color: var(--dmg); color: #fff; }
-.blisthead .bheadbtns .bdelbtn { background: var(--warn); border-color: var(--warn); color: #fff; }
-.blisthead .bheadbtns .bnew:hover, .blisthead .bheadbtns .bdelbtn:not(:disabled):hover { filter: brightness(1.1); }
-.blisthead .bheadbtns .bcmpbtn { margin-left: auto; background: var(--accent); border-color: var(--accent);
-                                  color: #2A2410; }
-.blisthead .bheadbtns .bcmpbtn:hover { filter: brightness(1.08); }
-.blisthead .bdelbtn.armed { box-shadow: 0 0 0 2px rgba(242, 102, 94, .35); }
+/* the Jouer button's look: a glossy gradient, a light rim, uppercase
+   letters, each in its colour */
+.blisthead .bheadbtns .btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-head); font-size: 13px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 2px 6px rgba(0, 0, 0, .4);
+  background: linear-gradient(180deg, #6E6AAE, #514D8C 45%, #3F3B74); border: 1px solid #8C88CC; color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .3);
+}
+.blisthead .bheadbtns .btn:not(:disabled):hover { filter: brightness(1.1); }
+.blisthead .bheadbtns .bnew { background: linear-gradient(180deg, #A9C4FB, var(--dmg) 45%, #4A78D6);
+                              border-color: #BCD1FC; color: #0E1E44; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+.blisthead .bheadbtns .bdelbtn { background: linear-gradient(180deg, #F8A49D, var(--warn) 45%, #CC4A43);
+                                 border-color: #FABAB4; color: #3A0E0B; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+.blisthead .bheadbtns .bcmpbtn { margin-left: auto;
+                                 background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, #D9A92E);
+                                 border-color: #FBE08A; color: #3A2A06; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+.blisthead .bdelbtn.armed { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 0 0 2px rgba(242, 102, 94, .45),
+                                        0 0 12px rgba(242, 102, 94, .5); }
 .blisthead .bdelbtn:disabled { opacity: .55; cursor: default; }
 .bdelnote { margin: 4px 0 0; }
 .bcard.bpick { padding-right: 40px; }
@@ -3106,7 +3120,7 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
           gap: 6px; text-align: left; }
 .wneeds li { position: relative; padding-left: 20px; color: var(--dim); font-size: 13.5px; }
 .wneeds li::before { content: ""; position: absolute; left: 3px; top: 7px; width: 7px; height: 7px;
-                     transform: rotate(45deg); background: var(--accent); border-radius: 1px; }
+                     transform: rotate(45deg); background: var(--lime); border-radius: 1px; }
 .wsafe { margin: 4px 0 18px; color: var(--faint); font-size: 12.5px; }
 .wpath { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0 auto 18px;
          padding: 10px 14px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
@@ -3123,10 +3137,10 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .wbar { height: 12px; margin: 18px 0 10px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line);
         overflow: hidden; }
 .wbar i { display: block; height: 100%; border-radius: 8px; transition: width .45s linear;
-          background: linear-gradient(90deg, var(--accent), var(--lime)); }
+          background: linear-gradient(90deg, var(--lime-2), var(--lime)); }
 .wring { position: relative; width: 72px; height: 72px; margin: 0 auto 10px; display: grid; place-items: center; }
-.wring i { position: absolute; inset: 0; border-radius: 50%; border: 5px solid rgba(242, 201, 76, .15);
-           border-top-color: var(--accent); border-right-color: var(--lime); animation: wspin 1s linear infinite; }
+.wring i { position: absolute; inset: 0; border-radius: 50%; border: 5px solid rgba(166, 210, 59, .15);
+           border-top-color: var(--lime); border-right-color: var(--lime-2); animation: wspin 1s linear infinite; }
 .wring b { font-family: var(--font-head); font-size: 17px; color: #fff; }
 @keyframes wspin { to { transform: rotate(360deg); } }
 .wrows { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
@@ -3140,7 +3154,7 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .wrows li.wdone .wmark { background: var(--ok); border-color: var(--ok); color: #1B2408; }
 .wrows li.wrun { color: #fff; border-color: rgba(242, 201, 76, .45); background: rgba(242, 201, 76, .06); }
 .wrows li.wrun b { color: var(--accent); }
-.wrows li.wrun .wmark { border-color: rgba(242, 201, 76, .25); border-top-color: var(--accent);
+.wrows li.wrun .wmark { border-color: rgba(166, 210, 59, .25); border-top-color: var(--lime);
                         animation: wspin .8s linear infinite; }
 .wgame { margin: 0 0 20px; color: var(--text); font-family: var(--font-head); font-size: 18px; }
 .wback { display: block; margin: 14px auto 0; }
@@ -3157,3 +3171,85 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 #page.page-Help > .btn.go { display: flex; width: fit-content; margin-left: calc(50% - min(400px, 50%)); }
 .btn.go:hover { filter: brightness(1.08); border-color: #E2F7A6;
                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(166, 210, 59, .5); }
+
+
+/* "En jeu" with the game off (live.js buildLiveIntro) */
+.lintro { max-width: 900px; margin: 6px auto 0; }
+.lihead { text-align: center; margin-bottom: 20px; }
+.lihead h1 { margin: 0 0 6px; font-family: var(--font-head); font-size: 30px; color: #fff; }
+.lihead p { margin: 0; color: var(--accent); font-size: 15px; }
+.ligrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+html.lt-760 .ligrid { grid-template-columns: minmax(0, 1fr); }
+.licard { position: relative; padding: 22px 22px 20px; border-radius: 16px; overflow: hidden;
+          background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line-2);
+          box-shadow: 0 14px 34px rgba(0, 0, 0, .3); }
+.licard.fight { --c: var(--dmg); }
+.licard.luck { --c: var(--accent); }
+.liic { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 12px;
+        background: color-mix(in srgb, var(--c) 16%, transparent);
+        border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
+.liic svg { width: 26px; height: 26px; fill: var(--c); }
+.licard.fight .liic svg { width: 32px; height: 32px; }
+.licard h3 { margin: 0 0 8px; font-family: var(--font-head); font-size: 19px; color: #fff; }
+.licard p { margin: 0 0 14px; color: var(--dim); font-size: 13.5px; line-height: 1.55; }
+.litags { display: flex; flex-wrap: wrap; gap: 6px; }
+.litags span { padding: 3px 10px; border-radius: 20px; font-size: 12px; color: var(--text);
+               background: var(--bg-2); border: 1px solid color-mix(in srgb, var(--c) 40%, var(--line)); }
+.lifoot { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+          margin-top: 22px; color: var(--dim); font-size: 13.5px; }
+
+
+/* ---- green: what is active and what progresses ----------------------------
+   The Jouer / Réparer green, for coherence: the diamonds before the titles,
+   the navigation's active tab, progress (bars, rings, pips, spinners). The
+   gold stays for borders, highlighted text, badges and the pips (codex,
+   succès). */
+.section::before, .bssec::before {
+  background: linear-gradient(135deg, #D6F08E, var(--lime-2));
+  box-shadow: 0 0 6px rgba(166, 210, 59, .5);
+}
+/* the line after a title: light enough to read on a dungeon's or a rift's
+   picture, fading out to the right */
+.section::after { height: 1px;
+  background: linear-gradient(90deg, rgba(214, 240, 142, .55), rgba(225, 220, 255, .28) 35%, transparent); }
+#nav button.active { color: var(--lime); }
+#nav button.active::after, #navink { background: var(--lime); box-shadow: 0 0 10px rgba(166, 210, 59, .45); }
+#appbtns .navicon.active { color: #1F2A06; border-color: #D6F08E;
+                           background: linear-gradient(180deg, #C4E66A, var(--lime-2));
+                           box-shadow: 0 0 10px rgba(166, 210, 59, .45); }
+.btab.on { color: var(--lime); border-bottom-color: var(--lime); }
+.collbar i, .achcard .abar i { background: linear-gradient(90deg, var(--lime-2), var(--lime)); }
+.ring .fill { stroke: var(--lime); }
+.step.s-run .stmk { border-color: var(--lime); border-top-color: transparent; }
+
+/* The collection's list: its pieces fade out at its top and bottom edges
+   as it scrolls, rather than being cut clean (room left so that, at rest,
+   nothing is faded) */
+.coll .colllist .collgrid {
+  padding-top: 16px; padding-bottom: 22px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 22px), transparent 100%);
+}
+
+
+/* Réglages: its subjects in a menu on the left (frame.js buildSetNav), the
+   chosen one's settings beside it */
+#page.page-Settings { display: grid; grid-template-columns: 210px minmax(0, 760px); justify-content: center;
+                      column-gap: 28px; align-content: start; }
+#page.page-Settings > * { grid-column: 2; margin-left: 0; margin-right: 0; }
+#page.page-Settings > .setnav { grid-column: 1; grid-row: 1 / span 40; align-self: start; position: sticky; top: 0; }
+html.lt-760 #page.page-Settings { grid-template-columns: minmax(0, 1fr); }
+html.lt-760 #page.page-Settings > * { grid-column: 1; }
+html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; flex-direction: row; flex-wrap: wrap; }
+.setnav { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 14px;
+          background: var(--panel); border: 1px solid var(--line); }
+.setitem { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; cursor: pointer;
+           background: none; border: 1px solid transparent; color: var(--dim); text-align: left;
+           font-family: var(--font-head); font-size: 14px; font-weight: 600; letter-spacing: .3px;
+           transition: background-color .18s ease, color .18s ease, border-color .18s ease; }
+.setitem:hover { background: var(--panel-2); color: #fff; }
+.setic { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px;
+         background: var(--bg-2); border: 1px solid var(--line); }
+.setic svg { width: 17px; height: 17px; fill: currentColor; }
+.setitem.on { color: #fff; background: rgba(166, 210, 59, .1); border-color: rgba(166, 210, 59, .45); }
+.setitem.on .setic { color: #1F2A06; border-color: #D6F08E; background: linear-gradient(180deg, #C4E66A, var(--lime-2)); }
