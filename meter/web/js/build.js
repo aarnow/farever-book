@@ -752,23 +752,32 @@ function buildModal(id, title, fill, buttons) {
   return close;
 }
 
-/* "+ Nouveau build": by hand, or step by step with the guide. */
-function newBuildDialog() {
+/* "+ Nouveau build": by hand, step by step with the guide, or the
+   character in game copied (once the game has said who it is). */
+function newBuildDialog(n) {
   let close = null;
-  const pick = (title, text, act) => {
-    const c = el('button', 'bnewpick');
+  const pick = (title, text, act, off) => {
+    const c = el('button', 'bnewpick' + (off ? ' off' : ''));
     c.type = 'button';
     c.appendChild(el('b', null, title));
     c.appendChild(el('span', null, text));
-    c.addEventListener('click', () => { if (close) close(); act(); });
+    if (off) c.disabled = true;
+    else c.addEventListener('click', () => { if (close) close(); act(); });
     return c;
   };
+  const me = (n && n.me) || null;
   close = buildModal('newbuildmodal', 'Nouveau build', (box) => {
     const row = el('div', 'bnewpicks');
     row.appendChild(pick('Manuellement', 'Un build vide : tu choisis toi-même chaque pièce, '
       + 'les talents et les compétences.', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); }));
     row.appendChild(pick('Avec assistance', 'Quelques questions (classe, armes, attributs, '
       + 'statistiques, objectif) et le build est composé pour toi.', openGuide));
+    row.appendChild(pick('Depuis mon personnage',
+      !me ? 'Lance le jeu : ton personnage doit être identifié.'
+        : me.wait ? 'Lecture de ' + me.n + '…'
+          : 'Copie l’équipement, les talents, les compétences et les runes de ' + me.n
+            + (me.when ? ' (le jeu est fermé : tel que lu le ' + me.when + ')' : '') + '.',
+      () => { BUILD_VIEW = 'stuff'; notify('build_from_me', {}); }, !me || me.wait));
     box.appendChild(row);
   }, [['Annuler', 'rowbtn', null]]);
 }
@@ -802,27 +811,16 @@ function deleteBuildsDialog(list, box, n) {
 function buildList(n, box) {
   const head = el('div', 'blisthead');
   head.appendChild(el('div', 'section', 'Mes builds'));
+  // importing, a new build (blue), deleting (red); comparing at the right
   const btns = el('div', 'bheadbtns');
-  // a quick start: the character in game, copied into a build
-  const me = el('button', 'btn bme' + (n.me ? '' : ' off'),
-    n.me && n.me.wait ? 'Lecture de ' + n.me.n + '…'
-      : 'Créer depuis mon personnage' + (n.me ? ' (' + n.me.n + ')' : ''));
-  if (n.me && n.me.when) me.title = 'Le jeu est fermé : ' + n.me.n + ' tel que lu le ' + n.me.when + '.';
-  me.type = 'button';
-  me.title = n.me ? 'Copie l’équipement, les talents, les compétences et les runes de '
-    + n.me.n + ' dans un nouveau build.' : 'Lance le jeu : ton personnage doit être identifié.';
-  if (n.me && n.me.wait) me.disabled = true;
-  me.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_from_me', {}); });
-  btns.appendChild(me);
   const imp = el('button', 'btn bimp', 'Importer un code');
   imp.type = 'button';
   imp.addEventListener('click', importCodeDialog);
   btns.appendChild(imp);
-  const cmp = el('button', 'btn bcmpbtn', 'Comparer');
-  cmp.type = 'button';
-  cmp.title = 'Compare deux builds de la même classe, côte à côte.';
-  cmp.addEventListener('click', () => notify('build_cmp_open', {}));
-  btns.appendChild(cmp);
+  const nb = el('button', 'btn bnew', '+ Nouveau build');
+  nb.type = 'button';
+  nb.addEventListener('click', () => newBuildDialog(n));
+  btns.appendChild(nb);
   // deleting: a first click to pick the builds, a second to confirm them
   const files = new Set((n.list || []).map((b) => b.file));
   if (BUILD_DEL) BUILD_DEL.forEach((f) => { if (!files.has(f)) BUILD_DEL.delete(f); });
@@ -844,10 +842,11 @@ function buildList(n, box) {
       btns.appendChild(no);
     }
   }
-  const nb = el('button', 'btn bnew', '+ Nouveau build');
-  nb.type = 'button';
-  nb.addEventListener('click', newBuildDialog);
-  btns.appendChild(nb);
+  const cmp = el('button', 'btn bcmpbtn', 'Comparer');
+  cmp.type = 'button';
+  cmp.title = 'Compare deux builds de la même classe, côte à côte.';
+  cmp.addEventListener('click', () => notify('build_cmp_open', {}));
+  btns.appendChild(cmp);
   head.appendChild(btns);
   box.appendChild(head);
   if (BUILD_DEL) {

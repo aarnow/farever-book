@@ -2226,10 +2226,8 @@ html:not(.lt-1250) .btalents { grid-template-columns: minmax(420px, 640px) minma
 
 /* Build list: copy one's own character, beside "Nouveau build" */
 .bheadbtns { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn.bme.off { opacity: .55; }
 .blisthead .bheadbtns { flex: none; }
 .blisthead .bheadbtns .btn { width: auto; max-width: none; margin: 0; }
-.blisthead .bme:not(.off) { border-color: var(--accent); color: var(--accent); }
 
 
 /* ---- smoother navigation -------------------------------------------------
@@ -3052,7 +3050,10 @@ html.lt-760 .sheet.card > .shero { position: static; height: 420px; }
 .bdialog { width: min(560px, 92vw); padding: 18px 20px; }
 .bdialog .bbtns { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 14px; }
 .bdialog .bbtns .btn { width: auto; max-width: none; margin: 0; padding-left: 22px; padding-right: 22px; }
-.bnewpicks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+#newbuildmodal .bdialog { width: min(780px, 92vw); }
+.bnewpicks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.bnewpick.off { opacity: .5; cursor: default; }
+.bnewpick.off:hover { border-color: var(--line); background: var(--bg-2); }
 html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .bnewpick { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 12px; text-align: left;
             background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font: inherit; cursor: pointer; }
@@ -3060,7 +3061,18 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .bnewpick span { font-size: 12px; color: var(--dim); line-height: 1.4; }
 .bnewpick:hover { border-color: var(--accent); background: rgba(242, 201, 76, .08); }
 .blisthead .bdelbtn, .blisthead .bdelno { width: auto; max-width: none; margin: 0; }
-.blisthead .bdelbtn.armed { background: var(--warn); border-color: var(--warn); color: #fff; }
+/* the header: the title, then importing, new (blue), deleting (red), and
+   comparing (gold) pushed to the right */
+.blisthead { width: 100%; }
+.blisthead .section { flex: none; }
+.blisthead .bheadbtns { flex: 1; align-items: center; }
+.blisthead .bheadbtns .bnew { background: var(--dmg); border-color: var(--dmg); color: #fff; }
+.blisthead .bheadbtns .bdelbtn { background: var(--warn); border-color: var(--warn); color: #fff; }
+.blisthead .bheadbtns .bnew:hover, .blisthead .bheadbtns .bdelbtn:not(:disabled):hover { filter: brightness(1.1); }
+.blisthead .bheadbtns .bcmpbtn { margin-left: auto; background: var(--accent); border-color: var(--accent);
+                                  color: #2A2410; }
+.blisthead .bheadbtns .bcmpbtn:hover { filter: brightness(1.08); }
+.blisthead .bdelbtn.armed { box-shadow: 0 0 0 2px rgba(242, 102, 94, .35); }
 .blisthead .bdelbtn:disabled { opacity: .55; cursor: default; }
 .bdelnote { margin: 4px 0 0; }
 .bcard.bpick { padding-right: 40px; }
