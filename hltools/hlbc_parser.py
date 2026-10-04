@@ -1,18 +1,10 @@
 """
 hlbc_parser.py — self-contained HashLink bytecode reader (format v4/v5).
 
-Parses hlboot.dat up through the *natives* section, which is everything we need
-to build a memory-reading meter:
-
-  * String pool
-  * Full type table — every HOBJ/HSTRUCT class with its field names+types,
-    method prototypes (name -> function index), and bindings.
-  * Globals and natives (native name -> function index + owning hdll).
-
-We deliberately do NOT parse function bodies (opcodes). Their only use would be
-argument-type inference, which we do live instead by reading each hooked
-object's runtime hl_type header. Skipping opcodes avoids depending on the
-version-specific opcode arg tables — the fragile part of the format.
+Parses hlboot.dat up through the natives section: string pool, type table
+(classes with fields, method prototypes and bindings), globals and natives.
+Function bodies are not parsed: the opcode tables are version-specific, the
+fragile part of the format.
 
 Reference: hashlink/src/code.c hl_code_read.
 """
@@ -134,7 +126,6 @@ class HLCode:
         self.natives: list[Native] = []
         self.counts: dict[str, int] = {}
 
-    # ---- string pool ----
     def _read_strings(self, r: HLReader, n: int) -> list[str]:
         size = r.i32()
         sdata = r.d[r.p:r.p + size]
@@ -197,7 +188,6 @@ class HLCode:
                 t.constructs.append((cn, params))
         elif kind >= HLAST:
             raise ValueError(f"invalid type kind {kind} at type {idx} pos {r.p}")
-        # else: primitive kinds carry no extra payload
         return t
 
     def parse(self) -> "HLCode":
@@ -246,12 +236,8 @@ class HLCode:
             ti = r.index()
             findex = r.index()
             self.natives.append(Native(lib, name, ti, findex))
-        # Stop here — functions/constants are not parsed (hlbc_code.py
-        # reads them on demand, from this offset).
-        self.functions_offset = r.p
         return self
 
-    # ---- convenience views ----
     def type_str(self, ti: int) -> str:
         if ti < 0 or ti >= len(self.types):
             return f"?{ti}"
@@ -282,7 +268,7 @@ class HLCode:
     def obj_types(self) -> list[HType]:
         return [t for t in self.types if t.kind in (HOBJ, HSTRUCT) and t.name]
 
-    # ---- runtime object field layout (mirrors hashlink hl_get_obj_rt) ----
+    # runtime object field layout (mirrors hashlink hl_get_obj_rt)
     @staticmethod
     def _type_size(kind: int) -> int:
         if kind == HVOID:
@@ -312,9 +298,8 @@ class HLCode:
     def field_offsets(self, tindex: int) -> dict[str, tuple[int, int, str]]:
         """Map field name -> (byte_offset, kind, type_str) for a runtime HL obj.
 
-        Object memory begins with an 8-byte hl_type* header, then fields laid
-        out base-class-first, each aligned to its own size (min 1). Matches
-        hashlink's hl_get_obj_rt so offsets are valid for direct memory reads.
+        An 8-byte hl_type* header, then fields base-class-first, each aligned
+        to its own size (as hashlink's hl_get_obj_rt).
         """
         size = 8  # HL_WSIZE header (the hl_type* pointer)
         out: dict[str, tuple[int, int, str]] = {}

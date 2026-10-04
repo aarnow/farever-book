@@ -152,9 +152,8 @@ function svgIcon(d) {
   return svg;
 }
 
-/* The tabs are built once and kept: only which one is active changes, so
-   its colour can ease in and one gold bar (#navink) can slide under it.
-   A click shows the new tab at once; the page follows (core.js). */
+/* Tabs are built once and kept, so the active colour can ease in and the
+   gold bar (#navink) can slide between them. */
 const NAV_BTNS = {};
 let NAV_ACTIVE = null;
 
@@ -212,8 +211,7 @@ function showTab(t) {
   }
   // the first placement does not slide in from the left edge
   ink.classList.toggle('still', first || ink.style.opacity === '0');
-  // under its tab: on the band's bottom edge when the tabs fit on one line,
-  // right under the tab when they wrap onto two
+  // on the band's bottom edge, or right under the tab when the tabs wrap
   const nav = $('#nav');
   const rows = new Set(Object.values(NAV_BTNS).filter((x) => x.parentNode === nav)
     .map((x) => x.offsetTop)).size;
@@ -223,8 +221,7 @@ function showTab(t) {
   ink.style.opacity = '1';
 }
 
-/* The bar follows its tab when the band reflows: window resized, the
-   interface zoomed, the tabs wrapping onto two lines. */
+/* The bar follows its tab when the band reflows (resize, zoom, wrap). */
 let NAV_WATCH = null;
 function watchNav() {
   if (NAV_WATCH) return;
@@ -269,9 +266,8 @@ function renderLink(l, shard) {
   box.appendChild(st);
 }
 
-/* The window's own frame: the title bar drags the window (a double click
-   maximises), the edges resize it, and the three buttons do what the native
-   caption's did. All through the host (menu_host.Api.win). */
+/* The frameless window's drag, resize and caption buttons, all through the
+   host (menu_host.Api.win). */
 function winCall(action, arg) {
   const api = window.pywebview && window.pywebview.api;
   if (!api || !api.win) return Promise.resolve(false);
@@ -284,9 +280,8 @@ function setMaxState(isMax) {
   if (b) b.title = isMax ? 'Restaurer' : 'Agrandir';
 }
 
-/* Follow the mouse while a button is held, sending the host at most one
-   new rectangle per frame (and never a new one before the last is done):
-   the window keeps up without flooding the bridge. */
+/* At most one rectangle per frame, never before the last one is done:
+   keeps up without flooding the bridge. */
 function followMouse(e, place) {
   winCall('rect').then((r) => {
     if (!r) return;
@@ -351,15 +346,8 @@ function initWindowFrame() {
   });
 }
 
-/* ---- the state push ----------------------------------------------------- */
-/* Called by the host with a JSON *string*: the state carries player names,
-   and interpolating those into a script expression would break the page the
-   first time somebody had a quote in their name. */
-
-
 /* The first launch: the welcome screen, alone in the window (no tabs) until
-   the game's data has been read (app.py _setup_*). It asks before reading
-   the game's folder, shows the progress, then lets the player in. */
+   the game's data has been read (app.py _setup_*). */
 function welcomePick() {
   if (!window.pywebview || !window.pywebview.api.pick_folder) return;
   window.pywebview.api.pick_folder().then((p) => {
@@ -367,8 +355,8 @@ function welcomePick() {
   });
 }
 
-/* The progress screen, kept between state pushes: its ring turns and its
-   bar slides on, the numbers changed in place rather than redrawn. */
+/* The progress screen is kept between pushes and updated in place, so its
+   animations don't restart. */
 let WELCOME_RUN = null;
 
 function updateWelcomeRun(w, n) {
@@ -438,7 +426,6 @@ function buildWelcome(n) {
   }
 
   if (n.stage === 'run') {
-    // a ring that always turns, the percentage in it: something is moving
     const ring = el('div', 'wring');
     ring.appendChild(el('i'));
     const pct = el('b');
@@ -533,8 +520,8 @@ function buildSetNav(n) {
 }
 
 
-/* A new version (updater.py): offered, downloaded with its progress, then
-   its installer opened and the app closed. Also the manual check's answer. */
+/* The update dialog (updater.py): offer, download progress, install; also
+   the manual check's answer. */
 function renderUpdate(u) {
   let back = $('#updatemodal');
   if (!u) { if (back) back.remove(); return; }

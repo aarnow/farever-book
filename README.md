@@ -64,18 +64,18 @@ premier plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
 ## Installation et lancement
 
-Farever France se lance depuis les sources (Windows). Il faut
-[Python](https://www.python.org/downloads/), puis un double-clic sur
-**`Installer Farever France.cmd`** : il installe les modules (dans les bonnes
-versions) et crée le raccourci **Farever France** sur le Bureau et dans le menu
-Démarrer. Le raccourci lance l'application sans console ; son journal est alors
-dans `%LOCALAPPDATA%\FareverFrance\meter.log` (bouton dans les Réglages).
+Farever France s'installe avec `FareverFrance-<version>-Setup.exe`, publié
+dans les releases de
+[aarnow/farever-france-releases](https://github.com/aarnow/farever-france-releases).
+L'application vérifie elle-même les nouvelles versions et propose de les
+installer. Son journal est dans `%LOCALAPPDATA%\FareverFrance\meter.log`
+(bouton dans les Réglages).
 
-À la main, avec la console (pratique pour lire le journal en direct) :
+Depuis les sources, avec la console (pratique pour lire le journal en direct) :
 
 ```
 pip install frida==17.18.0 pillow pywebview
-python meter/farever_meter.py
+python meter/farever_france.py
 ```
 
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
@@ -92,7 +92,8 @@ qui peut déstabiliser Farever.
 
 ## Où sont les fichiers
 
-Depuis les sources, tout est écrit dans le dossier du projet :
+Installé, tout est écrit dans `%LOCALAPPDATA%\FareverFrance` ; depuis les
+sources, dans le dossier du projet :
 
 | Quoi | Où |
 |---|---|
@@ -121,8 +122,7 @@ Farever tourne sur **HashLink** : `Farever.exe` exécute `hlboot.dat`, un
 bytecode qui garde les noms de toutes les classes, champs et méthodes du jeu.
 
 1. **Données du jeu** (`hltools/`) : le parseur lit `hlboot.dat` (index des
-   fonctions, positions des champs, et même le code des fonctions avec
-   `hlbc_code.py`) ; les générateurs tirent de `res.pak` et `data.cdb` les
+   fonctions, positions des champs) ; les générateurs tirent de `res.pak` et `data.cdb` les
    noms français, images, catalogues et règles de jeu dans `analysis_out/`.
 2. **Lecture en jeu** (`frida/meter_hook.js`) : le script injecté retrouve la
    table des fonctions de HashLink et observe, en lecture seule, les coups,
@@ -133,7 +133,7 @@ bytecode qui garde les noms de toutes les classes, champs et méthodes du jeu.
 
    | Module | Rôle |
    |---|---|
-   | `farever_meter.py` | démarrage et arrêt |
+   | `farever_france.py` | démarrage et arrêt |
    | `app.py` | l'application : état, actions, pages |
    | `gamelink.py` | la connexion au jeu (attache, hook, reconnexion, étapes) |
    | `combat.py` | comptage dégâts/soins, enregistrement des failles et donjons |
@@ -165,7 +165,7 @@ frida/         le script injecté dans le jeu (meter_hook.js)
 hltools/       le parseur de bytecode HashLink et les générateurs de données
 analysis_out/  données générées à partir du jeu
 assets/        icône, icônes de classe, images de la fiche personnage
-packaging/     raccourci, icône, et construction d'un exécutable
+packaging/     construction de l'exécutable et de l'installateur (build.ps1)
 ```
 
 ## Limites connues

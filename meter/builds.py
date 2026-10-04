@@ -1,10 +1,8 @@
-"""Builds: a character put together by hand — class, level, gear (rarity,
-level, upgrades, augments, infusion), talents and skills — under the rules
-the game enforces (hltools/build_data.py), saved in builds/.
+"""Builds: a character put together by hand (class, level, gear, talents,
+skills) under the game's rules (hltools/build_data.py), saved in builds/.
 
-A build is turned into the same profile the hook reads from a live player
-(to_profile), so the character sheet, the gear stats and the attributes are
-the Inspecter's own, already checked against the game."""
+to_profile turns a build into the hook's live-player profile, so the sheet
+and stats reuse the Inspecter's code."""
 from __future__ import annotations
 
 import base64
@@ -36,12 +34,9 @@ WEAPON_SKILL_TYPES = ("WeaponSkill",)
 PASSIVE_TYPES = ("WeaponPassive",)
 
 
-# ---- the build ---------------------------------------------------------------
 # ---- share codes ------------------------------------------------------------
-# A build as text to copy and paste between players: "FFB1:" then the build
-# (name, class, level, gear, skills, talents, runes — not the simulator's
-# settings) as compact JSON, zlib-compressed, base64url. The digit is the
-# format's version, so an older code stays readable.
+# "FFB1:" + the SHARE_KEYS as compact JSON, zlib, base64url (no padding).
+# The digit is the format version.
 SHARE_PREFIX = "FFB1:"
 SHARE_KEYS = ("name", "cls", "lvl", "gear", "skills", "talents", "runes")
 
@@ -248,12 +243,10 @@ def _skills_of(b, slot, types):
 
 
 def skill_options(b):
-    """What each skill group holds or can hold now. The weapon's are not a
-    choice: the main weapon's skills then the off hand's, as many as the
-    slots open at this level (UnlockLevel_WeaponSkillSlots: "Weapon 1
-    second skill or off-hand skill"). The arsenal's are picked among its
-    skills and passive (UnlockLevel_Arsenal slots); the class's among those
-    unlocked at this level, 4 slots."""
+    """-> (options, slot counts) per skill group. Weapon skills are not a
+    choice: main weapon's then off hand's, as many as UnlockLevel_
+    WeaponSkillSlots opens. Arsenal: its skills and passive (UnlockLevel_
+    Arsenal slots). Class: those unlocked at this level, 4 slots."""
     d = build_data()
     lvl = int(b["lvl"])
     cls = (d.get("classes") or {}).get(b["cls"]) or {}
@@ -486,10 +479,9 @@ def delete_build(file):
 
 
 # ---- the guided build ----------------------------------------------------------
-# What the player wants (class, level, weapons, two attributes, three stats)
-# made a build: each slot gets the piece whose stats fit those wishes best,
-# each augment slot the augment that does, the faction armour an infusion,
-# the class's skills their slots. Talents and runes are left to the player.
+# The player's wishes (class, level, weapons, two attributes, three stats)
+# -> best-fitting pieces, augments and infusion. Talents and runes are left
+# to the player.
 GUIDE_ATTRIBUTES = ("Vitality", "Strength", "Dexterity", "Faith", "Intellect")
 GUIDE_STATS = ("CritChanceRating", "FervorRating", "ArmorPenetrationRating",
                "SpellPenetrationRating")
@@ -505,10 +497,9 @@ def guide_role(p):
     """The role the player picked, else the one the main attribute says."""
     return p.get("role") if p.get("role") in GUIDE_ROLES else \
         ROLE_OF.get((p.get("atbs") or [None])[0], "DPS")
-# the guide's last question, what the build is for: the infusions it wears,
-# as (role, pieces) — "main" the main attribute's role, "other" Tank (DPS
-# for a tank). Infusions count by piece, whatever its faction
-# (ent.Hero.refreshInfusions), and reach their tiers at 2, 4 and 6.
+# the guide's goal -> infusions worn as (role, pieces): "main" the main
+# attribute's role, "other" Tank (DPS for a tank). Pieces count whatever
+# their faction (ent.Hero.refreshInfusions); tiers at 2, 4 and 6.
 GUIDE_GOALS = {"max": (("main", 6), ("main", 2)),
                "mix": (("main", 6), ("other", 2)),
                "surv": (("main", 4), ("other", 4))}
@@ -520,9 +511,8 @@ GUIDE_INFUSION_PREF = ("Infusion_Bee_Tank", "Infusion_Manfish_Tank",
 
 
 def istat_options(piece):
-    """The infusion bonus stats a piece can roll: $HInfusion.
-    pickInfusionBonusStat draws one of the four at random when the piece
-    drops, leaving out those the piece already has."""
+    """The infusion bonus stats a piece can roll: one of the four, minus
+    those it already has ($HInfusion.pickInfusionBonusStat)."""
     from gearstats import gear_stats
     e = item(piece.get("id")) or {}
     got = gear_stats(piece.get("id"), piece.get("rar") or e.get("rar"),

@@ -145,9 +145,7 @@ function buildStatCards(n) {
   return box;
 }
 
-/* ---- the events window ---------------------------------------------------
-   Opened from the title band's journal button; follows every state push
-   while open. Unseen events are counted on the button. */
+/* ---- the events window (the title band's journal button) --------------- */
 function buildEvents(n) {
   const p = el('div', 'panel events');
   const head = el('div', 'phead');
@@ -164,8 +162,7 @@ function buildEvents(n) {
       'Les kills de boss, records et fins de faille apparaîtront ici.'));
     return p;
   }
-  /* Newest first, in a box of its own that scrolls: the page never grows
-     with the feed. */
+  // newest first, in its own scrolling box so the page never grows
   const list = el('div', 'evlist');
   p.appendChild(list);
   n.rows.forEach((r) => {

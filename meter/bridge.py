@@ -14,20 +14,16 @@ from common import (ANALYSIS, CREATE_NO_WINDOW, FROZEN, LOG_FILE, MENU_FLAG,
 
 
 # ---------------------------------------------------------------------------
-# The settings panel, at arm's length
+# The window process
 # ---------------------------------------------------------------------------
 class MenuBridge:
-    """The meter's half of the link to the WebView2 settings panel.
+    """The meter's half of the link to the WebView2 window.
 
-    The panel runs in its own process (menu_host.py explains why) and speaks
-    line-JSON over its stdin and stdout. This class owns that process: starting
-    it, pushing state at it, translating what comes back into actions on the
-    app's loop, and noticing when it dies.
-
-    It is deliberately forgiving. Nothing here may take the meter down: the
-    app, the hook and the damage numbers all work perfectly well with no
-    settings panel at all, so every failure path ends in "no panel" rather than
-    an exception reaching the refresh loop.
+    The window runs in its own process (see menu_host.py) and speaks
+    line-JSON over stdin/stdout. This class starts it, pushes state to it,
+    turns its messages into actions on the app's loop and notices when it
+    dies. Every failure ends in "no window", never an exception reaching the
+    refresh loop.
     """
 
     def __init__(self, app):
@@ -42,8 +38,7 @@ class MenuBridge:
 
     # -- lifecycle --------------------------------------------------------
     def start(self, geom=None):
-        """Spawn the panel, hidden. Called once, lazily — a player who never
-        opens the menu never pays for a second process or a WebView2."""
+        """Spawn the window process, hidden. Called once."""
         if self.proc is not None or self._failed:
             return
         self.geom = dict(geom or {})
@@ -51,9 +46,8 @@ class MenuBridge:
                else [sys.executable, str(Path(__file__).resolve().parent
                                          / "menu_host.py"),
                      json.dumps(self.geom)])
-        # Its log lines join ours: frozen and windowed there is no console,
-        # so it writes into our log file — inheriting our (absent) stderr
-        # handle made its first log line fail with Errno 22.
+        # Its log goes to our stderr; frozen there may be none, and inheriting
+        # the absent handle fails its first write with Errno 22.
         try:
             err = sys.stderr if sys.stderr and sys.stderr.fileno() >= 0 else None
         except (OSError, ValueError, AttributeError):
@@ -63,7 +57,7 @@ class MenuBridge:
         try:
             self.proc = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                # Where the window finds the boss portraits it inlines.
+                # where the window finds the boss portraits
                 env=dict(os.environ, FAREVER_ANALYSIS=str(ANALYSIS)),
                 stderr=err,
                 text=True, encoding="utf-8", bufsize=1,
@@ -80,8 +74,8 @@ class MenuBridge:
         return self.proc is not None and self.proc.poll() is None
 
     def pid(self):
-        """The panel's process id, or None. Used by the focus test: the
-        panel takes focus like any other window, and is still 'us'."""
+        """The window's process id, or None (the focus test counts it as
+        'us')."""
         return self.proc.pid if self.alive() else None
 
     def stop(self):
@@ -108,19 +102,13 @@ class MenuBridge:
                 self.proc.stdin.write(line)
                 self.proc.stdin.flush()
             except (OSError, ValueError):
-                # The panel died. Leave the corpse for _read to notice.
-                pass
+                pass                    # it died; _read notices
 
     def show(self):
         self.send({"t": "show"})
 
     def push(self, spec):
-        """Send the panel its state, if it has changed.
-
-        The refresh loop calls this on every tick the panel is open, and almost
-        every tick produces exactly what the last one did — comparing here is
-        far cheaper than serialising it down a pipe and re-rendering it.
-        """
+        """Send the window its state, if it has changed (called every tick)."""
         if not self.ready:
             return
         if spec == self._last_push:
@@ -136,10 +124,8 @@ class MenuBridge:
         self.send({"t": "ov", "d": spec})
 
     def invalidate(self):
-        """Force the next push through even if it matches. Used when the panel
-        has just appeared and its idea of the state is nothing at all, and by
-        every action the panel triggers, so a click redraws immediately rather
-        than on the next throttled rebuild."""
+        """Force the next push through even if it matches (window just ready,
+        or after an action so a click redraws at once)."""
         self._last_push = None
 
     def dirty(self):
@@ -149,8 +135,8 @@ class MenuBridge:
 
     # -- receiving --------------------------------------------------------
     def _read(self):
-        """One thread, for the panel's lifetime. Everything it decides to do
-        is handed to the app's loop through its action queue."""
+        """Reader thread for the window's lifetime; actions go to the app's
+        loop."""
         proc = self.proc
         try:
             for line in proc.stdout:
@@ -164,22 +150,18 @@ class MenuBridge:
                 self._handle(msg)
         except (OSError, ValueError):
             pass
-        # stdout closed: the panel has gone.
+        # stdout closed: the window has gone
         print("[meter] settings panel closed", file=sys.stderr)
         if not self.ready and self.proc is proc:
-            # It died before ever showing: the window is all there is to
-            # see of the app, so say so rather than sit silent in the tray.
+            # died before showing: say so rather than sit silent in the tray
             self._failed = True
             code = proc.poll()
             print(f"[meter] the window never opened (exit code {code})",
                   file=sys.stderr)
             message_box(
                 "La fenêtre de Farever France n'a pas pu s'ouvrir.\n\n"
-                "Causes les plus courantes :\n"
-                "• le zip n'a pas été débloqué (clic droit sur le zip > "
-                "Propriétés > cocher « Débloquer », puis décompresser à "
-                "nouveau) ;\n"
-                "• Microsoft Edge WebView2 n'est pas installé "
+                "Cause la plus courante : Microsoft Edge WebView2 n'est "
+                "pas installé "
                 "(https://developer.microsoft.com/microsoft-edge/webview2/).\n\n"
                 f"Le détail est dans :\n{LOG_FILE}",
                 "Farever France — fenêtre impossible à ouvrir", 0x10)
@@ -193,15 +175,12 @@ class MenuBridge:
             self.ready = True
             self.invalidate()
         elif t == "geom":
-            # Straight onto the object: a torn read of four ints by the
-            # app's loop is not a real hazard.
+            # no lock: a torn read of four ints is harmless
             got = {k: msg.get(k) for k in ("x", "y", "w", "h")}
             if got != self.geom:
                 self.geom = got
-                # Stamped rather than saved here. This arrives on the reader
-                # thread, and it arrives for every step of a drag — writing the
-                # file each time would be sixty writes a second. The overlay
-                # notices the stamp and saves once the gesture has settled.
+                # stamped, not saved: this fires on every drag step; the app
+                # saves once the gesture settles
                 self.geom_at = time.monotonic()
         elif t == "call":
             self._dispatch(msg)
@@ -226,23 +205,18 @@ class MenuBridge:
             except Exception as e:
                 print(f"[meter] panel action {method!r} failed: {e!r}",
                       file=sys.stderr)
-            # Anything the panel asked for may have changed what it should be
-            # showing, so the next tick rebuilds rather than waiting for the
-            # throttle. One place, so no action can forget.
+            # any action may change what the window shows
             self.invalidate()
             if cid:
                 self.send({"t": "ret", "id": cid, "r": result})
 
-        # Onto the app's loop, like every other action.
         self.app._enqueue(run)()
 
 
 def _parse_help(text):
     """Turn one help article into (title, blurb, spec blocks).
 
-    A deliberately small markdown subset — enough for the prose we actually
-    write and nothing more, because a full parser here would be a dependency
-    and a surface for the panel to render something unexpected:
+    A deliberately small markdown subset:
 
         # Title          the article's name (first one wins)
         > blurb          the one-liner on the index
@@ -251,9 +225,8 @@ def _parse_help(text):
         ```              a fenced code block
         anything else    a paragraph
 
-    Inline **bold** and `code` survive as markers and are handled by the
-    renderer, which builds them as elements rather than as HTML — nothing here
-    ever becomes innerHTML.
+    Inline **bold** and `code` are left as markers for the renderer, which
+    builds elements (never innerHTML).
     """
     title, blurb, blocks = "", "", []
     para, bullets, code, in_code = [], [], [], False
@@ -306,13 +279,8 @@ def _parse_help(text):
 
 
 def _wants_params(fn):
-    """True if `fn` takes the panel's parameter dict.
-
-    The action table mixes two kinds of callable: existing meter methods that
-    already take nothing (self._toggle_sounds) and small adapters written for
-    the panel that need the value the user picked. Rather than wrap the former
-    in dozens of no-argument lambdas, ask.
-    """
+    """True if `fn` takes the window's parameter dict (the action table mixes
+    no-argument methods and adapters that take it)."""
     try:
         import inspect
         sig = inspect.signature(fn)

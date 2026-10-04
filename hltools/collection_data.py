@@ -1,20 +1,12 @@
 """The collection catalogue: every mount, glider, companion and armour
-appearance in the game,
-with how each is obtained — for the app's Collection tab.
+appearance, with how each is obtained, for the app's Collection tab.
 
-Everything comes from the game's own files:
+Sources: data.cdb (items, Critter units, loot tables and who rolls them,
+achievement rewards, unitGroup spawn weights, starting gliders) and the
+levels (HBSON prefabs: shops, placed chests, spawners, with zoneBaked).
 
-* data.cdb (res.light.pak): the items (type Mount / GearGlider), the
-  companions (units of type Critter), the loot tables and who rolls them
-  (unitType.lootTable = every foe of that family; a unit's own lootTable /
-  bossLootTable), the achievements' rewards, the critter spawn groups
-  (unitGroup, with weights), each class's starting glider;
-* the levels (.prefab, HBSON — see hbson.py): the merchants (props.shop), the
-  chests placed in the world (props.lootTable / props.lootItems), the critter
-  spawners (props.unitGroup), each with the zone it stands in (zoneBaked).
-
-Chances are the data's: a table flagged Weights gives ONE of its lines, by
-weight; otherwise each line rolls on its own. Nested tables multiply."""
+A loot table flagged Weights gives ONE line, by weight; otherwise each line
+rolls on its own. Nested tables multiply."""
 import io
 import json
 import struct
@@ -26,11 +18,9 @@ import imgcache
 import pak_extract
 
 CATEGORIES = (("mounts", "Mount"), ("gliders", "GearGlider"))
-# Flags read by name: their bits move when a patch edits the enum (the
-# 2026-09-30 one dropped itemType's Equippable, AppearanceCollection 32 -> 16).
-# itemType.flags AppearanceCollection: the armour pieces the game's appearance
-# collection (Collection.gears) counts. item.flags WorldLoot: dropped at
-# random around its level, anywhere.
+# Flags are read by name: a patch that edits the enum moves their bits.
+# itemType AppearanceCollection: what Collection.gears counts. item WorldLoot:
+# dropped at random around its level.
 
 
 def flag_bit(sheets, sheet, name, column="flags"):
@@ -120,8 +110,7 @@ def build(game_dir, img_dir=None):
                        if appearance(r.get("type"))]
     collectible = {iid for ids in wanted.values() for iid in ids}
     gear_set = set(wanted["gears"])
-    # A capturable companion has a name; the unnamed Critter units are
-    # scenery (YellowRabbits).
+    # unnamed Critter units are scenery
     critters = [uid for uid, r in units.items() if r.get("type") == "Critter"
                 and (r.get("texts") or {}).get("name")]
     critter_set = set(critters)
@@ -148,8 +137,7 @@ def build(game_dir, img_dir=None):
                     add(iid, {"k": "starter", "cls": CLASS_UNITS[uid],
                               "gear": iid in gear_set})
 
-    # -- achievements. A tier ("collect 25 mounts") has no name or text of
-    # its own: they are its parent's, with the tier's target value.
+    # -- achievements. A tier's name and text are its parent's.
     achs = rows("ach")
     for aid, r in achs.items():
         chain, p = [aid], r.get("parent")
@@ -186,8 +174,7 @@ def build(game_dir, img_dir=None):
                     iid = s.get("item") if isinstance(s, dict) else None
                     pet = iid[len("Critter_"):] if iid and \
                         iid.startswith("Critter_") else None
-                    # {item, qty} before the 2026-09-30 patch, {kind, amount}
-                    # (kind: a currency or an item) since
+                    # {item, qty} or {kind, amount} (2026-09-30 patch)
                     cost = [{"item": c.get("item") or c.get("kind"),
                              "n": c.get("qty") or c.get("count")
                              or c.get("amount")}
@@ -257,9 +244,7 @@ def build(game_dir, img_dir=None):
                               "chance": round(float(c.get("weight") or 0)
                                               / total, 4)})
 
-    # -- armour generated rather than listed: a faction's pieces come from
-    # its activities and chests, the WorldLoot ones from anything around
-    # their level
+    # -- armour generated rather than listed: faction pieces and WorldLoot
     for iid in wanted["gears"]:
         row = items[iid]
         if row.get("faction") in FACTIONS:

@@ -1,12 +1,7 @@
-"""The third-party components Farever France ships, and their licences: one
-text file, THIRD_PARTY_LICENSES.txt, written at build time by
-farevermeter.spec and installed with the app (Réglages › Configuration ›
-Licences des composants).
-
-Each licence's text is read from the package itself (its dist-info), so a
-new version of a component brings its own text. Python's licence (the
-Windows build's LICENSE.txt) also covers what Python bundles: OpenSSL,
-libffi, bzip2, xz, SQLite and the Microsoft C runtime.
+"""THIRD_PARTY_LICENSES.txt: the third-party components Farever France ships
+and their licences, written at build time by FareverFrance.spec. Each text
+is read from the package's dist-info; Python's LICENSE.txt also covers what
+Python bundles (OpenSSL, libffi, bzip2, xz, SQLite, the C runtime).
 
     py packaging\\third_party.py [out.txt]      to look at it"""
 import importlib.metadata as md

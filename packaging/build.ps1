@@ -14,9 +14,7 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-# One source of truth for the version: the constant the update check compares
-# against. Reading it here means the installer, its filename and the running
-# app can never disagree about which release this is.
+# The version is meter\common.py's VERSION (what the update check compares).
 $meter = Get-Content "meter\common.py" -Raw
 if ($meter -notmatch '(?m)^VERSION\s*=\s*"([^"]+)"') {
     throw "Couldn't find VERSION in meter\common.py"
@@ -24,24 +22,18 @@ if ($meter -notmatch '(?m)^VERSION\s*=\s*"([^"]+)"') {
 $version = $Matches[1]
 Write-Host "==> Building Farever France $version" -ForegroundColor Cyan
 
-# --- 1. Icon ---------------------------------------------------------------
-# Regenerated rather than assumed: it's the tray, executable and installer icon,
-# and it's cheap to redraw.
 Write-Host "==> Icon" -ForegroundColor Cyan
 py packaging\make_icon.py
 
-# --- 2. Executable ---------------------------------------------------------
 Write-Host "==> PyInstaller" -ForegroundColor Cyan
 py -m PyInstaller --clean --noconfirm --distpath dist --workpath build `
-    packaging\farevermeter.spec
+    packaging\FareverFrance.spec
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
 
 $exe = "dist\FareverFrance\FareverFrance.exe"
 if (-not (Test-Path $exe)) { throw "Expected $exe, but it wasn't produced" }
 
-# --- 3. Installer ----------------------------------------------------------
-# winget puts Inno Setup under LOCALAPPDATA for a per-user install and under
-# Program Files for a machine-wide one, so both are worth looking in.
+# Inno Setup: per-user (LOCALAPPDATA) or machine-wide (Program Files) install
 $isccCandidates = @(
     "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",

@@ -35,8 +35,7 @@ function renderHunt(box, n) {
   const hunted = items.filter((it) => it.kills > 0).length;
   const mastered = items.filter((it) => it.rank >= it.max).length;
 
-  // the first column, always in view: where the hunt stands, which view,
-  // which region; the second, the list, the only thing that scrolls
+  // a fixed side column; only the list scrolls
   const side = el('aside', 'huntside');
   const main = el('div', 'huntmain');
   box.appendChild(side);
@@ -174,11 +173,7 @@ function renderHunt(box, n) {
 }
 
 /* ---- one monster's page --------------------------------------------------- */
-/* Who it is, where it spawns in the open world (the Map tab's tiles, framed
-   on its spawns, each one a pin with its portrait) and what a kill gives. */
 function buildHuntMon(n) {
-  // its name on top; under it, two columns side by side — its words and the
-  // monster itself, where it lives and the map; then what it drops
   const page = el('div', 'huntmon');
   let box = page;
   const head = el('div', 'hmhead' + (n.kills ? ' seen' : ''));
@@ -246,8 +241,7 @@ function buildHuntMon(n) {
   return page;
 }
 
-/* The monster itself, turning (its portrait while the model comes, or when
-   the game has none). */
+/* The monster's 3D model; its portrait while loading or when there is none. */
 function huntModel(n) {
   const v = el('div', 'collview hmview');
   const stage = el('div', 'cvstage');
@@ -256,7 +250,6 @@ function huntModel(n) {
   stage.appendChild(pic);
   if (m3dSupported()) {
     stage.classList.add('is3d');
-    // the monster breathing, its idle animation playing
     stage.appendChild(m3dCanvas(n.uid, (st) => { stage.dataset.st = st; }, { anim: true }));
     stage.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
     stage.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
@@ -265,9 +258,8 @@ function huntModel(n) {
   return v;
 }
 
-/* The zones in one column, the map in the other. A zone with spawns in the
-   open world frames the map on them; a dungeon or rift zone has no map. The
-   chosen zone is kept per monster, so a state push doesn't lose it. */
+/* The zones beside the map (none for dungeon or rift zones). The chosen
+   zone is kept per monster so a state push doesn't lose it. */
 const HUNTMON_ZONE = {};
 function huntWhere(n) {
   const wrap = el('div', 'hmwhere');
@@ -343,10 +335,8 @@ function huntWhere(n) {
   return wrap;
 }
 
-/* The open world around the monster's spawns: the Map tab's tiles, fitted to
-   its spawns (with some room around a lone one). Not draggable nor zoomable:
-   it sits in a scrolling page, and the wheel must scroll the page. The pins
-   are placed in screen pixels, so they keep their size. */
+/* The Map tab's tiles fitted to the monster's spawns. Neither draggable nor
+   zoomable: the wheel must scroll the page. */
 function huntMiniMap(n) {
   const m = n.meta || {};
   const size = m.tile_px || 512;
@@ -441,11 +431,8 @@ function renderFamilies(box, n) {
   box.appendChild(grid);
 }
 
-/* ---- the world map -------------------------------------------------------- */
-/* A small pan/zoom viewer, nothing loaded from anywhere: the game's minimap
-   tiles (sent after the page, like the other pictures) in a transformed
-   layer, and the points in a layer of their own, placed in screen pixels so
-   they keep their size at every zoom. */
+/* The mounts and gliders monsters can drop, with every monster that drops
+   each, the kills behind it and the chances. */
 function renderFarm(box, n) {
   const all = n.farm || [];
   box.appendChild(el('p', 'note', 'Les montures et planeurs qui tombent sur des monstres, avec le '

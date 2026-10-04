@@ -1,12 +1,8 @@
 """Skip re-encoding the pictures a game patch did not change.
 
-The generators cut ~2,200 pictures out of the game (collection, bestiary,
-skills, map) and encoding them as WebP is nearly all of a regenerate's time:
-6.5 minutes measured 2026-10-01 (WebP method 6: now 4, 80 times faster
-for the same size), which looked like a hang. A patch almost
-never touches them, so each folder keeps a hash of every picture's pixels
-(.pixels.json) and a picture is only encoded again when its pixels changed
-or its file is gone.
+WebP encoding is nearly all of a regenerate's time (~2,200 pictures), so
+each folder keeps a hash of every picture's pixels (.pixels.json) and a
+picture is encoded again only when its pixels changed or its file is gone.
 """
 from __future__ import annotations
 

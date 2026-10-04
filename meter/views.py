@@ -30,7 +30,7 @@ COLLECTION_CATS = (("mounts", "Montures", "monture"),
                    ("items", "Objets", "objet"))
 
 
-# the armour appearances: slots in the game's order, and the aptitudes
+# armour appearance slots, in the game's order
 GEAR_SLOTS = (("Head", "Tête"), ("Shoulders", "Épaules"), ("Chest", "Torse"),
               ("Hands", "Mains"), ("Waist", "Taille"), ("Legs", "Jambes"),
               ("Feet", "Pieds"), ("Back", "Dos"))
@@ -328,9 +328,8 @@ def hunt_detail_view(uid, ranks):
         [meta["region"]] if meta.get("region") else [])
     spawns = [{"x": x, "y": y, "z": _zone_label(z) if z else ""}
               for x, y, z in (cat.get("spawns") or {}).get(uid) or ()]
-    # the instances it spawns in (a dungeon, a boss's lair, a rift), each
-    # with its entrance in the open world when the world has one, and who
-    # summons it when no level does
+    # instances it spawns in (dungeon, lair, rift) with their world
+    # entrances, and who summons it when no level places it
     where = (cat.get("where") or {}).get(uid) or {}
     insts = []
     for act in where.get("acts") or ():
@@ -393,10 +392,9 @@ def hunt_detail_view(uid, ranks):
 
 
 def _farm_view(items, fams, owned):
-    """The mounts and gliders a monster can drop, each with every monster
-    (a whole family, or one unit — a dungeon boss, an elite demon) that can
-    drop it, the kills behind each, and the chances: per kill, and of having
-    seen it drop by now (1 - (1-p)^kills, each kill an independent roll)."""
+    """Mounts and gliders that monsters drop, with their sources (a family
+    or one unit), the kills, the chance per kill and of having seen it drop
+    by now (1 - (1-p)^kills, each kill an independent roll)."""
     by_id = {it["id"]: it for it in items}
     out = []
     for cat, label in (("mounts", "Monture"), ("gliders", "Planeur")):
@@ -437,17 +435,13 @@ def _farm_view(items, fams, owned):
                 miss *= (1 - p) ** kills
             if not sources:
                 continue
-            # One set of numbers per item: the kills of every source summed,
-            # the chance per kill (a range when the sources differ), and the
-            # chance of having seen it drop by now over all of them.
+            # chance per kill: a range when the sources differ
             total = sum(s["kills"] for s in sources)
             ps = sorted({s["p"] for s in sources})
             pct = (_pct(ps[0]) if len(ps) == 1
                    else f"{_pct(ps[0])} à {_pct(ps[-1])}")
             odds = (f"1 chance sur {_n(round(1 / ps[0]))}" if len(ps) == 1
                     else "selon le monstre")
-            # every monster that can drop it: a family's species, or the
-            # unit itself — portraits only, the name on hover
             mobs = []
             for s in sources:
                 if s["kind"] == "family":
@@ -507,10 +501,9 @@ def _augment_chips(item_type, gslots):
 
 
 def _augment_view(aid, factor=1):
-    """One augment set into a gear: its name and what it does — the attribute
-    bonuses and maluses, or the skill it grants (a formula's enchantment, a
-    sigil's talent). Corrupted gifts all share one name, so the effect is
-    what tells them apart."""
+    """One augment on a piece: its name and effects (attribute bonuses and
+    maluses, or the skill it grants). Corrupted gifts share one name: the
+    effect tells them apart."""
     a = _augments_data().get(aid) or {}
     t = a.get("t") or ""
     fx = []
@@ -520,8 +513,7 @@ def _augment_view(aid, factor=1):
         sign = "+" if val > 0 else "\u2212"
         fx.append(f"{name} {sign}{abs(val):g}")
     name = item_label(aid)
-    # a formula is already named after its enchantment ("Formule magique :
-    # Dévot" gives "Dévot"): no need to say it twice
+    # a formula is already named after its enchantment: not said twice
     fx += [sk for sk in (_skill_label(s) for s in a.get("s") or ())
            if sk not in name]
     return {"k": AUGMENT_KIND.get(t, "enchant" if "Enchant" in t else "aug"),
@@ -550,12 +542,10 @@ def _talent_tree(cls, ranks, granted=()):
                        if t["tier"] == tier and t["branch"] == b]
                       for b in ("Left", "Center", "Right")])
     spent = sum(int(v or 0) for v in ranks.values())
-    # the tree's own talents only; the root's point counts like any other
-    # the points a tier needs in the lower tiers of its branch
-    # (Talents_TierThresholds, read in the game's implSetTalentRank)
+    # points a tier needs in the lower tiers of its branch
+    # (Talents_TierThresholds, implSetTalentRank)
     thresholds = build_data().get("tiers") or [0, 1, 2, 4, 8]
-    # shown as the game does: the points in the branch, the root's apart
-    # (tier 1 needs only the root)
+    # shown as the game does: the root's point apart (tier 1 needs only it)
     cost = [""] + [str(thresholds[k] - thresholds[1])
                    for k in range(2, min(5, len(thresholds)))]
     return {"root": cell(root) if root else None, "tiers": tiers,
@@ -714,8 +704,6 @@ def character_view(roster, profiles, sel, waiting, live):
                          for t in dict.fromkeys(prof.get("skills") or ())
                          if t and (t.endswith("_Passive")
                                    or t.endswith("_P"))],
-            "raw": {k: prof.get(k) for k in ("arsenals", "prayers",
-                                              "secondary")},
             "infusions": _infusion_sets(gear)}
     return view
 
@@ -727,14 +715,13 @@ LUCK_LABELS = (("Luck_Mount", "Monture"), ("Luck_Glider", "Planeur"),
                ("Luck_PrismaticGear", "Équipement prismatique"))
 
 
-# Progress.counters shown as statistics (the rest are internal flags).
-# The rift counters head the Failles tab; the rest is on the live page.
+# Progress.counters shown as statistics (the others are internal flags).
+# The rift ones head the Failles tab.
 RIFT_STAT_LABELS = (("Rift_NbCompleted", "Failles terminées"),
                     ("Rift_NbGatesClosed", "Portails de faille fermés"),
                     ("Rift_NbGatesClosed_InOneRift",
                      "Record de portails fermés en une faille"))
-# ...each led by a badge of the game's (assets/charsheet): the rift's, as on
-# the map; a portal's swirl; the red crest
+# their badges (assets/charsheet)
 RIFT_STAT_ICONS = {"Rift_NbCompleted": "rift_done",
                    "Rift_NbGatesClosed": "rift_portal",
                    "Rift_NbGatesClosed_InOneRift": "rift_record"}

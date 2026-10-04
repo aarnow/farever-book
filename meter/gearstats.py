@@ -7,7 +7,7 @@ import sys
 
 from common import _n, _pretty_id
 from gamedata import (
-    _fr_names, _fr_ref, _infusion_id, _item_flag, _skill_label, faction_label,
+    _fr_names, _fr_ref, _infusion_id, _item_flag, faction_label,
     gear_stats_data, infusion_data)
 
 
@@ -115,14 +115,10 @@ def _atb_level_scaling(d, index, level, start, end, reduction=-1.0):
 def _item_ilevel(d, it, rarity, glevel):
     """$HItem.getILevel: the definition's iLevel, else its required level
     * 10 + the rarity's bonus. The copy's level (Gear.level) and rarity
-    (Weapon.rarity) are what count: measured 2026-10-01 on Amon Arès
-    (Mace_Benediction, Rare level 20 in the data; the copy Legendary level
-    25, 5 upgrades, a corrupted gift set) — iLevel 250 + 70 + 50 + 10 = 380
-    gives the tooltip's Vitalité 75, Force 29, Foi 29, Ferveur 110."""
-    # A fixed iLevel holds for a copy at the definition's level only: scaled
-    # loot is defined at level 1 / iLevel 1 and takes the level it dropped
-    # at (Cape déchirâme, Back_RDemon_Cle, a level 25 copy: iLevel 260 gives
-    # the tooltip's Armure 50, Vitalité 6, Foi 6, Perforation magique 16).
+    (Weapon.rarity) count, not the definition's (checked against tooltips,
+    2026-10-01)."""
+    # a fixed iLevel holds only at the definition's level: scaled loot is
+    # defined at level 1 and takes the level it dropped at
     if it.get("il") is not None and (not glevel or glevel == it.get("lvl")):
         return int(it["il"])
     lvl = glevel or it.get("lvl") or 1
@@ -252,9 +248,8 @@ def gear_stats(kind, rarity, glevel, upgrade, slots, flags):
     return il, rows
 
 
-# The character sheet's attributes, as the game derives them (ent.Unit.
-# getAtbScaling): the class base at the hero's level, plus the gear, then
-# each derived attribute from its sources.
+# Character sheet (ent.Unit.getAtbScaling): class base at the hero's level,
+# plus gear, then each derived attribute from its sources.
 ATB_PERCENT, ATB_MOVESPEED = 4, 256           # attribute flags
 
 
@@ -342,7 +337,7 @@ def _hero_sheet(prof, gear):
             k = inf["statId"]
             totals[k] = totals.get(k, 0) + inf["val"]
     lvl = prof.get("lvl") if isinstance(prof.get("lvl"), int) else None
-    effects, counted = _hero_effects(prof, gear)
+    effects = _hero_effects(prof, gear)
     vals = hero_attributes(prof.get("k"), lvl, totals, effects, SIM_EXTRA)
     if vals is None:
         return None
@@ -367,13 +362,13 @@ def _hero_sheet(prof, gear):
         return out
     return {"primary": [row(k) for k in HERO_PRIMARY],
             "secondary": [row(k) for k in HERO_SECONDARY],
-            "effects": counted, "raw": vals}
+            "raw": vals}
 
 
 def _hero_effects(prof, gear):
     """The attribute effects on the hero: its active statuses, its passives
     and talents, its infusion passives (rank: one per two pieces).
-    -> ({attribute: [flat, share, factor]}, [names of what counted])."""
+    -> {attribute: [flat, share, factor]}."""
     aff = gear_stats_data().get("skillAffixes") or {}
     masteries = set(prof.get("masteries") or ())
     talents = prof.get("talents") if isinstance(prof.get("talents"),
@@ -395,9 +390,8 @@ def _hero_effects(prof, gear):
     for sid, n in pieces.items():
         if sid in aff and n >= 2:
             ranks[sid] = max(ranks.get(sid, 0), n // 2)
-    out, counted = {}, []
+    out = {}
     for sid, rank in ranks.items():
-        used = False
         for ref, atb, val, conds in aff.get(sid) or ():
             if not isinstance(val, (int, float)):
                 continue
@@ -414,19 +408,13 @@ def _hero_effects(prof, gear):
                 e[1] += val
             elif ref in ("TAttribute_MRatio", "TAttribute_MRatioMin"):
                 e[2] *= val
-            else:
-                continue
-            used = True
-        if used:
-            counted.append(_skill_label(sid))
-    return out, sorted(set(counted))
+    return out
 
 
 def _gear_infusion(kind, raw, stat, prism=False):
     """One gear piece's infusion: name, bonus stat, and whether the bonus
-    applies (the piece's faction must be the infusion's — or the piece is
-    prismatic: constant Item_PrismaticChance, "infusion bonus active
-    regardless of faction")."""
+    applies (piece of the infusion's faction, or prismatic: active
+    regardless of faction)."""
     sid = _infusion_id(raw)
     if not sid:
         return None

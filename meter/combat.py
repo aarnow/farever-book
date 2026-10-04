@@ -43,10 +43,8 @@ def _stamp_report_classes(report, world):
 def _overheal_pct(total, landed):
     """Share of `total` healing that restored no health, as a percentage.
 
-    Clamped at 0 because the two figures come from different observations —
-    a health rise can be attributed to a heal whose estimated size is smaller
-    than the rise itself (a regen tick landing inside a heal's match window,
-    say), and "-3% overheal" is not a thing to show anyone."""
+    Clamped at 0: a rise can exceed a heal's estimated size (a regen tick in
+    its match window, say)."""
     if not total or total <= 0.0:
         return 0.0
     return max(0.0, (total - landed) / total * 100.0)
@@ -55,37 +53,16 @@ def _overheal_pct(total, landed):
 class HealSizeEstimator:
     """How big was that heal? The client is never told, so this estimates it.
 
-    Measured 2026-08-03 (40 heal events across 6 healers and 4 skills): of
-    the fifteen heal entry points in the build, ONLY
-    `ent.Unit.playHitHealFX` runs client-side, and its `HitData.amount` reads
-    0.000. `receiveHeal`, `computeHeal`, `evalHeal`, the four `*HealEval`
-    callbacks, `applyHeal`, `rpcDisplayHeal(__impl)` and
-    `ui.hud.EffectsFeed.displayHeal` never fire on a client at all. The only
-    heal quantity observable here is the RISE in the target's replicated
-    health — which is zero when the target is already full.
+    Measured 2026-08-03: only `ent.Unit.playHitHealFX` runs client-side and
+    its amount reads 0; the only observable is the RISE in the target's
+    health (zero on a full target). A heal is sized from the game's own data
+    (size_from_spec) when possible, else as the HIGH-WATER MARK of what that
+    player's casts of that skill were seen to restore: capping only biases
+    observations down, and maxHealth reads 0 for heroes, so a mean would
+    under-rate healers of healthy parties. Cost: a skill once seen to crit is
+    credited its crit value. The window bounds it as gear and levels change.
 
-    A heal's size is therefore estimated as the HIGH-WATER MARK of what that
-    player's casts of that skill have been seen to restore. A cast on a target
-    missing more health than the heal restores lands in full, so the largest
-    observation converges on the true per-cast value from below; every smaller
-    one is a cast that was capped by the target's missing health, and every
-    zero is a cast that was capped completely.
-
-    Deliberately the maximum, not a mean or a quantile. Capping biases
-    observations DOWN and there is no way to tell a capped observation from an
-    uncapped one — `ent.UnitAttributes.maxHealth` reads 0 for heroes (measured
-    in the same session), so "how hurt was the target" isn't available either.
-    Averaging would report a healer as weaker the healthier their party was,
-    which is the exact bug this replaces. The known cost is crits: once a skill
-    has been seen to crit it is credited its crit value on every cast, so a
-    crit-heavy healing build reads somewhat high.
-
-    The window bounds that across a session — levels, gear and talent changes
-    all move a skill's real value, and a lifetime maximum would pin the
-    estimate to the best it ever was.
-
-    Called only from the hook's message thread (the same thread that feeds
-    PartySession), so it needs no lock of its own.
+    Hook message thread only, so no lock.
     """
 
     WINDOW = 64          # observations kept per (player, skill)
@@ -94,10 +71,9 @@ class HealSizeEstimator:
     def __init__(self, specs=None):
         self._obs: dict[tuple, deque] = defaultdict(
             lambda: deque(maxlen=self.WINDOW))
-        # skill id -> {step index: [effect spec, ...]} out of the game's own
-        # data.cdb (analysis_out/heal_specs.json). This is what makes a heal
-        # on a full-health target countable at all, so its absence is worth
-        # saying out loud rather than quietly falling back.
+        # skill id -> {step index: [effect spec, ...]} from data.cdb
+        # (analysis_out/heal_specs.json); the only way to size a heal on a
+        # full-health target.
         self._specs = specs or {}
         self._computed = 0      # heals sized from the game's own numbers
         self._guessed = 0       # ...and heals that fell back to observation
@@ -108,11 +84,10 @@ class HealSizeEstimator:
     def size_from_spec(self, ev):
         """The heal's real size, computed the way the game computes it.
 
-        `dyn` heals carry their amount in BaseSkill.dynVal1-3, which the server
-        replicates; `scale` heals are a ratio on one of the caster's
-        attributes. Both arrive on the event from the hook. Returns None when
-        this skill isn't in the table, or when the inputs it needs are missing
-        — a summon's attributes, say, or a step index that didn't match."""
+        `dyn` heals read BaseSkill.dynVal1-3 (server-replicated); `scale`
+        heals are a ratio on a caster attribute. None when the skill isn't in
+        the table or an input is missing (a summon's attributes, a step index
+        that didn't match)."""
         steps = self._specs.get(ev.get("skill"))
         if not steps:
             return None
@@ -145,10 +120,8 @@ class HealSizeEstimator:
     def stamp(self, ev: dict) -> None:
         """Fold one heal event in and fill in its raw size.
 
-        `landed` (what the health bar actually moved) arrives from the hook;
-        `amount` leaves as the estimated size of the heal itself. Every
-        downstream consumer already reads `amount`, so healing totals become
-        raw healing without any of them knowing about the estimate."""
+        `landed` (what the health bar moved) comes from the hook; `amount`
+        leaves as the estimated size of the heal, which consumers read."""
         landed = float(ev.get("landed", ev.get("amount", 0.0)) or 0.0)
         ev["landed"] = landed
         if not ev.get("est"):
@@ -157,9 +130,8 @@ class HealSizeEstimator:
         obs = self._obs[(ev.get("player") or "?", ev.get("skill") or "?")]
         if landed > 0:
             obs.append(landed)
-        # The game's own numbers first — they are right on the very first cast
-        # and don't care whether the target had room for the heal. Observation
-        # is only the fallback for the skills the table can't size.
+        # The game's own numbers first; observation only for skills the table
+        # can't size.
         spec = self.size_from_spec(ev)
         if spec is not None:
             self._computed += 1
@@ -174,10 +146,8 @@ class HealSizeEstimator:
                 ev["sized"] = "none"
         # A size can never make a measured heal smaller than it actually was.
         ev["amount"] = max(landed, spec)
-        # Ground truth, collected from ordinary play: a
-        # heal that LANDED in full is a direct measurement of what that heal
-        # was worth, so a computed size below it means the formula is wrong.
-        # (Above it is expected and means nothing — the target was topped off.)
+        # Audit: a landed heal is a lower bound on its size, so a computed size
+        # below it means the formula is wrong (above it is just overheal).
         if ev.get("sized") == "spec" and landed > 0:
             key = ev.get("skill") or "?"
             worst = self._audit.get(key)
@@ -187,10 +157,7 @@ class HealSizeEstimator:
 
     def drain_report(self):
         """A one-line summary for the log, or None when nothing has healed.
-
-        The `under` entries are the ones worth reading: a skill whose computed
-        size came out BELOW what it was measured to restore is a formula that
-        needs fixing, not a rounding artifact."""
+        UNDER-COMPUTED entries flag heal formulas that need fixing."""
         computed, guessed, unsized = (self._computed, self._guessed,
                                       self._unsized)
         if not (computed or guessed or unsized):
@@ -223,9 +190,8 @@ class PlayerAgg:
     heal_self: float = 0.0      # ...and of which the healer was the target
     # skill -> [hits, total, crits]  (damage)
     skills: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0]))
-    # skill -> [hits, total, crits, self_total]  (healing). The fourth column
-    # is what makes a healing bar splittable: how much of that skill's healing
-    # the caster put on themselves.
+    # skill -> [hits, total, crits, self_total]  (healing; self_total splits
+    # the bar into self/others)
     heals: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0, 0.0]))
     # element -> [hits, total]
     elements: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0]))
@@ -253,10 +219,7 @@ class PlayerAgg:
 
     @property
     def overheal_pct(self):
-        """Share of this player's healing that restored no health.
-
-        Zero — not "unknown" — when they have not healed at all: a row with no
-        healing has nothing to have wasted."""
+        """Share of this player's healing that restored no health (0 if none)."""
         return _overheal_pct(self.heal_total, self.heal_landed)
 
 
@@ -284,15 +247,13 @@ class PartySession:
         self.epoch = 0          # bumped on explicit/zone reset (UI watches it)
         self.capture_until = None   # parse mode's hard cutoff (None = no limit)
         self.capture_start = None   # ...and when that window opened
-        # (timestamp, "hit"|"heal", event) for the last few seconds, so a
-        # boss-pull reset can rewind instead of wiping: only what was
-        # recorded, never what the capture window rejected
+        # (timestamp, "hit"|"heal", event) recorded lately, replayed by a
+        # boss-pull reset
         self._recent: deque = deque(maxlen=RECENT_EVENT_MAX)
 
     def set_capture_window(self, seconds):
         """Parse mode: take data for exactly `seconds` from now, then stop.
-        Enforced here on the data path rather than by the UI tick, so the sample
-        is the length asked for however the 250 ms refresh happens to land.
+        Enforced on the data path, not the UI tick, so the sample is exact.
         None clears the limit."""
         with self.lock:
             now = time.time()
@@ -305,12 +266,9 @@ class PartySession:
     def _effective_duration(self, now):
         """Seconds to divide by for DPS.
 
-        Normally that's in-combat time, so a pull's DPS isn't diluted by the
-        walk to it. Inside a parse window it's wall-clock elapsed instead: the
-        window *is* the measurement, so downtime has to count against you or two
-        runs aren't comparable — and the game's isInCombat flag drops between
-        pulls, which would otherwise inflate a 60 s parse by however much of it
-        the flag happened to miss."""
+        Normally in-combat time, so the walk to a pull doesn't dilute it.
+        Inside a parse window it's wall-clock elapsed: downtime must count or
+        two parses aren't comparable (isInCombat drops between pulls)."""
         if self.capture_start is not None:
             return max(0.001, min(now, self.capture_until) - self.capture_start)
         return max(0.001, self._duration(now)) if self.enc_start else 0.0
@@ -344,9 +302,8 @@ class PartySession:
             now = time.time()
             if not self._capturing(now):
                 return
-            # The lull-reset is suppressed inside a parse window: a quiet
-            # stretch mid-parse is part of the sample, not the start of a new
-            # encounter, and wiping 40 seconds in would ruin the run.
+            # No lull-reset inside a parse window: a quiet stretch is part of
+            # the sample.
             if (self.capture_until is None and self.last_hit
                     and (now - self.last_hit) > self.timeout):
                 self._reset()             # new encounter after a long lull
@@ -357,16 +314,14 @@ class PartySession:
             self._apply_hit(self._player_for(ev), ev, now)
 
     def _apply_hit(self, p, ev, ts):
-        """Record one hit. Shared with the boss-pull rewind, so a replayed hit
-        lands exactly where the live one did."""
+        """Record one hit (shared with the boss-pull rewind)."""
         p.record(self._skill_of(ev), ev.get("element", "?"),
                  float(ev.get("amount", 0.0)), int(ev.get("crit", 0)),
                  int(ev.get("kill", 0)))
 
     def record_heal(self, ev: dict):
-        # Heals are recorded but never drive encounter boundaries: an
-        # out-of-combat potion/regen must not roll the meter into a fresh
-        # encounter (damage does that), so last_hit stays untouched.
+        # Heals never drive encounter boundaries (an out-of-combat regen must
+        # not start a fresh encounter), so last_hit stays untouched.
         with self.lock:
             now = time.time()
             if not self._capturing(now):
@@ -386,8 +341,7 @@ class PartySession:
         """Advance/pause the duration clock based on whether a captured player
         is currently in combat. Called each UI tick with a mode-aware value."""
         with self.lock:
-            # Past a parse window's cutoff the clock stops even mid-fight, so
-            # the duration the meter shows is the sample's, not the pull's.
+            # Past a parse window's cutoff the clock stops even mid-fight.
             if not self._capturing(now):
                 active = False
             if active and self.active_since is None:
@@ -410,15 +364,10 @@ class PartySession:
     def reset_keeping_recent(self, backlag=BOSS_PULL_BACKLAG_SECS):
         """Reset the encounter but carry the last `backlag` seconds forward.
 
-        For the boss-pull reset. The healthbar the pull is detected from lags
-        the pull itself, so a plain reset lands *after* the opening burst and
-        deletes it — the single most interesting part of the parse. Replaying
-        the buffered events with their ORIGINAL timestamps keeps the numbers,
-        the per-player first/last times and the encounter start honest, rather
-        than restamping everything to the moment the bar appeared and reporting
-        a burst that took four seconds as instantaneous.
-
-        Returns how many events were carried over, for the log."""
+        For the boss-pull reset: the boss healthbar lags the pull, so a plain
+        reset would delete the opening burst. Events are replayed with their
+        ORIGINAL timestamps so the encounter start and duration stay honest.
+        Returns how many events were carried over."""
         with self.lock:
             cutoff = time.time() - backlag
             keep = [e for e in self._recent if e[0] >= cutoff]
@@ -442,10 +391,8 @@ class PartySession:
                                   int(ev.get("crit", 0)),
                                   float(ev.get("landed", 0.0)),
                                   bool(ev.get("self")))
-            # Damage was landing, so the player was in combat for the whole
-            # replayed stretch. Without this the duration clock would only start
-            # at the next UI tick and those seconds would be missing from the
-            # divisor — inflating the DPS of the very burst we just rescued.
+            # In combat for the whole replayed stretch, else those seconds
+            # would miss the DPS divisor.
             if self.enc_start:
                 self.active_since = self.enc_start
                 self.in_combat = True
@@ -477,29 +424,16 @@ class PartySession:
 class RiftRecorder:
     """Captures one rift run for the end-of-rift report.
 
-    Fed the same hit/heal stream as PartySession but never reset by the
-    player — its boundaries are the rift's own. Entering the rift starts
-    phase 1 (the trash), the boss-pull edge starts phase 2 (the boss), and
-    the kill that ends the fight freezes both into a report. Two phases and
-    not a running meter, because that's the question the report answers:
-    who carries the AoE clear and who carries the single-target, which are
-    different players on purpose.
-
-    A run that doesn't end in a kill — walking out, a wipe's loading screen —
-    produces nothing. Half a rift isn't a rift report.
-
-    Aggregates everything the hook sends rather than the meter's party/all
-    mode: the mode can change mid-rift (the rift prompt exists to change it),
-    and a report whose phase 1 and phase 2 counted different sets of players
-    would be comparing nothing with nothing."""
+    Fed the same hit/heal stream as PartySession but bounded by the rift
+    itself: entering starts phase 1 (trash), the boss pull starts phase 2,
+    the kill freezes both into a report. A run without a kill produces
+    nothing. Counts every player the hook sends, ignoring the meter's
+    party/all mode, which can change mid-rift."""
 
     PHASE_LABELS = ("Phase de faille", "Phase du boss")
-    # The rift flag can drop before the boss's bar does: the flag is read
-    # every 0.4 s, the bar only when the game refreshes it (2/s), and the bar
-    # stays up through the death. Dropping the recording on the flag then
-    # lost the report to a race. Once the boss is pulled, the end of the rift
-    # leaves this long for the kill to come in; past it, the rift is reported
-    # anyway, as one whose kill was not seen.
+    # The rift flag (read every 0.4 s) can drop before the boss bar (2/s,
+    # up through the death). Once the boss is pulled, the rift's end waits
+    # this long for the kill, then reports anyway as unconfirmed.
     CLOSE_GRACE = 20.0
 
     def __init__(self):
@@ -508,14 +442,10 @@ class RiftRecorder:
         self.phase = 0
         self._closing_at = None     # the rift flag dropped mid-boss, at
         self._phases = [self._new_phase(), self._new_phase()]
-        # (timestamp, phase, "hit"|"heal", event) — kept so the boss-pull
-        # edge can move the opening burst across the phase boundary, same
-        # trick (and same measured bar lag) as reset_keeping_recent().
+        # (timestamp, phase, "hit"|"heal", event) — lets the boss pull move
+        # the opening burst across the phase boundary
         self._recent: deque = deque(maxlen=RECENT_EVENT_MAX)
-        # skill key -> display name, for the per-skill tables below. Kept
-        # across the whole rift rather than per phase: a name is a fact about
-        # the game, and the boss phase should not have to re-learn one the
-        # trash phase already saw.
+        # skill key -> display name, across the whole rift
         self.skill_names: dict[str, str] = {}
 
     @staticmethod
@@ -542,8 +472,7 @@ class RiftRecorder:
 
     def _apply(self, ph, kind, ev, sign):
         """Add (or, for the phase-boundary rewind, subtract) one event. Every
-        stat is a plain sum, which is what makes the rewind exact — including
-        the per-skill tables, which is why they are sums and not counters."""
+        stat is a plain sum so the rewind is exact."""
         p = self._player_of(ph, ev.get("player") or "?")
         amount = sign * float(ev.get("amount", 0.0))
         sid, nm = _skill_ident(ev)
@@ -587,16 +516,13 @@ class RiftRecorder:
                 if self._closing_at is None:
                     self._closing_at = time.time()
                 return "closing"
-            # Leaving normally happens after the kill, when the report has
-            # already been taken; leaving mid-run abandons the recording.
+            # Leaving mid-run (the report wasn't taken) abandons it.
             self.active = False
             return "abandoned"
 
     def on_zone(self):
-        """A loading screen means the player left the instance — a wipe or a
-        walk-out. Whatever was building is not a finished rift — unless the
-        rift is already over and only its kill is awaited. True when a
-        recording was dropped."""
+        """A loading screen (wipe or walk-out) drops the recording unless
+        only its kill is awaited. True when a recording was dropped."""
         with self.lock:
             if self.active and self._closing_at is not None:
                 return False
@@ -619,8 +545,7 @@ class RiftRecorder:
         return report
 
     def record(self, kind, ev: dict):
-        """kind is "hit" or "heal". Hits arrive already filtered of nullified
-        damage — the caller drops those before the meter sees them too."""
+        """kind is "hit" or "heal" (nullified hits already filtered out)."""
         with self.lock:
             if not self.active or self._closing_at is not None:
                 return              # nothing recording, or the rift is over
@@ -629,11 +554,9 @@ class RiftRecorder:
             self._apply(self._phases[self.phase], kind, ev, 1)
 
     def on_boss_pull(self, backlag=BOSS_PULL_BACKLAG_SECS):
-        """The healthbar the pull is detected from lags the pull itself
-        (fetchBosses is a 2/s timer), so the opening burst on the boss has
-        already been recorded as trash. Move the last few seconds across the
-        boundary — measured damage on the boss, miscounted only in which
-        column it landed."""
+        """The boss healthbar lags the pull (fetchBosses is a 2/s timer), so
+        the opening burst was recorded as trash: move the last few seconds
+        into the boss phase."""
         with self.lock:
             if not self.active or self.phase != 0:
                 return
@@ -646,16 +569,14 @@ class RiftRecorder:
                     self._apply(self._phases[0], kind, ev, -1)
                     self._apply(self._phases[1], kind, ev, 1)
                     boundary = min(boundary, ts)
-            # The boundary is where the earliest moved event landed, not where
-            # the bar rose — the durations should agree with the totals.
+            # Boundary at the earliest moved event, so durations match totals.
             self._phases[0]["end"] = boundary
             self._phases[1]["start"] = boundary
 
     def on_boss_kill(self):
         """The kill that ended the fight. Returns the finished report as plain
-        data (safe to hand to another thread), or None if nothing was recording.
-        One report per rift: taking it stops the recording, so the walk to the
-        exit portal can't dribble into the boss column."""
+        data (safe across threads), or None if nothing was recording. Taking
+        it stops the recording."""
         with self.lock:
             if not self.active:
                 return None
@@ -669,13 +590,9 @@ class RiftRecorder:
             for label, ph in zip(self.PHASE_LABELS, self._phases):
                 players = sorted((dict(p) for p in ph["players"].values()),
                                  key=lambda p: -p["total"])
-                # The rewind leaves float dust (and a player who only acted in
-                # the moved window ends up all-zero) — drop empty rows rather
-                # than showing "0" lines.
+                # The rewind leaves float dust and all-zero rows: drop them.
                 players = [p for p in players
                            if p["total"] > 0.5 or p["heal"] > 0.5]
-                # The rewind subtracts, so a skill moved wholesale to the next
-                # phase is left behind as a zero row. Same dust, same rule.
                 for p in players:
                     for key in ("skills", "heals", "elements"):
                         p[key] = {k: list(v) for k, v in p[key].items()
@@ -706,9 +623,8 @@ class RiftRecorder:
 
 
 class DungeonRecorder(RiftRecorder):
-    """The rift recorder's two-phase capture, for a dungeon: the exploration,
-    then the boss. Its boundaries come from the game's dungeon state rather
-    than from the boss bar — see DungeonTracker."""
+    """The rift recorder for a dungeon (exploration, then boss), bounded by
+    the game's dungeon state — see DungeonTracker."""
 
     PHASE_LABELS = ("Exploration", "Phase du boss")
     CLOSE_GRACE = 0             # its end comes from the dungeon's own state
@@ -730,13 +646,11 @@ DUNGEON_MIN_SECS = 30
 class DungeonTracker:
     """Follows one dungeon run from the hook's `dungeon` messages.
 
-    Measured (a Manfish Ruins run, 2026-09-28): the active activity is an
-    st.activity.Dungeon; its state lives on the player's DungeonContext and
-    goes Explo -> BossStart -> BossPhase -> BossWin (then back to Explo); the
-    context's `end` is the instance clock at the kill, which is the run's
-    time (the clock starts at the instance's creation); `start` stays -1 on a
-    client. The difficulty exists only on the instance lobby, which vanishes
-    at launch — so the last one seen is remembered for the run that follows.
+    Measured 2026-09-28: the player's DungeonContext state goes Explo ->
+    BossStart -> BossPhase -> BossWin; its `end` is the instance clock at the
+    kill, i.e. the run's time (`start` stays -1 on a client). The difficulty
+    only exists on the lobby, which vanishes at launch, so the last one seen
+    is remembered.
 
     Runs on the hook's thread; a finished run is handed to the app."""
 
@@ -856,10 +770,8 @@ class DungeonTracker:
 
 
 class WorldSnapshot:
-    """Which class every player is: damage events carry none. Fed by the
-    hook's `shard` message (every player the client holds, with its class);
-    a player who leaves keeps their tag while their damage is on the
-    meter."""
+    """Which class every player is (damage events carry none), from the
+    hook's `shard` message. Tags are kept after a player leaves."""
 
     def __init__(self):
         self._lock = threading.Lock()

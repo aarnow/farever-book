@@ -1,23 +1,18 @@
 """The game's 3D models, for the Collection's viewer.
 
-A collectible names its model (item visuals.modelRef -> the `model` sheet,
-whose row — or the row it inherits from — names a prefab). The prefab
-(HBSON) names the model file and, material by material, the gradients that
-colour it. The model file is HMD (Heaps' compiled model format, version 6 in
-this build) even though it is named .fbx; its layout here is the one
-hxd.fmt.hmd.Reader reads in the game's own bytecode.
+An item's visuals.modelRef -> the `model` sheet (row or inherited row) ->
+a prefab (HBSON), which names the model file and each material's gradients.
+The model file is HMD (Heaps' compiled format, v6 here) despite its .fbx
+name; layout as hxd.fmt.hmd.Reader reads it in the game's bytecode.
 
-The colours are the game's, as its GradMat shader (prefab.GradMatShader,
-decoded from the HXSL in hlboot.dat) makes them: the prefab's gradmat lists
-up to 8 gradients (the `gradient` sheet), U picks one (floor(u * 8)), V a
-row of it. A gradient is 6 columns: albedo, shadow, terminator, specular,
-emissive, outline. The light chooses between them — a cel-shaded ramp, plus
-a hand-drawn line texture over the second UV set.
+Colours follow the game's GradMat shader (prefab.GradMatShader): up to 8
+gradients per gradmat, U picks one (floor(u * 8)), V a row of it. A gradient
+is 6 columns: albedo, shadow, terminator, specular, emissive, outline; the
+light picks between them (cel-shaded), plus a line texture on the second UV.
 
-What leaves here is compact and JSON-ready, for a small WebGL viewer rather
-than a full glTF stack: the vertices' positions, normals and two UV sets,
-each material's triangles, its gradients side by side (6 px per slot) as a
-PNG, and its shading values with the game's defaults filled in.
+The output is compact JSON for a small WebGL viewer: positions, normals, two
+UV sets, per-material triangles, gradients as a PNG (6 px per slot) and the
+shading values with the game's defaults filled in.
 
     py hltools/hmd_model.py Mount_Wolf_01      # writes analysis_out/models/
 """
@@ -36,9 +31,8 @@ _DIRS = {}
 
 
 def _read(pak, name):
-    """One file out of a pak, its directory read once per pak (and again
-    if the pak changes): a model takes twenty-odd reads of res.pak, whose
-    directory alone is 700 KB."""
+    """One file out of a pak, its directory cached per pak (res.pak's alone
+    is 700 KB, and a model reads it twenty-odd times)."""
     pak = Path(pak)
     st = pak.stat()
     key = (str(pak), st.st_size, st.st_mtime)
@@ -71,7 +65,6 @@ def _sheets(game_dir):
     return _CDB[key]
 
 
-# ---- HMD ------------------------------------------------------------------
 class _R:
     def __init__(self, b):
         self.b, self.p = b, 0
@@ -318,11 +311,10 @@ def mesh(raw, d, geom=0):
             "bounds": g["bounds"]}
 
 
-# ---- the skeleton's rest pose ---------------------------------------------
 # Heaps' matrices take row vectors (v * M): a joint's absolute matrix is its
-# own times its parent's, and what moves a vertex is transPos (the inverse
-# bind) times that. Some models (the crawlers) are stored in centimetres and
-# Z-up, and only their skeleton makes them the right size and way up.
+# own times its parent's; a vertex moves by transPos (inverse bind) times
+# that. Some models (the crawlers) are in centimetres and Z-up: only their
+# skeleton makes them the right size and way up.
 def _mat(p):
     """A Position (x y z, qx qy qz, sx sy sz) as a 4x3 row-vector matrix."""
     x, y, z, qx, qy, qz = p[:6]
@@ -341,9 +333,8 @@ def _mat(p):
 
 def _mat_post(p):
     """The same, as Position.toMatrix(true) builds a joint's bind matrix
-    (transPos): rotated, translated, and only then scaled — the scale
-    reaches the translation too. A model in centimetres (the crawlers) has
-    its bind matrices scaled, and gets this wrong otherwise."""
+    (transPos): scaled last, so the scale reaches the translation too (the
+    crawlers' bind matrices are scaled)."""
     m = _mat(list(p[:6]) + [1.0, 1.0, 1.0])
     s = p[6:9] if len(p) >= 9 else (1.0, 1.0, 1.0)
     return [[row[c] * s[c] for c in range(3)] for row in m]
@@ -427,11 +418,9 @@ def rest_pose(m, sub_of_vertex, model, skinned=False):
             nor[i * 3:i * 3 + 3] = (ax / ln, ay / ln, az / ln)
 
 
-# ---- the idle animation ----------------------------------------------------
-# The viewer is sent the mesh already moved by the root (G), the prefab (N)
-# and turned Y-up (S). An animated frame moves a vertex by its joints'
-# matrices P instead of G; what the viewer applies on top of what it has is
-# therefore C = S^-1 N^-1 G^-1 P N S, per joint, per frame.
+# The viewer gets the mesh already moved by the root (G), the prefab (N) and
+# turned Y-up (S); a frame moves it by the joints' P instead of G, so the
+# viewer applies C = S^-1 N^-1 G^-1 P N S, per joint, per frame.
 _SWAP = [[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]
 ANIM_FPS = 15
 
@@ -565,7 +554,6 @@ def anim_file_frames(game_dir, path):
     return frames[::step], (a["sampling"] or 30) / step * (a["speed"] or 1)
 
 
-# ---- prefab, model sheet, palettes ----------------------------------------
 def _walk(o, fn):
     if isinstance(o, dict):
         fn(o)
@@ -639,10 +627,8 @@ _IDENTITY = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]]
 
 
 def prefab_models(game_dir, prefab, depth=0):
-    """Every model a prefab is made of: [{source, mats, matrix}] — a boss is
-    a body, an abdomen and its eyes. Each with its own materials and its
-    place in the prefab. A model hung on a bone of another (a constraint:
-    eyes on a head) is left out, its place being where that bone is."""
+    """Every model a prefab is made of: [{source, mats, matrix}]. A model
+    hung on another's bone (a constraint) is left out."""
     raw = _read(Path(game_dir) / "res.pak", prefab)
     if not raw:
         return []
@@ -825,9 +811,8 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
             v = [nx * M[0][c] + ny * M[1][c] + nz * M[2][c] for c in range(3)]
             ln = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) ** 0.5 or 1.0
             nor[i:i + 3] = [v[0] / ln, v[1] / ln, v[2] / ln]
-    # a material the prefab names differently from the model (Gradmat1 in
-    # the model, Gradmat_12Slots_002 in the prefab) takes the prefab's main
-    # gradmat left unclaimed: the one with the most slots
+    # a material the prefab names differently from the model takes the
+    # unclaimed gradmat with the most slots
     names = {mm.get("name") for mm in d["mats"]}
     spare = sorted((v for k, v in gradmats.items()
                     if k not in names and k != "*" and v.get("slots")),
@@ -837,8 +822,7 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
         mi = model["mats"][k] if k < len(model["mats"]) else 0
         mat = d["mats"][mi] if mi < len(d["mats"]) else {}
         if str(mat.get("name", "")).lower() == "outline":
-            # the inverted hull that draws the cartoon outline, meant to be
-            # seen from inside only: drawn plainly, it hides the object
+            # the outline's inverted hull: drawn plainly, it hides the object
             continue
         gm = (gradmats.get(mat.get("name")) or gradmats.get("*")
               or (spare[0] if spare else {}))
@@ -883,12 +867,9 @@ def hero_models(game_dir, gear):
     return out
 
 
-# ---- the weapons, holstered ------------------------------------------------
-# A weapon rests on the hero's back or hips: its type's holster (itemType
-# slot.holster, inherited) names a socket per model (visuals.models, in
-# order), "primary" for the set in use, "secondary" for the other. The
-# sockets are Body.prefab's, grouped on the chest and the pelvis. The body
-# parts' prefabs turn the hero a quarter (their ROOT).
+# A weapon's type's holster (itemType slot.holster, inherited) names a
+# Body.prefab socket per model, "primary" for the set in use, "secondary" for
+# the other. The body parts' prefabs turn the hero a quarter (their ROOT).
 HERO_SKELETON = "Character/Hero/Body/Sources/Hero_N.fbx"
 HERO_ROOT = _local({"rotationZ": 90})
 HERO_IDLE = "Anim/Human/Common/Anim_Human_Common_Idle.fbx"
@@ -1007,11 +988,9 @@ def hero_model(game_dir, gear, anim=True):
 
 
 def item_model(game_dir, item_id, anim=False, models=None, idle=None):
-    """The viewer's payload for one collectible (or monster), or None when
-    it has no model this reader can make sense of. A prefab of several
-    models comes as one mesh. With `anim`, a unit's idle animation too.
-    `models` instead of the item's: a dressed hero (hero_models), `idle`
-    its animation (anim_file_frames)."""
+    """The viewer's payload for one collectible (or monster), as one mesh,
+    or None. With `anim`, its idle animation too. `models`/`idle` replace
+    the item's (a dressed hero)."""
     prefab = item_prefab(game_dir, item_id) if models is None else None
     if not prefab and models is None:
         return None
@@ -1032,9 +1011,8 @@ def item_model(game_dir, item_id, anim=False, models=None, idle=None):
             continue
         m, parts, am = got
         if frames:
-            # each model's joints after the ones before; a model the
-            # animation doesn't move hangs on one still joint, or on the
-            # hero's joint it follows (a holstered weapon on the chest)
+            # a model the animation doesn't move hangs on one still joint,
+            # or on the hero's joint it follows (a holstered weapon)
             first = len(cols)
             if am:
                 jl, wl, mats = am
@@ -1055,7 +1033,7 @@ def item_model(game_dir, item_id, anim=False, models=None, idle=None):
     n = len(pos) // 3
     if not n:
         return None
-    # Heaps is Z-up; the viewer, like WebGL's habits, Y-up
+    # Heaps is Z-up, the viewer Y-up
     for a in (pos, nor):
         for i in range(0, len(a), 3):
             a[i + 1], a[i + 2] = a[i + 2], -a[i + 1]
@@ -1118,8 +1096,8 @@ def item_model(game_dir, item_id, anim=False, models=None, idle=None):
                             tw += w
                     out[i] = [x / tw for x in acc] if tw else P
                 return out
-            # where the first frame puts the vertices: the framing follows
-            # the pose (a crawler's legs spread wider than they were modelled)
+            # frame from the first pose (a crawler's legs spread wider than
+            # modelled)
             sk = skinned(0)
             mn = [min(v[c] for v in sk.values()) for c in range(3)]
             mx = [max(v[c] for v in sk.values()) for c in range(3)]

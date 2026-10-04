@@ -1,8 +1,7 @@
-"""Draw assets/farevermeter.ico — the tray, executable and installer icon.
+"""Draw assets/fareverfrance.ico — the tray, executable and installer icon.
 
-Generated rather than committed as an opaque binary: it is the window's own
-emblem (the Farever France shield), so a re-skin can follow by editing the
-colour constants here instead of by opening an image editor.
+The window's emblem (the Farever France shield), drawn from the colour
+constants below.
 
     py packaging/make_icon.py
 """
@@ -10,10 +9,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-OUT = Path(__file__).resolve().parent.parent / "assets" / "farevermeter.ico"
+OUT = Path(__file__).resolve().parent.parent / "assets" / "fareverfrance.ico"
 
-# The window's emblem (menu.css .emblem): a dark-blue-rimmed shield, its
-# field in the French colours — blue, white, red, side by side.
+# as menu.css .emblem: a dark-blue rim, a blue-white-red field
 RIM_HI, RIM_LO = (42, 63, 143), (14, 26, 74)
 BANDS = ((0, 85, 164), (255, 255, 255), (239, 65, 53))
 SHADE = 0.22                # how much darker a band gets at the shield's tip
@@ -73,8 +71,7 @@ def draw(size: int) -> Image.Image:
 def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frames = [draw(s) for s in SIZES]
-    # Pillow writes every append_images frame at its own size, so the .ico ends
-    # up with a real image per resolution instead of one Windows has to rescale.
+    # one real image per resolution, not one Windows rescales
     frames[-1].save(OUT, format="ICO",
                     sizes=[(s, s) for s in SIZES],
                     append_images=frames[:-1])

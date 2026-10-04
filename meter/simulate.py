@@ -1,5 +1,5 @@
 """Damage, heal and mitigation simulation for a build, with the game's own
-formulas (hlboot.dat, read with hltools/hlbc_code.py, 2026-10-02):
+formulas (read in hlboot.dat, 2026-10-02):
 
 amount ($HSkill.getStepEffectScaling)
     base value + sum(ratio * attribute). A skill of the main weapon draws
@@ -30,7 +30,7 @@ from __future__ import annotations
 from gamedata import _skill_label, build_data, gear_stats_data
 from gearstats import _atb_level_scaling
 
-CLASS_APTITUDE = 1                  # aptitude props flag: a class's
+CLASS_APTITUDE = 1                  # aptitude props flag: a class aptitude
 
 
 def _resist_consts():
@@ -146,9 +146,8 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
     crit_c = max(0.0, min(1.0, pct("CritChance")))
     crit_m = max(1.0, pct("CritDamage"))
     dmg_mod = 1.0                               # DamageModifier: 100 %
-    # a heal goes through the damage ratio's Fervor, then through
-    # HealGivenMultiplier (100 % + Fervor): measured 2026-10-02 against the
-    # game's tooltip (Bond d'essaim, Fervor 22.59 %: 68 PV)
+    # Fervor twice: damage ratio, then HealGivenMultiplier (checked against
+    # the tooltip, 2026-10-02)
     heal_mod = (1.0 + fervor) * (1.0 + fervor)
     target_resist = resist_for(target_armor_pct / 100.0, level)
     effects = build_data().get("effects") or {}

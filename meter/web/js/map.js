@@ -1,9 +1,9 @@
-/* The world map: tiles, markers, filters and pan/zoom. */
+/* The world map: tiles, markers, filters and pan/zoom. The tiles sit in a
+   transformed layer; the points in their own, in screen pixels, so they keep
+   their size at every zoom. */
 
 const MAP = { s: null, x: 0, y: 0, on: {}, reg: 'all', sel: null, node: null,
               hideFound: false };
-const MAP_COLORS = { chest: '#E2B65B', vault: '#C07CF0', recipe: '#5B8DEF',
-                     orb: '#F2665E', obelisk: '#B89CFF', respawn: '#4FD1C5' };
 
 function mapPx(n, x, y) {
   const m = n.meta, k = m.tile_px / m.units_per_tile;
@@ -78,8 +78,7 @@ function mapIcons() {
 }
 
 function mapPanel(n) {
-  // the title stays put, the body under it scrolls (its bar clear of the
-  // panel's rounded corners)
+  // only the body scrolls, its bar clear of the panel's rounded corners
   const panel = el('div', 'mpanel');
   panel.appendChild(el('div', 'mtitle', 'Carte de Siagarta'));
   const p = el('div', 'mbody');
@@ -187,8 +186,7 @@ function mapFit() {
 function mapApply() {
   const world = document.querySelector('.mworld');
   if (!world) return;
-  // Framed on the first call that has a real size: a window that was hidden
-  // or minimised when the tab opened has none yet.
+  // framed on the first call with a real size (a hidden window has none)
   if (MAP.s === null) mapFit();
   if (MAP.s === null) return;
   world.style.transform = `translate(${MAP.x}px, ${MAP.y}px) scale(${MAP.s})`;
@@ -279,6 +277,3 @@ function mapPopupPlace() {
 }
 
 window.addEventListener('resize', () => { if (document.querySelector('.mapvp')) mapApply(); });
-
-/* The mounts and gliders monsters can drop: each with every monster that can
-   drop it, the kills behind it and the chances, per kill and so far. */

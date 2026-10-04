@@ -1,11 +1,8 @@
 """The player's own last known state, kept on disk so the app shows it with
-the game closed: per character, the profile (equipment, talents, skills,
-runes — the same read as Inspecter's), the counters (luck, statistics) and
-the stock (bag, equipment, bank: the goals' counts), plus the account they
-belong to and the last character played.
-
-Only one's own characters: the players analysed in Inspecter stay in memory.
-Saved in .meter_me.json, written at most every FLUSH_SECS."""
+the game closed: per character, the profile (as Inspecter reads it), the
+counters (luck, statistics) and the stock (the goals' counts), plus the last
+character played. Players inspected in Inspecter stay in memory only.
+Saved in .meter_me.json, at most every FLUSH_SECS."""
 from __future__ import annotations
 
 import json
@@ -20,7 +17,7 @@ FLUSH_SECS = 10.0
 
 class MeStore:
     def __init__(self):
-        self.data = {"account": {}, "last": None, "chars": {}}
+        self.data = {"last": None, "chars": {}}
         self._dirty = False
         self._written = 0.0
         try:
@@ -31,12 +28,6 @@ class MeStore:
             pass
 
     # -- writing -----------------------------------------------------------
-    def set_account(self, uid, name):
-        acct = {k: v for k, v in (("uid", uid), ("name", name)) if v}
-        if acct and acct != self.data.get("account"):
-            self.data["account"] = acct
-            self._dirty = True
-
     def set_hero(self, name):
         if name and name != self.data.get("last"):
             self.data["last"] = name

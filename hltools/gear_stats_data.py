@@ -1,11 +1,8 @@
-"""Gear stats, for the Inspecter tab: what the game needs to compute a gear
-piece's attributes — from data.cdb (res.light.pak). The computation itself
-is in the meter (meter/gearstats.py, gear_stats); this only packs its inputs.
+"""The inputs of meter/gearstats.py's gear_stats, from data.cdb.
 
-A gear piece holds no rolled stats: st.item.Gear keeps level, upgradeLevel,
-slots, infusion and infusionBonusStat, nothing else. The game derives the
-attributes every time, deterministically (hlboot.dat, read with
-hltools/hlbc_code.py, 2026-10-01):
+A gear piece holds no rolled stats (st.item.Gear keeps level, upgradeLevel,
+slots, infusion and infusionBonusStat): the game derives them
+deterministically (read in hlboot.dat, 2026-10-01):
 
 st.Item.getItemAffixes
     iLevel = the instance's item level (st.item.Gear.getILevel):
@@ -89,9 +86,7 @@ def build(game_dir):
                             "scale": {s["attribute"]: s.get("scale")
                                       for s in a.get("scaling") or ()
                                       if s.get("attribute")},
-                            # [source, scale, scalingOperator] for the
-                            # hero's derived attributes (ent.Unit.
-                            # getAtbScaling)
+                            # derived attributes (ent.Unit.getAtbScaling)
                             "ops": [[s["attribute"], s.get("scale") or 0,
                                      s.get("scalingOperator") or [0]]
                                     for s in a.get("scaling") or ()
@@ -132,9 +127,8 @@ def build(game_dir):
             "armorReduction": (a.get("props") or {}).get("armorReduction")
                               or 0,
             "scalings": lines}
-    # A type without its own ratio takes its parent's (data.cdb `inherit`,
-    # resolved when the game loads its data): Mace -> OHWeapon ->
-    # MainhandWeapon, which carries the weapons' ratio.
+    # a type without its own ratio takes its parent's (Mace -> OHWeapon ->
+    # MainhandWeapon)
     tlines = {t["id"]: t for t in sheets["itemType"]["lines"]}
 
     def inherited(t, get):
@@ -146,9 +140,8 @@ def build(game_dir):
                 return v
             t = tlines.get(t.get("inherit"))
         return {}
-    # Equipment slots that weaken what they hold (itemType Slot_* lines,
-    # slot.affixFactor — st.Equipment.getAffixFactor): the arsenal's weapon
-    # (Slot_Weapon2) at 0.4. The tooltip rounds the result up.
+    # slots that weaken what they hold (slot.affixFactor: Slot_Weapon2 0.4);
+    # the tooltip rounds the result up
     slot_factors = {t["id"]: (t.get("slot") or {}).get("affixFactor")
                     for t in sheets["itemType"]["lines"]
                     if (t.get("slot") or {}).get("affixFactor") is not None}
@@ -176,10 +169,9 @@ def build(game_dir):
                            "il": il, "rar": it.get("rarity"),
                            "fac": it.get("faction"), "apt": apt,
                            "fixed": fixed or None}
-    # Every skill's attribute effects (statuses, passives, talents,
-    # infusion passives): [ref, attribute, value, conds] — Flat adds,
-    # ARatio adds a share, MRatio / MRatioMin multiply. conds: mastery (a
-    # rune the hero has), minRank (talent rank, infusion tier).
+    # every skill's attribute effects: [ref, attribute, value, conds]. Flat
+    # adds, ARatio adds a share, MRatio / MRatioMin multiply; conds: mastery
+    # (a rune), minRank (talent rank, infusion tier).
     skill_affixes = {}
     for sk in sheets["skill"]["lines"]:
         rows = [[a.get("ref"), (a.get("target") or {}).get("attribute"),

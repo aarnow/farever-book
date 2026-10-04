@@ -3,15 +3,12 @@ window, downloaded, then installed by the installer itself.
 
 A release is a GitHub Release of RELEASES_REPO tagged with the version
 (1.15.0 or v1.15.0) carrying FareverFrance-<version>-Setup.exe. The check
-runs in the background (at launch, then hourly) and never fails loudly:
-offline, rate-limited (60 requests an hour without an account) or no
-release yet costs the offer, not the app.
+runs in the background (at launch, then hourly) and never fails loudly
+(offline, rate-limited at 60 requests/hour, no release yet).
 
-Installing is the installer's job, run the way a person would run it:
-opened visibly (ShellExecute) once the player said yes, this app quitting
-so nothing is in its way, its last page starting the new version. No
-hidden script waiting for us to exit and no silent install: an updater
-doing that was quarantined by Windows Defender as defense evasion."""
+The installer is opened visibly (ShellExecute) and the app quits; no hidden
+script or silent install: an updater doing that was quarantined by Windows
+Defender as defense evasion."""
 import json
 import os
 import sys
@@ -186,7 +183,6 @@ class Updater:
                 return
             self._set({"stage": "installing", "v": r["v"]})
             try:
-                # a double-click's launch: visible, the player's own
                 os.startfile(str(dest))  # noqa: S606 - the update agreed to
             except OSError as e:
                 print(f"[update] couldn't open the installer: {e}",
@@ -195,8 +191,7 @@ class Updater:
                            "t": "L'installeur n'a pas pu être ouvert. Il est "
                                 f"dans {UPDATE_DIR}.", "page": r["page"]})
                 return
-            # out of its way: the installer replaces our files, and its
-            # last page starts the new version
+            # the installer replaces our files and starts the new version
             time.sleep(1.5)
             quit_app()
         threading.Thread(target=work, daemon=True, name="update-download").start()

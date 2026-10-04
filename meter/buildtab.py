@@ -1,10 +1,8 @@
-"""The Build tab: the builds saved in builds/, the one being edited, and
-the page it shows. The app only forwards the tab's actions here and asks
-for its page (BuildTab.actions(), BuildTab.page()).
+"""The Build tab: saved builds, the one being edited, and its page
+(BuildTab.actions(), BuildTab.page()).
 
-The rules and the model are in builds.py; the result (gear stats,
-attributes, infusion sets) is the Inspecter's own character view, computed
-on the build turned into a profile."""
+Rules and model are in builds.py; the sheet is the Inspecter's
+character_view on the build turned into a profile."""
 from __future__ import annotations
 
 import copy
@@ -146,9 +144,8 @@ class BuildTab:
             self._toast("Copie impossible : le presse-papiers est occupé.")
 
     def _image(self):
-        """The open build as a picture to share (buildcard.py), made in the
-        background (the hero's 3D render takes some seconds): saved in
-        Images\\Farever France and put on the clipboard."""
+        """The open build as a picture (buildcard.py), in a thread (the 3D
+        render takes seconds): saved in Images\\Farever France and copied."""
         if not self.build or self.imaging:
             return
         import re
@@ -402,20 +399,17 @@ class BuildTab:
         return ((v.get("open") or {}).get("atbs") or {}).get("raw")
 
     def _guide_survival(self, b):
-        """What keeps the build alive: its health over what its armour
-        lets through, from a monster of its level (armour = r/(1−r)·(385 +
-        100·level), so r = armour / (armour + 385 + 100·level))."""
+        """Effective health: health / (1 - r) against a monster of its level,
+        r = armour / (armour + 385 + 100·level)."""
         raw = self._guide_raw(b) or {}
         arm = max(0.0, raw.get("Armor") or 0)
         r = arm / (arm + 385 + 100 * b["lvl"])
         return (raw.get("MaxHealth") or 0) / max(0.05, 1 - r)
 
     def _guide_score(self, b, mode, heals):
-        """What the guide maximises: the build's skills (its weapons', its
-        arsenal's, its class's) simulated against a common target, their
-        average hits — critical chance included — summed: magical ones only
-        when the player favours magic penetration, physical ones only for
-        armour penetration; heals too when Faith leads."""
+        """What the guide maximises: the sum of all the build's skills'
+        average hits (crits included) on a common target; `mode` keeps only
+        magic or physical damage, `heals` adds heals and shields."""
         from simulate import is_magic
         raw = self._guide_raw(b)
         sim = self._sim_view(dict(b, sim={"armor": 30, "enemy": None,
@@ -436,10 +430,9 @@ class BuildTab:
         return total
 
     def _guide_optimise(self, b, p):
-        """From the guide's first draft, slot by slot: every piece the slot
-        can take, then every augment, then the infusion and its stat — each
-        time the one that makes the most of the build's skills (two passes:
-        a change can open another). The wishes' own score breaks ties."""
+        """Greedy pass over the guide's draft: per slot the piece, then the
+        augments, then the infusions that score best (two passes over
+        pieces: a change can open another). The wishes break ties."""
         from gearstats import gear_stats
         stats = [s for s in p.get("stats") or () if s]
         mode = ("magic" if "SpellPenetrationRating" in stats
@@ -448,10 +441,8 @@ class BuildTab:
                 and "SpellPenetrationRating" not in stats else "all")
         heals = B.guide_role(p) == "Support"
         weights = B.guide_weights(list(p.get("atbs") or ())[:2], stats[:3])
-        # the player's order of stats: a piece's own stats, the first one
-        # weighing most, raise its score by a few percent (53 of the first
-        # stat: +3.2 %, of the second: +1.6 %), enough for the order to win
-        # over the small gaps the simulation finds between them
+        # a few % bonus per wished stat on the piece, so the player's order
+        # wins over the simulation's small gaps
         prio = dict(zip(stats[:3], (0.6, 0.3, 0.1)))
         draft = next((pc.get("inf") for pc in b["gear"].values()
                       if pc.get("inf")), "")
@@ -522,13 +513,9 @@ class BuildTab:
         return B.normalize(b), best, mode, plan
 
     def _guide_infusions(self, b, p, stats, score):
-        """The infusions the goal asks for (builds.GUIDE_GOALS): its groups
-        in order, each the infusion of its role that does the most —
-        damage (or heals) for a damage or support role, health over what
-        the armour lets through for a tank — the others kept to theirs.
-        The pieces that take one are epic at least, so prismatic: any
-        infusion's bonus holds on them, whatever their faction, and the
-        bonus aims at the player's first stat the piece can roll."""
+        """The infusions builds.GUIDE_GOALS asks for, each group the one of
+        its role that scores best (effective health for a tank). Infused
+        pieces are made prismatic so any infusion's bonus holds."""
         infs = infusion_data().get("infusions") or {}
         pieces = [pc for pc in b["gear"].values() if B.infusable(pc)]
         for pc in pieces:
@@ -557,8 +544,8 @@ class BuildTab:
                             if sid.endswith("_" + role) and sid not in taken),
                            key=lambda s: pref.get(s, 99))
             pick, pick_v = None, None
-            # survival asked for: not an infusion that costs some (the
-            # demons' 4 pieces: Vitality −4 %)
+            # survival goals: skip infusions that cost health (e.g. demons'
+            # 4 pieces: Vitality −4 %)
             wear()
             floor = (self._guide_survival(b) * 0.999
                      if goal != "max" and role != "Tank" else None)
@@ -830,10 +817,8 @@ class BuildTab:
                       for x in r["lines"]]}
 
     def _runes_view(self, b, raw, rows, armor, enemy, hit):
-        """Each class skill that has runes, on the bar or not: its three,
-        the one chosen,
-        each described with its own numbers (::dmg::, ::heal:: simulated
-        with that rune, ::cooldown:: its own)."""
+        """Each class skill with runes, on the bar or not: its runes, the
+        chosen one, each described with numbers simulated with that rune."""
         info = build_data().get("skillInfo") or {}
         chosen = b.get("runes") or {}
         out = []
@@ -984,8 +969,7 @@ ROLE_FR = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 HERO_SLOTS = ("Weapon1", "OffhandWeapon", "Weapon2", "Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
 
 def _infusion_options():
-    """The infusions, by faction then role, each named with both: the
-    bonus only applies on a piece of the same faction."""
+    """The infusions, sorted by faction then role."""
     infs = infusion_data().get("infusions") or {}
     out = []
     for sid in build_data().get("infusions") or ():
@@ -1002,10 +986,8 @@ def _infusion_options():
 
 
 def _cmp_spells(ma, mb):
-    """Two simulations' spells, source by source (main weapon, off hand,
-    arsenal, class skills), each spell once: its lines on both sides when
-    both builds have it, "—" on the side that hasn't. Where both have a
-    line, the higher average is the better one."""
+    """Two simulations' spells side by side, grouped by source; "better"
+    marks the higher value where both sides have the line."""
     if not ma and not mb:
         return []
     ga = {g["t"]: g for g in (ma or {}).get("groups") or ()}

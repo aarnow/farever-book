@@ -1,6 +1,5 @@
-"""The gear infusions (2026-09-30 patch): what each does, for the Character
-tab — from data.cdb (res.light.pak) and the game's French text
-(res.pak lang/export_fr.xml).
+"""The gear infusions: what each does, for the Character tab, from data.cdb
+and the game's French text (res.pak lang/export_fr.xml).
 
 An infusion is a passive skill (type InfusionPassive) set on a gear piece by
 an infusion pattern (item type InfusionPattern, which names the faction).

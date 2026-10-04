@@ -1,18 +1,8 @@
 """The Farever France window: a WebView2 application window in its own process.
 
-WHY A SECOND PROCESS
---------------------
-pywebview refuses to run anywhere but the main thread, and a window that
-crashed or hung must never be able to take the frida hook down with it —
-unloading a wedged hook is how this game gets crashed. So the meter (the
-engine: game link, aggregation, saved data) and this window live in two
-processes and talk over a pipe.
-
-WHY PIPES AND NOT A SOCKET
---------------------------
-A process that opens a listening socket can make Windows Firewall put a dialog
-in front of somebody who is mid-raid. stdin/stdout carry the same JSON and ask
-nobody's permission.
+pywebview must own the main thread, and a crashed or hung window must not take
+the frida hook down with it (unloading a wedged hook crashes the game). Pipes,
+not a socket: a listening socket can trigger a Windows Firewall prompt.
 
 THE PROTOCOL
 ------------
@@ -28,10 +18,8 @@ One JSON object per line, in both directions.
                    {"t": "geom",   "x": .., "y": .., "w": .., "h": ..}
                    {"t": "closed"}                  the user closed the window
 
-This module is deliberately dumb. It owns the window and the pipe and nothing
-else: every label is computed by the meter and every button calls back into it.
-The page's behaviour lives in web/js/ (one file per concern, joined in
-JS_FILES order into the page's single script).
+This module only owns the windows and the pipe: labels are computed by the
+meter, buttons call back into it, and the page's behaviour lives in web/js/.
 """
 from __future__ import annotations
 
@@ -47,8 +35,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Everything here has to happen before `import webview`
 # ---------------------------------------------------------------------------
-# Awareness is per-process: without it Windows bitmap-stretches this window by
-# the system scale and it comes out blurry.
+# DPI awareness is per-process: without it the window is stretched and blurry.
 if sys.platform == "win32":
     try:
         ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
@@ -58,9 +45,8 @@ if sys.platform == "win32":
         except (AttributeError, OSError):
             pass
 
-# One CSS pixel is one real pixel whatever the Windows display scale says; the
-# user's own size preference is a CSS zoom on the page (setZoom in web/js/core.js), so
-# it can change without restarting the browser environment.
+# One CSS pixel = one physical pixel; the user's size preference is a CSS zoom
+# (setZoom in web/js/core.js), changeable without restarting WebView2.
 os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                       "--force-device-scale-factor=1")
 
@@ -78,11 +64,9 @@ DEFAULT_W, DEFAULT_H = 1200, 800
 MIN_W, MIN_H = 720, 480
 SW_RESTORE = 9
 SW_MINIMIZE = 6
-# The window draws its own title bar (frameless). Moving and resizing are
-# driven by the page, which follows the mouse and asks for the new rectangle:
-# the system's own move / size loops never see the mouse, which WebView2 —
-# another process — holds captured while a button is down (measured
-# 2026-10-01: WM_SYSCOMMAND SC_MOVE did nothing).
+# Frameless: the page drives move/resize itself, since WebView2 holds the mouse
+# capture and the system move loop never sees it (2026-10-01: SC_MOVE did
+# nothing).
 SWP_NOZORDER, SWP_NOACTIVATE, SWP_NOSIZE = 0x0004, 0x0010, 0x0001
 
 
@@ -170,8 +154,7 @@ class Api:
         self.pipe.send({"t": "call", "id": 0, "m": method, "p": params or {}})
 
     def pick_folder(self):
-        """The welcome screen's Parcourir: Windows' folder picker, over the
-        window. The folder, or "" when cancelled."""
+        """Windows' folder picker; the folder, or "" when cancelled."""
         host = self._host
         if host is None:
             return ""
@@ -183,8 +166,8 @@ class Api:
         return str(got[0]) if got else ""
 
     def win(self, action, arg=None):
-        """The page's own title bar: drag, resize from an edge, minimise,
-        maximise / restore, close. Returns whether the window is maximised."""
+        """The page's title bar actions. Returns whether the window is
+        maximised."""
         host = self._host
         return host.win(action, arg) if host is not None else False
 
@@ -224,16 +207,15 @@ class AppWindow:
                 _log(f"overlay {oid} unavailable: {e!r}")
 
     def attach(self):
-        """Runs once the native window exists: find its handle, restore the
-        saved size exactly, and tell the meter we are ready."""
+        """Once the native window exists: restore the saved geometry, tell the
+        meter we are ready."""
         for _ in range(400):                       # ~10s, then give up quietly
             if getattr(self.window, "native", None) is not None:
                 break
             time.sleep(0.025)
         self.hwnd = _own_hwnd(self.window)
         if self.hwnd and self._want.get("w") and self._want.get("h"):
-            # SetWindowPos in physical pixels: pywebview's own geometry is in
-            # logical pixels and would re-apply the display scale.
+            # physical pixels; pywebview's geometry would re-apply the scale
             flags = 0x0004 | 0x0010                 # NOZORDER | NOACTIVATE
             x, y = self._want.get("x"), self._want.get("y")
             if x is None or y is None:
@@ -261,8 +243,7 @@ class AppWindow:
         self.pipe.send({"t": "geom", "x": x, "y": y, "w": w, "h": h})
 
     def _on_closing(self):
-        """Closing the window is quitting Farever France: the meter unloads its
-        hook and stops. The window closes right away either way."""
+        """Closing the window quits Farever France."""
         if not self._closing:
             self._closing = True
             self._on_geom()
@@ -295,8 +276,8 @@ class AppWindow:
         return self._restore_rect is not None
 
     def _toggle_max(self):
-        """Maximised to the monitor's work area (the taskbar stays visible —
-        a borderless window maximised by Windows would cover it), and back."""
+        """Maximise to the work area and back (Windows' own maximise of a
+        borderless window would cover the taskbar)."""
         u = ctypes.windll.user32
         flags = 0x0004 | 0x0010                    # NOZORDER | NOACTIVATE
         if self._restore_rect is not None:
@@ -335,7 +316,6 @@ class AppWindow:
             for o in self.overlays:
                 o.update(msg.get("d") or {})
         elif t == "model":
-            # Its JSON text, passed as a string argument like the state.
             try:
                 self.window.evaluate_js(
                     f"window.addModel({json.dumps(msg.get('id'))}, "
@@ -350,9 +330,8 @@ class AppWindow:
                 os._exit(0)
 
     def _send_collection_images(self):
-        """The collection's and the bestiary's pictures, handed over once the
-        page is up, in batches: inlined, they took the page past WebView2's
-        2 MB limit on an HTML string, and the window came up blank."""
+        """The game's pictures, sent in batches once the page is up: inlined,
+        they exceed WebView2's 2 MB HTML limit (blank window)."""
         self._images_sent = True
         try:
             self.window.evaluate_js(
@@ -365,8 +344,7 @@ class AppWindow:
                            ("best", "bestiary_img"), ("map", "map_tiles"),
                            ("skill", "skill_img"), ("dbg", "dungeon_bg")):
             imgs = list(_analysis_images(folder).items())
-            # batches of at most 40 pictures and about 600 KB: the
-            # full-size dungeon screens are 100 KB and more each
+            # at most 40 pictures / ~600 KB (dungeon screens are 100 KB+)
             batches, cur, size = [], [], 0
             for k, v in imgs:
                 if cur and (len(cur) >= 40 or size + len(v) > 600_000):
@@ -386,10 +364,9 @@ class AppWindow:
                     break
 
     def _push(self, data):
-        """Hand one state object to the page — as a JSON string argument,
-        never interpolated: it carries player names straight off the wire."""
-        # again once the game's data has been (re)read: the first launch
-        # starts with none
+        """Hand one state object to the page as a JSON string argument, never
+        interpolated: it carries player names off the wire."""
+        # resend images once the game's data has been (re)read
         gen = data.get("dataGen")
         if gen is not None and gen != getattr(self, "_images_gen", gen):
             self._images_sent = False
@@ -406,16 +383,11 @@ class AppWindow:
 # ---------------------------------------------------------------------------
 # The overlays over the game
 # ---------------------------------------------------------------------------
-# Two small windows of this same process: the group meter and the goals. Each
-# is borderless, exactly the size of its panel with the corners cut round by a
-# window region (pywebview's "transparent" only clears what the page draws:
-# the rest of the window showed white), always on top, never in the taskbar, and never takes the focus from the game when clicked (pywebview's
-# focus=False is WS_EX_NOACTIVATE) — except while a goal is being typed, when
-# it takes the keyboard and gives it back to the game after. The meter says
-# when they show (on a character, the game or one of our windows in front),
-# which are on, and where the game is; each one is anchored to a side of the
-# game's window (left/right, top/bottom) at a distance from that edge, so it
-# stays put against its side whatever the window's size.
+# Two small windows of this process (group meter, goals): borderless, corners
+# cut by a window region (pywebview's "transparent" left the rest white),
+# topmost, out of the taskbar, never taking focus (WS_EX_NOACTIVATE) except
+# while a goal is typed. The meter says when they show and where the game is;
+# each is anchored to a side of the game's window at a distance from that edge.
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = 0x80, 0x40000
 WS_EX_NOACTIVATE = 0x08000000
@@ -573,8 +545,8 @@ class Overlay:
         return None
 
     def _focus(self, on):
-        """Typing a goal: the window takes the keyboard (it never does
-        otherwise), then hands it back to whatever had it — the game."""
+        """Typing a goal: take the keyboard, then hand it back to whatever had
+        it (the game)."""
         u = ctypes.windll.user32
         ex = u.GetWindowLongW(self.hwnd, GWL_EXSTYLE)
         if on and self.typing is None:
@@ -625,15 +597,13 @@ def _rect(hwnd):
     return (r.left, r.top, r.right - r.left, r.bottom - r.top)
 
 
-# The page's script, by concern, in the order it is joined: core first (the
-# helpers and the state push everything else uses), boot last (it starts the
-# page once every function and constant above exists).
+# Joined in this order: core first (shared helpers), boot last (starts the page).
 JS_FILES = ("core", "frame", "live", "report", "dungeons", "model3d",
             "collection", "achievements", "hunt", "map", "character", "build", "boot")
 
 
 def _document():
-    """One self-contained HTML document, assembled from the three files."""
+    """One self-contained HTML document: menu.html, menu.css and the JS."""
     def read(name):
         try:
             return (WEB_DIR / name).read_text(encoding="utf-8")
@@ -659,8 +629,8 @@ def _document():
 
 
 def _analysis_images(name):
-    """{"Mount_Wolf_01": data URI, ...}: the .webp pictures extracted from the
-    game into analysis_out/<name>/ (collection, bestiary)."""
+    """{"Mount_Wolf_01": data URI, ...}: the .webp pictures extracted into
+    analysis_out/<name>/."""
     import base64
     folder = Path(os.environ.get("FAREVER_ANALYSIS")
                   or HERE.parent / "analysis_out") / name
@@ -679,10 +649,8 @@ def _analysis_images(name):
 
 
 def _title_logo():
-    """The game's wordmark as a data URI (analysis_out/ui_logo.png,
-    extracted by emit_offsets.py), else the copy the app ships with
-    (assets/ui_logo.png: the first launch's welcome screen comes before any
-    extraction), or "" — the header then keeps its text."""
+    """The game's wordmark as a data URI: the extracted one, else the shipped
+    copy (the first launch precedes any extraction), else ""."""
     import base64
     for path in (Path(os.environ.get("FAREVER_ANALYSIS")
                       or HERE.parent / "analysis_out") / "ui_logo.png",
@@ -696,9 +664,8 @@ def _title_logo():
 
 
 def _boss_portraits():
-    """{"Cleodora": data URI, ...}: the dungeon bosses' portraits, extracted
-    from the game into analysis_out/boss_portraits/ — inlined once here
-    rather than sent with every state push."""
+    """{"Cleodora": data URI, ...}: the dungeon bosses' portraits from
+    analysis_out/boss_portraits/."""
     import base64
     folder = Path(os.environ.get("FAREVER_ANALYSIS")
                   or HERE.parent / "analysis_out") / "boss_portraits"
@@ -718,8 +685,7 @@ def _boss_portraits():
 
 def _sheet_art():
     """{"slot_Head": data URI, "upgrade_pip": ..., "stat_Faith": ...}:
-    the character sheet's art, cut from the game's UI into
-    assets/charsheet/ by hltools/build_charsheet_art.py."""
+    the character sheet's art, cut from the game's UI (assets/charsheet/)."""
     import base64
     out = {}
     try:
@@ -735,8 +701,7 @@ def _sheet_art():
 
 
 def _class_icons():
-    """{"warrior": data URI, ...} for the class icons that exist — inlined in
-    the page, so nothing is ever loaded from anywhere."""
+    """{"warrior": data URI, ...} for the class icons that exist."""
     import base64
     out = {}
     folder = ICON_DIR
@@ -766,7 +731,6 @@ def main():
     win = AppWindow(pipe, geom)
     threading.Thread(target=pipe.read_forever, daemon=True).start()
     webview.start(win.attach, debug=bool(os.environ.get("FAREVER_MENU_DEBUG")))
-    # start() returns when the window is gone for good.
     pipe.send({"t": "closed"})
 
 

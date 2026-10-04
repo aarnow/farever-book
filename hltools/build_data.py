@@ -1,6 +1,5 @@
-"""What the Build tab needs to assemble a build the way the game allows it —
-from data.cdb (res.light.pak). Rules read in hlboot.dat (hltools/hlbc_code.py,
-2026-10-02):
+"""What the Build tab needs to assemble a build the way the game allows it,
+from data.cdb. Rules read in hlboot.dat (2026-10-02):
 
 * a class wears what carries its aptitude (unit.props.aptitudes: Warrior =
   Fighter, Rogue = Assassin, Mage = Wizard, Priest = Cleric); hybrid
@@ -74,7 +73,6 @@ def build(game_dir):
                   if c["name"] == "flags")["typeStr"].split(":")[1].split(",")
     allow_shield_bit = 1 << tflags.index("AllowShield")
 
-    # aptitude -> classes
     unit = {u["id"]: u for u in sh["unit"]["lines"]}
     apt_class = {}
     for c in CLASSES:
@@ -101,7 +99,6 @@ def build(game_dir):
         t = (skills.get(sid) or {}).get("type")
         return skill_type[t] if isinstance(t, int) else None
 
-    # the gear
     items = {}
     for it in sh["item"]["lines"]:
         tid = it.get("type")
@@ -171,20 +168,17 @@ def build(game_dir):
                          for s in u.get("skills") or ()
                          if stype(s.get("skill")) == "ClassPassive"]}
 
-    # what each skill does, for the simulator: per step effect its kind
-    # (Damage, Heal, Shield), affinity, fixed value and attribute scalings
+    # what each skill does, for the simulator
     eff_kinds = next(c for c in sh["skill@steps@effects"]["columns"]
                      if c["name"] == "effect")["typeStr"].split(":")[1]         .split(",")
     wanted = {s["id"] for e in items.values() for s in e.get("skills") or ()}
     for c in CLASSES:
         wanted |= {s.get("skill") for s in (unit.get(c) or {}).get("skills")
                    or ()}
-    # A step can need a rune (cond.mastery), exclude one (masteryExclude)
-    # or a skill rank (minRank / maxRank, on steps and scalings): skills are
-    # shown at their highest rank (WeaponSkill_MaxRank).
+    # Steps and scalings can need a rank (minRank / maxRank): skills are shown
+    # at their highest (WeaponSkill_MaxRank).
     max_rank = int(num("WeaponSkill_MaxRank") or 3)
-    # the runes' French descriptions (res.pak lang/export_fr.xml: under each
-    # skill, mastery/<rune>/text.desc)
+    # the runes' French descriptions (lang/export_fr.xml mastery/<rune>/text.desc)
     rune_fr = {}
     try:
         import xml.etree.ElementTree as ET
@@ -202,9 +196,9 @@ def build(game_dir):
         pass
     effects, skill_info = {}, {}
     def collect(sid, rune, no_rune, depth, seen, out, reach):
-        """The damage / heal / shield effects of a skill and of the
-        statuses and sub-skills it puts down (a bubble, an area left behind),
-        two levels deep; a step's rune condition carries over to them."""
+        """The damage / heal / shield effects of a skill and of the statuses
+        and sub-skills it puts down, two levels deep; a step's rune condition
+        carries over to them."""
         if sid in seen or depth > 2:
             return reach
         seen.add(sid)
@@ -299,7 +293,7 @@ def build(game_dir):
                                   or 0) for r in sh["rarity"]["lines"]},
         "classes": classes, "items": items, "augments": augments,
         "accepts": accepts, "infusions": infusions,
-        "effects": effects, "skillInfo": skill_info, "skillRank": max_rank,
+        "effects": effects, "skillInfo": skill_info,
         "affinities": affinities, "aptFlags": apt_flags,
         "weaponPowerRatio": wp_ratio,
     }

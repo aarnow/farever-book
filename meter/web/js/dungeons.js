@@ -33,13 +33,12 @@ function buildLoot(groups) {
   return box;
 }
 
-/* A dungeon's possible loot: icon, name (rarity colour), type, classes,
-   source, chance, quantity, how many the saved runs brought back. */
+/* A dungeon's possible loot table. */
 let DROP_DIFF = 0;          // the difficulty whose table is shown
 let DROP_SORT = 0;          // the chance column: 0 as given, 1 up, -1 down
 
-/* The loot tables, one per difficulty (its skull a tab), the chance
-   column sortable both ways. Kept here, so switching never waits. */
+/* One table per difficulty, switched and sorted here so it never waits
+   for the meter. */
 function buildDropTable(n) {
   const wrap = el('div', 'dropwrap');
   const tables = n.tables || [{ d: 0, t: '', rows: n.rows || [] }];
@@ -70,8 +69,7 @@ function buildDropTable(n) {
   return wrap;
 }
 
-/* `lite`: the item, its type, its chance and how many — no classes, source
-   nor what we got (the rifts' chests). */
+/* `lite` (the rifts' chests): no classes, source nor drops column. */
 function dropTable(rows, redraw, lite) {
   const box = el('div', 'panel droptable' + (lite ? ' lite' : ''));
   const head = el('div', 'drow dhead');
@@ -115,17 +113,8 @@ function dropTable(rows, redraw, lite) {
   return box;
 }
 
-/* ---- the Collection page ------------------------------------------------ */
-/* Category, filter, search and the open card live here, in the page, so
-   typing and clicking never wait for the meter; the meter only says what
-   exists and what is owned. */
-
 /* ---- the boss sheet (bosssheet.py) --------------------------------------
-   The boss's portrait and name, its health by group size, defences, power
-   and critical hits, each skill with what it deals, what it summons, the
-   statuses it applies and its phases. Pictures from the game: the portrait,
-   the difficulty's skull, the skills' icons (a glyph when the game has none,
-   by element). */
+   Skill icons fall back to a glyph by element when the game has none. */
 const BS_GLYPH = {
   phys: 'M6.9 18.5 4 21.4 2.6 20l2.9-2.9-1.4-1.4 1.4-1.4 1.8 1.8L15.7 7.7l-.4-2.9 3.5-2.2 2.6 2.6-2.2 3.5-2.9-.4-8.4 8.4 1.8 1.8-1.4 1.4-1.4-1.4Z',
   magic: 'M8 3s-4 4.6-4 7.3A4 4 0 0 0 8 14.3a4 4 0 0 0 4-4C12 7.6 8 3 8 3Zm8 6s-4 4.6-4 7.3a4 4 0 0 0 8 0C20 13.6 16 9 16 9Z',

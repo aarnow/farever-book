@@ -3,16 +3,11 @@ completion points placed in the world — chests, red orbs, obelisks and
 respawn points — each with its position and zone.
 
 Tiles: res.map.pak Level/World/<world>.dat/minimap/<tx>_<ty>_1024.png. Tile
-(tx, ty) covers world x in [tx*576, (tx+1)*576) and y in [ty*576,
-(ty+1)*576); +y is south, so the map reads with +y DOWN. (Worked out on the
-game's minimap and cross-checked against questlog.gg, whose markers use
-raw in-game coordinates on these same tiles.)
+(tx, ty) covers world x in [tx*576, (tx+1)*576), same for y; +y is south.
 
-Points: the world level's elements (HBSON, see hbson.py), by the prefab they
-are an instance of. Their x/y are world coordinates; the rare one nested in
-another object is placed through its parent (offset, rotation in degrees).
-The counts match questlog.gg's: 131 world chests, 8 vault chests, 23 recipe
-chests, 284 red orbs, 11 obelisks, 29 respawn points."""
+Points: the world level's elements (HBSON), by the prefab they instance, in
+world coordinates; one nested in another object is placed through its parent
+(offset, rotation in degrees). Counts match questlog.gg's."""
 import io
 import json
 import math
@@ -33,14 +28,12 @@ CATEGORIES = {"WorldChest.prefab": "chest", "VaultChest.prefab": "vault",
               "Obelisk.prefab": "obelisk", "RespawnPoint.prefab": "respawn"}
 
 
-# Each point category's marker, by the game's own icon rows (icon sheet:
-# the map window's markers and completion icons).
+# each point category's marker (icon sheet rows)
 MARKER_ICONS = {"chest": "ChestCompletion", "vault": "VaultChestMarker",
                 "recipe": "RecipeChestMarker", "orb": "RedOrbCompletion",
                 "obelisk": "ObeliskMarker", "respawn": "RespawnPointMarker",
                 "dungeon": "Dungeon"}
-# The rifts have no icon row of their own: the same sheet's purple eye, the
-# chaos one, stands for them (the hunting log's rift entrances).
+# the rifts have no icon row: the activities sheet's chaos eye
 RAW_ICONS = {"rift": {"file": "UI/icons/activities.png", "size": 128,
                       "x": 2, "y": 2}}
 
@@ -83,8 +76,6 @@ def build(game_dir, tile_dir=None):
                 wx, wy = px + x * c - y * s, py + x * s + y * c
                 wr = rot + float(o.get("rotationZ") or 0)
             cat = CATEGORIES.get(str(o.get("source") or "").split("/")[-1])
-            # one red orb rides a moving object and has no x/y of its own:
-            # it is placed where its carrier is
             if cat:
                 points.append({"c": cat, "id": props.get("id") or o.get("name"),
                                "x": round(wx, 1), "y": round(wy, 1),

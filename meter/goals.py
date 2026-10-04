@@ -1,11 +1,11 @@
-"""The goals overlay's list: what the player wants to gather, and how far.
+"""The goals list: what the player wants to gather, and how far.
 
 Two kinds of goal:
   item    "5 Minerai de cuivre": the count OWNED, wherever it is — bag,
           equipment and bank tabs (the hook's "stock" message);
   rarity  "1 objet légendaire": the pieces of that rarity picked up since
           the goal was set (the hook's "pickup" messages).
-Saved in .meter_goals.json; set from the overlay itself."""
+Saved in .meter_goals.json."""
 from __future__ import annotations
 
 import base64
@@ -44,7 +44,7 @@ class Goals:
         except OSError as e:
             print(f"[meter] couldn't save the goals: {e}", file=sys.stderr)
 
-    # -- editing (the overlay's buttons) -----------------------------------
+    # -- editing -----------------------------------------------------------
     def add(self, kind, ref, n):
         n = max(1, min(int(n or 1), 99999))
         if kind == "item" and ref:
@@ -61,16 +61,6 @@ class Goals:
 
     def remove(self, gid):
         self.items = [g for g in self.items if g.get("id") != gid]
-        self.save()
-
-    def set_n(self, gid, n):
-        for g in self.items:
-            if g.get("id") == gid:
-                g["n"] = max(1, min(int(n or 1), 99999))
-        self.save()
-
-    def clear_done(self):
-        self.items = [g for g in self.items if self.have(g) < g["n"]]
         self.save()
 
     # -- what the game says ------------------------------------------------
@@ -102,7 +92,7 @@ class Goals:
             return self.stock.get(g["item"], 0)
         return g.get("got", 0)
 
-    # -- the overlay's view ------------------------------------------------
+    # -- the view ----------------------------------------------------------
     def label(self, g):
         if g["kind"] == "item":
             return item_label(g["item"])

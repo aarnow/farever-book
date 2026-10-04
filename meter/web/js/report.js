@@ -4,9 +4,8 @@
 /* The player whose report card is open, and which of their phases. */
 const REPORT_SEL = { name: null, phase: 0, detail: null };
 
-/* A ranking, a bar per player as in the game's meters: the class's badge
-   on a dark square, then the bar — "1. Name" and the numbers — filled from
-   the left in the class's colour, as far as their share against the best. */
+/* A ranking, a bar per player as in the game's meters, filled in the
+   class colour relative to the best. */
 function rankTable(rows, rateLabel) {
   const box = el('div', 'tbl rktbl');
   const h = el('div', 'rk h');
@@ -35,8 +34,7 @@ function rankTable(rows, rateLabel) {
   return box;
 }
 
-/* The damage by type: a ring, centred, each type its arc in its colour, and
-   the types listed beside it with their share. */
+/* Damage by type: a ring chart with its legend. */
 function typePie(types) {
   const box = el('div', 'typepie');
   const ns = 'http://www.w3.org/2000/svg';
@@ -92,7 +90,6 @@ function typePie(types) {
 function buildReport(n) {
   REPORT_SEL.detail = n.detail || null;
   const p = el('div', 'panel report');
-  // titled like every tab's sections: the yellow diamond, then the date
   const t = el('div', 'section rtitle', n.title);
   t.appendChild(el('span', 'rwhen', n.when));
   if (n.sub) t.appendChild(el('span', 'rsub', n.sub));
@@ -112,7 +109,7 @@ function buildReport(n) {
     });
     top.appendChild(facts);
     c.appendChild(top);
-    if (!ph.mvp) c.appendChild(el('div', 'empty', "rien n'a été enregistré pour cette phase"));
+    if (ph.empty) c.appendChild(el('div', 'empty', "rien n'a été enregistré pour cette phase"));
     if (ph.dmg && ph.dmg.length) {
       c.appendChild(el('div', 'sub rtab', 'Dégâts'));
       c.appendChild(rankTable(ph.dmg, 'DPS'));
@@ -126,8 +123,7 @@ function buildReport(n) {
     }
     cols.appendChild(c);
   });
-  // a dungeon run: its boss phase in one column, what it brought back in
-  // the other
+  // a dungeon run: its loot as a second column
   if (n.loot) cols.appendChild(buildLoot(n.loot));
   p.appendChild(cols);
   return p;
@@ -173,8 +169,7 @@ function renderPlayerCard() {
   });
   card.appendChild(facts);
 
-  // as the report's tables: each skill a bar in the player's class colour,
-  // filled as far as its share against their best, led by its icon
+  // same bars as the report's rankings, one per skill
   const table = (title, rows, cols) => {
     card.appendChild(el('div', 'sub2 rtab', title));
     if (!rows.length) { card.appendChild(el('p', 'none', 'rien d’enregistré')); return; }
@@ -234,10 +229,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ---- the rifts done: a small card each, under the day ------------------- */
-/* The whole card opens the rift's report; its corner box ticks it for
-   deletion without opening it. A dungeon's runs use it too: their card
-   says its difficulty (the game's skull) and result, its own facts, and
-   opens with its own action. */
+/* The card opens the report; its corner box selects it for deletion.
+   Dungeon runs reuse it with their own `open` action (and no tick box). */
 function buildRiftCards(n) {
   const box = el('div', 'riftdays');
   (n.groups || []).forEach((g) => {

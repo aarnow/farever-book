@@ -15,28 +15,17 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Where things live
 # ---------------------------------------------------------------------------
-# Two layouts, one codebase.
-#
-#   From source — everything stays in the project folder, exactly as it always
-#   has, so the developer workflow is untouched.
-#
-#   From the installed build — the code and the data part company. PyInstaller
-#   unpacks the bundle into a temporary directory that is a *different path on
-#   every launch* and is deleted on exit, so anything we WRITE (regenerated
-#   offsets, window positions, parse images, the log) has to go somewhere
-#   durable and user-writable instead. Everything we only READ — the agent JS,
-#   the shipped JSON — comes out of the bundle.
+# From source, everything is in the project folder. Installed, PyInstaller
+# unpacks to a temp dir that changes every launch and is deleted on exit:
+# reads come from the bundle, writes go to DATA_HOME.
 FROZEN = bool(getattr(sys, "frozen", False))
 
 
-# Bundled resources go under res/ rather than at the bundle root, so our own
-# "frida" folder of agent JS can't collide with the frida *package* PyInstaller
-# unpacks alongside it. Inside res/ the layout is the project's, unchanged.
+# res/ keeps our "frida" folder from colliding with the bundled frida package.
 ROOT = (Path(sys._MEIPASS) / "res") if FROZEN else Path(__file__).resolve().parent.parent
 
 
-# %LOCALAPPDATA%\FareverFrance. Already the home of the single-instance lock, so
-# the installed build isn't inventing a location — just keeping more there.
+# %LOCALAPPDATA%\FareverFrance
 DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()) / "FareverFrance"
 
 
@@ -49,24 +38,18 @@ FRIDA_DIR = ROOT / "frida"                  # read-only: the agent's JS
 SHIPPED_ANALYSIS = ROOT / "analysis_out"    # read-only: the JSON we ship with
 
 
-# Regenerated on nearly every launch, so it has to be writable — which the
-# bundle isn't (usefully). Seeded from SHIPPED_ANALYSIS on first run.
+# Regenerated on most launches, so writable; seeded from SHIPPED_ANALYSIS.
 ANALYSIS = (_WRITABLE / "analysis_out") if FROZEN else SHIPPED_ANALYSIS
 
 
 POSITION_CACHE = _WRITABLE / ".meter_position.json"
 
 
-# Settings live apart from window positions on purpose: "Reset window
-# positions" clears that file, and it has no business resetting your theme and
-# your Show/hide ticks along with it.
+# Apart from positions so resetting window positions keeps the settings.
 SETTINGS_CACHE = _WRITABLE / ".meter_settings.json"
 
 
-# Your fastest kill of each boss. Beside the two caches above rather than
-# inside either: "Reset window positions" must not erase records, and the
-# settings file is rewritten on every toggled checkbox — a record only needs
-# writing when it's beaten. Same home as the positions, so it survives updates.
+# Fastest kill of each boss; its own file so no reset erases it.
 BEST_TIMES_CACHE = _WRITABLE / ".meter_besttimes.json"
 
 
@@ -76,11 +59,9 @@ RIFTS_DIR = _WRITABLE / "failles"
 
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 BUILDS_DIR = _WRITABLE / "builds"       # one JSON per build (Build tab)
-# The game's folder, when the player had to show it (welcome screen): its
-# install was not where the drives' search looks.
+# The game's folder, when the player had to pick it (welcome screen).
 GAME_PATH_FILE = _WRITABLE / ".meter_gamepath.json"
-# The third-party components' licences, installed with the app (written at
-# build time by packaging/third_party.py): none in a source run.
+# Written at build time by packaging/third_party.py; none from source.
 THIRD_PARTY_FILE = (Path(sys._MEIPASS) / "THIRD_PARTY_LICENSES.txt"
                     if FROZEN else None)
 
@@ -117,39 +98,31 @@ TARGET_PROCESS = "Farever.exe"
 FAREVER_STEAM_APPID = 3672400
 
 
-# One meter at a time. The lock lives outside the project folder: copies run
-# from different folders (or installed) have to find each other.
+# Outside the project folder, so copies run from anywhere find each other.
 LOCK_DIR = DATA_HOME
 
 
 LOCK_FILE = LOCK_DIR / "instance.json"
 
 
-# Process images that count as "another meter" when the lock file names them.
-# The installed executable's name is here as a literal rather than read from
-# sys.executable, so a source run recognises an installed one and vice versa.
-# FareverMeter.exe, its earlier name: an older install still counts.
+# Images that count as "another meter". A literal, not sys.executable, so
+# source and installed runs recognise each other.
 EXE_NAME = "FareverFrance.exe"
 
 
-METER_IMAGE_NAMES = frozenset({EXE_NAME.lower(), "farevermeter.exe",
-                               "python.exe", "pythonw.exe"})
+METER_IMAGE_NAMES = frozenset({EXE_NAME.lower(), "python.exe", "pythonw.exe"})
 
 
-# Set once at startup, before stderr is redirected: is there a console for a
-# human to read? False under the installed (windowed) build and pythonw.exe;
-# without one, the output goes to the log file.
+# Read at import, before stderr is redirected. False for the windowed build
+# and pythonw.exe (output then goes to the log file).
 HAS_CONSOLE = sys.stderr is not None and sys.stdout is not None
 
 
-# How long to let a running instance shut itself down before forcing it. It has
-# to unload the hook and detach, which is the whole point of asking nicely.
+# How long a running instance gets to unload its hook before it is forced.
 QUIT_WAIT_SECS = 12.0
 
 
-# Serialises the claim in claim_single_instance(). "Local\" scopes it to the
-# logon session, which is the right boundary — two users on one machine each get
-# their own meter, their own lock file and their own game.
+# "Local\": one meter per logon session.
 CLAIM_MUTEX = "Local\\FareverFranceClaim"
 
 
@@ -159,41 +132,20 @@ CLAIM_WAIT_MS = 30000       # comfortably longer than a full QUIT_WAIT_SECS wait
 COMBAT_TIMEOUT_SECS = 25.0
 
 
-# Hits the game reports a full `_amount` for but the target never takes.
-#
-# st.skill.DamageResult.blocker carries a _Data.$GameBeatKind_Impl_ name:
-# AttackBlock, DamageDodge, Backstabbed, Critical, InvulnerableHit,
-# BlockWellTimed, Missed. Measured against Ratsar's immune phase — 33 hits
-# reported with blocker='InvulnerableHit', amount > 0 and _block == 0, every
-# one of them counted by the meter and none of them touching his health.
-#
-# Only InvulnerableHit is listed, because only InvulnerableHit was measured.
-# Missed and DamageDodge read like they belong here too, but a blocker that
-# turns out to still deal damage would mean silently DROPPING real hits, which
-# is a worse and far less visible bug than counting fake ones. Everything not
-# listed is still reported by the mitigated-hit log, so adding one later is a
-# one-line change backed by the same evidence this one was.
+# DamageResult.blocker values whose hits report a full `_amount` but deal
+# nothing. Measured: Ratsar's immune phase, 33 'InvulnerableHit' hits with
+# amount > 0, none touching his health. Missed/DamageDodge are unmeasured, and
+# wrongly dropping real hits is worse than counting fake ones.
 NULLIFIED_BLOCKERS = frozenset({"InvulnerableHit"})
 
 
-# How much damage a boss-pull reset keeps rather than wiping.
-#
-# The reset is driven by the game's boss healthbar, and that bar is refreshed on
-# a 2/s timer — so up to half a second passes between the pull landing and the
-# meter hearing about it, plus however long the engagement takes to register at
-# all. A player opening on a boss dumps their whole burst into that gap, and a
-# plain reset throws exactly the numbers they wanted away.
-#
-# So the reset rewinds instead: damage newer than this is replayed into the
-# fresh encounter with its original timestamps. Long enough to cover an opening
-# burst and the detection lag, short enough not to drag in the trash pack you
-# finished on the way over.
+# A boss-pull reset replays damage newer than this into the new encounter:
+# the boss healthbar (2/s timer) is detected after the opening burst lands.
+# Short enough to leave out the previous trash pack.
 BOSS_PULL_BACKLAG_SECS = 4.0
 
 
-# Rolling event buffer backing that rewind. Bounded by count as well as age so a
-# big party in a busy fight can't grow it without limit — at ~4s of backlag this
-# is far more headroom than the window can use.
+# Cap on the rolling event buffer behind that replay.
 RECENT_EVENT_MAX = 2048
 
 
@@ -206,17 +158,15 @@ MAX_PLAYER_ROWS = 8
 MAX_SKILL_ROWS = 8
 
 
-# 60s Parse Mode: a fixed-length sample, so two runs are comparable in a way
-# "whatever that pull happened to be" never is. The pre-roll leaves time to
-# go back to the game after clicking.
+# 60s Parse Mode: a fixed-length, comparable sample. The pre-roll leaves time
+# to go back to the game after clicking.
 PARSE_PREROLL_SECS = 8
 
 
 PARSE_LENGTH_SECS = 60
 
 
-# Short class tags for the meter. The game's own names come off ent.Unit.kind,
-# which for a hero is its class rather than a creature id.
+# Short class tags, keyed by ent.Unit.kind (a hero's class).
 CLASS_ABBR = {"Warrior": "Gue", "Mage": "Mag", "Priest": "Prê", "Rogue": "Vol"}
 
 
@@ -237,8 +187,8 @@ def class_key(kind_or_tag):
 
 
 def _class_tag(kind):
-    """(War) for Warrior. Anything unrecognised falls back to its first three
-    letters rather than disappearing — a new class should look odd, not absent."""
+    """Gue for Warrior; an unknown class falls back to its first three
+    letters."""
     if not kind:
         return ""
     return CLASS_ABBR.get(kind) or kind[:3].title()
@@ -251,24 +201,18 @@ RIFT_PORTAL_SECS = 180
 RIFT_STYLE_SECS = 900       # ...and turn the box rift-coloured at 15
 
 
-# The Help tab's articles, as markdown beside the panel's other web assets.
-# Files rather than string constants so they stay writable prose — and the
-# numeric prefix is the running order, so inserting one is a rename rather than
-# an edit to a list somewhere else.
+# The Help tab's markdown articles; the numeric prefix is their order.
 HELP_DIR = (ROOT / "web" / "help") if FROZEN else (
     Path(__file__).resolve().parent / "web" / "help")
 
 
-# Which heading each article sits under on the index. Anything not named here
-# lands in the last group, so a new file appears rather than disappearing.
 # The index's groups of articles. None for now: the help tab shows the
-# repair alone ("Pour commencer" will come back in another form).
+# repair alone.
 HELP_GROUPS = ()
 
 
-# The game's affinity vocabulary as it actually arrives off
-# DamageResult.affinity (yes, Cheese), each with a colour. This is the single
-# element-colour table — the rift report reads it through element_color().
+# DamageResult.affinity values as the game sends them (yes, Cheese), with
+# their colour. Read through element_color().
 ELEMENT_COLORS = {
     "Physical": "#B68A4E", "Magic": "#5279B5", "Fire": "#C9612A",
     "Spark": "#D9B43C", "Earth": "#7C5A2E", "Water": "#4B8FB5",
@@ -280,8 +224,7 @@ ELEMENT_COLORS = {
 _ELEMENT_FOLD = {k.lower(): v for k, v in ELEMENT_COLORS.items()}
 
 
-# Display names for the affinities. The English keys are what the game sends
-# and what saved reports hold, so they are only translated on the way out.
+# Display names; the English keys are what the game sends and reports store.
 ELEMENT_LABELS = {
     "Physical": "Physique", "Magic": "Magie", "Fire": "Feu",
     "Spark": "Étincelle", "Earth": "Terre", "Water": "Eau", "Faith": "Foi",
@@ -298,8 +241,7 @@ def element_label(el):
     return ELEMENT_LABELS.get(el, str(el))
 
 
-# Month names for dates shown on screen, so they do not depend on the
-# Windows locale Python happens to start with.
+# Independent of the Windows locale.
 _MONTHS_FR = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.",
               "août", "sept.", "oct.", "nov.", "déc.")
 
@@ -321,9 +263,8 @@ def _n(x):
 
 
 def element_color(name):
-    """The colour a damage type wears — table first (case-folded), then a
-    stable pastel from the name hash, so an affinity a patch adds arrives
-    tinted rather than invisible, and the same colour every session."""
+    """A damage type's colour: the table (case-folded), else a stable pastel
+    from the name's hash."""
     key = (name or "?").strip().lower()
     hit = _ELEMENT_FOLD.get(key)
     if hit:
@@ -336,37 +277,27 @@ def element_color(name):
 # ---------------------------------------------------------------------------
 # Running without a console
 # ---------------------------------------------------------------------------
-# The installed build is a windowed executable: no console, so nothing to press
-# Ctrl+C in, nowhere for a print() to land, and no stdin to answer a prompt on.
-# Each of those needs a replacement rather than a removal — the diagnostics in
-# particular are the entire support process ("send me the log").
-
-# Re-invoking ourselves to run one of the hltools generators. Frozen, there is
-# no python.exe to call and sys.executable is *this* program, so the exe has to
-# be able to act as its own interpreter for the two bundled tool scripts.
+# Frozen, there is no python.exe: the exe re-invokes itself with these flags
+# to run a bundled hltools script or the window process (menu_host.py).
 TOOL_FLAG = "--run-hltool"
 
 
-# ...and the same trick for the settings panel, which is a WebView2 window in
-# its own process. See menu_host.py for why it cannot share this one.
 MENU_FLAG = "--menu-host"
 
 
-CREATE_NO_WINDOW = 0x08000000   # ...or every regenerate flashes a console up
+CREATE_NO_WINDOW = 0x08000000   # no console flashing up for child processes
 
 
 def run_bundled_tool(name, argv_rest):
     """Entry point for `FareverFrance.exe --run-hltool build_targets.py ...`.
 
-    The tools are plain top-level scripts that do their work on import and exit
-    via SystemExit, so they're run as scripts rather than imported — which also
-    keeps them in their own process, as they are when run from source."""
+    The tools do their work at top level and exit via SystemExit, so they are
+    run as scripts, not imported."""
     tool = ROOT / "hltools" / name
     if not tool.is_file():
         sys.exit(f"[!] bundled tool missing: {tool}")
     import runpy
-    # its progress lines go to the meter as they are written (frozen, the
-    # interpreter may ignore PYTHONUNBUFFERED)
+    # progress lines reach the meter live (frozen may ignore PYTHONUNBUFFERED)
     try:
         sys.stdout.reconfigure(line_buffering=True)
     except (AttributeError, ValueError):
@@ -379,10 +310,8 @@ def run_bundled_tool(name, argv_rest):
 def seed_analysis():
     """Make ANALYSIS exist and hold something usable.
 
-    Only the installed build needs this: its writable data directory starts
-    empty, while the JSON it should start from is inside the read-only bundle.
-    Copying rather than symlinking means the first launch after an install has
-    working data even if the game is mid-patch and regeneration fails."""
+    Installed build only: copies the shipped JSON into the empty writable
+    directory, so the first launch works even if regeneration fails."""
     if not FROZEN:
         return
     try:
@@ -402,17 +331,11 @@ def seed_analysis():
 
 def setup_logging():
     """Point stdout/stderr at a log file when there's no console behind them.
-
-    Without this the windowed build is silent in the one situation where output
-    matters most — it failed to start and the user wants to know why. The
-    previous runs are kept as meter.log.1 to .10, because "it worked yesterday" is
-    usually asked after today's run has already overwritten the evidence."""
+    Previous runs are kept as meter.log.1 (newest) to .10."""
     if HAS_CONSOLE:
         return
     try:
         DATA_HOME.mkdir(parents=True, exist_ok=True)
-        # the last runs, meter.log.1 the newest: a restart no longer
-        # wipes what an earlier session saw
         prev = LOG_FILE.with_suffix(".log.1")
         if LOG_FILE.exists():
             try:
@@ -422,16 +345,10 @@ def setup_logging():
                         old.replace(LOG_FILE.with_suffix(f".log.{n + 1}"))
                 LOG_FILE.replace(prev)
             except OSError:
-                # Windows won't rename a file another process still has open,
-                # which is exactly the case where two meters overlap — during a
-                # handover, or when one is displacing another. Appending below
-                # rather than truncating means the outgoing instance's last
-                # lines (the ones explaining the handover) survive it.
+                # still open by an outgoing instance (handover): append below
                 pass
-        # Append, not truncate: see above. After a successful rotation the file
-        # is gone, so this creates a fresh one and the two are equivalent.
-        # Line-buffered, so a crash mid-write still leaves the lines before it —
-        # which is exactly the log you want to read after a crash.
+        # append so a handover keeps the outgoing instance's last lines;
+        # line-buffered so a crash keeps everything before it
         f = open(LOG_FILE, "a", buffering=1, encoding="utf-8", errors="replace")
     except OSError:
         return          # nowhere to log => run silently rather than not at all
@@ -445,16 +362,14 @@ def setup_logging():
         traceback.print_exception(exc_type, exc, tb, file=sys.stderr)
         f.flush()
     sys.excepthook = hook
-    # The hook, the hotkey and the tray run on their own threads: one dying
-    # quietly would otherwise take a feature with it and leave no trace.
+    # worker threads too, or one dies without a trace
     def thook(args):
         hook(args.exc_type, args.exc_value, args.exc_traceback)
     threading.excepthook = thook
 
 
-# The meter can be asked to stop before the app exists (the tray icon is the
-# way out then): STOP is what those early waits watch. Once the app exists it
-# takes over, because only it can unload the hook on the way down.
+# Watched by startup waits before the app exists; afterwards the app handles
+# the stop (only it can unload the hook).
 STOP = threading.Event()
 
 
@@ -470,9 +385,8 @@ def request_stop():
 
 
 def message_box(text, title="Farever France", flags=0x40):
-    """A dialog is the only way to reach a user who has no console. Used for
-    the failures that stop the meter starting at all — anything softer belongs
-    in the log."""
+    """For failures that stop the meter starting; anything softer goes to the
+    log."""
     try:
         ctypes.windll.user32.MessageBoxW(None, str(text), str(title),
                                          flags | 0x1000)   # MB_SETFOREGROUND
@@ -488,17 +402,15 @@ def _pretty_id(sid: str) -> str:
 # ---------------------------------------------------------------------------
 # Version / update check
 # ---------------------------------------------------------------------------
-# Bump this on every release, and tag the repo with the same string — it's the
-# left-hand side of the comparison below, so a release that forgets it tells
-# everyone they're out of date forever.
+# Bump on every release and tag the repo with the same string: the update
+# check compares it with the latest release.
 VERSION = "1.14.0"
 
 
 # ---------------------------------------------------------------------------
 # The application window
 # ---------------------------------------------------------------------------
-# One window, meant for a second screen. Tab ids are what the window sends
-# back; the labels are what it shows.
+# Tab ids are what the window sends back; the labels are what it shows.
 APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
             "Achievements", "Character", "Build", "Settings", "Help")
 
@@ -522,8 +434,6 @@ APP_TAB_DEFAULT = "Live"
 # Réglages: its subjects, in the menu on its left
 SETTINGS_TOPICS = {"meter": "DPS Meter", "overlay": "Overlay",
                    "display": "Affichage", "config": "Configuration"}
-
-
 
 
 EVENTS_MAX = 40             # lines kept in the live page's event feed

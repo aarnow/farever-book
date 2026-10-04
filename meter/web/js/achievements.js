@@ -22,8 +22,6 @@ function renderAch(box, n) {
   box.textContent = '';
   box.appendChild(el('div', 'section', 'Succès'));
   box.appendChild(el('p', 'note', n.sync || ''));
-  // the counters, each led by its picture: the game's star (its
-  // "Personnage" category's), its achievement badge, a ring for the share
   const stats = el('div', 'cards achstats');
   const pct = n.n ? Math.round(n.got / n.n * 100) : 0;
   const pic = (src, cls) => {
@@ -100,8 +98,7 @@ function renderAch(box, n) {
 
   const list = el('div', 'achlist');
   shown.forEach((it) => {
-    // a guild-mission card: a coloured band with the category's crest, the
-    // body, then the points and the reward in dark wells
+    // styled like the game's guild-mission cards
     const card = el('div', 'achcard cat-' + it.c + (it.done ? ' done' : ''));
     const band = el('div', 'aband');
     const crest = el('span', 'crest');

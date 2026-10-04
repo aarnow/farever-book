@@ -1,9 +1,8 @@
 """
-emit_offsets.py — compute every runtime field offset the meter needs and write
-analysis_out/meter_offsets.json. Re-run after a Farever patch.
-
-Offsets come from hlbc_parser.field_offsets() (mirrors hl_get_obj_rt) and the
-HL virtual vfield indices for the skill-name chain.
+emit_offsets.py — compute the field offsets the hook reads (from
+hlbc_parser.field_offsets(), which mirrors hl_get_obj_rt) into
+analysis_out/meter_offsets.json, then write every data table. Re-run after
+a Farever patch.
 """
 import json
 import os
@@ -14,8 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from hlbc_parser import HLCode, HOBJ, HSTRUCT
 from gamepath import find_hlboot
 
-# Overridable for the same reason as build_targets.py's: the installed meter
-# runs this from a bundle directory that doesn't survive the process.
+# Overridable: the installed app runs this from a temporary bundle directory.
 _OUT_DIR = Path(os.environ.get("FAREVER_ANALYSIS_OUT")
                 or Path(__file__).resolve().parent.parent / "analysis_out")
 _OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,27 +39,19 @@ def main():
 
 
 def hook_layout(code):
-    """Where the hook finds each field it reads: offsets in the game's
-    objects, read off its bytecode, so a patch that moves a field moves
-    them too."""
+    """The offset of each field the hook reads, from the game's bytecode."""
     byname = {t.name: t for t in code.types
               if t.kind in (HOBJ, HSTRUCT) and t.name}
 
     def offs(name):
         f = code.field_offsets(byname[name].index)
-        # Fields a patch renamed keep the name the hook reads them by.
         for (cls, old), new in FIELD_RENAMES.items():
             if cls == name and old not in f and new in f:
                 f[old] = f[new]
         return f
 
     def descendants(root):
-        """Every class that inherits from `root`, itself included.
-
-        Needed because a summon's runtime class is not always the literal
-        `ent.Foe` — the hook has to recognise the whole family before it dares
-        read `summonOwner` off a dealer, since that offset means something
-        entirely different on a class that hasn't got the field."""
+        """Every class that inherits from `root`, itself included."""
         ti = byname[root].index
         out = []
         for t in code.types:
@@ -87,13 +77,11 @@ def hook_layout(code):
     base = offs("st.skill.BaseSkill")
     step = offs("st.skill.SkillStep")
     string = offs("String")
-    state = offs("st.State")
     activity = offs("st.Activity")
     arrobj = offs("hl.types.ArrayObj")
     foe = offs("ent.Foe")
     unit = offs("ent.Unit")
     status = offs("st.skill.Status")
-    elem = offs("ent.Element")
     bosses = offs("ui.hud.BossesInfo")
     bossinfo = offs("ui.hud.BossInfo")
     loadout = offs("st.Loadout")
@@ -109,29 +97,21 @@ def hook_layout(code):
     coll = offs("st.player.Collection")
     mapdata = offs("hxbit.MapData")
     smap = offs("haxe.ds.StringMap")
-    # The codex counter proxy. hxbit generates one class per record shape and
-    # NAMES IT after the shape, which is how the layout was confirmed rather
-    # than guessed — ObjProxy_OkillCount_Int_rank_Int really does carry
-    # killCount then rank. Resolved by name so a patch that adds a field to the
-    # record (and so renames the class) fails loudly here instead of reading a
-    # stale offset.
+    # hxbit names each proxy class after its record's fields, so a patch that
+    # changes the record renames the class and fails loudly here.
     kproxy = offs("hxbit.ObjProxy_OkillCount_Int_rank_Int")
     eproxy = offs("hxbit.ObjProxy_Ocompleted_Float")
     spec = offs("st.player.HeroSpecialization")
     gear = offs("st.item.Gear")
     weapon_ = offs("st.item.Weapon")
     skill = offs("st.skill.Skill")
-    # Dungeons. GameLayer.mainActivity is the running activity; for a dungeon
-    # it is an st.activity.Dungeon, whose globalCtx is the DungeonContext that
-    # carries the run's state, clock and death count. The difficulty lives on
-    # the group's instance lobby, not on the run.
+    # A dungeon run's state is on its DungeonContext; its difficulty is on the
+    # group's instance lobby.
     dctx = offs("st.activity.DungeonContext")
     dact = offs("st.activity.Dungeon")
     lobby = offs("st.player.InstanceLobby")
 
-    # st.Equipment extends st.Inventory, so one `content` offset serves both
-    # containers. Verified rather than assumed — if the two ever diverge, the
-    # equipment sweep would read a wrong offset and report nonsense items.
+    # st.Equipment extends st.Inventory: the hook reads both with one offset.
     if equip["content"][0] != inv["content"][0]:
         raise SystemExit(
             f"[!] st.Equipment.content@{equip['content'][0]} != "
@@ -139,21 +119,14 @@ def hook_layout(code):
             "longer share a layout; fix the inventory sweep before shipping.")
 
     meta = {
-        "String": {"bytes": string["bytes"][0], "length": string["length"][0]},
-        # `blocker` and `effect` are read for the nullified-hit diagnostic: the
-        # meter counts a hit's _amount whether or not the target actually took
-        # it, so damage against a boss in an immunity phase inflates the parse.
-        # Which of _block / blocker / effect marks that is not settled yet:
-        # the hook reports them from normal play.
+        "String": {"bytes": string["bytes"][0]},
+        # _block / blocker / effect: which one marks a nullified hit (boss
+        # immunity phase) is not settled yet.
         "DamageResult": {k: dr[k][0] for k in
             ["_amount", "affinity", "_critical", "_kill", "_block",
              "blocker", "effect", "baseSkill"]},
-        # dynVal1-3 are how MOST player heal skills carry their amount: the
-        # cdb's skill@steps@effects rows name `dynVal` rather than a baseVal or
-        # a scaling ratio, and these three f64s are hxbit-replicated, so the
-        # number the server computed is sitting here on the client. That is the
-        # only reason healing can be counted at all — nothing else on a client
-        # knows what a heal was worth.
+        # dynVal1-3 (hxbit-replicated) carry most heals' server-computed
+        # amount: the only place a client learns what a heal was worth.
         "BaseSkill": {"kind": base["kind"][0], "inf": base["inf"][0],
                       "owner": base["owner"][0],
                       "ownerPlayer": base["ownerPlayer"][0],
@@ -170,35 +143,21 @@ def hook_layout(code):
                            "intellect": ua["intellect"][0],
                            "strength": ua["strength"][0],
                            "dexterity": ua["dexterity"][0]},
-        # Hero.layer is st.State.layer, inherited — it points at the GameLayer
-        # the hero is in, which is how the hook reaches the rift flag without
-        # calling anything (a plain pointer walk is safe off the game thread).
+        # Hero.layer (inherited from st.State) is the hero's GameLayer.
         "Hero": {"name": hero["name"][0], "player": hero["player"][0],
                  "isInCombat": hero["isInCombat"][0],
                  "layer": hero["layer"][0],
-                 # the hero's containers (pickups, the goals' counts)
                  "loadout": hero["loadout"][0],
-                 # The class ("Warrior"/"Priest"/"Rogue"/"Mage") and level.
-                 # st.player.HeroData would be the tidier home for both, but
-                 # it is null on the client for every player including
-                 # yourself: the entity is the only source.
+                 # class and level: st.player.HeroData is null on the client
                  "kind": hero["kind"][0], "level": hero["_level"][0]},
         "Loadout": {"inventory": loadout["inventory"][0],
                     "equipment": loadout["equipment"][0],
-                    # the bank's tabs (hxbit.ArrayProxyData), for the goals'
-                    # "owned" count
+                    # the bank's tabs (hxbit.ArrayProxyData)
                     "banks": loadout["banks"][0]},
-        # content is an ArrayObj of SLOT VIRTUALS, not of items: each entry is
-        # a standalone hl vvirtual carrying inline {count:Int, item:st.Item}.
-        # The hook reads the `item` field by name out of the virtual's own
-        # field table — see readSlot() in meter_hook.js. Decoding entries as
-        # st.Item directly does not throw, it just yields garbage.
+        # content holds slot virtuals {count, item}, not items (see readSlot()
+        # in meter_hook.js).
         "Inventory": {"content": inv["content"][0]},
-        # __uid is NOT stable identity — it is reassigned on every container
-        # move, so a uid-diff alone reports a re-equip as a fresh pickup. It is
-        # emitted because it is still the only per-slot discriminator; the
-        # pickup rule guards on `kind` as well.
-        "Item": {"kind": item["kind"][0], "uid": item["__uid"][0],
+        "Item": {"kind": item["kind"][0],
                  # the copy's flags (st.ItemFlag: Flawless, Prismatic), an
                  # hxbit.EnumFlagsData whose `value` holds the bits
                  "flags": item["flags"][0]},
@@ -207,150 +166,89 @@ def hook_layout(code):
         "ItemFlag": next({(c[0] if isinstance(c, tuple) else c.name): i
                           for i, c in enumerate(t.constructs)}
                          for t in code.types if t.name == "st.ItemFlag"),
-        # `rarity` is declared ONLY on st.item.Weapon (hierarchy:
-        # st.Item -> st.item.Gear -> st.item.Armor / st.item.Weapon). Reading
-        # it at any other class is past the end of the object. Live values are
-        # capitalised: Legendary, Epic, Rare.
+        # `rarity` exists ONLY on st.item.Weapon: past the end of any other item.
         "Weapon": {"rarity": weapon["rarity"][0], "level": weapon["level"][0]},
         "GameLayer": {"isRift": layer["isRift"][0],
-                      # Which shard you are on. hxbit-replicated (the class
-                      # carries __net_mark_serverName), so this is the SERVER's
-                      # own name for itself pushed to the client — measured
-                      # 2026-08-05 as "Sfojuxa3386_6601_na": a generated server
-                      # name, an instance number, and the region code. Distinct
-                      # from the zone, which is layer.world.level below.
+                      # the shard, replicated: "Sfojuxa3386_6601_na" (name,
+                      # instance, region; measured 2026-08-05)
                       "serverName": layer["serverName"][0],
                       "mainActivity": layer["mainActivity"][0],
                       "time": layer["_time"][0],
-                      # world -> world.World, whose `level` string is the
-                      # honest zone/world identity. Main.getMapId() — the old
-                      # zone signal — turned out to return the MACHINE NAME.
+                      # world.World.level is the zone (Main.getMapId() returns
+                      # the machine name)
                       "world": layer["world"][0],
-                      # the whole shard's roster: every player the client
-                      # holds, not only those streamed in around you
+                      # every player on the shard, not only those nearby
                       "players": layer["players"][0]},
-        # The loaded level's identity, for the zone signal and the map
-        # backdrop. `level` is the primary; name/branchName/_isWorldMap ship
-        # so the hook can report what they actually hold from normal play —
-        # field names lie in this game until measured.
-        "World": {"level": world["level"][0],
-                  "name": world["name"][0],
-                  "branchName": world["branchName"][0],
-                  "_isWorldMap": world["_isWorldMap"][0]},
-        # Despawned-but-still-listed entries. Filtered out of the sweep.
-        "State": {"removed": state["removed"][0]},
-        "Activity": {"kind": activity["kind"][0],
-                     "globalCtx": activity["globalCtx"][0],
-                     "contexts": activity["contexts"][0]},
+        "World": {"level": world["level"][0]},
+        "Activity": {"kind": activity["kind"][0]},
         "Dungeon": {"bossId": dact["bossId"][0]},
         "DungeonCtx": {"dungeonState": dctx["dungeonState"][0],
-                       "lastStateChanged": dctx["lastStateChanged"][0],
-                       "startActivity": dctx["startActivity"][0],
                        "endActivity": dctx["endActivity"][0],
-                       "nbPlayerDeaths": dctx["nbPlayerDeaths"][0],
-                       "step": dctx["step"][0]},
+                       "nbPlayerDeaths": dctx["nbPlayerDeaths"][0]},
         "InstanceLobby": {"activityId": lobby["activityId"][0],
                           "difficulty": lobby["difficulty"][0]},
-        # every placed world object (chest, orb, obelisk) is an ent.Element,
-        # `kind` its id ("Z1_World_Greenlands_WorldChest_60")
-        "Element": {"kind": elem["kind"][0]},
-        # A foe with a summonOwner is somebody's pet, not a mob. That's the
-        # only reliable way to tell them apart — they're the same class.
-        # `kind` is the internal id ("Crimson_Z2W_Sword"); `inf` is the CDB row
-        # it came from, whose texts.name is the display name on the nameplate.
-        "Unit": {"kind": unit["kind"][0], "inf": unit["inf"][0],
-                 # attr.health is what the boss bar is actually reading. NOTE:
-                 # UnitAttributes.maxHealth reads 0 for the whole of a boss
-                 # fight (measured), so health is only good for "did it die",
-                 # never for a percentage.
+        # `kind` is the internal id ("Crimson_Z2W_Sword").
+        "Unit": {"kind": unit["kind"][0],
+                 # maxHealth reads 0 during a boss fight (measured): health
+                 # only tells "did it die", never a percentage.
                  "attr": unit["attr"][0],
-                 # an hxbit proxy array of st.skill.Status (plain pointer
-                 # reads, safe from a timer)
+                 # an hxbit proxy array of st.skill.Status
                  "statuses": unit["statuses"][0]},
-        # One live buff/debuff, resolved off the Status subclass. Measured:
-        # stopTime is -1 on every status (not a clock): it ends at startTime
-        # + duration, and duration grows on every refresh.
+        # Measured: stopTime is always -1; a status ends at startTime +
+        # duration, and duration grows on every refresh.
         "Status": {"kind": status["kind"][0],
                    "startTime": status["startTime"][0],
                    "stopTime": status["stopTime"][0],
                    "duration": status["duration"][0],
                    "removed": status["removed"][0]},
+        # a foe with a summonOwner is a pet (same class as a mob)
         "Foe": {"summonOwner": foe["summonOwner"][0]},
-        # hl.types.ArrayObj: length, then a pointer to an hl_varray whose
-        # ELEMENTS START AT +24, past its (t, at, size, pad) header. Reading
-        # from +0 yields the header as your first entity and faults instantly.
+        # the hl_varray's elements start at +24, past its (t, at, size, pad)
+        # header
         "ArrayObj": {"length": arrobj["length"][0], "array": arrobj["array"][0],
                      "data": 24},
         # the server's clock (statuses' times are on it)
         "TimeState": {"serverNow": tstate["serverNow"][0]},
-        # `uid` is the player's STEAM ACCOUNT ID, not an internal handle:
-        # "S" + the id's bytes as hex in LITTLE-ENDIAN order, trailing zero
-        # bytes trimmed (measured 2026-08-02 against steam_get_steam_id() and
-        # the registry's ActiveUser: read big-endian, it is a wrong,
-        # plausible-looking number).
-        # `hero` is the player's live ent.Hero: populated for 24/24 players on
-        # the layer when measured, so every player has a class, not only those
-        # nearby.
+        # `hero` is set for every player on the layer, not only those nearby
         "Player": {"name": player["name"][0], "group": player["group"][0],
-                   "isMe": player["isMe"][0], "lobbyId": player["lobbyId"][0],
-                   "uid": player["uid"][0], "hero": player["hero"][0],
-                   # ...and the per-character codex/collection store.
+                   "isMe": player["isMe"][0], "hero": player["hero"][0],
+                   # per character
                    "progress": player["progress"][0],
-                   # The ACCOUNT-wide store — collected companions, mounts,
-                   # gliders. Distinct from `progress`, which is per character.
+                   # account-wide: companions, mounts, gliders
                    "accountProgress": player["accountProgress"][0],
-                   # The activity contexts the server replicates to this
-                   # player — where a dungeon's DungeonContext lives on the
-                   # client (Activity.globalCtx reads null there).
+                   # where a dungeon's DungeonContext lives on the client
+                   # (Activity.globalCtx reads null there)
                    "activityCtx": player["activityCtx"][0]},
-        # Collected critters (companions), measured 2026-08-07:
-        # Collection.pets is an hxbit proxy array of plain UNIT KINDS
-        # ("Turtle_Grey", "Frog_Demon"), the same string as ent.Unit.kind (the
-        # game's own "already caught?" check, Collection.hasPet(kind), takes
-        # exactly these). NOT item ids.
+        # Collection.pets holds UNIT kinds ("Turtle_Grey"), not item ids
+        # (measured 2026-08-07).
         "AccountProgress": {"collection": acct["collection"][0],
                             "achievements": acct["achievements"][0]},
         # mounts / gliders: the same proxy arrays, of item kinds.
         "Collection": {"pets": coll["pets"][0], "mounts": coll["mounts"][0],
                        "gliders": coll["gliders"][0],
                        "gears": coll["gears"][0]},
-        # hxbit wraps a replicated array in a proxy: Group.players is an
-        # ArrayProxyData whose ArrayDyn wraps an ArrayObj. Two hops, and the
-        # party roster is the reason they are here.
+        # a replicated array: ArrayProxyData -> ArrayDyn -> ArrayObj
         "ArrayProxyData": {"array": aproxy["array"][0]},
         "ArrayDyn": {"array": adyn["array"][0]},
         "Group": {"players": group["players"][0],
                   "instanceLobbies": group["instanceLobbies"][0]},
-        # The codex (hunting log), measured 2026-08-05. The
-        # whole thing is replicated to the client and reachable by plain
-        # pointer reads from the hero:
-        #   Hero.player -> Player.progress -> Progress.unitsProgress
-        #   -> MapData.map (a virtual; hl_vvirtual.value @8 is the real
-        #      StringMap) -> StringMap.h -> $std.hbget(h, utf16(unitKind))
-        #   -> ObjProxy { killCount, rank }
-        # `rank` is how many thresholds the count has passed, and every UNIT
-        # threshold set has three tiers, so rank==3 means the entry is done and
-        # nothing has to know WHICH set applies.
+        # The codex (measured 2026-08-05): Progress.unitsProgress -> MapData.map
+        # (a virtual, the StringMap at +8) -> StringMap.h -> hbget(unitKind)
+        # -> {killCount, rank}. Every unit set has three tiers: rank 3 = done.
         "Progress": {"unitsProgress": progress["unitsProgress"][0],
                      "itemProgress": progress["itemProgress"][0],
-                     # element id -> ProgressState (discovered, completed):
-                     # the world's chests, orbs, obelisks... per character
+                     # element id -> state: chests, orbs, obelisks...
                      "elements": progress["elements"][0],
-                     # counter id -> value (a plain StringMap): the loot
-                     # luck counters (counter sheet, Luck_*) among them
+                     # counter id -> value, the Luck_* counters among them
                      "counters": progress["counters"][0],
-                     # achievement id -> state, per character
                      "achievements": progress["achievements"][0]},
         "MapData": {"map": mapdata["map"][0], "value": 8},
-        # Progress.elements' value (measured 2026-09-28): `completed` is when
-        # the element was completed — a chest opened, an orb picked up, an
-        # obelisk discovered. An element never completed has no entry.
+        # Progress.elements' value; a never-completed element has no entry
+        # (measured 2026-09-28)
         "ElementProxy": {"completed": eproxy["completed"][0]},
-        # Any player's profile (the Character tab), measured 2026-09-28:
-        # the client holds every hero's equipment, talents and skills.
+        # the client holds every hero's equipment, talents and skills
         "HeroDetail": {k: hero[k][0] for k in
-                       ("skills", "specialization", "skillSlots",
-                        "weaponSkills", "secondarySkill")},
+                       ("skills", "specialization", "weaponSkills")},
         "Specialization": {k: spec[k][0] for k in
                            ("talents", "skillSlots", "skillMasteries",
                             "arsenals", "prayerSequence")},
@@ -362,9 +260,8 @@ def hook_layout(code):
         "SkillsProxy": {"skills": offs(
             "hxbit.ObjProxy_Oskills_Arr_Data_SkillKind")["skills"][0]},
         "Skill": {"kind": skill["kind"][0]},
-        # A gear's upgrades and what is set on it (a profile's equipment):
-        # upgradeLevel (the stars), slots (augments: the "corrupted gifts"),
-        # and a weapon's effects (its enchantment formula).
+        # upgradeLevel = stars, slots = augments, effects = a weapon's
+        # enchantment formula
         "Gear": {"level": gear["level"][0],
                  "upgradeLevel": gear["upgradeLevel"][0],
                  "slots": gear["slots"][0],
@@ -375,37 +272,29 @@ def hook_layout(code):
         "StringMap": {"h": smap["h"][0]},
         "CodexProxy": {"count": kproxy["killCount"][0],
                        "rank": kproxy["rank"][0]},
-        # The game's boss/elite healthbar. `bossInfos` is NOT a fixed pool —
-        # measured lengths were only ever 0 (no bar) or 1 (bar up), so its
-        # length alone says whether a bar is on screen. Each entry's `active`
-        # is the per-slot gate; UIElement.visible tracks it but diverged on a
-        # couple of samples at transitions, so `active` is the one to read.
+        # The boss healthbar: bossInfos' length is 0 or 1 (measured); read
+        # `active`, not UIElement.visible, which lags at transitions.
         "BossesInfo": {"bossInfos": bosses["bossInfos"][0]},
         "BossInfo": {"active": bossinfo["active"][0],
                      "unit": bossinfo["unit"][0]},
-        # Which runtime classes are foes — the set a dealer must belong to
-        # before `Foe.summonOwner` may be read off it. Measured 2026-07-30:
-        # only 7 classes descend from ent.Foe, so this is a small closed set,
-        # and a summon's class is not reliably the literal "ent.Foe".
+        # A dealer must be one of these before Foe.summonOwner is read off it:
+        # a summon's class is not always the literal ent.Foe.
         "foeClasses": descendants("ent.Foe"),
     }
     return meta
 
 
-# ---- the tables: what the app shows, read off the game's files ------------
 class Table:
-    """One output of the data folder: a JSON file built from the game, or a
-    folder (or file) of pictures its builder writes itself (dump None).
-    `summary` says what was written, after "[written] <path>" (the app's
-    progress reads those lines). A table that fails is reported and
-    skipped, the others are still written."""
+    """One output of the data folder: a JSON file, or pictures its builder
+    writes itself (dump None). `summary` follows "[written] <path>", which
+    the app's progress reads."""
 
     def __init__(self, out, build, summary=None, dump=None, label=None):
         self.out, self.build, self.summary = out, build, summary
         self.dump, self.label = dump, label or out
 
 
-# how each JSON is written (kept as each table always was)
+# how each JSON is written
 PLAIN = {"indent": 0}
 TEXT = {"ensure_ascii": False, "indent": 0}
 COMPACT = {"ensure_ascii": False, "separators": (",", ":")}
@@ -421,10 +310,6 @@ def _cdb(game):
     import pak_extract
     return json.loads(pak_extract.read_entry(game / "res.light.pak",
                                              "data.cdb"))
-
-
-def _n(key):
-    return lambda d: f"{len(d[key])}"
 
 
 # In the app's order (meter/gamedata.py GENERATED_GROUPS lists the same).
@@ -523,29 +408,19 @@ def write_tables(game):
               + (f" ({table.summary(data)})" if table.summary else ""))
 
 
-# skill@steps@effects.effect is an enum; "5:Damage,Heal,Shield,GainAtb,Status"
-# makes Heal index 1. Read off the column's own typeStr rather than hardcoded,
-# because a patch that inserts an effect kind would silently re-point it.
+# skill@steps@effects.effect is an enum ("5:Damage,Heal,..."): Heal's index is
+# read off the column's typeStr, a patch could insert a kind before it.
 HEAL_EFFECT_NAME = "Heal"
 
 
 def extract_heal_specs(game_dir):
     """skill id -> {step index: how that step's heal amount is computed}.
 
-    This is what lets a client know what a heal was WORTH. Measured
-    2026-08-03: no heal amount is ever sent to a client (fifteen entry points
-    hooked, only playHitHealFX fires and its HitData.amount reads 0), so the
-    only way to count a heal that restored nothing is to compute it the way the
-    game does. The cdb says how, per skill:
-
-      dyn  -> the amount is in BaseSkill.dynVal1/2/3, which ARE replicated
-      scale-> ratio x one of the caster's attributes (Faith on most of them)
-      base -> a flat number
-
-    Shapes seen in this build (44 heal skills): dyn only (12), scale only (27),
-    base+dyn (4), base+scale (2), base only (2). Where both a base and a dyn
-    are given the dyn is the real value and the base is its floor, so the host
-    prefers dyn when it is non-zero.
+    No heal amount reaches the client (measured 2026-08-03), so heals are
+    computed the way the game does:
+      dyn   -> the amount is in BaseSkill.dynVal1/2/3 (replicated)
+      scale -> ratio x one of the caster's attributes
+      base  -> a flat number (a floor when a dyn is also given)
     """
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
@@ -553,7 +428,6 @@ def extract_heal_specs(game_dir):
     cdb = json.loads(data[data_off + e.pos: data_off + e.pos + e.size])
     sheets = {sh["name"]: sh for sh in cdb["sheets"]}
 
-    # Which enum index means Heal, from the column definition itself.
     heal_idx = 1
     for c in sheets.get("skill@steps@effects", {}).get("columns", []):
         if c.get("name") == "effect" and isinstance(c.get("typeStr"), str):
@@ -614,22 +488,18 @@ def extract_display_names(game_dir):
     return sheet_names("unit")
 
 
-# The sheets whose French names the app shows: dungeons (activity), loot
-# (item, rarity) and bosses (unit).
+# the sheets whose French names the app shows
 FR_SHEETS = ("ach", "activity", "attribute", "faction", "gatherable",
              "item", "itemType", "job", "rarity", "skill", "unit",
              "unitType", "zone")
-# Sheets whose French descriptions the app shows (the collection's details,
-# a monster's page).
+# the sheets whose French descriptions the app shows
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc"),
            "unit": ("texts.desc",), "skill": ("texts.desc",)}
 
 
 def extract_fr_names(game_dir):
     """sheet -> id -> French display name, from the game's own translation
-    (res.pak lang/export_fr.xml: <sheet name=...><Id><texts.name>...). The
-    same text the game shows when it runs in French — e.g. the activity
-    R1_POI_CleodorasNest is "Tronc-ruche d'Élizabeille"."""
+    (res.pak lang/export_fr.xml: <sheet name=...><Id><texts.name>...)."""
     import xml.etree.ElementTree as ET
     import pak_extract
     raw = pak_extract.read_entry(Path(game_dir) / "res.pak",
@@ -684,20 +554,14 @@ def extract_luck(game_dir):
 
 
 def extract_rift_rewards(game_dir):
-    """What a rift gives, as the game's code hands it out (read from
-    hlboot.dat with hltools/hlbc_code.py, 2026-10-01 — st.activity.
-    RiftContext.dropBossActivityLoot / onElementStateComplete / isTier):
-
-    * the boss chest opens at Rift_RewardTiers[0] gates closed; opened, it
-      gives every player the boss's lootTable (one of its two weapons, by
-      weight) and bossLootTable, both at min. rarity Rare, then
-      Rift_Bosschest, plus Rift_Tier4 from tier 3 (10 gates) and Rift_Tier6
-      from tier 5 (15 gates);
-    * the other chests (tiers 1, 2, 4: 5, 9, 14 gates) give every player
-      Rift_BonusChest;
-    * a weapon's rarity is drawn by ent.Hero.makeLootItem from the rarity
-      sheet's generationChance at the player's level, Rare at least: the
-      Legendary share first, through the Luck_LegendaryWeapon counter."""
+    """What a rift gives, as st.activity.RiftContext hands it out (read in
+    hlboot.dat, 2026-10-01):
+    * the boss chest (Rift_RewardTiers[0] gates): the boss's lootTable (one
+      weapon, by weight) and bossLootTable, Rare at least, then
+      Rift_Bosschest, plus Rift_Tier4 from tier 3 and Rift_Tier6 from tier 5;
+    * the other chests (tiers 1, 2, 4): Rift_BonusChest;
+    * a weapon's rarity: the rarity sheet's generationChance at the player's
+      level, Rare at least, Legendary through Luck_LegendaryWeapon."""
     import pak_extract
     cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
                                             "data.cdb"))
@@ -709,7 +573,7 @@ def extract_rift_rewards(game_dir):
 
     def lines(tid):
         return [{k: ln.get(k) for k in ("item", "lootTable", "proba",
-                                         "itemMin", "itemMax")}
+                                         "itemMin")}
                 for ln in (tables.get(tid) or {}).get("loot") or ()]
 
     tiers = [{"gates": f.get("v"), "desc": f.get("desc") or ""}
@@ -725,15 +589,11 @@ def extract_rift_rewards(game_dir):
             continue
         bosses.append({"id": u["id"], "weapons": lines(p["lootTable"]),
                        "extra": lines(p["bossLootTable"])})
-    rarities = {r["id"]: (r.get("props") or {}).get("generationChance")
-                for r in sheets["rarity"]["lines"]
-                if isinstance(r.get("id"), str)}
     return {"tiers": tiers, "bosses": bosses,
             "bossChest": lines("Rift_Bosschest"),
             "bonusChest": lines("Rift_BonusChest"),
             "tier4": lines("Rift_Tier4"), "tier6": lines("Rift_Tier6"),
-            "soulstone": lines("Soulstone"),
-            "rarities": rarities}
+            "soulstone": lines("Soulstone")}
 
 
 def extract_item_types(game_dir):
@@ -748,8 +608,7 @@ def extract_item_types(game_dir):
 
 
 def extract_augments(game_dir):
-    """What each augment does — the items set into a gear's slots: corrupted
-    gifts, formulas, sigils, gems, plates, embroideries. {id: {t: type,
+    """What each augment (an item set into a gear's slot) does: {id: {t: type,
     a: [[attribute, value]], s: [skill]}}, from data.cdb."""
     import pak_extract
     cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
@@ -772,9 +631,8 @@ def extract_augments(game_dir):
 
 
 def extract_item_rarity(game_dir):
-    """item id -> the item's base rarity, from data.cdb. Only a weapon
-    carries its own rarity per copy (st.item.Weapon.rarity); every other item
-    — armour, materials — is the rarity its sheet row says."""
+    """item id -> base rarity, from data.cdb (only a weapon has a per-copy
+    rarity)."""
     import pak_extract
     raw = pak_extract.read_entry(Path(game_dir) / "res.light.pak", "data.cdb")
     if raw is None:
@@ -791,11 +649,9 @@ BOSS_ALIASES = {"Splongeblob": "SpongeBlob"}
 
 
 def extract_dungeons(game_dir):
-    """Every dungeon in the game, in the game's order: [{kind, boss,
-    region}]. The activity sheet ships empty in data.cdb, so the list comes
-    from the achievements — one per dungeon, "Defeat [Boss] in ::target::
-    on Normal difficulty…", whose target is the dungeon's activity id and
-    whose category (Combat_Z1…) names its region (Z1_Region…)."""
+    """Every dungeon, in the game's order: [{kind, boss, region, ...}]. The
+    activity sheet ships empty, so the list comes from the "Defeat [Boss] in
+    ::target::" achievements (target = activity id, category = region)."""
     import re
     import pak_extract
     raw = pak_extract.read_entry(Path(game_dir) / "res.light.pak", "data.cdb")
@@ -848,27 +704,17 @@ APTITUDE_CLASS = {"Fighter": "warrior", "Wizard": "mage",
 def dungeon_loot(boss, item_rows, tables, itypes=None):
     """What the end of a dungeon can give, from the game's own data.
 
-    * The reward chest (Gameplay/Elements/Activities/BossChest.prefab, placed
-      in each dungeon with lootTable = the boss) rolls the boss's table, which
-      has the Weights flag: ONE item, chosen by weight.
-    * The boss's other table rolls on its death, each line on its own chance.
-      The unit's `bossLootTable`/`lootTable` props point at the two, but not
-      always the same way round — the Weights flag says which is which.
-    * Every dungeon activity (Gameplay/Activities/Base.prefab) gives
-      DungeonCrate: spark shards, the quantity by level.
-    * The faction's armour, by the game's code (read from hlboot.dat with
-      hltools/hlbc_code.py, 2026-10-01 — st.activity.DungeonContext.
-      dropBossLoot): in Normal / Hard every player gets ONE piece for sure
-      (dropFactionLoot, chance 1.0), drawn evenly among the faction's Rare
-      non-weapon gear his class can wear (HItem.getFactionLootTable, flags
-      WithAffinity + BLP_LootLog: the last 2 pieces received are left out);
-      in Heroic that is replaced by the boss's heroicLootTable (Epic pieces,
-      one drawn among the class's), and a boss without one gives no armour.
+    * The boss's table with the Weights flag is the reward chest: ONE item,
+      by weight. The other rolls on its death, each line on its own chance
+      (bossLootTable/lootTable are not always the same way round).
+    * Every dungeon gives DungeonCrate (spark shards, quantity by level).
+    * Faction armour (st.activity.DungeonContext.dropBossLoot, read
+      2026-10-01): in Normal/Hard ONE sure piece, drawn evenly among the
+      faction's Rare non-weapon gear the class can wear (the last 2 received
+      left out); in Heroic the boss's heroicLootTable instead, if any.
       "pools": {mode: {class: pieces eligible}}.
-    A line can require a difficulty (conditions.difficulty.min: since the
-    2026-09-30 patch the bosses' infusion pattern, Heroic only): `diff`.
     Each entry: {item, type, rarity, apt, src, chance (0..1 or None), qty,
-    diff}."""
+    diff (conditions.difficulty.min)}."""
     def min_diff(ln):
         m = (((ln.get("conditions") or {}).get("difficulty") or {})
              .get("min"))
@@ -943,9 +789,8 @@ BOSS_PORTRAIT_PX = 192
 
 def extract_title_logo(game_dir, out, height=96):
     """The game's "FAREVER" wordmark (res.pak UI/Window/TitleScreen/
-    title.png), cut to its letters and scaled to `height` pixels, for the
-    window's header. Out of the player's own game files like every other
-    picture: the game's art is never shipped with the app."""
+    title.png), cropped and scaled to `height` pixels, for the window's
+    header."""
     import io
     import pak_extract
     from PIL import Image
@@ -1006,10 +851,9 @@ ITEM_ICON_PX = 48
 
 
 def extract_item_icons(game_dir, out_dir):
-    """Every item's icon as a small PNG, out_dir/<item id>.png — for the
-    dungeon loot list. data.cdb's item row names it: gfx {file, size, x, y},
-    a `size`-pixel tile at column x, row y of `file` in res.pak. res.pak is
-    close to a gigabyte, so only its directory and the files used are read."""
+    """Every item's icon, out_dir/<item id>.png: the item row's gfx {file,
+    size, x, y} is a tile of `file` in res.pak. res.pak is close to a
+    gigabyte, so only its directory and the files used are read."""
     import io
     import struct
     import pak_extract
@@ -1066,9 +910,7 @@ def extract_item_icons(game_dir, out_dir):
     return done
 
 
-# Which rank-threshold set a unit's codex entry uses. Measured 2026-08-05 on a
-# fresh character, 11/11 samples agreeing.
-# The bucket names are ours; the numbers are the cdb's own constants.
+# Which cdb threshold constant each codex bucket uses (measured 2026-08-05).
 CODEX_SETS = {
     "elite": "EliteAndBossProgressThresholds",
     "big": "BigFoeProgressLevelThreshold",
@@ -1078,24 +920,12 @@ CODEX_SETS = {
 
 
 def extract_codex_units(game_dir):
-    """What the meter needs to say "12/20" and "still missing" per mob.
-
-    Three facts per unit, all from data.cdb so nothing has to be asked of the
-    running game:
-
-      * `NoCodex` — the game's own "this mob has no codex entry" flag. Its BIT
-        INDEX is read off the flags column definition rather than hardcoded to
-        18, because a patch inserting a flag above it would otherwise silently
-        re-point it at NeutralAggro.
-      * elite/boss — `flags & (Elite|Boss)`, which is a 1-kill entry.
-      * "big" — the `inherit` column referencing a `*_Big` base
-        (`W_Base_Big`, `D_Base_Big`). NOT model scale and NOT a flag: measured,
-        `OgreManfish_Z1W_Claws` and `Manfish_Z1W_Claws` share a type and a
-        faction, the big one carries no `scale` at all, and only `inherit`
-        separates them. It is what `Progress.unitInheritFrom` tests.
-
-    Emitted as three id lists plus the thresholds — anything not listed is an
-    ordinary foe, which keeps the file to about 130 ids instead of 500 rows.
+    """Each unit's codex bucket, from data.cdb, plus the thresholds:
+      * `NoCodex` — no codex entry (bit read off the flags column);
+      * elite/boss — `flags & (Elite|Boss)`;
+      * "big" — inherits a `*_Big` base (not scale, not a flag: what
+        Progress.unitInheritFrom tests).
+    Any unit not listed is an ordinary foe.
     """
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
@@ -1144,7 +974,7 @@ def extract_codex_units(game_dir):
         fl = fl if isinstance(fl, int) else 0
         if (fl >> bits["NoCodex"]) & 1:
             no_codex.append(uid)
-            continue                       # no entry at all; bucket is moot
+            continue
         if ((fl >> bits["Elite"]) & 1) or ((fl >> bits["Boss"]) & 1):
             elite.append(uid)
         elif any("Big" in ref for ref in inherit_refs(uid)):
@@ -1154,8 +984,7 @@ def extract_codex_units(game_dir):
 
 
 def extract_unit_traits(game_dir):
-    """{"spark": [unit ids]}: the units carrying the `Spark` flag (its bit
-    read off the column definition), the rare "Sparkling ..." variants."""
+    """{"spark": [unit ids]}: the "Sparkling ..." variants (`Spark` flag)."""
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
     e = next(x for x in entries if x.path.endswith("data.cdb"))

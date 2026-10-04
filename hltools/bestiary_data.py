@@ -1,33 +1,16 @@
 """The bestiary: every monster the game places in its world, dungeons and
-rifts, for the app's hunting log. The kill counts themselves are the game's
-own (Progress.unitsProgress, read by the hook); this is the list to count
-against.
+rifts, for the app's hunting log (the kill counts come from the hook).
 
-A monster is a unit some level spawns — a spawner's `unit`, or the units of
-its `unitGroup` — minus what is not a monster: companions (Critter), mounts,
-totems, scenery, and the units data.cdb keeps out of the codex. Each comes
-with its family (unit.type -> unitType), the zones it spawns in and their
-region, and its codex tier (codex_units.json: elite / big / foe).
-
-For the hunting log's monster page, two more things:
-* spawns: where each spawner of the open world (W1_Siagarta, the level the
-  Map tab draws) stands, in world coordinates — a spawner is the `props` of
-  a level object, so it stands where that object does (its x/y, through its
-  parents' offsets and rotations, as in map_data.py). Dungeon and rift levels
-  have no minimap: their monsters keep their zones only.
-* loot: what a kill can give — the family's table (unitType.lootTable) and
-  the unit's own (lootTable, bossLootTable), nested tables flattened, each
-  item with its chance per kill (collection_data._table_items).
-* where else: a wave spawner's units (`waveSpawner.group`: the open
-  world's fight stones, the rifts, a boss's adds) count as spawned too, at
-  the spawner; a unit spawned in an instance (dungeon, boss, rift level)
-  keeps that instance's activity, whose entrance in the open world (an
-  element with a `targetActivity`: the instance orbs, the rift entrances)
-  is placed like a spawner; and a unit no level spawns names who summons it
-  (a skill or unit script that refers to it).
-* summoning altars: an element that spawns a unit when used (`spawnUnit`,
-  the soulstone altars) stands where it spawns it, and its `interactible`
-  cost names the item it takes (the soulstone)."""
+A monster is a unit some level spawns (a spawner's `unit`, its `unitGroup`,
+a `waveSpawner.group`, an altar's `spawnUnit`), minus companions, mounts,
+totems, scenery and the units kept out of the codex. Per monster:
+* family, zones, region and codex tier (codex_units.json);
+* spawns: open-world spawner positions (W1_Siagarta), composed through the
+  parents' offsets and rotations as in map_data.py; instances have no map;
+* loot: the family's and the unit's own tables, with chance per kill;
+* where else: the instance it spawns in (placed at its open-world entrance,
+  an element with `targetActivity`), who summons it, the item its altar
+  takes."""
 import json
 import math
 import re
@@ -92,7 +75,6 @@ def build(game_dir, codex, img_dir=None):
             if world and isinstance(o.get("targetActivity"), str):
                 doors[o["targetActivity"]].add((round(wx), round(wy),
                                                 zone or ""))
-            # an altar: used (and paid), it spawns its unit where it stands
             altar = o.get("spawnUnit")
             if isinstance(altar, dict) and isinstance(altar.get("unit"), str):
                 u = altar["unit"]
@@ -160,11 +142,9 @@ def build(game_dir, codex, img_dir=None):
     placed.sort(key=lambda e: (e["regions"][:1] or ["~"], e["family"],
                                e["id"]))
 
-    # Every monster of the game, for the ones the levels don't place (rift
-    # waves, invasions, summons, boss champions) that show up in a codex:
-    # their family, tier, and a region read off the id (Crab_Z1D -> Z1).
-    # The units kept out of the codex's pages (boss champions, dungeon
-    # variants, portals) are in: the game still counts their kills.
+    # Every monster, placed or not (summons, invasions...), NoCodex ones
+    # included: the game still counts their kills. Region off the id
+    # (Crab_Z1D -> Z1).
     every = {}
     for uid in units:
         if not monster(uid, codex_only=False):
@@ -191,8 +171,7 @@ def build(game_dir, codex, img_dir=None):
         p = units[uid].get("props") or {}
         own = {}
         for key, src in (("lootTable", "unit"), ("bossLootTable", "boss")):
-            # a line can require a difficulty (the bosses' infusion
-            # pattern: Heroic only, conditions.difficulty.min = 2)
+            # a line can require a difficulty (conditions.difficulty.min)
             need = {}
             for ln in (tables.get(p.get(key)) or {}).get("loot") or ():
                 d = (((ln.get("conditions") or {}).get("difficulty") or {})
@@ -208,8 +187,8 @@ def build(game_dir, codex, img_dir=None):
     lvls = {uid: units[uid].get("lvl") for uid in every
             if units[uid].get("lvl")}
 
-    # who summons the units no level spawns: the owners of a skill that
-    # names it, and the units whose script or props name it
+    # who summons the units no level spawns: a skill's owners or a unit's
+    # script/props naming it
     owners = defaultdict(set)
     for uid, u in units.items():
         for sk in u.get("skills") or ():
@@ -236,8 +215,7 @@ def build(game_dir, codex, img_dir=None):
     entrances = {a: sorted([x, y, z] for x, y, z in pts)
                  for a, pts in doors.items()}
 
-    # each region's first illustration in the game's codex (Z2: the sunset
-    # over the mill): the picture of a dungeon that has none of its own
+    # each region's first codex illustration: for a dungeon without its own
     region_art = {}
     for cid, c in rows("codexCategory").items():
         for f in re.findall(r'"file": *"([^"]*LoadingScreen/Background/[^"]+)"',
@@ -250,8 +228,8 @@ def build(game_dir, codex, img_dir=None):
         gfx = {uid: units[uid].get("gfx") for uid in every}
         gfx.update({f"family_{f}": type_gfx.get(f) for f in families})
         _images(game_dir, img_dir, gfx)
-        # the screens the instances name, and the ones named after a boss
-        # that no instance claims (Munster_Chuck: the Gorgon's Hollow's)
+        # the screens the instances name, plus those named after a boss no
+        # instance claims
         named = {e.path for e in _pak_entries(game_dir)
                  if e.path.startswith("UI/Window/LoadingScreen/Background/")
                  and not re.search(r"/(loading_screen\d+|Default)\.png$", e.path)}
@@ -259,8 +237,8 @@ def build(game_dir, codex, img_dir=None):
                    | set(TAB_SCREENS))
         _backdrops(game_dir, Path(img_dir).parent / "dungeon_bg", screens,
                    full=screens)
-    # each monster's line of descent (itself, then what it inherits from):
-    # a variant's description and faction are often its base monster's
+    # itself then its bases: a variant's description and faction are often
+    # its base's
     def chain(uid):
         out, todo = [], [uid]
         while todo:
@@ -280,8 +258,7 @@ def build(game_dir, codex, img_dir=None):
             "spawns": spawns, "lvl": lvls, "famLoot": fam_loot,
             "unitLoot": unit_loot, "where": where, "entrances": entrances,
             "chain": {u: c for u, c in chains.items() if len(c) > 1},
-            # an instance's loading screen (a dungeon's own, the rifts'),
-            # by the file's name in dungeon_bg/
+            # an instance's loading screen, by its name in dungeon_bg/
             "loading": {a: Path(p).stem for a, p in sorted(loading.items())},
             "regionArt": {r: Path(p).stem for r, p in sorted(region_art.items())},
             "faction": factions}
@@ -305,10 +282,8 @@ def _pak_entries(game_dir):
 
 
 def _backdrops(game_dir, out_dir, paths, full=()):
-    """The loading screens (1920x1080), halved and in WebP: backgrounds for
-    the app's dungeon cards, under the app's 2 MB page. Those in `full` get
-    a full-size copy too, "<name>_hd", for behind a whole page (the Rifts
-    tab, a dungeon's): at half size it blurs."""
+    """The loading screens, halved, in WebP (the dungeon cards). Those in
+    `full` also get a full-size "<name>_hd" copy, for a page background."""
     import io
     from PIL import Image
     out_dir = Path(out_dir)

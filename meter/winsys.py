@@ -20,30 +20,20 @@ from common import (
 # ---------------------------------------------------------------------------
 # Display scaling
 # ---------------------------------------------------------------------------
-# Windows scales an application that never says otherwise. This one never did:
-# there is no dpiAware entry in the shipped manifest and no awareness call
-# anywhere, so at a 300% system scale the desktop composer bitmap-stretched
-# every window to three times its size and blurred it on the way.
-#
-# Declaring per-monitor-v2 turns the stretching off. It also puts every
-# coordinate this process handles into one space — ours AND the game's, since
-# _window_rect_of_pid asks Windows for the game's rect and an unaware process
-# is handed a virtualised answer.
+# Without a DPI declaration Windows bitmap-stretches (and blurs) every window
+# at high scale. Per-monitor-v2 also keeps our coordinates and the game's in
+# one space: an unaware process gets virtualised window rects.
 DPI_PER_MONITOR_V2 = -4
 
 
-# Windows' own reference DPI. A scale factor is whatever the monitor reports
-# divided by this.
 USER_DEFAULT_SCREEN_DPI = 96
 
 
 def declare_dpi_awareness():
     """Opt out of Windows' bitmap stretching. Returns what was achieved.
 
-    Must run before this process owns its first window — the tray icon's
-    or a message box's — because awareness is latched at that moment and cannot
-    be changed afterwards. Each fallback is a older-Windows entry point for the
-    same idea, tried newest first.
+    Must run before this process creates its first window: awareness is
+    latched then. Fallbacks are older-Windows entry points, newest first.
     """
     if sys.platform != "win32":
         return "not windows"
@@ -70,17 +60,15 @@ def declare_dpi_awareness():
 def display_scale():
     """The primary monitor's scale factor: 1.0 at 100%, 3.0 at 300%.
 
-    Only meaningful once awareness is declared — an unaware process is told 96
-    whatever the user chose, which is the whole point of being unaware. Used to
-    migrate window positions saved by a build that had not declared it.
+    Only meaningful once awareness is declared (an unaware process is always
+    told 96 DPI).
     """
     if sys.platform != "win32":
         return 1.0
     try:
         dc = ctypes.windll.user32.GetDC(0)
         try:
-            # LOGPIXELSX = 88
-            dpi = ctypes.windll.gdi32.GetDeviceCaps(dc, 88)
+            dpi = ctypes.windll.gdi32.GetDeviceCaps(dc, 88)   # LOGPIXELSX
         finally:
             ctypes.windll.user32.ReleaseDC(0, dc)
         return (dpi / USER_DEFAULT_SCREEN_DPI) if dpi else 1.0
@@ -210,21 +198,17 @@ MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_NOREPEAT = 0x0001, 0x0002, 0x0004, 0x4000
 REBIND_TO = [0]
 
 
-# The one key the meter owns: Shift+\ by default, reset the encounter.
+# The encounter reset key, Shift+\ by default.
 HK_RESET = 1
 
 
-# The reset keybind, rebindable in Réglages. A dict rather than a
-# constant because the hook thread reads it on every keypress: rebinding is
-# then a matter of writing new values here, with no hook to tear down and
-# reinstall. Mutated in place for the same reason — the thread closed over this
-# object, not over the name.
+# Rebindable in Réglages. The hook thread reads it on every keypress, so a
+# rebind just mutates it in place (never rebind the name).
 RESET_BIND = {"vk": VK_OEM_5, "shift": True, "ctrl": False, "alt": False}
 
 
-# Virtual-key codes whose names aren't derivable. Everything else falls back to
-# its character (A-Z, 0-9 are their own VK) or a bare hex code, so an unusual
-# keyboard shows something rather than nothing.
+# Names for VKs that aren't their own character; others fall back to the
+# character (0-9, A-Z) or a hex code.
 VK_NAMES = {
     0x08: "Retour arrière", 0x09: "Tab", 0x0D: "Entrée", 0x13: "Pause",
     0x14: "Verr. Maj", 0x1B: "Échap", 0x20: "Espace", 0x21: "Page préc.",
@@ -243,10 +227,8 @@ VK_NAMES.update({0x60 + i: f"Pavé {i}" for i in range(10)})
 VK_NAMES.update({0x70 + i: f"F{i + 1}" for i in range(24)})
 
 
-# Mouse buttons are bindable too, but only these three. Left and right belong
-# to the game and always will; the hook SWALLOWS whatever it fires on, and
-# taking left-click away from somebody mid-fight is not a setting, it's a
-# hostage situation. Middle and the two side buttons are fair game.
+# Only these mouse buttons are bindable: the hook swallows what it fires on,
+# and left/right belong to the game.
 VK_MOUSE = {0x04: "Clic milieu", 0x05: "Souris 4", 0x06: "Souris 5"}
 
 
@@ -268,8 +250,7 @@ def _vk_name(vk):
 
 
 def bind_label(bind=None):
-    """"Shift + \\" — what the menu button and the floating hint both show, so
-    they can't drift apart."""
+    """Display label of a bind, e.g. "Maj + \\"."""
     b = bind or RESET_BIND
     parts = [n for n, k in (("Ctrl", "ctrl"), ("Alt", "alt"), ("Maj", "shift"))
              if b.get(k)]
@@ -290,12 +271,10 @@ class _MSLL(ctypes.Structure):
 
 
 class _ResetHotkey:
-    """The reset key, on its own thread with its own message pump: a
-    low-level keyboard hook (and a mouse one, for the side buttons) that
-    fires and swallows the bound key only while Farever has the focus, every
-    other key left to the game. Without the hook, a global RegisterHotKey
-    (whatever has the focus). `game_pid` is a callable: the game can start,
-    close and start again while the meter runs."""
+    """The reset key, on its own thread and message pump: low-level keyboard
+    and mouse hooks that fire and swallow the bound key only while Farever has
+    the focus. Falls back to a global RegisterHotKey. `game_pid` is a callable:
+    the game can restart while the meter runs."""
 
     def __init__(self, callbacks, game_pid):
         self.callbacks = callbacks
@@ -328,9 +307,8 @@ class _ResetHotkey:
         return pid.value
 
     def _matches(self, vk):
-        """The bound key, Farever in front, and every modifier exactly as
-        bound (Shift+\\ must not fire on Ctrl+Shift+\\). RESET_BIND is read
-        each time: a rebind takes effect at once."""
+        """The bound key with Farever in front and modifiers exactly as bound
+        (Shift+\\ must not fire on Ctrl+Shift+\\)."""
         b = RESET_BIND
         return (vk == b.get("vk") and self._fg_pid() == self.game_pid()
                 and self._pressed(VK_SHIFT) == bool(b.get("shift"))
@@ -360,8 +338,7 @@ class _ResetHotkey:
         return self.u.CallNextHookEx(None, code, wparam, lparam)
 
     def _on_mouse(self, code, wparam, lparam):
-        # every mouse move comes through here (a thousand a second on a
-        # 1000 Hz mouse): anything that isn't a button press leaves first
+        # hot path: every mouse move comes through here
         if code == HC_ACTION and wparam in (WM_MBUTTONDOWN, WM_XBUTTONDOWN):
             vk = 0x04                       # middle button
             if wparam == WM_XBUTTONDOWN:    # side button 1 or 2: 0x05, 0x06
@@ -441,16 +418,10 @@ def start_hotkeys(callbacks: dict, target_pid):
 # ---------------------------------------------------------------------------
 # Tray icon
 # ---------------------------------------------------------------------------
-# Closing the window quits, but the tray icon is also there before the
-# window opens and when it is hidden: the clean exit is always reachable,
-# never the Task Manager's force-kill that leaves a half-attached agent in
-# the game.
-#
-# Hand-rolled on ctypes rather than pystray: the file already talks to user32
-# directly for click-through, hotkeys and window enumeration, and a tray icon is
-# one window and one message pump. It also keeps `pip install frida` as the only
-# thing a from-source run needs.
-ICON_FILE = ROOT / "assets" / "farevermeter.ico"
+# Keeps a clean exit reachable while the window is hidden or not yet open
+# (a force-kill leaves a half-attached agent in the game). Plain ctypes, no
+# pystray dependency.
+ICON_FILE = ROOT / "assets" / "fareverfrance.ico"
 
 
 WM_TRAY = 0x0400 + 1                      # WM_APP + 1
@@ -460,8 +431,6 @@ NIM_ADD, NIM_MODIFY, NIM_DELETE = 0, 1, 2
 
 
 NIF_MESSAGE, NIF_ICON, NIF_TIP, NIF_INFO = 0x01, 0x02, 0x04, 0x10
-
-
 
 
 WM_DESTROY, WM_CLOSE, WM_COMMAND = 0x0002, 0x0010, 0x0111
@@ -526,9 +495,8 @@ class NOTIFYICONDATAW(ctypes.Structure):
 class TrayIcon:
     """A notification-area icon whose menu holds the clean shutdown.
 
-    Owns a hidden window on its own thread: tray callbacks are window messages,
-    and they're delivered to the thread that created the window, so it needs a
-    pump of its own."""
+    Owns a hidden window on its own thread with its own pump: tray callbacks
+    are messages delivered to the window's creating thread."""
 
     def __init__(self, on_quit, tip="Farever France"):
         self.on_quit = on_quit
@@ -544,13 +512,11 @@ class TrayIcon:
         self._thread = threading.Thread(target=self._run, daemon=True,
                                         name="tray")
         self._thread.start()
-        # Bounded: a tray that fails to come up must not stop the meter from
-        # starting — the in-game menu's Quit button is the other way out.
+        # bounded: a failed tray must not block startup
         self._ready.wait(timeout=5.0)
 
     def stop(self):
-        """Called from the app's loop on the way out. PostMessage rather than
-        a direct call because the window belongs to the tray thread."""
+        """Posted, not called: the window belongs to the tray thread."""
         if self.hwnd:
             try:
                 ctypes.windll.user32.PostMessageW(self.hwnd, WM_CLOSE, 0, 0)
@@ -599,8 +565,7 @@ class TrayIcon:
         u.AppendMenuW(m, MF_STRING, TRAY_QUIT, "Arrêter le compteur")
         pt = wintypes.POINT()
         u.GetCursorPos(ctypes.byref(pt))
-        # Required by TrackPopupMenu, or the menu refuses to close when the user
-        # clicks away from it.
+        # or the menu won't close when the user clicks away
         u.SetForegroundWindow(self.hwnd)
         cmd = u.TrackPopupMenu(m, TPM_RIGHTBUTTON | TPM_RETURNCMD,
                                pt.x, pt.y, 0, self.hwnd, None)
@@ -633,11 +598,8 @@ class TrayIcon:
     def _prototypes():
         """Declare every call this class makes.
 
-        Not optional on 64-bit: ctypes defaults an unprototyped argument to C
-        int, so any handle or pointer — a module handle, an lParam carrying a
-        struct — overflows on the way through. Declared here in one place
-        rather than at each call site, because the failure mode is a call that
-        looks correct and raises at runtime on some machines and not others."""
+        Required on 64-bit: ctypes passes unprototyped arguments as C int, so
+        handles and pointers overflow, on some machines only."""
         u, k32 = ctypes.windll.user32, ctypes.windll.kernel32
         k32.GetModuleHandleW.restype = ctypes.c_void_p
         k32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
@@ -676,9 +638,7 @@ class TrayIcon:
     def _run(self):
         u = ctypes.windll.user32
         self._prototypes()
-        # Explorer drops every tray icon when it restarts and broadcasts this to
-        # ask for them back. Without it an explorer crash silently costs the
-        # user their only way to stop the meter.
+        # broadcast by a restarted Explorer, which has dropped every tray icon
         taskbar_created = u.RegisterWindowMessageW("TaskbarCreated")
 
         def wndproc(hwnd, msg, wparam, lparam):
@@ -687,11 +647,8 @@ class TrayIcon:
                     self._on_command(self._menu())
                 return 0
             if msg == WM_COMMAND:
-                # The popup is read with TPM_RETURNCMD, so a click comes back
-                # from _menu() rather than through here. This is the standard
-                # route into the same commands for anything that drives the icon
-                # by message — and it's how the shutdown path gets tested
-                # without a human clicking the menu.
+                # menu clicks come back from _menu() (TPM_RETURNCMD); this is
+                # for commands sent by message, e.g. testing the shutdown
                 self._on_command(wparam & 0xFFFF)
                 return 0
             if msg == taskbar_created:
@@ -772,9 +729,8 @@ def copy_text_to_clipboard(text):
 
 
 def copy_image_to_clipboard(img):
-    """Put a PIL image on the Windows clipboard as CF_DIB — the format every
-    paste target understands. A BMP file is a 14-byte header ahead of a DIB,
-    so the conversion is a save and a slice, no encoder gymnastics."""
+    """Put a PIL image on the Windows clipboard as CF_DIB (a BMP file minus
+    its 14-byte header)."""
     import io
     if sys.platform != "win32":
         raise OSError("image clipboard is Windows-only")
@@ -798,8 +754,7 @@ def copy_image_to_clipboard(img):
     p = k32.GlobalLock(h)
     ctypes.memmove(p, dib, len(dib))
     k32.GlobalUnlock(h)
-    # The clipboard is one shared lock; whoever synced it last (clipboard
-    # managers love to) can hold it for a beat. Brief retries beat failing.
+    # another app (e.g. a clipboard manager) may hold it briefly
     for attempt in range(5):
         if u32.OpenClipboard(0):
             break
@@ -812,7 +767,7 @@ def copy_image_to_clipboard(img):
         if not u32.SetClipboardData(8, ctypes.c_void_p(h)):    # CF_DIB
             k32.GlobalFree(h)
             raise OSError("SetClipboardData failed")
-        # Ownership of `h` passed to the system on success — no free here.
+        # on success the system owns `h`: no free
     finally:
         u32.CloseClipboard()
 
@@ -845,8 +800,8 @@ def _close_handle(h):
 
 
 def _process_alive(pid):
-    """True while `pid` is still running. Note this can't be os.kill(pid, 0):
-    on Windows os.kill TERMINATES the target instead of probing it."""
+    """True while `pid` is running. Not os.kill(pid, 0): on Windows that
+    terminates the target."""
     h = _open_process(pid, PROCESS_QUERY_LIMITED_INFORMATION)
     if not h:
         return False
@@ -862,9 +817,8 @@ def _process_alive(pid):
 
 
 def _process_image(pid):
-    """Full path of a pid's executable, or "". Guards the force-kill path: a
-    stale lock file can name a pid Windows has since recycled onto something
-    else entirely, and that must not be what gets terminated."""
+    """Full path of a pid's executable, or "". Guards the force-kill: a stale
+    lock file can name a recycled pid."""
     h = _open_process(pid, PROCESS_QUERY_LIMITED_INFORMATION)
     if not h:
         return ""
@@ -886,8 +840,7 @@ def _quit_flag(pid):
 
 
 def quit_requested():
-    """Has a newly-started instance asked us to stand down? Polled by the
-    app's loop, so the answer is acted on within one refresh tick."""
+    """Has a newly-started instance asked us to stand down?"""
     try:
         return _quit_flag(os.getpid()).exists()
     except OSError:
@@ -895,13 +848,8 @@ def quit_requested():
 
 
 def watch_for_quit_request():
-    """Poll the stand-down flag on a background thread, for the stretches where
-    nothing else is polling it.
-
-    The app checks the flag on its refresh tick, but not before it exists:
-    without this, an instance still starting ignores the request and is
-    force-killed twelve seconds later, the outcome the polite handover
-    exists to avoid."""
+    """Poll the stand-down flag on a background thread, so an instance still
+    starting (no app tick yet) honours it instead of being force-killed."""
     def work():
         while not STOP.is_set():
             if quit_requested():
@@ -915,10 +863,9 @@ def watch_for_quit_request():
 
 
 def _stop_instance(pid):
-    """Ask pid to exit, and wait. The request is a file the running overlay
-    polls — it returns from its mainloop and takes main()'s normal shutdown
-    path, unloading the hook and detaching. Force-killing is the fallback only,
-    because that's what leaves a half-attached agent in the game."""
+    """Ask pid to exit (a flag file it polls, so it detaches cleanly) and
+    wait. Force-kill is only the fallback: it leaves a half-attached agent in
+    the game."""
     flag = _quit_flag(pid)
     try:
         flag.write_text("quit")
@@ -947,16 +894,11 @@ def _stop_instance(pid):
 
 
 def _acquire_claim_mutex():
-    """Take the system-wide lock covering the read-decide-write in
-    claim_single_instance(), returning a handle to release afterwards.
+    """Take the system-wide lock around claim_single_instance()'s
+    read-decide-write; returns a handle to release.
 
-    Without it that sequence races itself. Stopping the previous instance takes
-    up to QUIT_WAIT_SECS, and the winner's own pid isn't written to the lock
-    file until after that — so a meter started inside the gap reads the same
-    stale pid, shuts down the same already-dying instance, and declares itself
-    the survivor too. Two live meters, each certain it's the only one. Starting
-    the game from Steam while a shortcut launch is still settling is enough to
-    hit it."""
+    Without it, a meter started during a handover (up to QUIT_WAIT_SECS, before
+    the winner writes its pid) reads the same stale pid and also survives."""
     k32 = ctypes.windll.kernel32
     k32.CreateMutexW.restype = ctypes.c_void_p
     k32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
@@ -966,9 +908,7 @@ def _acquire_claim_mutex():
         h = k32.CreateMutexW(None, False, CLAIM_MUTEX)
         if not h:
             return None
-        # Long enough to outlast a full QUIT_WAIT_SECS handover ahead of us.
-        # A timeout isn't fatal — carrying on unserialised is exactly the old
-        # behaviour, so the worst case is no worse than before.
+        # outlasts a full handover; a timeout just carries on unserialised
         k32.WaitForSingleObject(h, CLAIM_WAIT_MS)
         return h
     except Exception as e:
@@ -991,10 +931,8 @@ def _release_claim_mutex(h):
 def claim_single_instance():
     """Become the only meter running, then record ourselves in the lock file.
 
-    Two overlays on screen at once is confusing enough; two hooks in the game is
-    worse. The usual way into it is launching a *second copy* of this script
-    from a different folder while the first is still up — which is why the lock
-    lives in LOCK_DIR rather than beside the script."""
+    The lock lives in LOCK_DIR, not beside the script, so copies started from
+    different folders still see each other."""
     try:
         LOCK_DIR.mkdir(parents=True, exist_ok=True)
     except OSError:
@@ -1016,10 +954,8 @@ def _claim_locked():
     pid = int(other.get("pid") or 0)
     if pid and pid != os.getpid() and _process_alive(pid):
         image = _process_image(pid)
-        # A meter is either a python interpreter running the script or the
-        # installed executable, and BOTH have to be recognised from either side
-        # — the case this exists for is one build being started while the other
-        # is already up, and each has to see the other as a meter to displace.
+        # a meter is either python running the script or the installed exe;
+        # each must recognise the other
         name = Path(image).name.lower()
         if "python" in name or name in METER_IMAGE_NAMES:
             print(f"[meter] another meter is already running (pid {pid}, "
@@ -1049,9 +985,8 @@ def release_instance_lock():
             pass
 
 
-
 # ---------------------------------------------------------------------------
-# The game's window, for the overlays
+# The game's window
 # ---------------------------------------------------------------------------
 def game_window(pid):
     """(hwnd, (x, y, w, h), minimised) of the largest visible top-level window

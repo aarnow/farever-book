@@ -1,16 +1,9 @@
-"""The achievements, for the app's Succès tab — from data.cdb (res.light.pak).
+"""The achievements, for the app's Succès tab, from data.cdb.
 
-The ach sheet holds three kinds of rows: categories (type Category, with a
-parent category for the regional sub-categories), achievements, and their
-tiers — an achievement whose `parent` is the previous tier ("Level 10" ->
-"Level 20" -> "Level 30"). Each has points, an optional item reward, and
-objectives: {ref (CounterValue, Collect, ElementCompleted,
-AchievementCompleted, FoeKilledOnce, ActivityCompleted...), targets, value}.
-
-What a character has completed is read in game (Progress.achievements /
-AccountProgress.achievements); the objectives are kept as they are so the app
-can measure progress on the ones it has data for. The names and
-descriptions are the game's French text, looked up by the app."""
+The ach sheet holds categories (type Category), achievements and their
+tiers (an achievement whose `parent` is the previous tier). Objectives are
+kept as they are ({ref, targets, value}) so the app can measure progress on
+the ones it has data for; completion is read in game."""
 import json
 from pathlib import Path
 

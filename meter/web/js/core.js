@@ -1,23 +1,20 @@
-/* The Farever France window's renderer.
- *
- * This file knows how to draw a NODE, not a page. The meter sends a
- * declarative spec — a flat list of nodes for the current page — a few times
- * a second, and everything here turns it into DOM. All the logic (what the
- * numbers are, what a button does) lives in the meter.
+/* The window's renderer. The meter pushes the current page as a flat list
+ * of nodes a few times a second; this turns them into DOM. All the logic
+ * (the numbers, what a button does) lives in the meter.
  *
  * Generic nodes:
  *   {k:"section", t}   {k:"note", t, warn?}   {k:"gap"}
  *   {k:"prose", t}     {k:"bullets", items}   {k:"code", t}
  *   {k:"button", id, t, on?, tone?, p?}
- *   {k:"field", t, c:<control>}   controls: select | slider | text | label
- *   {k:"search", id, v, count?}
- *   {k:"list", id, h?, grow?, rows:[{t?, name?, cls?, meta?, btns?:[{id,t,p?,off?}]}], empty?}
+ *   {k:"field", t, c:<control>}   controls: select | slider | label
+ *   {k:"list", id, rows:[{t?, name?, cls?, meta?, btns?:[{id,t,p?,off?}]}], empty?}
  *   {k:"sub", t}   a small heading inside a section
  * Live and report nodes:
  *   {k:"toolbar", btns}          {k:"cards", items}
  *   {k:"meter", title, heal, rows, empty}
  *   {k:"detail", name, cls, stats, dmg, heal, elements, empty}
- *   {k:"events", rows}           {k:"report", title, when, phases}
+ *   {k:"report", title, when, phases}
+ * Page-specific nodes (dcards, hunt, map, build...): see buildNode.
  */
 'use strict';
 
@@ -125,10 +122,8 @@ function setZoom(pct) {
   headerWrap();
 }
 
-/* The page's real width: the window's, divided by the zoom. A media query
-   only sees the window — at 130 % a 720 px window lays out 554 px of page —
-   so the layout's breakpoints are classes on <html> instead (lt-1100: the
-   page is 1100 px wide or less), set from that real width. */
+/* Breakpoints as classes on <html> (lt-1100: page <= 1100 px), from the
+   window width divided by the zoom: media queries ignore the zoom. */
 const WIDTH_STEPS = [1250, 1100, 1000, 900, 760, 620];
 function widthClasses() {
   const root = document.documentElement;
@@ -138,9 +133,8 @@ function widthClasses() {
 window.addEventListener('resize', widthClasses);
 widthClasses();
 
-/* The header on two lines (its right-hand group gone under the name: a
-   narrow window) is centred, both lines. Measured, not guessed from a width:
-   the group's own width changes (Jouer, En jeu, a long server name). */
+/* A header wrapped onto two lines is centred. Measured, not a breakpoint:
+   the right-hand group's width varies with the game's state. */
 let HEADER_WRAP = 0;
 function headerWrap() {
   cancelAnimationFrame(HEADER_WRAP);
@@ -155,8 +149,7 @@ function headerWrap() {
 }
 window.addEventListener('resize', headerWrap);
 
-/* A button that floats at the page's bottom right once it is scrolled down,
-   and takes it back to the top. */
+/* Back-to-top button, shown once the page is scrolled down. */
 function initToTop() {
   const page = $('#page');
   if (!page || document.getElementById('totop')) return;
@@ -167,9 +160,7 @@ function initToTop() {
   b.setAttribute('aria-label', 'Revenir en haut');
   b.addEventListener('click', () => page.scrollTo({ top: 0, behavior: 'smooth' }));
   page.parentNode.appendChild(b);
-  // the header's right-hand group changes width with the game's state
-  // the header's right-hand group changes width with the game's state, the
-  // name's height once the logo has loaded
+  // re-check the wrap when the right-hand group or the logo changes size
   if (window.ResizeObserver && $('#topright')) {
     const ro = new ResizeObserver(headerWrap);
     ro.observe($('#topright'));
@@ -200,24 +191,11 @@ function buildControl(c) {
     r.type = 'range';
     r.min = c.min; r.max = c.max; r.step = c.step || 1; r.value = c.v;
     const out = el('span', 'slider-val', c.v + (c.unit || ''));
-    r.addEventListener('input', () => {
-      out.textContent = r.value + (c.unit || '');
-      if (c.live) notify(c.id, { value: Number(r.value) });
-    });
-    r.addEventListener('change', () => {
-      if (!c.live) notify(c.id, { value: Number(r.value) });
-    });
+    r.addEventListener('input', () => { out.textContent = r.value + (c.unit || ''); });
+    r.addEventListener('change', () => notify(c.id, { value: Number(r.value) }));
     wrap.appendChild(r);
     wrap.appendChild(out);
     return wrap;
-  }
-  if (c.k === 'text') {
-    const i = el('input');
-    i.type = 'text';
-    i.value = c.v || '';
-    if (c.ph) i.placeholder = c.ph;
-    i.addEventListener('input', () => notify(c.id, { value: i.value }));
-    return i;
   }
   return el('span', 'meta', c.t || '');
 }
@@ -225,14 +203,7 @@ function buildControl(c) {
 /* ---- generic nodes ------------------------------------------------------ */
 function buildRow(r) {
   if (r.portrait !== undefined) return buildPortraitRow(r);
-  const row = el('div', 'row' + (r.check ? ' checkable' + (r.check.on ? ' ticked' : '') : ''));
-  if (r.check) {
-    const cb = el('input', 'rowcheck');
-    cb.type = 'checkbox';
-    cb.checked = !!r.check.on;
-    cb.addEventListener('change', () => notify(r.check.id, r.check.p || {}));
-    row.appendChild(cb);
-  }
+  const row = el('div', 'row');
   if (r.name !== undefined) row.appendChild(el('span', 'name', r.name));
   if (r.cls !== undefined) row.appendChild(el('span', 'cls', r.cls));
   if (r.t !== undefined) row.appendChild(el('span', 'name', r.t));
@@ -306,8 +277,7 @@ function lootTiers(list) {
   return tiers;
 }
 
-/* The dungeon list: a card each, the whole card a link to its runs — on
-   top the boss and what we have done there, under it what it can give. */
+/* The dungeon list: one clickable card per dungeon (boss, runs, loot). */
 function buildDungeonCards(n) {
   const grid = el('div', 'dcards');
   (n.cards || []).forEach((c) => {
@@ -446,20 +416,8 @@ function buildNode(n) {
       }
       return row;
     }
-    case 'search': {
-      const row = el('div', 'searchrow');
-      row.appendChild(el('label', null, 'Rechercher'));
-      const i = el('input');
-      i.type = 'text';
-      i.value = n.v || '';
-      i.addEventListener('input', () => notify(n.id, { value: i.value }));
-      row.appendChild(i);
-      row.appendChild(el('span', 'count', n.count || ''));
-      return row;
-    }
     case 'list': {
       const box = el('div', 'list');
-      if (n.h && !n.grow) box.style.maxHeight = n.h + 'px';
       if (!n.rows || !n.rows.length) {
         box.appendChild(el('div', 'empty', n.empty || "Rien pour l'instant."));
         return box;
@@ -500,7 +458,6 @@ function buildNode(n) {
     }
     case 'meter': return buildMeter(n);
     case 'detail': return buildDetail(n);
-    case 'events': return buildEvents(n);
     case 'luck': return buildLuck(n);
     case 'liveintro': return buildLiveIntro(n);
     case 'statcards': return buildStatCards(n);
@@ -521,9 +478,8 @@ function buildNode(n) {
 }
 
 /* ---- the page ----------------------------------------------------------- */
-/* Keyed reconciliation: only nodes whose content changed are rebuilt, so a
-   search box keeps its caret and a list keeps its scroll while the page is
-   pushed several times a second. */
+/* Keyed reconciliation: only changed nodes are rebuilt, so inputs keep
+   their caret and lists their scroll across pushes. */
 function renderPage(nodes) {
   const page = $('#page');
   const next = new Map();
@@ -546,25 +502,22 @@ function renderPage(nodes) {
   });
   NODES.forEach((v, k) => { if (!next.has(k)) v.el.remove(); });
   NODES = next;
-  // a page may ask for a picture behind it (a dungeon's screen); some tabs
-  // always have theirs
+  // the page's backdrop: its own `backdrop` node, else the tab's default
   const bg = nodes.find((n) => n.k === 'backdrop');
   const tab = (page.className.match(/page-(\w+)/) || [])[1];
   page.dataset.pbg = (bg && bg.bg) || TAB_BACKDROPS[tab] || '';
   applyPageBackdrop();
 }
 
-/* Which view a page shows: its first block (a list's toolbar or a detail's
-   "back" bar) and the subject of any detail block (`uid`). The live
-   updates that redraw a page keep both, so they never scroll it. */
+/* Which view a page shows: its first block plus any `uid`s. Live redraws
+   keep both, so only a real view change scrolls back to the top. */
 let PAGE_VIEW = '';
 function pageView(nodes) {
   const first = nodes[0] ? nodes[0].k + ':' + (nodes[0].id || 0) : '';
   return first + '|' + nodes.filter((n) => n.uid).map((n) => n.uid).join(',');
 }
 
-/* The app's own tabs (Réglages, Aide) are icons on the right of the band,
-   named on hover. Built as elements, never as markup. */
+/* Takes a JSON string, not a script literal: player names may hold quotes. */
 window.applyState = function (json) {
   let s;
   try {
@@ -600,8 +553,7 @@ window.applyState = function (json) {
     page.scrollTop = 0;
   }
   renderTabs(s.tabs || [], s.tab);
-  // a tab whose content changes view (a monster's page, a dungeon, a rift
-  // report opened or closed) starts at the top, like a new tab
+  // a view change inside a tab (a monster's page, a dungeon) starts at the top
   const view = pageView(s.page || []);
   if (s.tab === prev.tab && view !== PAGE_VIEW) $('#page').scrollTop = 0;
   PAGE_VIEW = view;
@@ -614,9 +566,7 @@ window.applyState = function (json) {
   if (JSON.stringify(s.update) !== JSON.stringify(prev.update)) renderUpdate(s.update);
 };
 
-/* A new tab's page comes in softly: its blocks rise and fade in, one
-   after the other. Only on a tab change — the state pushes that redraw a
-   block several times a second must not animate. */
+/* Entry animation, on a tab change only: live redraws must not animate. */
 let PAGE_ENTER = 0;
 function pageEnter() {
   const page = $('#page');

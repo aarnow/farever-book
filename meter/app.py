@@ -75,11 +75,9 @@ MONTHS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
 
 
 def _dungeon_backdrop(kind, boss, region=""):
-    """The picture behind a dungeon's card: the loading screen the game shows
-    for it, else the one named after its boss that no instance claims (the
-    cheese station's Munster_Chuck), else its region's illustration in the
-    game's codex (the Gorgon's Hollow, in Z2: loading_screen4); "" when
-    there is none."""
+    """The picture behind a dungeon's card: its loading screen, else an
+    unclaimed one named after its boss (Munster_Chuck), else its region's
+    codex illustration (Z2: loading_screen4); "" when there is none."""
     cat = bestiary_catalogue()
     got = (cat.get("loading") or {}).get(kind)
     if got:
@@ -99,16 +97,12 @@ def _dungeon_backdrop(kind, boss, region=""):
 
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
-    saved data, and the one window (a WebView2 app in its own process — see
-    menu_host.py) that shows all of it.
-
-    Nothing here draws over the game. The window is an ordinary application
-    window, meant for a second screen, and it works with the game closed:
-    live modules say they need the game, everything saved stays readable.
+    saved data, and the window (a WebView2 app in its own process, see
+    menu_host.py). Works with the game closed: saved data stays readable.
 
     Threading: the game link, the hotkey hook, the tray and the window's pipe
-    all run on their own threads and reach this object only through
-    _enqueue(); everything else runs on the main thread, in run()."""
+    run on their own threads and reach this object only through _enqueue();
+    everything else runs on the main thread, in run()."""
 
     def __init__(self, session: PartySession, ui_state=None, world=None,
                  link=None, target_pid=None):
@@ -235,12 +229,6 @@ class App:
                     {"vk": vk} | {m: bool(bind.get(m))
                                   for m in ("shift", "ctrl", "alt")})
         z = data.get("zoom")
-        if not isinstance(z, int):
-            # The old settings panel's size slider.
-            try:
-                z = int(round(float((data.get("scales") or {}).get("menu")) * 100))
-            except (TypeError, ValueError):
-                z = None
         if isinstance(z, int) and 50 <= z <= 200:
             self._zoom = z
         pos = data.get("overlay_pos")
@@ -251,9 +239,6 @@ class App:
                     self._ov_pos[k] = {"ax": v["ax"], "ay": v["ay"],
                                        "dx": int(v.get("dx") or 0),
                                        "dy": int(v.get("dy") or 0)}
-                elif isinstance(v, list) and len(v) == 2:   # the first form
-                    self._ov_pos[k] = {"ax": "l", "ay": "t",
-                                       "dx": int(v[0]), "dy": int(v[1])}
         on = data.get("overlay_on")
         if isinstance(on, dict):
             for k in self._ov_on:
@@ -282,8 +267,7 @@ class App:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
 
     def _load_window_geom(self):
-        """Where the window was left, in physical pixels — or {} for the
-        default size, centred by Windows."""
+        """Where the window was left, in physical pixels, or {}."""
         try:
             d = json.loads(POSITION_CACHE.read_text())
         except Exception:
@@ -388,9 +372,8 @@ class App:
         self.menubridge.send({"t": "show"})
 
     def _tick_rift(self):
-        """Follow rift crossings for the standing "all players in rifts"
-        setting. There is no question to answer any more: without the setting
-        the view is simply left alone."""
+        """Follow rift crossings for the "all players in rifts" setting;
+        without it the view is left alone."""
         in_rift = self.ui_state.in_rift()
         if in_rift == self._rift_seen:
             return
@@ -624,8 +607,6 @@ class App:
             "link_retry": self._link_clicked,
             "launch_game": self._launch_game,
             "boot": self.menubridge.invalidate,
-            "rendered": lambda p: None,
-            "escape": lambda: None,
             # live
             "toggle_mode": self._toggle_mode,
             "toggle_sort": self._toggle_sort,
@@ -659,7 +640,6 @@ class App:
             # character
             "char_analyze": lambda p: self._analyze(p.get("name")),
             "char_open": lambda p: setattr(self, "_char_sel", p.get("name")),
-            "char_close": lambda: setattr(self, "_char_sel", None),
             "char_forget": lambda p: self._forget_profile(p.get("name")),
             "char_to_build": lambda p: self._profile_to_build(p.get("name")),
             "build_from_me": self._build_from_me,
@@ -672,8 +652,6 @@ class App:
             "goal_search": lambda p: G.search(p.get("q")),
             "goal_add": self._goal_add,
             "goal_del": lambda p: self.goals.remove(p.get("id")),
-            "goal_n": lambda p: self.goals.set_n(p.get("id"), p.get("n")),
-            "goal_clear_done": self.goals.clear_done,
             # settings
             "toggle_heal": self._toggle_heal,
             "toggle_rift_auto_view": self._toggle_rift_auto_view,
@@ -1210,9 +1188,6 @@ class App:
     def on_collection(self, p):
         """The account's collection, read in game. Saved, so the Collection
         tab shows it with the game closed. Hook thread."""
-        if p.get("types"):
-            print(f"[meter] collection element types: {p['types']}",
-                  file=sys.stderr)
         owned = {k: sorted(set(p.get(k) or ()))
                  for k in ("mounts", "gliders", "pets", "gears")}
 
@@ -1257,12 +1232,11 @@ class App:
     def _goal_add(self, p):
         self.goals.add(p.get("kind"), p.get("ref"), p.get("n"))
 
-    def on_hero_seen(self, name, uid=None, acct=None):
+    def on_hero_seen(self, name):
         """The hook saw our hero (every 3 s in the world). Hook thread."""
         self._hero_at = time.time()
 
         def done():
-            self.me.set_account(uid, acct)
             self.me.set_hero(name)
             if name != self._me_name:
                 self._me_name = name
@@ -1343,13 +1317,15 @@ class App:
         rows, duration, _holding, in_combat = self._live
         group = [p for p in rows if p.in_party] or [p for p in rows
                                                     if p.is_me]
-        heal = self._ov_tab == "heal"
+        # the heal tab only while the heal columns are on
+        heal = self._show_heal and self._ov_tab == "heal"
         group.sort(key=lambda p: -(p.heal_total if heal else p.total))
         top = max(((p.heal_total if heal else p.total) for p in group),
                   default=0.0) or 1.0
         total = sum((p.heal_total if heal else p.total) for p in group)
         spec["meter"] = {
-            "tab": self._ov_tab,
+            "tab": "heal" if heal else "dmg",
+            "heals": bool(self._show_heal),
             "time": _mmss(duration) if duration > 0 else "",
             "fight": bool(in_combat),
             "total": _n(total) if total else "",
@@ -1448,8 +1424,8 @@ class App:
                 by_type = defaultdict(int)
                 for iid in items:
                     by_type[item_type(iid) or "?"] += 1
-                print(f"[meter] item codex: {hero}, {len(items)} items "
-                      f"(other value type: {p.get('other')}); by type: "
+                print(f"[meter] item codex: {hero}, {len(items)} items; "
+                      "by type: "
                       f"{dict(sorted(by_type.items(), key=lambda kv: -kv[1]))}",
                       file=sys.stderr)
         self._enqueue(done)()
@@ -1713,9 +1689,8 @@ class App:
         return self._collection_owned
 
     def _coll_model(self, item_id):
-        """The viewer asked for a collectible's 3D model: built (or read from
-        the cache) off the app's loop, and sent on its own channel — half a
-        megabyte that has no business riding along in every state push."""
+        """A collectible's 3D model, built (or cached) off the app's loop and
+        sent on its own channel: ~0.5 MB, kept out of the state push."""
         def work():
             d = item_model_json(item_id)
             self.menubridge.send({"t": "model", "id": item_id, "d": d})
@@ -1783,9 +1758,8 @@ class App:
             return None
 
     def _prune_dungeon_runs(self, kind, keep_name=None):
-        """At most DUNGEON_RUNS_KEPT runs per dungeon: past that the oldest
-        go. A run holding a difficulty's record stays, or the record would
-        go with it; the run just saved stays too."""
+        """At most DUNGEON_RUNS_KEPT runs per dungeon, oldest out first; a
+        run holding a difficulty's record stays, as does the one just saved."""
         mine = [(n, d) for n, d in self._dungeon_runs()
                 if d.get("kind") == kind]          # newest first
         if len(mine) <= DUNGEON_RUNS_KEPT:
@@ -2054,7 +2028,7 @@ class App:
                         "cards": [row(dg["kind"], dg.get("boss"))
                                   for dg in dgs]})
         if not regions:
-            out.append({"k": "list", "id": "dungeons", "grow": True,
+            out.append({"k": "list", "id": "dungeons",
                         "rows": [],
                         "empty": "Aucun donjon enregistré pour l'instant."})
         return out
@@ -2153,8 +2127,7 @@ class App:
     # ---- boss records, rift reports ----
     @staticmethod
     def _load_best_times():
-        """The record book, tolerantly: a missing file is an empty one, and a
-        hand-edited or corrupt entry drops rather than crashing the launch."""
+        """The record book; a missing file is empty, a corrupt entry drops."""
         try:
             d = json.loads(BEST_TIMES_CACHE.read_text())
             return {str(k): float(v) for k, v in d.items()
@@ -2172,19 +2145,15 @@ class App:
     def _record_boss_kill(self, kinds, secs):
         """Compare the kill against the stored best and say so on screen.
 
-        The key is the PULL's boss kinds, sorted and joined — stable for a
-        council pulled together (whichever member dies last), and for the
-        Nightqueen it is her alone, because her copies never fire a second
-        pull edge. The killed bar's kind would be neither."""
+        Keyed on the PULL's boss kinds, sorted and joined: stable for a
+        council (whichever member dies last) and for the Nightqueen, whose
+        copies never fire a second pull edge. The killed bar's kind isn't."""
         if not kinds:
-            # A bar with no kind can't key a record, but the time is still
-            # worth saying — it just can't be compared to anything.
+            # no kind, no record: the time alone
             self._show_kill_toast(f"Boss vaincu en {self._mmss(secs)}", best=False)
             return
-        # The record keys on the internal kind — stable across localization
-        # and any rename the cdb ships — but the toast speaks the game's
-        # language: the kind is routinely not the name on the bar (the first
-        # live kill said "CLEODORA" for a boss the game calls Honeyzabeth).
+        # Keyed on the internal kind (stable across localization), shown by
+        # the game's name: the two often differ (kind CLEODORA = Honeyzabeth).
         key = "+".join(kinds)
         name = " + ".join(_boss_label(k) for k in kinds)
         prev = self._best_times.get(key)
@@ -2207,12 +2176,8 @@ class App:
         self._show_kill_toast(text, best)
 
     def on_boss_timed_kill(self, kinds, secs):
-        """The LAST boss bar went down killed — the fight is formally over and
-        its clock has a reading. Called from the hook's thread: the record
-        and the event are done on the app's loop.
-
-        Not opt-in, deliberately: a record you had to switch on beforehand is
-        a record you don't have when you finally want it."""
+        """The LAST boss bar went down killed. Hook thread: the record is
+        done on the app's loop. Deliberately not opt-in."""
         self._enqueue(lambda: self._record_boss_kill(tuple(kinds), secs))()
 
     def auto_reset_boss(self) -> bool:
@@ -2225,12 +2190,9 @@ class App:
 
 
     def _save_rift_report(self, report):
-        """The report into failles/, three ways: .json is the full metrics —
-        the file _load_last_rift_report reads back, which is what lets 'Last
-        Rift Report' survive a meter restart; .txt is the chat-pasteable
-        lines; .png is the shareable image. Same folder, same lifecycle as
-        the parse screenshots. Never fatal, and each format fails alone: no
-        Pillow costs the picture, not the data."""
+        """The report into failles/: .json (full metrics, read back by
+        _load_last_rift_report), .txt (chat-pasteable), .png (image). Never
+        fatal; each format fails alone (no Pillow costs only the picture)."""
         base = f"rift-{time.strftime('%Y%m%d-%H%M%S')}"
         saved = None
         try:
@@ -2284,10 +2246,8 @@ class App:
 
     @staticmethod
     def _load_last_rift_report():
-        """The newest saved rift report, or None — how a fresh session still
-        has a 'Last Rift Report'. Timestamped filenames sort lexicographically,
-        so newest is just last. Validated for shape, not trusted: a truncated
-        or hand-edited file costs the button, never the meter."""
+        """The newest saved rift report, or None. Timestamped names sort, so
+        newest is last. Validated for shape: a bad file costs the button."""
         try:
             files = sorted(RIFTS_DIR.glob("rift-*.json"))
             if not files:
@@ -2314,9 +2274,7 @@ class App:
                + (f" ({data['sub']})" if data.get("sub") else "")]
         for ph in data["phases"]:
             dur = ph["duration"]
-            # Rate first here too. The card, the image and this line are three
-            # renderings of one report, and a paste that ranked people by a
-            # different number than the picture would be its own bug report.
+            # rate first, as on the card and the image
             dps = _rate_text(ph["total"], dur, "DPS")
             hps = _rate_text(ph["heal"], dur, "HPS")
             out.append(f"== {ph['label']} — {self._mmss(dur)}, "
@@ -2369,8 +2327,7 @@ class App:
         """Pre-roll over: clear the meter and start the fixed-length sample."""
         self.session.reset()
         self.session.set_capture_window(PARSE_LENGTH_SECS)
-        # Our own reset, so don't let the epoch watcher read it as the player
-        # resetting out of parse mode.
+        # our own reset: not the player leaving parse mode
         self._last_epoch = self.session.epoch
         self.focus_player = None
         self._parse_state = "parsing"
@@ -2378,17 +2335,13 @@ class App:
         self._set_parse_banner(f"PARSE  {PARSE_LENGTH_SECS} s")
 
     def _finish_parse(self):
-        """Nothing to switch off: the session's capture window has already
-        elapsed, which stops both new data and the duration clock. This just
-        moves the UI into its 'sample is sitting there to be read' state
-        (nothing is saved: the result is read on screen)."""
+        """The session's capture window has already stopped data and clock;
+        only the UI state changes. Nothing is saved."""
         self._parse_state = "done"
         self._set_parse_banner(f"PARSE TERMINÉ  {PARSE_LENGTH_SECS} s")
 
     def _open_parses(self):
-        """Open the rift reports' folder in Explorer. Created on demand, so
-        the button does something sensible before the first rift has been
-        saved rather than failing on a folder that doesn't exist yet."""
+        """Open the rift reports' folder in Explorer, created if needed."""
         try:
             RIFTS_DIR.mkdir(parents=True, exist_ok=True)
             os.startfile(RIFTS_DIR)
@@ -2396,9 +2349,8 @@ class App:
             print(f"[meter] couldn't open {RIFTS_DIR}: {e}", file=sys.stderr)
 
     def _stop_parse(self):
-        """Back to live metering — which clears the sample. Resuming capture
-        into a finished parse would quietly append live hits to the numbers you
-        were reading, so leaving them would be worse than dropping them."""
+        """Back to live metering, clearing the sample (resuming into it would
+        mix live hits into the parse's numbers)."""
         self._parse_state = None
         self._hide_parse_banner()
         self.session.reset()
@@ -2406,9 +2358,8 @@ class App:
         self.focus_player = None
 
     def _tick_parse(self):
-        """Drive the countdown from the refresh loop. Only the phase changes
-        matter for correctness — the exact 60 s cutoff is enforced inside the
-        session, not here, so a late tick can't lengthen the sample."""
+        """Drive the countdown from the refresh loop. The exact cutoff is the
+        session's, so a late tick can't lengthen the sample."""
         if self._parse_state is None or self._parse_state == "done":
             return
         now = time.time()
@@ -2427,20 +2378,16 @@ class App:
     def _begin_bind_capture(self):
         """Listen for the next keypress and make it the reset bind.
 
-        Polled (GetAsyncKeyState), not taken from the window: the key is
-        meant for the game, which has the keyboard.
-
-        GetAsyncKeyState doesn't care who has focus, needs no hook, and reads
-        the same virtual-key codes the hook will later match against — so what
-        you press here is exactly what will fire in play."""
+        Polled with GetAsyncKeyState, not taken from the window: the game has
+        the keyboard, and these are the same virtual-key codes the hook
+        matches against."""
         if self._binding_now:
             self._end_bind_capture()
             return
         self._binding_now = True
         self._bind_refused = None
         self._bind_poll_job = None
-        # The prompt is drawn from _binding_now by _menu_spec, not written to a
-        # button here — the panel lives in another process.
+        # the prompt is drawn by _bind_prompt
         self._poll_bind_capture()
 
     def _poll_bind_capture(self):
@@ -2456,16 +2403,12 @@ class App:
             self._end_bind_capture()
             return
         shift, ctrl, alt = down(VK_SHIFT), down(VK_CONTROL), down(VK_MENU)
-        # Middle and the side buttons are offered; left and right never are,
-        # and 0x03 is Break rather than a button at all.
+        # middle and side buttons only; 0x03 is Break, not a button
         for vk in list(VK_MOUSE) + list(range(0x08, 0xFF)):
             if vk in VK_UNBINDABLE or not down(vk):
                 continue
-            # A modifier is required for anything that would otherwise be a
-            # plain keystroke — the hook swallows what it fires on, so a bare
-            # letter costs you that key in game. F-keys and the bindable mouse
-            # buttons are exempt: nothing in Farever wants them by default, and
-            # binding Mouse 4 on its own is the normal thing to do.
+            # A modifier is required except for F-keys and mouse buttons: the
+            # hook swallows what it fires on, so a bare letter is lost in game.
             if (not (shift or ctrl or alt) and not (0x70 <= vk <= 0x87)
                     and vk not in VK_MOUSE):
                 # keep listening, and say why nothing happened
@@ -2497,15 +2440,14 @@ class App:
             except Exception:
                 pass
             self._bind_poll_job = None
-        # Nothing to unbind: the capture is polled (see _begin_bind_capture).
-        # The new label reaches the window with the next state push.
+        # nothing to unbind: the capture is polled
         self.menubridge.invalidate()
 
     def _set_reset_bind(self, bind):
         RESET_BIND.update(bind)
         self._save_settings()
-        # Only the RegisterHotKey fallback needs telling; the low-level hook
-        # reads RESET_BIND on every keypress and has already picked it up.
+        # only the RegisterHotKey fallback needs telling; the low-level hook
+        # reads RESET_BIND on every keypress
         if RESET_BIND.get("vk") in VK_MOUSE and REBIND_TO[0]:
             print("[meter] mouse buttons need the low-level hook, which isn't "
                   "installed — this binding won't fire.", file=sys.stderr)
@@ -2527,20 +2469,16 @@ class App:
     def _apply_mode(self, rows):
         if self.mode == "party":
             party = [p for p in rows if p.in_party]
-            # If we haven't identified any party members yet, fall back to me so
-            # the meter isn't blank (e.g. solo, or group not read yet).
+            # no party known yet (solo, group not read): me alone
             return party if party else [p for p in rows if p.is_me]
         return rows
 
     def _merge_named(self, table):
-        """Merge a skill-id table by display name (e.g. all weapons' base
-        "Attack" share one row) and return [(label, total, hits, crits, self)]
-        sorted by total desc.
+        """Merge a skill-id table by display name (all weapons' "Attack" share
+        one row): [(label, total, hits, crits, self)] by total desc.
 
-        Damage rows carry [hits, total, crits] and healing rows carry a fourth
-        column (the self-healed share). Both go through here, so the fourth is
-        read optionally and damage simply reports 0 — a damage bar has nothing
-        to split."""
+        Damage rows are [hits, total, crits]; healing rows add the self-healed
+        share, which damage reports as 0."""
         merged: dict[str, list] = defaultdict(lambda: [0, 0.0, 0, 0.0])
         for sid, vals in table.items():
             label = self.session.skill_names.get(sid) or _pretty_id(sid)
@@ -2552,43 +2490,21 @@ class App:
         return out[:MAX_SKILL_ROWS]
 
     def _hold_last(self, rows, duration):
-        """Keep the previous encounter on screen until the next one starts.
-
-        A reset empties the store instantly, and the meter used to go blank
-        with it — which is the one moment you most want to read it. A boss
-        pull wipes the meter to measure the pull; a wipe or a zone change
-        wipes it because the fight is over. In every case the numbers you were
-        looking at vanish at the exact instant they became final.
-
-        So the last non-empty set of rows is held and re-shown while the live
-        one has nothing in it. Nothing is faked: the rows, the totals and the
-        duration are all the previous encounter's own, frozen together, and
-        the header says LAST so it can't be mistaken for a live fight. The
-        first hit of the next encounter replaces them.
+        """Keep the previous encounter on screen until the next one starts:
+        a reset (pull, wipe, zone change) empties the store just as the
+        numbers become final. The last non-empty rows and duration are
+        re-shown, headed LAST, until the next hit.
 
         Returns (rows, duration, holding).
         """
         if rows:
-            # Held as a snapshot, not a reference: PlayerAgg copies come out
-            # of session.snapshot() already detached, but the LIST is ours to
-            # keep, and the sort above has already ordered it the way it was
-            # displayed.
             self._held_rows = rows
             self._held_duration = duration
             return rows, duration, False
         if not self._held_rows:
             return rows, duration, False
-        # Party-only means party-only, including for the encounter being held
-        # over. A set recorded while all-players was on carries people who are
-        # not in the group, and re-showing it after the player has switched
-        # back would quietly contradict the setting they just chose — the
-        # meter would be listing strangers under a header that says PARTY.
-        #
-        # Dropped wholesale rather than filtered down to the party members in
-        # it: the totals, the percentages and the duration were all computed
-        # against the full set, so a filtered view would be a set of numbers
-        # that never existed. Better to show nothing than to show arithmetic
-        # about a fight that did not happen.
+        # A set held from all-players mode has strangers in it: in party mode
+        # it is dropped whole, since its totals and percentages count them.
         if self.mode == "party" and any(
                 not p.in_party and not p.is_me for p in self._held_rows):
             self._held_rows = []
@@ -2603,12 +2519,9 @@ class App:
         return me or (rows[0].name if rows else None)
 
     def _apply_rift_view(self, kind):
-        """Switch the view the way the rift wants it — to all-players on the
-        way in, back to party-only on the way out.
-
-        That resets the encounter, the same as the mode button: the two views
-        can't share one encounter without the percentages lying. Saved too, so
-        a restart comes back on the view you're actually looking at."""
+        """All-players on entering a rift, party-only on leaving. Resets the
+        encounter like the mode button (the views can't share one) and saves
+        the setting."""
         want = "all" if kind == "enter" else "party"
         if self.mode == want:
             return False
@@ -2620,12 +2533,8 @@ class App:
 
     @staticmethod
     def _help_articles():
-        """Every article on disk, parsed once and cached.
-
-        Cached on the function rather than the instance because the files are
-        read-only assets — re-reading them on every refresh tick would be four
-        file opens a second for prose that cannot change while the meter runs.
-        """
+        """Every article on disk, parsed once and cached on the function
+        (read-only assets, otherwise re-read on every refresh tick)."""
         cached = getattr(App._help_articles, "_cache", None)
         if cached is not None:
             return cached
@@ -2699,15 +2608,13 @@ class App:
 
     @staticmethod
     def _tick(on, label):
-        """A setting's button reads as its state, not as the action that
-        would change it."""
+        """A setting's button label, showing its state."""
         return ("☑  " if on else "☐  ") + label
 
 
     def _enqueue(self, fn):
-        """Wrap `fn` so it runs on the app's loop at the next refresh: the
-        hotkey, the tray, the hook and the window's actions all arrive on
-        their own threads, and every action takes this one path."""
+        """Wrap `fn` so it runs on the app's loop at the next refresh; the
+        way in for every other thread."""
         def handler():
             with self._q_lock:
                 self._action_q.append(fn)
@@ -2748,14 +2655,12 @@ class App:
 
     def _on_game_disconnected(self):
         self.target_pid = None
-        # A parse whose data source just died is not a sample of anything.
         if self._parse_state is not None:
             self._stop_parse()
         self.menubridge.invalidate()
 
     def _link_spec(self):
-        """The title band's game state: "play" (Farever is not running: a
-        button that launches it), "launching" (just asked Steam), then
+        """The title band's game state: "play" (launch button), "launching",
         "connecting", "ingame" or "failed"."""
         if self.link is None:
             return {"state": "ingame", "t": "En jeu"}
@@ -2799,13 +2704,8 @@ class App:
             self.link.retry()
 
     def _manual_reset(self):
-        """A reset the PLAYER asked for — the hotkey, or the panel's button.
-
-        Separate from session.reset() because the automatic resets (a zone
-        change, a boss pull, switching player view) must stay silent: they
-        happen while you are reading the meter for other reasons, and a banner
-        over it every time you walked through a door would be noise.
-        """
+        """A reset the PLAYER asked for (hotkey or button): unlike the
+        automatic ones (zone, pull, view switch), it shows a toast."""
         self.session.reset()
         self._show_reset_toast()
 

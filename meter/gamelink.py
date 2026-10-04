@@ -17,28 +17,24 @@ from gamedata import (
 from combat import DungeonTracker, _stamp_report_classes
 
 
-# Frida 17.19.0 crashes whatever process it leaves: attach then detach, no
-# script at all, and the target dies with 0xC0000005 (measured 2026-09-28 on
-# Windows 11 build 26200, against 16.7.19 / 17.2.17 / 17.10.1 / 17.18.0 that
-# all leave it running). With the game, that is closing Farever France closing
-# Farever. The meter refuses to attach with it.
+# Frida 17.19.0 crashes the process it detaches from (0xC0000005, even with
+# no script; measured 2026-09-28 on Windows 11 26200, 17.18.0 and older are
+# fine): closing the app would kill Farever, so it refuses to attach.
 FRIDA_CRASHING_VERSIONS = {"17.19.0"}
 
 
 FRIDA_GOOD_VERSION = "17.18.0"
 
 
-# How long the game's threads get to leave our hooks' trampolines, between
-# the hooks coming off and the agent being unloaded. The hooked functions are
-# short (a health write, a damage event); a second is ample.
+# How long the game's threads get to leave our hooks' trampolines before
+# the agent is unloaded (the hooked functions are short).
 HOOK_DRAIN_SECS = 1.0
 
 
 def _unload_hook(script):
-    """Take the hook out of a running game without crashing it: hooks off
-    and timers stopped first (the script's shutdown()), a pause for the
-    game's threads to leave them, then the unload. Unloading straight away
-    crashed the game (see the note at the top of meter_hook.js)."""
+    """Take the hook out of a running game without crashing it: shutdown()
+    (hooks and timers off), a pause, then the unload. Unloading straight
+    away crashes the game (see meter_hook.js)."""
     try:
         exports = getattr(script, "exports_sync", None) or script.exports
         exports.shutdown()
@@ -99,14 +95,12 @@ class GameSession:
         self.progress_printed = 0.0
         self.hero_name = None       # the last local hero (a quiet log)
         self.zone_seen = False      # the first zone report came in
-        # A boss fight under way: started on the pull edge, ended by a
-        # kill of the last boss bar, a loading screen, or the bars staying
-        # down (bossgone). Its clock is read on the kill; `kinds` keys
-        # the record.
+        # A boss fight under way (see _on_bossbar); `boss_kinds` keys the
+        # kill-time record.
         self.boss_fight_on = False
         self.boss_t0 = None
         self.boss_kinds = ()
-        # diagnostics, from ordinary play (see their handlers)
+        # diagnostics (see their handlers)
         self.nullified = {}
         self.nullified_at = 0.0
         self.heal_log_at = 0.0
@@ -158,9 +152,8 @@ class GameSession:
         return True
 
     def _sync_data(self):
-        """The data files matched to the build actually running (its own
-        hlboot.dat), once the player has agreed to it (the welcome
-        screen). Skipped when the file is unchanged."""
+        """The data files matched to the running build's hlboot.dat, once
+        the player has consented (welcome screen). Skipped when unchanged."""
         link = self.link
         link.step("data", "run", "comparaison avec la version installée")
         while not DATA_CONSENT.wait(0.5):
@@ -271,9 +264,9 @@ class GameSession:
         return False
 
     def _wait_ready(self, max_total=240.0, idle_grace=30.0):
-        """The hook's ready message. Its memory scan can take minutes on a
-        slow machine, and unloading it restarts it from zero: waited for as
-        long as it keeps talking, up to a cap."""
+        """The hook's ready message. Its memory scan can take minutes and
+        restarts from zero if unloaded: waited for while it keeps talking,
+        up to a cap."""
         start = time.monotonic()
         while True:
             if self.ready_evt.wait(timeout=0.5):
@@ -291,9 +284,8 @@ class GameSession:
                 return False
 
     def _connected(self):
-        """Connected: the hook feeds on_message until the game closes, the
-        meter stops or a reconnect is asked; then everything the hook was
-        saying is forgotten."""
+        """Connected until the game closes, the meter stops or a reconnect is
+        asked; then the hook-fed state is cleared."""
         link = self.link
         link.script = self.script
         link.step("hook", "ok", "")
@@ -349,14 +341,12 @@ class GameSession:
         if p.get("pet"):
             sig = (p["pet"], p.get("player") or "?")
             if sig not in self.pet_seen:
-                # summon damage merges into the owner's row: the only line
-                # that says it is attributed, and to whom
+                # summon damage merges into the owner's row: logged once
                 self.pet_seen.add(sig)
                 print(f"[meter] summon damage: pet={sig[0]!r} "
                       f"credited to {sig[1]!r}", file=sys.stderr)
         if not dropped:
-            # a hit the target never took is not damage: dropped before it
-            # can start or extend a fight
+            # a nullified hit must not start or extend a fight
             self.session.record(p)
             self.rift_rec.record("hit", p)
             self.dungeon.record("hit", p)
@@ -381,8 +371,7 @@ class GameSession:
         return dropped
 
     def _on_heal(self, p):
-        # the hook reports what landed: its full size is filled in first,
-        # so every aggregator sees the same heal
+        # the hook reports what landed: size it once for every aggregator
         self.heal_sizer.stamp(p)
         self.session.record_heal(p)
         self.rift_rec.record("heal", p)
@@ -429,8 +418,8 @@ class GameSession:
         if boss_up and not self.boss_fight_on:
             self._boss_pulled(p)
         for b in (p.get("down") or []):
-            # `killed`: decided by the hook from the last health seen; a bar
-            # dropped because the boss reset is not a kill
+            # `killed`: the hook's verdict from the last health seen (a boss
+            # reset is not a kill)
             if b.get("boss") and b.get("killed"):
                 print(f"[meter] boss killed: {b.get('kind')}",
                       file=sys.stderr)
@@ -449,8 +438,7 @@ class GameSession:
         self.rift_rec.on_boss_pull()        # the rift report's phase edge
         app = _app()
         if app is not None and app.auto_reset_boss():
-            # the bar is polled, so the opening burst has already landed:
-            # the last seconds are kept
+            # the bar lags the pull: keep the opening burst
             kept = self.session.reset_keeping_recent()
             print(f"[meter] meter reset for the pull "
                   f"(kept {kept} event{'' if kept == 1 else 's'} from "
@@ -487,9 +475,8 @@ class GameSession:
         if not self.boss_fight_on:
             return
         self._end_boss_fight()
-        print("[meter] boss fight ended without a kill (no boss bar "
-              f"for {p.get('polls', 0)} polls) — pull reset re-armed",
-              file=sys.stderr)
+        print("[meter] boss fight ended without a kill — pull reset "
+              "re-armed", file=sys.stderr)
         app = _app()
         if app is not None and app.auto_reset_boss():
             self.session.reset()
@@ -497,15 +484,12 @@ class GameSession:
 
     def _on_zone(self, p):
         """A loading screen (or, first, where we already are)."""
-        extra = ", ".join(f"{k}={p.get(k)!r}"
-                          for k in ("name", "branch", "world_map")
-                          if p.get(k) is not None)
         if p.get("initial"):
             self.zone_seen = True
             self.link.step("zone", "ok", _zone_label(
                 str(p.get("sig") or "").split("/")[-1]))
-            print(f"[meter] zone identified ({p.get('sig')!r}"
-                  + (f"; {extra}" if extra else "") + ")", file=sys.stderr)
+            print(f"[meter] zone identified ({p.get('sig')!r})",
+                  file=sys.stderr)
             return
         self.session.reset()
         if self.rift_rec.on_zone():     # a wipe or a walk-out, not a run
@@ -515,8 +499,7 @@ class GameSession:
             if app is not None:
                 app.on_rift_dropped("changement de zone avant la victoire")
         self._end_boss_fight()
-        print(f"[meter] zone change ({p.get('sig')!r}"
-              + (f"; {extra}" if extra else "") + ") — meter reset",
+        print(f"[meter] zone change ({p.get('sig')!r}) — meter reset",
               file=sys.stderr)
 
     def _on_server(self, p):
@@ -531,12 +514,12 @@ class GameSession:
               f" ({p.get('name')!r})", file=sys.stderr)
 
     def _on_hero(self, p):
-        """The local hero, re-reported every 3 s with the group: only a new
-        one is logged, and never by name (the log is often on screen)."""
+        """The local hero, re-reported every 3 s: only a new one is
+        logged, and never by name (the log is often on screen)."""
         name = p.get("name")
         app = _app()
         if app is not None and name:
-            app.on_hero_seen(name, p.get("uid"), p.get("acct"))
+            app.on_hero_seen(name)
         if name and name != self.hero_name:
             first = self.hero_name is None
             self.link.step("hero", "ok", name)
@@ -583,19 +566,13 @@ class GameSession:
 
 
 class GameLink:
-    """The meter's connection to Farever, kept alive in the background.
-
-    The interface no longer waits for the game: it opens straight away, and
-    this thread watches for Farever to start, connects to it, and goes back to
-    watching once it closes — so the meter can stay open across game sessions,
-    and everything it saved is readable without the game.
-
-    State is read by the app (the status light) and changed only here."""
+    """The meter's connection to Farever, kept alive in the background: this
+    thread waits for the game, connects, and goes back to waiting once it
+    closes. State is read by the app (the status light), changed only here."""
 
     CLOSED, CONNECTING, CONNECTED, FAILED = (
         "closed", "connecting", "connected", "failed")
-    # The connection, step by step, for the window the game state opens:
-    # what is being done right now, and since when.
+    # The connection steps shown in the game-state window.
     STEPS = (("boot", "Démarrage du jeu"),
              ("data", "Vérification des données du jeu"),
              ("attach", "Connexion à Farever"),
@@ -614,9 +591,8 @@ class GameLink:
         self._steps = {}
         self._thread = None
         self.script = None
-        # The game we were last connected to. Once it closes it stays in the
-        # process list for a few seconds while it shuts down; it must not be
-        # mistaken for the game starting again.
+        # The game we were last connected to: it lingers in the process list
+        # while shutting down and must not look like a new launch.
         self._gone_pid = None
 
     # -- read by the app -------------------------------------------------
@@ -742,8 +718,7 @@ class GameLink:
             if STOP.is_set():
                 return
             if self.status()[0] == self.FAILED:
-                # Not straight back at the same process: hammering a stuck
-                # game with attaches is what crashes it. Wait for it to close,
+                # Repeated attaches crash a stuck game: wait for it to close
                 # or for a click on the status light.
                 self._wait_failed(device, proc.pid)
 
@@ -775,12 +750,8 @@ class GameLink:
             self._retry.clear()
         return None
 
-    # A game that has just started is not hooked straight away: its code and
-    # tables only exist once it has finished booting, and a hook brought up
-    # before that finds nothing — three times over, and the link gives up.
-    # That was the "second launch never connects" bug (2026-10-01): with the
-    # data already checked, the meter attached the instant Farever.exe
-    # appeared. Hooked once it shows its window and has run a little while.
+    # A just-started game has no tables to hook yet (the hook would fail all
+    # its attempts; seen 2026-10-01): wait for its window and a little uptime.
     BOOT_MIN_SECS = 12.0
     BOOT_MAX_SECS = 90.0
 

@@ -37,8 +37,7 @@ _TABLES = {}
 
 def _table(name, empty=dict, shape=None, warn=None):
     """analysis_out/<name>, parsed (then shaped), read once; `empty()` when
-    it is absent or unreadable — said in the log when `warn` says what that
-    costs."""
+    absent or unreadable (logged with `warn` when given)."""
     got = _TABLES.get(name)
     if got is None:
         try:
@@ -207,8 +206,8 @@ def world_map():
     return _table("map.json")
 def _element_done(states, eid):
     """Whether a world element has been completed (chest opened, orb picked
-    up, obelisk discovered): Progress.elements has it, with a time. A value
-    kept from the first measuring build is a [byte, time] pair."""
+    up, obelisk discovered): Progress.elements has it, with a time (or a
+    [byte, time] pair)."""
     v = (states or {}).get(eid)
     if isinstance(v, list):
         v = v[-1] if v else None
@@ -217,19 +216,15 @@ def _element_done(states, eid):
 
 
 def _unit_names():
-    """kind -> display name, from analysis_out/unit_names.json — the game's
-    own data.cdb rows, extracted by emit_offsets.py on the same self-heal
-    cycle as the offsets. Loaded once; {} when the file is absent.
-
-    A unit's kind is routinely NOT the name the game shows (measured:
-    'Cleodora' displays as 'Queen Honeyzabeth', 'Phrixes' as 'High
-    Inquisitor Chakram': the kind often names the lair, not the boss)."""
+    """kind -> display name, from analysis_out/unit_names.json (data.cdb,
+    via emit_offsets.py). {} when absent. A kind is often NOT the shown name
+    ('Cleodora' displays as 'Queen Honeyzabeth')."""
     return _table("unit_names.json")
 
 def _fr_names(sheet):
     """id -> French display name for one of the game's sheets (activity,
-    item, rarity, unit), from analysis_out/names_fr.json — the game's own
-    translation, extracted by emit_offsets.py. {} when absent."""
+    item, rarity, unit), from analysis_out/names_fr.json (the game's own
+    translation). {} when absent."""
     return _table("names_fr.json").get(sheet) or {}
 
 def item_rarity(kind):
@@ -240,9 +235,8 @@ _ITEM_ICONS = {}
 
 
 def item_icon(kind):
-    """An item's icon as a data URI (analysis_out/item_icons/<id>.png,
-    extracted from the game by emit_offsets.py), or "" when there is none.
-    Inlined because the window loads nothing from anywhere."""
+    """An item's icon as a data URI (analysis_out/item_icons/<id>.png), or
+    "" when there is none. Inlined: the window loads no external files."""
     kind = str(kind or "")
     if kind not in _ITEM_ICONS:
         uri = ""
@@ -302,11 +296,7 @@ def rarity_label(r):
 
 def _heal_specs():
     """skill id -> {step: [heal effect spec]}, from analysis_out/heal_specs.json.
-
-    The game's own cdb, extracted on the same self-heal cycle as the offsets.
-    Without it every heal on a full-health target is unsizeable and healing
-    collapses back to "health actually restored" — so its absence is logged
-    rather than swallowed."""
+    Its absence is logged: heals on full-health targets become unsizeable."""
     return _table("heal_specs.json", warn="healing falls back to what "
                   "each skill has been seen to restore")
 def _boss_label(kind):
@@ -319,13 +309,8 @@ def _boss_label(kind):
 def _summon_label(kind):
     """A summon's real display name ('Summon_Imp' -> 'Nightling Terror',
     'Rabbit_EarlyAccess_Spark' -> 'Sparktail'), falling back to the prettified
-    kind for anything the unit sheet doesn't carry.
-
-    Same sheet and the same reason as _boss_label: a unit's kind is a backend
-    id, not what the game puts on its nameplate. Stripping the `Summon_`/
-    `Totem_` prefix off the kind instead looks like it works — `Summon_Imp`
-    reduces to a plausible "Imp" — but it is a guess that happens to read well,
-    and it degenerates to a raw id on every summon not named that way."""
+    kind for anything the unit sheet doesn't carry. (Stripping `Summon_` off
+    the kind is not the nameplate name.)"""
     return (_fr_names("unit").get(kind) or _unit_names().get(kind)
             or _pretty_id(kind))
 
@@ -343,12 +328,10 @@ def build_script_source():
 DATA_STAMP = ANALYSIS / ".data_stamp.json"
 
 
-# Set while regenerate_data runs: the title band says the game's data is
-# being re-read, rather than a bare "Connexion…" for a minute.
+# Set while regenerate_data runs (shown in the title band).
 REGENERATING = threading.Event()
-# One regenerate at a time: the first launch's and the game link's would
-# otherwise write the same files together. The second, once the first is
-# done, finds the stamp current and returns at once.
+# One regenerate at a time (first launch and game link); the second then
+# finds the stamp current and returns at once.
 _REGEN_LOCK = threading.Lock()
 # Bumped by each regenerate that wrote new files: the window resends the
 # pictures (skills, collection, dungeons...) when it changes.
@@ -361,9 +344,9 @@ DATA_FORMAT = 2
 
 
 def _hook_needs():
-    """What the hook reads out of the generated files, read off its own
+    """What the hook reads out of the generated files, parsed from its own
     source: OFF.<group>[.<field>] in meter_offsets.json, DATA.<key> in
-    resolver_data.json. Never out of step with it."""
+    resolver_data.json."""
     try:
         src = (FRIDA_DIR / "meter_hook.js").read_text(encoding="utf-8")
     except OSError:
@@ -375,8 +358,7 @@ def _hook_needs():
 
 def _data_is_current():
     """True when the generated files carry everything the hook reads and
-    every table is there. What is missing is named in the log: this runs
-    before the window exists."""
+    every table is there; what is missing is logged."""
     def present(d, key):
         group, _, field = key.partition(".")
         got = d.get(group)
@@ -425,15 +407,13 @@ def regenerate_data(hlboot=None, force=False, on_step=None,
 
 
 def needs_first_data():
-    """The installed app's first launch: its data folder holds only the few
-    tables it ships with — no pictures, icons, models, build data. The
-    welcome screen asks the player before reading them off the game."""
+    """The installed app's first launch: only the shipped tables are there;
+    the welcome screen asks before reading the rest off the game."""
     return not (ANALYSIS / "build_data.json").is_file()
 
 
-# Set once the player has agreed to the game's files being read (the
-# welcome screen), or at once when the data is already there. The game link
-# waits for it before its own regenerate.
+# Set once the player consents on the welcome screen (or at once when the
+# data is already there); the game link waits for it before regenerating.
 DATA_CONSENT = threading.Event()
 
 
@@ -458,16 +438,15 @@ def game_folder_hlboot(folder):
 
 def _regenerate_data(hlboot=None, force=False, on_step=None,
                      on_progress=None):
-    """Re-run the target/offset generators against the given hlboot.dat (or the
-    tools' own auto-detect when None). Self-heals the shipped JSONs after a
-    Farever patch. Skips the multi-second reparse when the same hlboot.dat is
-    unchanged since the last successful run. Returns True on success."""
+    """Re-run the generators against the given hlboot.dat (or their own
+    auto-detect when None), e.g. after a Farever patch. Skipped when the
+    hlboot.dat is unchanged since the last success. True on success."""
     tools = [ROOT / "hltools" / "build_targets.py",
              ROOT / "hltools" / "emit_offsets.py"]
     missing = [t.name for t in tools if not t.exists()]
     if missing:
         print(f"[meter] can't self-heal — missing {', '.join(missing)} "
-              "(copy the whole farevermeter-plus folder).", file=sys.stderr)
+              "(reinstall the app).", file=sys.stderr)
         return False
     stamp = None
     if hlboot is not None:
@@ -476,12 +455,7 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
                  "format": DATA_FORMAT}
         if not force:
             try:
-                # Say WHY when the skip doesn't happen. Regenerating costs two
-                # subprocess parses of a 14 MB bytecode file, right as the game
-                # is loading, and without this the log shows the cost with no
-                # reason attached — which is exactly the state that made a
-                # stale stamp take an hour to spot. `_data_is_current` prints
-                # its own reason, so only the stamp arm needs one here.
+                # Log WHY a regenerate (two parses of a 14 MB file) happens.
                 on_disk = json.loads(DATA_STAMP.read_text())
                 if on_disk != stamp:
                     print(f"[meter] hlboot.dat has changed since the last "
@@ -502,10 +476,8 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
             except Exception as e:
                 print(f"[meter] couldn't read the data stamp ({e}); "
                       "regenerating.", file=sys.stderr)
-    # The tools write beside their own location, which frozen is the bundle's
-    # temp directory — the output would be thrown away with it on exit. Point
-    # them at the writable copy instead. Harmless from source, where the two
-    # paths are already the same.
+    # Frozen, the tools would write into the bundle's temp directory: point
+    # them at the writable copy.
     env = dict(os.environ, FAREVER_ANALYSIS_OUT=str(ANALYSIS))
     REGENERATING.set()
     try:
@@ -519,10 +491,9 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
     return ok
 
 
-# What the generators write, grouped as the welcome screen lists them: each
-# group's outputs ("[written] <file>" lines, in this order), the picture
-# folders whose files it counts as they arrive, and its share of the time
-# (measured 2026-10-04: 21 s in all, the pictures nearly all of it).
+# What the generators write, grouped as the welcome screen lists them:
+# (label, outputs in "[written]" order, picture folders counted for progress,
+# share of the time — measured 2026-10-04, 21 s in all).
 GENERATED_GROUPS = (
     ("Code et structures du jeu",
      ("resolver_data.json", "meter_offsets.json"), (), 3),
@@ -545,13 +516,11 @@ GENERATED_GROUPS = (
       "item_types.json", "item_rarity.json", "item_icons"),
      ("item_icons",), 10),
 )
-# Roughly how many pictures each folder ends with: only the bar's progress
-# inside a group leans on them (the counts shown are the real ones).
+# Roughly how many pictures each folder ends with (progress bar estimate only).
 GENERATED_PICTURES = {"collection_img": 855, "skill_img": 806,
                       "bestiary_img": 408, "dungeon_bg": 36, "map_tiles": 115,
                       "boss_portraits": 13, "item_icons": 1200}
-# ...and what one costs against the others: a dungeon's backdrop is a full
-# screen, a dozen icons' time
+# ...and relative cost per picture (a full-screen backdrop ~ a dozen icons)
 GENERATED_PICTURE_COST = {"dungeon_bg": 12}
 
 
@@ -572,17 +541,13 @@ def _run_generators(tools, hlboot, env, stamp, on_step=None,
         print(f"[meter] regenerating {t.name} for this build ...", file=sys.stderr)
         if on_step:
             on_step(labels.get(t.name, t.name))
-        # Frozen there is no python.exe to hand a script to, and sys.executable
-        # is this program — so it re-invokes itself in tool mode instead.
+        # Frozen, sys.executable is this program: re-invoke it in tool mode.
         cmd = ([sys.executable, TOOL_FLAG, t.name] if FROZEN
                else [sys.executable, str(t)])
         if hlboot is not None:
             cmd.append(str(hlboot))
-        # Without CREATE_NO_WINDOW a console flashes up for each tool on every
-        # launch of the windowed build — twice, right as the game is loading.
-        # Read as it comes: each "[written]" line is a step of the progress.
-        # unbuffered: a pipe is otherwise filled in blocks, and every line
-        # came at the end, the progress jumping from 4 % to done
+        # CREATE_NO_WINDOW: no console flash. Unbuffered and read line by line:
+        # each "[written]" line is a progress step.
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, text=True,
                              encoding="utf-8", errors="replace",
@@ -599,11 +564,8 @@ def _run_generators(tools, hlboot, env, stamp, on_step=None,
                   file=sys.stderr)
             return False
     if stamp is not None:
-        # Written AND read back. A stamp that silently fails to land costs a
-        # full regenerate on every single launch — the data stays correct, so
-        # nothing looks wrong except several seconds of startup, and the old
-        # `except OSError: pass` made that invisible. Whatever goes wrong here,
-        # the log now says so once per launch instead of never.
+        # Written and read back: a stamp that fails to land silently costs a
+        # regenerate on every launch.
         try:
             DATA_STAMP.write_text(json.dumps(stamp), encoding="utf-8")
             back = json.loads(DATA_STAMP.read_text())
@@ -645,10 +607,10 @@ RARITY_ORDER = {"Common": 0, "Uncommon": 1, "Rare": 2, "Epic": 3,
 
 
 def locate_hlboot(pid):
-    """Find the hlboot.dat matching the *running* game. Priority: explicit
-    FAREVER_HLBOOT override, then the file next to the process's own exe (which
-    makes a multi-install mismatch impossible), then the drive auto-detect, and
-    finally just asking. Returns a Path or None (= use shipped data as-is)."""
+    """Find the hlboot.dat matching the *running* game. Priority: the
+    FAREVER_HLBOOT override, the remembered game folder, the file next to the
+    process's exe, then the drive auto-detect. Returns a Path or None (= use
+    shipped data as-is)."""
     env = os.environ.get("FAREVER_HLBOOT")
     if env:
         if Path(env).is_file():
@@ -675,9 +637,6 @@ def locate_hlboot(pid):
         return Path(find_hlboot(argv_index=99))
     except (SystemExit, Exception):
         pass
-    # Nothing is asked any more: this runs on the game link's thread, with no
-    # window of its own to ask from. The shipped data is used as-is, which is
-    # fine unless the game has patched since.
     print("[meter] hlboot.dat not found — using the shipped data files. Set "
           "FAREVER_HLBOOT to its full path if Farever is installed somewhere "
           "unusual.", file=sys.stderr)
@@ -707,10 +666,9 @@ def _game_dir():
 
 
 def item_model_json(item_id):
-    """One collectible's model for the viewer, as JSON text — read off the
-    game's files the first time (a second or so), from the cache after. The
-    cache is keyed to res.pak, so a game patch rebuilds it. None when the
-    item has no model this reader understands, or the game isn't found.
+    """One collectible's model for the viewer, as JSON text, cached and keyed
+    to res.pak (a patch rebuilds it). None when there is no readable model or
+    no game.
     "<id>@anim" asks for a monster's idle animation with it;
     "hero:<slot>=<id>.<slot>=<id>…" the hero wearing those pieces (a
     build's), in its idle."""

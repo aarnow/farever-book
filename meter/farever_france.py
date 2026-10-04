@@ -5,7 +5,7 @@ a few function hooks) and shows it in one window meant for another screen:
 the damage/heal meter, rifts, dungeons, collection, hunting log, map,
 achievements and the character sheet. Nothing is ever drawn in the game.
 
-Run:  python meter/farever_meter.py
+Run:  python meter/farever_france.py
 
 The modules, by responsibility:
   common     paths, constants and small helpers
@@ -45,39 +45,29 @@ from app import App
 
 
 def main():
-    # First, before anything that can put a window on screen (the tray icon,
-    # a message box): Windows latches DPI awareness at the first window.
+    # before any window: Windows latches DPI awareness at the first one
     print(f"[meter] dpi awareness: {declare_dpi_awareness()} "
           f"(display at {display_scale():.2f}x)", file=sys.stderr)
     seed_analysis()
     claim_single_instance()
-    # Only after claiming: before it, the flag on disk may still be the one
-    # aimed at the instance we just displaced.
+    # after claiming: until then the flag may target the displaced instance
     watch_for_quit_request()
     session = PartySession()
     ui_state = GameUIState()
     world = WorldSnapshot()
     rift_rec = RiftRecorder()
-    # Outlives every encounter on purpose: a skill's heal size is a property of
-    # the build, not of the pull, and resetting it each fight would throw away
-    # exactly the observations that make the first heals of the next one
-    # countable.
+    # outlives encounters: heal size depends on the build, not the pull
     heal_sizer = HealSizeEstimator(_heal_specs())
 
-    # Up before anything that can block. Attaching waits for the game to launch
-    # and the hook's memory scan can run for minutes on a slow machine — with no
-    # console, an icon that only appeared afterwards would leave the user
-    # staring at nothing, with Task Manager as their only way to change their
-    # mind. Its quit callback works throughout, app or not.
+    # Up before anything that can block (waiting for the game, the hook's
+    # memory scan): the way out must exist from the start.
     tray = TrayIcon(request_stop)
     tray.start()
     try:
         return _run(tray, session, ui_state, world, rift_rec, heal_sizer)
     finally:
         tray.stop()
-        # Here as well as on the paths inside _run, which miss the early
-        # returns — stopping while still waiting for the game would otherwise
-        # leave our pid sitting in the lock file. Unlinking twice is harmless.
+        # also covers early returns; unlinking twice is harmless
         release_instance_lock()
 
 
@@ -85,8 +75,7 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     """The interface first, the game whenever it turns up."""
     link = GameLink(session, ui_state, world, rift_rec, heal_sizer)
     app = App(session, ui_state, world, link=link)
-    # From here the app owns shutdown: only its loop returning lets the
-    # finally below unload the hook and detach.
+    # from here the app owns shutdown
     _APP["ref"] = app
     app._setup_begin()              # before the link: it waits for consent
     link.start()
@@ -97,7 +86,6 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     finally:
         _APP["ref"] = None
         try:
-            # the window's process
             app.menubridge.stop()
         except Exception:
             pass
@@ -107,15 +95,12 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
 
 
 def _cli():
-    # Tool mode first: this is the frozen build standing in for python.exe to
-    # run one of the bundled hltools generators, and it must not start a meter.
+    # The frozen exe re-invoked as an hltools runner or as the window process
+    # (no python.exe). Before setup_logging(): the window logs to the stderr
+    # its parent gave it.
     if len(sys.argv) > 2 and sys.argv[1] == TOOL_FLAG:
         run_bundled_tool(sys.argv[2], sys.argv[3:])
         return
-    # ...and the settings panel, for the same reason: frozen, there is no
-    # python.exe to launch menu_host.py with, so the exe re-enters itself.
-    # Before setup_logging(), because the panel logs through the meter's
-    # stderr, which is the pipe its parent is already reading.
     if len(sys.argv) > 1 and sys.argv[1] == MENU_FLAG:
         sys.argv = sys.argv[1:]         # menu_host reads its geometry as [1]
         sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -126,15 +111,10 @@ def _cli():
     try:
         main()
     except KeyboardInterrupt:
-        # Ctrl+C is a documented way to stop a from-source run, so it shouldn't
-        # look like a crash: main()'s finally has already unloaded the hook and
-        # detached by the time this runs. Printing (and exiting 0) also lets a
-        # launcher tell a normal stop from a real failure.
+        # Ctrl+C from source is a normal stop; main() has already detached
         print("[meter] stopped.", file=sys.stderr)
     except SystemExit as e:
-        # sys.exit() carries the startup failures — messages written for a
-        # console that the windowed build doesn't have. Put them on screen
-        # instead of exiting silently, which would look like nothing happened.
+        # startup failures: without a console, show them in a dialog
         if not HAS_CONSOLE and e.code not in (0, None):
             print(f"[meter] {e.code}", file=sys.stderr)
             message_box(e.code, "Farever France — démarrage impossible", 0x10)

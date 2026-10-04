@@ -12,14 +12,12 @@ from gamedata import (
     RARITY_ORDER, item_icon, item_label, item_rarity, rarity_label)
 from combat import _overheal_pct
 
-# A window shorter than this has no rate worth showing: a boss phase a few
-# milliseconds long would give a seven-figure DPS.
+# A window shorter than this has no meaningful rate.
 RATE_MIN_SECS = 0.5
 
 
 def _rate(amount, duration):
-    """`amount` per second, or None when the window is too short: "no rate"
-    and "a rate of zero" show differently."""
+    """`amount` per second, or None when the window is too short."""
     if not duration or duration < RATE_MIN_SECS:
         return None
     return (amount or 0.0) / duration
@@ -37,7 +35,7 @@ def _report_name(p):
     return f"{name} ({p['cls']})" if p.get("cls") else name
 
 
-def _overheal_note(d, fmt=" ({:.0f}% en excès)"):
+def _overheal_note(d, fmt):
     """The share of the healing that restored nothing, or "" without
     healing."""
     heal = d.get("heal") or 0.0
@@ -47,8 +45,7 @@ def _overheal_note(d, fmt=" ({:.0f}% en excès)"):
 
 
 def _parse_font(name, size):
-    """Load a Windows font by filename, falling back to PIL's built-in bitmap
-    font so a missing/odd font install degrades the image instead of losing it."""
+    """Load a Windows font by filename, else PIL's built-in bitmap font."""
     from PIL import ImageFont
     for path in (Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / name,
                  Path(name)):
@@ -93,28 +90,14 @@ def report_view(data):
         players = ph.get("players") or []
         healers = sorted((p for p in players if (p.get("heal") or 0) > 0.5),
                          key=lambda p: -p["heal"])
-        mvp = players[0] if players else None
         phases.append({
             "label": (ph.get("label") or "Phase"),
             "dur": _mmss(dur),
             "dps": _rate_text(total, dur, "DPS") or "— DPS",
             "hps": _rate_text(heal, dur, "HPS") or "— HPS",
-            "totals": f"{_n(total)} dégâts · {_n(heal)} soins"
-                      + _overheal_note(ph),
-            "mvp": ({"name": mvp.get("name") or "?",
-                     "cls": cls(mvp), "ck": class_key(mvp.get("cls")),
-                     "v": _rate_text(mvp.get("total", 0), dur, "DPS")
-                     or f"{_n(mvp.get('total', 0))} dégâts"}
-                    if mvp else None),
-            "healer": ({"name": healers[0].get("name") or "?",
-                        "cls": cls(healers[0]),
-                        "ck": class_key(healers[0].get("cls")),
-                        "v": _rate_text(healers[0]["heal"], dur, "HPS")
-                        or f"{_n(healers[0]['heal'])} soins"}
-                       if healers else None),
+            "empty": not players,
             "dmg": rank(players, "total", dur, total),
-            # Everyone in the phase: those who healed nothing at the
-            # bottom, greyed, so the table always lists the whole group.
+            # Non-healers listed at the bottom, greyed.
             "heal": rank(healers, "heal", dur, heal) + [
                 dict(r, rank=len(healers) + i, zero=True)
                 for i, r in enumerate(rank(
@@ -141,9 +124,8 @@ def report_view(data):
 
 
 def _report_players(data):
-    """Each player of a report, phase by phase: what their damage and
-    healing were made of — per skill (share, hits, crit rate, average hit)
-    and per element. Everything a saved report already holds."""
+    """Each player of a report, phase by phase: their damage and healing
+    per skill (share, hits, crit rate, average hit) and per element."""
     names = data.get("skill_names") or {}
 
     def label(sid):
@@ -156,8 +138,8 @@ def _report_players(data):
             who = p.get("name") or "?"
             total = float(p.get("total") or 0)
             heal = float(p.get("heal") or 0)
-            # One row per NAME: the game names every step of a basic-attack
-            # combo "Attaque", and three "Attaque" rows read as a bug.
+            # One row per NAME: every step of a basic-attack combo is
+            # named "Attaque".
             merged, ids, els_of = {}, {}, {}
             skill_el = p.get("skillEl") or {}
             for sid, v in (p.get("skills") or {}).items():
@@ -176,8 +158,7 @@ def _report_players(data):
                 el_ = (max(els_of[name], key=els_of[name].get)
                        if els_of.get(name) else None)
                 skills.append({"n": name, "t": _n(amt), "ids": ids[name],
-                               # its bar in its element's colour (reports
-                               # from 1.12 on; older ones keep the class's)
+                               # its bar in its element's colour, if known
                                "c": element_color(el_) if el_ else "",
                                "f": round(amt / total, 4) if total else 0,
                                "pct": _pct1(amt / total * 100 if total else 0),
@@ -263,12 +244,9 @@ def loot_view(loot):
     return groups
 
 
-# The rift report as an image. Drawn from the same display data as the Failles
-# page (report_view), in the window's own palette and layout — the title with
-# its gold diamond, a card per phase, every player a bar in their class's
-# colour, the damage by type as a ring — so a pasted image looks like the
-# window it came from. Drawn rather than screenshotted: pixel-clean, and it
-# works with the window closed (the .png is written the moment a rift ends).
+# The rift report as an image, drawn from report_view's data in the window's
+# palette and layout. Drawn, not screenshotted, so it works with the window
+# closed (the .png is written when a rift ends).
 IMG_BG, IMG_CARD, IMG_RAISED = "#211F3A", "#211F3A", "#36335C"
 IMG_LINE, IMG_LINE2 = "#47447A", "#5B5893"
 IMG_TEXT, IMG_DIM, IMG_FAINT = "#EEEBFF", "#ADA9D6", "#7F7BAA"
@@ -352,9 +330,8 @@ def render_rift_report_image(data, path=None):
         return strip.resize((max(1, w), max(1, h)))
 
     def table(x, y, w, rows, rate_label):
-        """A ranking as in the window: a bar per player, filled from the left
-        in their class's colour as far as their share against the best, led
-        by the class badge in a dark rounded square. Returns the y below."""
+        """A ranking as in the window: a bar per player in their class's
+        colour, scaled to the best. Returns the y below."""
         row_h, head_h, ic_w = 30, 26, 32
         num_w = (64, 80, 50)
         h = head_h + row_h * len(rows)
@@ -451,7 +428,7 @@ def render_rift_report_image(data, path=None):
         cy += 68
         d.line((ix, cy, ix + iw, cy), fill=IMG_LINE)
         cy += 6
-        if not ph.get("mvp"):
+        if ph.get("empty"):
             text(ix, cy + 10, "rien n'a été enregistré pour cette phase",
                  f_row, IMG_FAINT)
             cy += 34

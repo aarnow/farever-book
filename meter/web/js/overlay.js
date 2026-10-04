@@ -1,7 +1,5 @@
-/* An overlay over the game (menu_host.Overlay): the group meter ("meter")
-   or the goals ("goals"), set by window.__OVERLAY__. The meter pushes its
-   state with applyOverlay(json); clicks go back through window.pywebview.api.
-   The window is sized to this page's content, and moved by its header. */
+/* An overlay over the game (menu_host.Overlay): "meter" or "goals", set by
+   window.__OVERLAY__. State arrives through applyOverlay(json). */
 const OV_ID = window.__OVERLAY__;
 let OV = null;                  // the last state
 let OV_SMALL = false;           // collapsed to the header
@@ -98,11 +96,13 @@ function renderMeter(box) {
   const heal = m.tab === 'heal';
   box.className = heal ? 'heal' : '';
   const tabs = el('div', 'tabs');
-  [['dmg', 'Dégâts'], ['heal', 'Soins']].forEach(([k, t]) => {
-    tabs.appendChild(btn('tab' + (m.tab === k ? ' on' : ''), t, null,
-      () => api() && api().notify('ov_tab', { tab: k })));
-  });
-  const h = head('Groupe', [tabs]);
+  if (m.heals) {
+    [['dmg', 'Dégâts'], ['heal', 'Soins']].forEach(([k, t]) => {
+      tabs.appendChild(btn('tab' + (m.tab === k ? ' on' : ''), t, null,
+        () => api() && api().notify('ov_tab', { tab: k })));
+    });
+  }
+  const h = head('Groupe', m.heals ? [tabs] : []);
   if (m.time) h.appendChild(el('span', 'clock' + (m.fight ? ' hot' : ''), m.time));
   h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? 'Déplier' : 'Replier',
     () => { OV_SMALL = !OV_SMALL; render(); }));

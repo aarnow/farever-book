@@ -1,13 +1,7 @@
-"""The item codex's catalogue: the items the game counts in
-Progress.itemProgress — crafting components, plus the raw ores, cloth and
-leather (measured 2026-09-28: 81 entries on a character, every one of these
-types) — with how each is obtained, from data.cdb:
-
-* dropped: the loot tables of monster families (unitType.lootTable) and of
-  single units (a unit's lootTable / bossLootTable), with their chances;
-* gathered: a gatherable's loot / hitLoot table (ore lodes, plants...);
-* crafted: the craft sheet's recipes that make it (job, level, inputs);
-and how many recipes use it."""
+"""The item codex's catalogue: the items Progress.itemProgress counts (the
+TYPES below, measured 2026-09-28), with how each is obtained from data.cdb
+(dropped, gathered, scrapped, combined, salvaged, crafted) and how many
+recipes use it."""
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -17,9 +11,8 @@ from collection_data import _images, _table_items
 
 TYPES = ("CraftingComponent", "Ore", "Cloth", "Leather")
 
-# The game gives these no category of their own (nearly all are a
-# "CraftingComponent"), but files their models by nature: the folder of an
-# item's model names what it is. A few are filed oddly and set by hand.
+# Nearly all are "CraftingComponent": the folder of an item's model gives its
+# category, a few odd ones are set by id.
 FOLDER_CATS = {
     "Gatherables/Ores": "ore", "Loot/Mineral": "ore", "Loot/Metal": "metal",
     "Gatherables/Plants": "plant", "Loot/Vegetals": "plant",
@@ -65,7 +58,6 @@ def build(game_dir, img_dir=None):
     wanted_set = set(wanted)
     src = defaultdict(list)
 
-    # who rolls which table
     users = defaultdict(list)
     for tid, r in rows("unitType").items():
         if r.get("lootTable"):
@@ -107,8 +99,7 @@ def build(game_dir, img_dir=None):
                     if s not in src[iid]:
                         src[iid].append(s)
 
-    # combining: an item whose props.completable turns N of one kind into
-    # another (5 water motes -> 1 water fragment)
+    # combining: props.completable turns N of one kind into another
     for iid, r in items.items():
         comp = (r.get("props") or {}).get("completable") or {}
         for rew in comp.get("reward") or ():
@@ -138,7 +129,6 @@ def build(game_dir, img_dir=None):
         src[iid].append({"k": "salvage", "lvl": s["lvl"],
                          "rarity": s["rarity"]})
 
-    # recipes: what makes each item, and how many use it
     uses = defaultdict(int)
     for r in sheets["craft"].get("lines") or ():
         out = r.get("item")

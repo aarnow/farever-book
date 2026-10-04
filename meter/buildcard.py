@@ -1,11 +1,9 @@
-"""A build as one picture, to share: the hero wearing it (rendered in 3D),
-its attributes, its gear piece by piece, its spells with what they hit
-for, its infusions, its talents and runes — in the app's look.
+"""A build as one shareable picture: hero in 3D, attributes, gear, spells,
+infusions, talents and runes.
 
-The card is an HTML page (meter/buildtab.py's open-build view, laid out
-here) photographed by Edge headless, which every Windows 11 has; the hero
-is the build viewer's own 3D model (web/js/model3d.js), rendered the same
-way on a transparent background first. Nothing touches the game."""
+An HTML page (from buildtab's open-build view) screenshotted by Edge
+headless, shipped with every Windows 11; the hero is web/js/model3d.js
+rendered first on a transparent background."""
 import base64
 import hashlib
 import html
@@ -65,7 +63,6 @@ def _shoot(page, png, w, h, transparent=False):
 
 def _height(page, w):
     """The page's height once laid out (Edge writes it into the DOM)."""
-
     r = _edge(page, w, 800, "--dump-dom")
     m = re.search(rb'data-h="([0-9]+)"', r.stdout or b"")
     return int(m.group(1)) if m else 2400
@@ -124,7 +121,6 @@ def e(s):
 
 
 # ---- the card ------------------------------------------------------------
-# each attribute's colour, on its icon
 ATB_COLOR = {"Vitality": "#F26D85", "Strength": "#F29A4A", "Dexterity": "#7BD88F",
              "Faith": "#F2C94C", "Intellect": "#9D8CF7"}
 ATB_ICON = {"Vitality": "stat_Vitality", "Strength": "stat_Strength",
@@ -149,9 +145,8 @@ def _fx(text):
 
 
 def _extras(g):
-    """What is added to a piece, a line each: its sigil, gem, augment,
-    formula or corrupted gift (their effects), then its infusion with the
-    bonus stat it rolled."""
+    """A line per add-on of a piece (sigil, gem, augment...), then its
+    infusion with the bonus stat it rolled."""
     icons = {c.get("name"): c.get("img") for c in g.get("chips") or ()
              if c.get("img")}
     rows = []

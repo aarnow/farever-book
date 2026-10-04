@@ -2,7 +2,7 @@
 
 const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '' };
 let COLL_NODE = null;
-// the categories whose models the meter knows how to read: all of them
+// the categories with 3D models
 const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears', 'items']);
 // ...and those that have a skeleton to play their idle animation on
 const COLL_ANIM = new Set(['mounts', 'pets']);
@@ -49,8 +49,7 @@ function rerenderCollection() {
 }
 
 function renderCollection(box, n) {
-  // the list scrolls on its own now: keep its place across rebuilds (images
-  // arriving, the state moving), not across a change of what it lists
+  // the list keeps its scroll across rebuilds, not across a change of list
   const listKey = [COLL.cat, COLL.filter, COLL.q, COLL.slot, COLL.cls, COLL.icat].join('|');
   if (COLL.listKey !== listKey) { COLL.listKey = listKey; COLL.top = 0; }
   const keepQ = document.activeElement && document.activeElement.classList.contains('collq');
@@ -61,8 +60,6 @@ function renderCollection(box, n) {
   const got = cats.reduce((a, c) => a + c.got, 0);
   const pct = total ? Math.round(got / total * 100) : 0;
 
-  // the first column: where you are in the collection, and which part of it
-  // the list shows
   const side = el('aside', 'collside');
   side.appendChild(el('div', 'section', 'Collection'));
   if (n.sync) side.appendChild(el('p', 'note', n.sync));
@@ -241,8 +238,7 @@ function renderCollection(box, n) {
   }
 }
 
-/* The panel beside the list: the item's model, turning, when the game has
-   one, else its picture — and what the game says of it. */
+/* The panel beside the list: 3D model (else picture) and description. */
 function buildCollView(it, cat) {
   const v = el('div', 'collview' + (it.rk ? ' r-' + it.rk : ''));
   const stage = el('div', 'cvstage');
