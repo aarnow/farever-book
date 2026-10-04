@@ -469,6 +469,12 @@ def run_bundled_tool(name, argv_rest):
     if not tool.is_file():
         sys.exit(f"[!] bundled tool missing: {tool}")
     import runpy
+    # its progress lines go to the meter as they are written (frozen, the
+    # interpreter may ignore PYTHONUNBUFFERED)
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
     sys.argv = [str(tool), *argv_rest]
     sys.path.insert(0, str(tool.parent))
     runpy.run_path(str(tool), run_name="__main__")

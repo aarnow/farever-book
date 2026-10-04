@@ -26,6 +26,8 @@ datas = [
     # the bug the OVER column exists to fix.
     (str(ROOT / "analysis_out" / "heal_specs.json"), "res/analysis_out"),
     (str(ROOT / "assets" / "farevermeter.ico"), "res/assets"),
+    # the header's wordmark before the game's data is read (welcome screen)
+    (str(ROOT / "assets" / "ui_logo.png"), "res/assets"),
     # Class icons, built from the game's art by hltools/build_class_icons.py.
     *[(str(f), "res/assets/classes")
       for f in sorted((ROOT / "assets" / "classes").glob("*.png"))],

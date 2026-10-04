@@ -683,15 +683,19 @@ def _analysis_images(name):
 
 def _title_logo():
     """The game's wordmark as a data URI (analysis_out/ui_logo.png,
-    extracted by emit_offsets.py), or "" — the header then keeps its text."""
+    extracted by emit_offsets.py), else the copy the app ships with
+    (assets/ui_logo.png: the first launch's welcome screen comes before any
+    extraction), or "" — the header then keeps its text."""
     import base64
-    path = Path(os.environ.get("FAREVER_ANALYSIS")
-                or HERE.parent / "analysis_out") / "ui_logo.png"
-    try:
-        return "data:image/png;base64," + base64.b64encode(
-            path.read_bytes()).decode()
-    except OSError:
-        return ""
+    for path in (Path(os.environ.get("FAREVER_ANALYSIS")
+                      or HERE.parent / "analysis_out") / "ui_logo.png",
+                 ICON_DIR.parent / "ui_logo.png"):
+        try:
+            return "data:image/png;base64," + base64.b64encode(
+                path.read_bytes()).decode()
+        except OSError:
+            continue
+    return ""
 
 
 def _boss_portraits():

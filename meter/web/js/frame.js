@@ -367,7 +367,32 @@ function welcomePick() {
   });
 }
 
+/* The progress screen, kept between state pushes: its ring turns and its
+   bar slides on, the numbers changed in place rather than redrawn. */
+let WELCOME_RUN = null;
+
+function updateWelcomeRun(w, n) {
+  const pct = n.pct || 0;
+  w.pct.textContent = pct + ' %';
+  w.fill.style.width = Math.max(2, pct) + '%';
+  (n.rows || []).forEach((r, i) => {
+    const li = w.rows[i];
+    if (!li) return;
+    li.className = 'w' + r.s;
+    li.querySelector('.wmark').textContent = r.s === 'done' ? '✓' : '';
+    const has = r.n !== null && r.n !== undefined;
+    li.querySelector('b').textContent = has
+      ? r.n.toLocaleString('fr-FR') + ' image' + (r.n > 1 ? 's' : '') : '';
+  });
+}
+
 function buildWelcome(n) {
+  if (n.stage !== 'run') WELCOME_RUN = null;
+  else if (WELCOME_RUN && WELCOME_RUN.box.isConnected
+           && WELCOME_RUN.rows.length === (n.rows || []).length) {
+    updateWelcomeRun(WELCOME_RUN, n);
+    return WELCOME_RUN.box;
+  }
   const box = el('div', 'welcome');
   const card = el('div', 'wcard');
   const crest = el('span', 'emblem wcrest');
@@ -394,19 +419,30 @@ function buildWelcome(n) {
   card.appendChild(el('p', 'wlead', 'L’outil qui vous accompagne dans vos aventures sur Farever !'));
 
   if (n.stage === 'run') {
-    const pct = n.total ? Math.round(100 * n.done / n.total) : 0;
-    card.appendChild(el('p', 'wtext', 'Récupération des données du jeu en cours, ça ne prend '
-      + 'qu’une minute environ.'));
+    // a ring that always turns, the percentage in it: something is moving
+    const ring = el('div', 'wring');
+    ring.appendChild(el('i'));
+    const pct = el('b');
+    ring.appendChild(pct);
+    card.appendChild(ring);
+    card.appendChild(el('p', 'wtext', 'Récupération des données du jeu, une trentaine de secondes.'));
     const bar = el('div', 'wbar');
     const fill = el('i');
-    fill.style.width = Math.max(3, pct) + '%';
     bar.appendChild(fill);
     card.appendChild(bar);
-    const st = el('div', 'wstep');
-    st.appendChild(el('span', null, 'En cours : ' + (n.label || '…')));
-    st.appendChild(el('b', null, pct + ' %'));
-    card.appendChild(st);
+    const list = el('ul', 'wrows');
+    const rows = (n.rows || []).map((r) => {
+      const li = el('li');
+      li.appendChild(el('i', 'wmark'));
+      li.appendChild(el('span', null, r.t));
+      li.appendChild(el('b'));
+      list.appendChild(li);
+      return li;
+    });
+    card.appendChild(list);
     box.appendChild(card);
+    WELCOME_RUN = { box, pct, fill, rows };
+    updateWelcomeRun(WELCOME_RUN, n);
     return box;
   }
 

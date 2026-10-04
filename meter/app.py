@@ -36,7 +36,9 @@ from gamedata import (
     item_rarity,
     dungeon_name, forget_loaded_data, item_icon, item_label, item_type,
     item_model_json, locate_hlboot, regenerate_data, world_map,
-    DATA_GENERATION, DATA_CONSENT, GENERATED_STEPS, game_folder_hlboot,
+    DATA_GENERATION, DATA_CONSENT, GENERATED_GROUPS, GENERATED_PICTURES,
+    GENERATED_PICTURE_COST,
+    game_folder_hlboot, generated_pictures,
     needs_first_data)
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot,
@@ -490,19 +492,56 @@ class App:
         DATA_CONSENT.set()
         path = self._setup.get("path")
         hb = Path(path) / "hlboot.dat"
-        names = [n for n, _t in GENERATED_STEPS]
-        self._setup = {"stage": "run", "path": path, "done": 0,
-                       "total": len(names), "label": GENERATED_STEPS[0][1]}
+        written = set()
+        running = threading.Event()
+        running.set()
+
+        def lines():
+            """Each group: done, running (the first not done) or waiting,
+            with the pictures counted in its folders so far."""
+            out, pct, current = [], 0.0, True
+            total_w = sum(g[3] for g in GENERATED_GROUPS)
+            for label, outs, folders, weight in GENERATED_GROUPS:
+                done = all(o in written for o in outs)
+                n = sum(generated_pictures(f) for f in folders)
+                if done:
+                    state = "done"
+                    pct += weight
+                elif current:
+                    state, current = "run", False
+                    cost = {f: GENERATED_PICTURE_COST.get(f, 1)
+                            for f in folders}
+                    want = sum(GENERATED_PICTURES.get(f, 0) * cost[f]
+                               for f in folders)
+                    got = sum(generated_pictures(f) * cost[f]
+                              for f in folders)
+                    part = (min(got / want, .95) if want else
+                            sum(o in written for o in outs) / len(outs))
+                    pct += weight * part
+                else:
+                    state = "wait"
+                out.append({"t": label, "s": state,
+                            "n": n if folders and state != "wait" else None})
+            return out, min(99, int(100 * pct / total_w))
+
+        def refresh():
+            st = self._setup
+            if st and st.get("stage") == "run":
+                rows, pct = lines()
+                self._setup = dict(st, rows=rows, pct=pct)
+                self.menubridge.invalidate()
 
         def progress(tool, line):
-            st = self._setup
-            if not st or st.get("stage") != "run":
-                return
-            done = st["done"] + 1
-            nxt = GENERATED_STEPS[done][1] if done < len(names) \
-                else "les dernières finitions"
-            self._setup = dict(st, done=min(done, st["total"]), label=nxt)
-            self.menubridge.invalidate()
+            m = re.match(r"\[written\]\s+(.+?)(?:\s+\(|$)", line.strip())
+            if m:
+                written.add(re.split(r"[\\/]", m.group(1))[-1])
+                refresh()
+
+        def poll():
+            # the pictures arrive between two outputs: counted twice a second
+            while running.is_set():
+                refresh()
+                time.sleep(0.4)
 
         def work():
             ok = False
@@ -511,10 +550,14 @@ class App:
             except Exception as e:
                 print(f"[meter] first data read failed: {e!r}",
                       file=sys.stderr)
+            running.clear()
             self._setup = ({"stage": "done"} if ok else
                            {"stage": "error", "path": path})
             self.menubridge.invalidate()
+        rows, _pct = lines()
+        self._setup = {"stage": "run", "path": path, "rows": rows, "pct": 0}
         threading.Thread(target=work, daemon=True, name="first-data").start()
+        threading.Thread(target=poll, daemon=True, name="first-data-count").start()
 
     def _setup_finish(self):
         if self._setup and self._setup.get("stage") == "done":

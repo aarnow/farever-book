@@ -535,7 +535,7 @@ function renderPage(nodes) {
       node = had.el;
     } else {
       node = buildNode(n);
-      if (had) page.replaceChild(node, had.el);
+      if (had && had.el !== node) page.replaceChild(node, had.el);
     }
     next.set(key, { el: node, sig });
     const want = prevEl ? prevEl.nextSibling : page.firstChild;

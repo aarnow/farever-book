@@ -980,37 +980,49 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
     return ok
 
 
-# What emit_offsets writes, in its order: the welcome screen's progress
-# (a "[written] <file>" line each), named for the player.
-GENERATED_STEPS = (
-    ("resolver_data.json", "le code du jeu"),
-    ("meter_offsets.json", "les structures du jeu"),
-    ("unit_names.json", "les noms des créatures"),
-    ("heal_specs.json", "les soins"),
-    ("codex_units.json", "le codex"),
-    ("unit_traits.json", "les traits des créatures"),
-    ("names_fr.json", "les textes en français"),
-    ("collection.json", "la collection et ses images"),
-    ("talents.json", "les sorts, les talents et leurs icônes"),
-    ("achievements.json", "les succès"),
-    ("infusions.json", "les imprégnations"),
-    ("build_data.json", "les données des builds"),
-    ("gear_stats.json", "les statistiques de l'équipement"),
-    ("codex_items.json", "les objets"),
-    ("bestiary.json", "le bestiaire et ses images"),
-    ("map.json", "la carte"),
-    ("dungeons.json", "les donjons"),
-    ("boss_sheets.json", "les fiches des boss"),
-    ("boss_portraits", "les portraits des boss"),
-    ("ui_logo.png", "le logo"),
-    ("augments.json", "les augmentations"),
-    ("rift_rewards.json", "les récompenses des failles"),
-    ("luck.json", "la chance"),
-    ("item_types.json", "les types d'objets"),
-    ("item_rarity.json", "les raretés"),
-    ("item_icons", "les icônes des objets"),
-    ("status_meta.json", "les effets d'état"),
+# What the generators write, grouped as the welcome screen lists them: each
+# group's outputs ("[written] <file>" lines, in this order), the picture
+# folders whose files it counts as they arrive, and its share of the time
+# (measured 2026-10-04: 21 s in all, the pictures nearly all of it).
+GENERATED_GROUPS = (
+    ("Code et structures du jeu",
+     ("resolver_data.json", "meter_offsets.json"), (), 3),
+    ("Créatures et textes en français",
+     ("unit_names.json", "heal_specs.json", "codex_units.json",
+      "unit_traits.json", "names_fr.json"), (), 2),
+    ("Images de la collection", ("collection.json",), ("collection_img",), 19),
+    ("Sorts, talents et leurs icônes", ("talents.json",), ("skill_img",), 9),
+    ("Builds, équipement et succès",
+     ("achievements.json", "infusions.json", "build_data.json",
+      "gear_stats.json", "codex_items.json"), (), 3),
+    ("Bestiaire et décors des donjons", ("bestiary.json",),
+     ("bestiary_img", "dungeon_bg"), 34),
+    ("Carte du monde", ("map.json",), ("map_tiles",), 18),
+    ("Donjons et fiches des boss",
+     ("dungeons.json", "boss_sheets.json", "boss_portraits"),
+     ("boss_portraits",), 2),
+    ("Icônes des objets",
+     ("ui_logo.png", "augments.json", "rift_rewards.json", "luck.json",
+      "item_types.json", "item_rarity.json", "item_icons",
+      "status_meta.json"), ("item_icons",), 10),
 )
+# Roughly how many pictures each folder ends with: only the bar's progress
+# inside a group leans on them (the counts shown are the real ones).
+GENERATED_PICTURES = {"collection_img": 855, "skill_img": 806,
+                      "bestiary_img": 408, "dungeon_bg": 36, "map_tiles": 115,
+                      "boss_portraits": 13, "item_icons": 1200}
+# ...and what one costs against the others: a dungeon's backdrop is a full
+# screen, a dozen icons' time
+GENERATED_PICTURE_COST = {"dungeon_bg": 12}
+
+
+def generated_pictures(folder):
+    """How many pictures a generator has written so far into a folder."""
+    try:
+        return sum(1 for p in (ANALYSIS / folder).iterdir()
+                   if p.suffix in (".webp", ".png"))
+    except OSError:
+        return 0
 
 
 def _run_generators(tools, hlboot, env, stamp, on_step=None,
@@ -1030,9 +1042,12 @@ def _run_generators(tools, hlboot, env, stamp, on_step=None,
         # Without CREATE_NO_WINDOW a console flashes up for each tool on every
         # launch of the windowed build — twice, right as the game is loading.
         # Read as it comes: each "[written]" line is a step of the progress.
+        # unbuffered: a pipe is otherwise filled in blocks, and every line
+        # came at the end, the progress jumping from 4 % to done
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, text=True,
-                             encoding="utf-8", errors="replace", env=env,
+                             encoding="utf-8", errors="replace",
+                             env=dict(env, PYTHONUNBUFFERED="1"),
                              creationflags=CREATE_NO_WINDOW)
         out = []
         for line in p.stdout:

@@ -3122,8 +3122,24 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .werr { margin: 0 0 14px; color: var(--warn); font-size: 13px; }
 .wbar { height: 12px; margin: 18px 0 10px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line);
         overflow: hidden; }
-.wbar i { display: block; height: 100%; border-radius: 8px; transition: width .4s ease;
+.wbar i { display: block; height: 100%; border-radius: 8px; transition: width .45s linear;
           background: linear-gradient(90deg, var(--accent), var(--lime)); }
-.wstep { display: flex; justify-content: space-between; gap: 12px; color: var(--dim); font-size: 13px; }
-.wstep b { color: #fff; font-family: var(--font-head); }
+.wring { position: relative; width: 72px; height: 72px; margin: 0 auto 10px; display: grid; place-items: center; }
+.wring i { position: absolute; inset: 0; border-radius: 50%; border: 5px solid rgba(242, 201, 76, .15);
+           border-top-color: var(--accent); border-right-color: var(--lime); animation: wspin 1s linear infinite; }
+.wring b { font-family: var(--font-head); font-size: 17px; color: #fff; }
+@keyframes wspin { to { transform: rotate(360deg); } }
+.wrows { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.wrows li { display: flex; align-items: center; gap: 10px; padding: 5px 12px; border-radius: 8px;
+            background: var(--bg-2); border: 1px solid transparent; font-size: 13.5px; color: var(--faint); }
+.wrows li span { flex: 1; }
+.wrows li b { font-family: var(--font-head); font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.wrows .wmark { width: 18px; height: 18px; flex: none; border-radius: 50%; display: grid; place-items: center;
+                font-style: normal; font-size: 11px; font-weight: 700; border: 2px solid var(--line); }
+.wrows li.wdone { color: var(--dim); }
+.wrows li.wdone .wmark { background: var(--ok); border-color: var(--ok); color: #1B2408; }
+.wrows li.wrun { color: #fff; border-color: rgba(242, 201, 76, .45); background: rgba(242, 201, 76, .06); }
+.wrows li.wrun b { color: var(--accent); }
+.wrows li.wrun .wmark { border-color: rgba(242, 201, 76, .25); border-top-color: var(--accent);
+                        animation: wspin .8s linear infinite; }
 .wgame { margin: 0 0 20px; color: var(--text); font-family: var(--font-head); font-size: 18px; }
