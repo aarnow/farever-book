@@ -15,6 +15,7 @@ function buildBuild(n) {
   BUILD_NODE = n;
   const box = el('div', 'buildpage');
   const o = n.open;
+  if (n.cmp) return buildCompare(n.cmp, box);
   if (!o) { BUILD_VIEW = 'stuff'; return buildList(n, box); }
   const back = el('button', 'btn bback', '‹  Revenir aux builds');
   back.type = 'button';
@@ -325,6 +326,101 @@ function buildPassives(list) {
   return p;
 }
 
+/* Two builds of one class side by side: pick each, then their attributes
+   in two columns; where they differ, the higher value is green with its
+   lead, the lower red. */
+function buildCompare(c, box) {
+  const back = el('button', 'btn bback', '‹  Revenir aux builds');
+  back.type = 'button';
+  back.addEventListener('click', () => notify('build_cmp_close', {}));
+  box.appendChild(back);
+  const page = el('div', 'bcmp');
+  page.appendChild(el('div', 'section', 'Comparer deux builds'));
+
+  const head = el('div', 'bcmphead');
+  const side = (s, key, picks) => {
+    const card = el('div', 'bcmpcard ' + key);
+    const top = el('div', 'bcmpwho');
+    top.appendChild(classEl(s.cls, s.ck, 'big'));
+    const t = el('div');
+    t.appendChild(el('b', null, s.name));
+    t.appendChild(el('span', null, s.cls + ' · niveau ' + s.lvl));
+    top.appendChild(t);
+    card.appendChild(top);
+    const sel = select(picks, s.file, (v) => notify('build_cmp_set', { side: key, file: v }));
+    sel.classList.add('bcmpsel');
+    card.appendChild(sel);
+    return card;
+  };
+  head.appendChild(side(c.a, 'a', c.pickA));
+  head.appendChild(el('div', 'bcmpvs', 'VS'));
+  head.appendChild(side(c.b, 'b', c.pickB));
+  page.appendChild(head);
+
+  (c.groups || []).forEach((g) => {
+    const blk = el('div', 'spanel bcmpblk');
+    blk.appendChild(el('div', 'sptitle', g.t));
+    g.rows.forEach((r) => {
+      const row = el('div', 'bcmprow' + (r.better ? ' diff' : ''));
+      const cell = (key) => {
+        const v = el('div', 'bcmpv ' + key + (r.better === key ? ' up' : r.better ? ' down' : ''));
+        v.appendChild(el('b', null, r[key]));
+        if (r.better === key) v.appendChild(el('small', null, r.delta));
+        return v;
+      };
+      row.appendChild(cell('a'));
+      const lab = el('div', 'bcmpl');
+      const art = 'stat_' + (r.k === 'Intellect' ? 'Intelligence' : r.k);   // the sheet's art name
+      if (SHEET_ART[art]) lab.appendChild(artImg(art));
+      lab.appendChild(el('span', null, r.t));
+      row.appendChild(lab);
+      row.appendChild(cell('b'));
+      blk.appendChild(row);
+    });
+    page.appendChild(blk);
+  });
+  box.appendChild(page);
+  return box;
+}
+
+/* Paste a build's share code (from another player) to add it. */
+function importCodeDialog() {
+  if ($('#importmodal')) return;
+  const back = el('div', 'modalback');
+  back.id = 'importmodal';
+  const box = el('div', 'spanel bimport');
+  box.appendChild(el('div', 'sptitle', 'Importer un build'));
+  box.appendChild(el('p', 'note', 'Colle le code qu’un joueur t’a donné (il commence par FFB1:).'));
+  const ta = el('textarea');
+  ta.rows = 4;
+  ta.placeholder = 'FFB1:…';
+  box.appendChild(ta);
+  const row = el('div', 'bbtns');
+  const close = () => back.remove();
+  const ok = el('button', 'btn', 'Importer');
+  ok.type = 'button';
+  ok.addEventListener('click', () => {
+    if (!ta.value.trim()) return;
+    BUILD_VIEW = 'stuff';
+    notify('build_import', { code: ta.value });
+    close();
+  });
+  const no = el('button', 'rowbtn', 'Annuler');
+  no.type = 'button';
+  no.addEventListener('click', close);
+  row.appendChild(ok);
+  row.appendChild(no);
+  box.appendChild(row);
+  back.appendChild(box);
+  back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ok.click(); }
+  });
+  document.body.appendChild(back);
+  setTimeout(() => ta.focus(), 0);
+}
+
 /* The builds, as cards: a click opens one. */
 function buildList(n, box) {
   const head = el('div', 'blisthead');
@@ -341,6 +437,15 @@ function buildList(n, box) {
   if (n.me && n.me.wait) me.disabled = true;
   me.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_from_me', {}); });
   btns.appendChild(me);
+  const imp = el('button', 'btn bimp', 'Importer un code');
+  imp.type = 'button';
+  imp.addEventListener('click', importCodeDialog);
+  btns.appendChild(imp);
+  const cmp = el('button', 'btn bcmpbtn', 'Comparer');
+  cmp.type = 'button';
+  cmp.title = 'Compare deux builds de la même classe, côte à côte.';
+  cmp.addEventListener('click', () => notify('build_cmp_open', {}));
+  btns.appendChild(cmp);
   const nb = el('button', 'btn bnew', '+ Nouveau build');
   nb.type = 'button';
   nb.addEventListener('click', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); });
@@ -419,6 +524,11 @@ function buildHead(o) {
   head.appendChild(lv);
 
   const btns = el('div', 'bbtns');
+  const share = el('button', 'rowbtn', 'Copier le code');
+  share.type = 'button';
+  share.title = 'Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.';
+  share.addEventListener('click', () => notify('build_share', {}));
+  btns.appendChild(share);
   const dup = el('button', 'rowbtn', 'Dupliquer');
   dup.type = 'button';
   dup.addEventListener('click', () => notify('build_dup', {}));

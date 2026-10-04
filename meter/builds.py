@@ -7,10 +7,12 @@ A build is turned into the same profile the hook reads from a live player
 the Inspecter's own, already checked against the game."""
 from __future__ import annotations
 
+import base64
 import json
 import re
 import sys
 import time
+import zlib
 
 from common import BUILDS_DIR
 from gamedata import _offsets, build_data, talent_data
@@ -35,6 +37,48 @@ PASSIVE_TYPES = ("WeaponPassive",)
 
 
 # ---- the build ---------------------------------------------------------------
+# ---- share codes ------------------------------------------------------------
+# A build as text to copy and paste between players: "FFB1:" then the build
+# (name, class, level, gear, skills, talents, runes — not the simulator's
+# settings) as compact JSON, zlib-compressed, base64url. The digit is the
+# format's version, so an older code stays readable.
+SHARE_PREFIX = "FFB1:"
+SHARE_KEYS = ("name", "cls", "lvl", "gear", "skills", "talents", "runes")
+
+
+def share_code(b):
+    raw = json.dumps({k: b.get(k) for k in SHARE_KEYS if b.get(k)},
+                     separators=(",", ":"), ensure_ascii=False)
+    z = zlib.compress(raw.encode("utf-8"), 9)
+    return SHARE_PREFIX + base64.urlsafe_b64encode(z).decode().rstrip("=")
+
+
+def from_code(text):
+    """The build a share code holds, brought within the rules (what this
+    game no longer has is dropped). ValueError with a message to show."""
+    m = re.search(r"FFB(\d+):([A-Za-z0-9_-]+)", str(text or ""))
+    if not m:
+        raise ValueError("Ce n'est pas un code de build Farever France.")
+    if m.group(1) != "1":
+        raise ValueError("Ce code vient d'une version plus récente de "
+                         "Farever France.")
+    body = m.group(2)
+    try:
+        raw = zlib.decompress(base64.urlsafe_b64decode(
+            body + "=" * (-len(body) % 4)))
+        data = json.loads(raw.decode("utf-8"))
+    except Exception:
+        raise ValueError("Code incomplet ou abîmé : recopie-le en entier.")
+    if not isinstance(data, dict) or data.get("cls") not in CLASSES:
+        raise ValueError("Code illisible : classe inconnue.")
+    b = new_build(str(data.get("name") or "Build importé")[:60],
+                  data["cls"], data.get("lvl"))
+    for k in ("gear", "skills", "talents", "runes"):
+        if isinstance(data.get(k), dict):
+            b[k] = data[k]
+    return normalize(b)
+
+
 def new_build(name, cls="Priest", lvl=None):
     d = build_data()
     return {"name": name, "cls": cls if cls in CLASSES else "Priest",

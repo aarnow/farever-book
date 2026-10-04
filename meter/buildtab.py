@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 
 import builds as B
-from common import _pretty_id, class_key, element_label
+from common import _n, _pretty_id, class_key, element_label
 from gamedata import (_fr_names, _skill_label, build_data, faction_label,
                       infusion_data, item_icon, item_label, item_type_label,
                       rarity_label)
@@ -46,6 +46,7 @@ class BuildTab:
         self.build = None
         self.slot = None            # the slot whose editor is open
         self.confirm_delete = False
+        self.cmp = None                 # {a, b}: two builds compared
 
     # ---- actions ---------------------------------------------------------
     def actions(self):
@@ -54,6 +55,12 @@ class BuildTab:
             "build_open": lambda p: self._open(p.get("file")),
             "build_close": self._close,
             "build_dup": self._duplicate,
+            "build_cmp_open": self._cmp_open,
+            "build_cmp_set": lambda p: self._cmp_set(p.get("side"),
+                                                     p.get("file")),
+            "build_cmp_close": lambda: setattr(self, "cmp", None),
+            "build_share": self._share,
+            "build_import": lambda p: self._import_code(p.get("code")),
             "build_delete": self._delete,
             "build_delete_cancel": lambda: setattr(self, "confirm_delete",
                                                    False),
@@ -108,6 +115,7 @@ class BuildTab:
         self._close()
 
     def _close(self):
+        self.cmp = None
         self.file = self.build = self.slot = None
         self.confirm_delete = False
 
@@ -118,6 +126,28 @@ class BuildTab:
         b = B.normalize(copy.deepcopy(b))
         self.file, self.build = B.save_build(b), b
         self._toast("Build dupliqué.")
+
+    def _share(self):
+        """The open build's share code, onto the clipboard."""
+        if not self.build:
+            return
+        from winsys import copy_text_to_clipboard
+        code = B.share_code(self.build)
+        if copy_text_to_clipboard(code):
+            self._toast(f"Code du build copié ({len(code)} caractères) : "
+                        "colle-le à qui tu veux.")
+        else:
+            self._toast("Copie impossible : le presse-papiers est occupé.")
+
+    def _import_code(self, code):
+        try:
+            b = B.from_code(code)
+        except ValueError as e:
+            self._toast(str(e))
+            return
+        self.file, self.build = B.save_build(b), b
+        self.slot, self.confirm_delete = None, False
+        self._toast(f"Build « {b['name']} » importé.")
 
     def _delete(self):
         if not self.build:
@@ -235,9 +265,104 @@ class BuildTab:
                   "ck": class_key(b.get("cls")), "on": f == self.file}
                  for f, b in B.list_builds()]
         node = {"k": "build", "id": "build", "list": saved, "open": None}
+        if self.cmp:
+            node["cmp"] = self._cmp_view()
+            if node["cmp"]:
+                return [node]
+            self.cmp = None
         if self.build:
             node["open"] = self._open_view()
         return [node]
+
+    # -- comparing two builds of one class -------------------------------
+    def _cmp_open(self):
+        """The comparison opens on the open build (or the first one that
+        has a twin of its class) against the next of its class."""
+        builds = B.list_builds()
+        by_cls = {}
+        for f, b in builds:
+            by_cls.setdefault(b.get("cls"), []).append(f)
+        pairs = [fs for fs in by_cls.values() if len(fs) > 1]
+        if not pairs:
+            self._toast("Il faut au moins deux builds de la même classe.")
+            return
+        first = self.file if self.file and any(
+            self.file in fs for fs in pairs) else pairs[0][0]
+        same = next(fs for fs in pairs if first in fs)
+        self.cmp = {"a": first, "b": next(f for f in same if f != first)}
+
+    def _cmp_set(self, side, file):
+        if not self.cmp or side not in ("a", "b"):
+            return
+        builds = dict(B.list_builds())
+        if file not in builds:
+            return
+        self.cmp[side] = file
+        other = "b" if side == "a" else "a"
+        cls = builds[file].get("cls")
+        # the other side follows: same class, never the same build
+        if (builds.get(self.cmp[other], {}).get("cls") != cls
+                or self.cmp[other] == file):
+            self.cmp[other] = next((f for f, b in builds.items()
+                                    if b.get("cls") == cls and f != file),
+                                   None)
+
+    def _cmp_view(self):
+        builds = dict(B.list_builds())
+        a, b = builds.get(self.cmp.get("a")), builds.get(self.cmp.get("b"))
+        if not a or not b:
+            return None
+
+        def sheet(bd):
+            prof = B.to_profile(bd)
+            v = character_view([], {bd["name"]: prof}, bd["name"], None,
+                               False)
+            return (v.get("open") or {}).get("atbs") or {}
+
+        sa, sb = sheet(a), sheet(b)
+        ra, rb = sa.get("raw") or {}, sb.get("raw") or {}
+        groups = []
+        for key, title in (("primary", "Attributs"),
+                           ("secondary", "Plus de stats")):
+            rows = []
+            texts_b = {r["k"]: r for r in sb.get(key) or ()}
+            for r in sa.get(key) or ():
+                k = r["k"]
+                pct = r["v"].endswith("%")
+                va, vb = ra.get(k) or 0, rb.get(k) or 0
+                d = vb - va
+                small = 0.05 if pct or k == "HealthRegen" else 0.5
+                if abs(d) < small:
+                    better, delta = "", ""
+                else:
+                    better = "b" if d > 0 else "a"
+                    amount = abs(d)
+                    if pct or k == "HealthRegen":
+                        txt = f"{amount:.1f}".rstrip("0").rstrip(".")
+                        txt = txt.replace(".", ",") + (" %" if pct else "")
+                    else:
+                        txt = _n(round(amount))
+                    delta = "+" + txt
+                rows.append({"k": k, "t": r["t"], "a": r["v"],
+                             "b": (texts_b.get(k) or {}).get("v", "—"),
+                             "better": better, "delta": delta})
+            groups.append({"t": title, "rows": rows})
+
+        def card(f, bd):
+            return {"file": f, "name": bd.get("name"), "lvl": bd.get("lvl"),
+                    "cls": CLASS_FR.get(bd.get("cls"), bd.get("cls")),
+                    "ck": class_key(bd.get("cls"))}
+        cls_a = a.get("cls")
+        return {
+            "a": card(self.cmp["a"], a), "b": card(self.cmp["b"], b),
+            # the left one picks among all builds that have a twin of their
+            # class; the right one among the left one's class
+            "pickA": [{"v": f, "t": bd.get("name")} for f, bd in builds.items()
+                      if sum(1 for x in builds.values()
+                             if x.get("cls") == bd.get("cls")) > 1],
+            "pickB": [{"v": f, "t": bd.get("name")} for f, bd in builds.items()
+                      if bd.get("cls") == cls_a and f != self.cmp["a"]],
+            "groups": groups}
 
     def _open_view(self):
         b = self.build

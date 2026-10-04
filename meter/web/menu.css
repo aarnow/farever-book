@@ -2903,3 +2903,49 @@ html.lt-760 .sheet.card > .shero { position: static; height: 420px; }
   .bsstats { grid-template-columns: 1fr 1fr; }
   .bssummon, .bsrow { grid-template-columns: 1fr; }
 }
+
+
+/* Build share codes: the import dialog (build.js importCodeDialog) */
+.modalback { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; background: rgba(10, 9, 24, .6); }
+.bimport { width: min(560px, 92vw); padding: 18px 20px; }
+.bimport textarea { width: 100%; box-sizing: border-box; margin: 6px 0 12px; padding: 8px 10px; border-radius: 8px;
+                    border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font: 12px/1.4 Consolas, monospace;
+                    resize: vertical; word-break: break-all; }
+.bimport textarea:focus { outline: none; border-color: var(--accent); }
+.blisthead .bheadbtns .bimp { width: auto; max-width: none; margin: 0; }
+.bimport .bbtns { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.bimport .bbtns .btn { width: auto; max-width: none; margin: 0; padding-left: 22px; padding-right: 22px; }
+
+
+/* Comparing two builds (build.js buildCompare) */
+.bcmp { display: flex; flex-direction: column; gap: 14px; }
+.bcmphead { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: stretch; }
+.bcmpcard { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 12px; background: var(--panel);
+            border: 1px solid var(--line); }
+.bcmpcard.a { border-top: 3px solid #6C9CF5; }
+.bcmpcard.b { border-top: 3px solid #D86BE0; }
+.bcmpwho { display: flex; align-items: center; gap: 12px; }
+.bcmpwho > div { display: flex; flex-direction: column; }
+.bcmpwho b { font-family: var(--font-head); font-size: 20px; }
+.bcmpwho span { color: var(--dim); font-size: 13px; }
+.bcmpsel { width: 100%; }
+.bcmpvs { align-self: center; font-family: var(--font-head); font-weight: 700; font-size: 22px; color: var(--accent);
+          letter-spacing: .1em; }
+.bcmpblk { padding: 14px 16px; }
+.bcmprow { display: grid; grid-template-columns: 1fr minmax(180px, 1.1fr) 1fr; align-items: center; gap: 10px; padding: 5px 6px;
+           border-radius: 8px; }
+.bcmprow + .bcmprow { border-top: 1px solid rgba(71, 68, 122, .45); }
+.bcmprow.diff { background: rgba(255, 255, 255, .025); }
+.bcmpl { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--dim); font-size: 14px; }
+.bcmpl img { width: 22px; height: 22px; }
+.bcmpv { display: flex; align-items: baseline; gap: 8px; }
+.bcmpv.a { justify-content: flex-end; }
+.bcmpv.b { justify-content: flex-start; }
+.bcmpv.a small { order: -1; }
+.bcmpv b { font-family: var(--font-head); font-size: 18px; color: var(--text); }
+.bcmpv.up b { color: #8BD86A; }
+.bcmpv.down b { color: #F2665E; }
+.bcmpv small { font-family: var(--font-head); font-size: 12px; font-weight: 700; color: #8BD86A; background: rgba(139, 216, 106, .12);
+               border: 1px solid rgba(139, 216, 106, .35); border-radius: 10px; padding: 0 7px; }
+.blisthead .bheadbtns .bcmpbtn { width: auto; max-width: none; margin: 0; }
+.bcmp { align-self: stretch; width: 100%; }
