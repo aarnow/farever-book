@@ -1,31 +1,27 @@
-"""Build resolver_data.json with anchors + a curated candidate map of combat
-functions to hook-and-count, so we can discover which one actually fires."""
-import json, os, re, sys
+"""analysis_out/resolver_data.json: the game functions the hook attaches to
+or calls, found by name in the game's bytecode (hlboot.dat), so a patch that
+moves them moves their indices too."""
+import json
+import os
+import re
+import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
-from hlbc_parser import HLCode, HOBJ, HSTRUCT
-from gamepath import find_hlboot
 
-HLBOOT = find_hlboot()
-# Normally the project's own analysis_out. The meter overrides it when it runs
-# us from its installed build, where this file lives in a temporary bundle
-# directory that is deleted on exit — writing beside ourselves would throw the
-# result away.
+sys.path.insert(0, str(Path(__file__).parent))
+from hlbc_parser import HLCode, HOBJ, HSTRUCT  # noqa: E402
+from gamepath import find_hlboot  # noqa: E402
+
+# The installed app runs this from a bundle folder deleted on exit: it says
+# where the result goes.
 OUT = Path(os.environ.get("FAREVER_ANALYSIS_OUT")
            or Path(__file__).resolve().parent.parent / "analysis_out")
-OUT.mkdir(parents=True, exist_ok=True)
-print(f"[*] parsing {HLBOOT}")
 
-code = HLCode(HLBOOT).parse()
-
-# anchors from loaded hdlls
+# Natives of the game's own libraries, anchors for the hook's search.
 HDLL_LIBS = {"ssl", "fmt", "uv", "ui", "sdl", "directx", "dx12", "openal",
              "heaps", "steam", "video", "hlfmod", "mysql", "dlss"}
-anchors = [{"lib": n.lib, "name": n.name, "findex": n.findex,
-            "symbol": f"{n.lib}_{n.name}", "module": f"{n.lib}.hdll"}
-           for n in code.natives if n.lib in HDLL_LIBS][:40]
 
-# Curated combat classes (base classes, not per-skill leaves) + method filter.
+# Combat functions worth counting: the base classes' methods whose name
+# says damage, hit, kill or heal.
 COMBAT_CLASSES = {
     "ent.Unit", "ent.Hero", "ent.Foe", "ent.GameObject", "ent.Projectile",
     "ent.UnitAttributes",
@@ -36,24 +32,14 @@ METHOD_RX = re.compile(
     r"(applyDamage|dealDamage|takeDamage|doDamage|onDamage|computeDamage|"
     r"inflict|hurt|onHit|applyHit|dealHit|receiveHit|^hit$|damage|onKill|"
     r"onDeath|die|kill|heal)", re.IGNORECASE)
+PRIMARY = ("ent.Unit.applyDamage", "ent.Hero.applyDamage",
+           "script.SkillScript.applyDamage", "script.UnitScript.onDamage")
 
-candidates = {}
-for t in code.types:
-    if t.kind not in (HOBJ, HSTRUCT) or t.name not in COMBAT_CLASSES:
-        continue
-    for p in t.protos:
-        if METHOD_RX.search(p.name):
-            candidates[f"{t.name}.{p.name}"] = p.findex
-
-# Also keep the specific primary targets even if filtered
-names = code.findex_names()
-for findex, nm in names.items():
-    if nm in ("ent.Unit.applyDamage", "ent.Hero.applyDamage",
-              "script.SkillScript.applyDamage", "script.UnitScript.onDamage"):
-        candidates[nm] = findex
-
-# High-signal shortlist to hook-and-count (avoid hooking hot getters).
-SHORTLIST = [
+# The combat functions the hook counts (no hot getters among them). Heals:
+# the server-side path never runs on the client, what does is the heal's
+# effect on the target (the skill and its owner) and the health attribute
+# (the amount).
+SHORTLIST = (
     "ent.Unit.applyDamage", "ent.Unit.computeDamage", "ent.Unit.receiveDamage",
     "ent.Unit.onInflictDamage", "ent.Unit.onReceiveDamage",
     "ent.Unit.rpcReceiveDamage__impl", "ent.Unit.clientReceiveHit",
@@ -64,133 +50,115 @@ SHORTLIST = [
     "script.SkillScript.onInflictDamage", "script.SkillScript.onDamage",
     "script.SkillScript.onHit", "st.skill.BaseSkill.calcDamageAmount",
     "st.skill.BaseSkill.evalDamage",
-    # Heals: the server-side path (receiveHeal/computeHeal/*HealEval) never
-    # runs client-side, and rpcDisplayHeal is rare. What IS replicated: the
-    # heal FX on the target (carries the healing skill + its owner) and the
-    # unit's health attribute (carries the effective amount).
     "ent.Unit.playHitHealFX", "ent.UnitAttributes.set_health",
-]
-count_targets = {nm: candidates[nm] for nm in SHORTLIST if nm in candidates}
+)
 
-# Singleton/static accessor functions (name -> findex) for local-player ID.
-SINGLETON_FNS = ["GameApp.getCameraHero", "ui.Console.getMyHero",
-                 "$GameApp.getMyHero", "$GameApp.get"]
-funcs = {nm.lstrip("$"): fi for fi, nm in names.items() if nm in SINGLETON_FNS}
+# The functions the hook attaches to, by group: (its key in the file, the
+# functions, what a missing one costs).
+TARGETS = (
+    # every game window opened or closed (escape menu, inventory, map...):
+    # the overlay follows the game's UI; onRemove catches windows torn down
+    # without removeWindow
+    ("ui_targets", ("ui.BaseUI.displayWindow", "ui.BaseUI.removeWindow",
+                    "ui.win.BaseWindow.onRemove"), "UI target"),
+    # the live camera (the minimap turns with it): its per-frame method,
+    # hooked on the base class so whichever camera drives the view is caught
+    ("cam_targets", ("client.BaseCamera.postUpdate",), "camera target"),
+    # the boss bar's own refresh (twice a second): `this` holds the bars
+    ("boss_targets", ("ui.hud.BossesInfo.fetchBosses",), "boss target"),
+    # a bar is raised for elites too: these tell a boss. Foe.shouldShowBossInfo
+    # is not among them: it throws when called with `this` only
+    ("boss_fns", ("ent.Unit.isBoss", "ent.Unit.isElite"), "boss target"),
+    # the codex, on a kill, client-side, in this order (the count is already
+    # up when the kill arrives): CodexDiscovered / CodexCompleted (rank 2,
+    # despite the name) / CodexMastered, the rank, then the kill. The
+    # wrappers without __impl are the senders and never fire here.
+    ("codex_targets", ("st.Player.notifyUnitKilled__impl",
+                       "st.Player.notifyCodexUnit__impl",
+                       "st.Player.onUnitCodexRankProgress__impl"),
+     "codex target", "codex popups will not fire"),
+    # a critter capture's result: only a cue to read the collection again
+    ("pet_targets", ("ent.Hero.notifyCapture__impl",
+                     "ent.Hero.notifyCaptureMiss__impl"), "capture target",
+     "the collected-critter mirror will only refresh on its timer"),
+)
+# The local player, through the game's singletons.
+SINGLETON_FNS = ("GameApp.getCameraHero", "ui.Console.getMyHero",
+                 "$GameApp.getMyHero", "$GameApp.get")
+# The current map, ()->String, called from the damage hook (zone changes).
+MAP_FN = "$Main.getMapId"
+# StringMap reads go through these natives (they allocate: game thread only).
+MAP_NATIVES = ("hbget", "hbkeys", "hbsize")
 
-# Current-map accessor — called only from the damage hook (game thread) for
-# zone-change detection. ()->String, no args.
-map_fn = next((fi for fi, nm in names.items() if nm == "$Main.getMapId"), None)
 
-# ---- the game's own window manager (native UI awareness) ----
-# ui.BaseUI.displayWindow(ui, win) / removeWindow(ui, win) are called for EVERY
-# game window — escape menu, inventory, map, group, ... — with the window
-# instance as the second argument, so hooking the pair gives the overlay a live
-# "which game windows are open" feed and it can follow the game's UI instead of
-# a hotkey. ui.win.BaseWindow.onRemove(win) is the safety net for windows torn
-# down without passing through removeWindow.
-UI_TARGETS = ["ui.BaseUI.displayWindow", "ui.BaseUI.removeWindow",
-              "ui.win.BaseWindow.onRemove"]
-ui_targets = {nm: fi for fi, nm in names.items() if nm in UI_TARGETS}
+def anchors(code):
+    return [{"lib": n.lib, "name": n.name, "findex": n.findex,
+             "symbol": f"{n.lib}_{n.name}", "module": f"{n.lib}.hdll"}
+            for n in code.natives if n.lib in HDLL_LIBS][:40]
 
-# ---- the active camera ----
-# The minimap turns with the camera, not the character, so it needs the live
-# camera object. There's no reachable singleton for it — GameApp holds one but
-# nothing hands us a GameApp — so instead we hook a per-frame camera method and
-# keep `this`. postUpdate is on the BASE class deliberately: the game swaps
-# between game/cinematic/character-edit cameras, and hooking the base captures
-# whichever one is currently driving the view.
-CAM_TARGETS = ["client.BaseCamera.postUpdate"]
-cam_targets = {nm: fi for fi, nm in names.items() if nm in CAM_TARGETS}
 
-# ---- the boss / elite healthbar ----
-# ui.hud.BossesInfo.fetchBosses is the game's own boss-bar refresh and `this` is
-# the BossesInfo holding the live bar list, so hooking it gives a persistent
-# pointer AND a natural tick. Measured at a steady 2/s — it's a timer, not a
-# per-frame call, which is why the hook body can afford to walk the array.
-BOSS_TARGETS = ["ui.hud.BossesInfo.fetchBosses"]
-boss_targets = {nm: fi for fi, nm in names.items() if nm in BOSS_TARGETS}
+def combat_candidates(code, names):
+    """Combat methods of the combat classes, the primary ones always."""
+    out = {f"{t.name}.{p.name}": p.findex
+           for t in code.types
+           if t.kind in (HOBJ, HSTRUCT) and t.name in COMBAT_CLASSES
+           for p in t.protos if METHOD_RX.search(p.name)}
+    out.update({nm: fi for fi, nm in names.items() if nm in PRIMARY})
+    return out
 
-# A bar goes up for ELITES as well as bosses (measured: "Krabby Jacob", a plain
-# ent.Foe, raised one), so the bar alone can't drive a boss-only rule. These two
-# predicates are what separate them. Both are (ent.Unit)->bool and safe to call
-# on the game thread. ent.Foe.shouldShowBossInfo is deliberately NOT here: it
-# throws when called with only `this`.
-BOSS_FNS = ["ent.Unit.isBoss", "ent.Unit.isElite"]
-boss_fns = {nm: fi for fi, nm in names.items() if nm in BOSS_FNS}
 
-# ---- the codex (hunting log) ----
-# Measured 2026-08-05: these three fire
-# CLIENT-side on a kill, in this order, and the codex pair lands BEFORE the kill
-# event — so a toast hung on notifyUnitKilled can quote the already-incremented
-# count without waiting a frame.
-#
-#   notifyCodexUnit__impl(this, kind:String, unitId:String)
-#        kind: CodexDiscovered (rank 1) | CodexCompleted (rank 2, an
-#        INTERMEDIATE rank-up despite the name) | CodexMastered (rank 3, done)
-#   onUnitCodexRankProgress__impl(this, unitId:String, rank:Int)
-#   notifyUnitKilled__impl(this, unitId:String)      — every kill
-#
-# The non-`__impl` wrappers are the RPC senders and never fired client-side;
-# hooking them would be silent. `Progress.getNbUnitKilled` fires constantly but
-# is the codex WINDOW reading counts, not a kill signal.
-CODEX_TARGETS = ["st.Player.notifyUnitKilled__impl",
-                 "st.Player.notifyCodexUnit__impl",
-                 "st.Player.onUnitCodexRankProgress__impl"]
-codex_targets = {nm: fi for fi, nm in names.items() if nm in CODEX_TARGETS}
+def by_name(names, wanted):
+    """{function name: index} of the wanted functions the build has."""
+    return {nm: fi for fi, nm in names.items() if nm in wanted}
 
-# ---- critter capture (companions) ----
-# The capture-net skill script calls ent.Hero.tryCaptureCritter(unit); the
-# result comes back on the hero as one of these two __impl notifications
-# (static, 2026-08-07 — the surface is confirmed but neither has been seen
-# firing yet, so the hook only uses them as "re-read the collection now"
-# triggers and never parses their arguments).
-PET_TARGETS = ["ent.Hero.notifyCapture__impl",
-               "ent.Hero.notifyCaptureMiss__impl"]
-pet_targets = {nm: fi for fi, nm in names.items() if nm in PET_TARGETS}
 
-# haxe.ds.StringMap is a thin wrapper over the native hl.types.BytesMap, so
-# reading it means calling these. They ALLOCATE (hbkeys builds an hl_varray),
-# which puts them under the same game-thread rule as every other HL call.
-MAP_NATIVES = ["hbget", "hbkeys", "hbsize"]
-map_natives = {n.name: n.findex for n in code.natives
-               if n.lib == "std" and n.name in MAP_NATIVES}
+def resolve(code):
+    names = code.findex_names()
+    candidates = combat_candidates(code, names)
+    payload = {
+        "nfunctions": code.counts["nfunctions"],
+        "nnatives": code.counts["nnatives"],
+        "anchors": anchors(code),
+        "candidates": candidates,
+        "count_targets": {nm: candidates[nm] for nm in SHORTLIST
+                          if nm in candidates},
+    }
+    for key, wanted, *_ in TARGETS:
+        payload[key] = by_name(names, wanted)
+    payload["map_natives"] = {n.name: n.findex for n in code.natives
+                              if n.lib == "std" and n.name in MAP_NATIVES}
+    payload["funcs"] = {nm.lstrip("$"): fi for nm, fi in
+                        by_name(names, SINGLETON_FNS).items()}
+    payload["map_fn"] = next((fi for fi, nm in names.items()
+                              if nm == MAP_FN), None)
+    return payload
 
-payload = {
-    "nfunctions": code.counts["nfunctions"],
-    "nnatives": code.counts["nnatives"],
-    "anchors": anchors,
-    "candidates": candidates,
-    "count_targets": count_targets,
-    "ui_targets": ui_targets,
-    "cam_targets": cam_targets,
-    "boss_targets": boss_targets,
-    "boss_fns": boss_fns,
-    "codex_targets": codex_targets,
-    "pet_targets": pet_targets,
-    "map_natives": map_natives,
-    "funcs": funcs,
-    "map_fn": map_fn,
-}
-(OUT / "resolver_data.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-print(f"anchors={len(anchors)}  candidates={len(candidates)}  "
-      f"ui_targets={len(ui_targets)}/{len(UI_TARGETS)}")
-for nm in UI_TARGETS:
-    if nm not in ui_targets:
-        print(f"    [!] UI target not found in this build: {nm}")
-for nm in CAM_TARGETS:
-    if nm not in cam_targets:
-        print(f"    [!] camera target not found in this build: {nm}")
-for nm in BOSS_TARGETS + BOSS_FNS:
-    if nm not in boss_targets and nm not in boss_fns:
-        print(f"    [!] boss target not found in this build: {nm}")
-for nm in CODEX_TARGETS:
-    if nm not in codex_targets:
-        print(f"    [!] codex target not found in this build: {nm} — "
-              f"codex popups will not fire")
-for nm in PET_TARGETS:
-    if nm not in pet_targets:
-        print(f"    [!] capture target not found in this build: {nm} — "
-              f"the collected-critter mirror will only refresh on its timer")
-for nm, fi in sorted(candidates.items()):
-    print(f"    {nm:<45} findex={fi}")
-print(f"[written] {OUT / 'resolver_data.json'}")
+
+def report(payload):
+    """What was found, and each function this build lacks."""
+    ui = payload["ui_targets"]
+    print(f"anchors={len(payload['anchors'])}  "
+          f"candidates={len(payload['candidates'])}  "
+          f"ui_targets={len(ui)}/{len(TARGETS[0][1])}")
+    for key, wanted, label, *cost in TARGETS:
+        for nm in wanted:
+            if nm not in payload[key]:
+                print(f"    [!] {label} not found in this build: {nm}"
+                      + (f" — {cost[0]}" if cost else ""))
+    for nm, fi in sorted(payload["candidates"].items()):
+        print(f"    {nm:<45} findex={fi}")
+
+
+def main():
+    hlboot = find_hlboot()
+    print(f"[*] parsing {hlboot}")
+    payload = resolve(HLCode(hlboot).parse())
+    OUT.mkdir(parents=True, exist_ok=True)
+    out = OUT / "resolver_data.json"
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    report(payload)
+    print(f"[written] {out}")
+
+
+if __name__ == "__main__":
+    main()
