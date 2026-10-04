@@ -379,6 +379,56 @@ function buildCompare(c, box) {
     });
     page.appendChild(blk);
   });
+
+  // the spells: each source, each spell once, lines face to face
+  if ((c.spells || []).length) {
+    page.appendChild(el('div', 'section', 'Sorts'));
+    const ctl = el('div', 'spanel bcmpctl');
+    ctl.appendChild(el('span', 'bl', 'Réduction de la cible'));
+    ctl.appendChild(slider(0, 80, Math.round(c.armor || 0),
+      (v) => notify('build_cmp_armor', { value: v }), '', ' %'));
+    page.appendChild(ctl);
+    if (c.target) page.appendChild(el('p', 'note', c.target));
+    c.spells.forEach((g) => {
+      const blk = el('div', 'spanel bcmpblk');
+      const h = el('div', 'sptitle bcmpgt');
+      h.appendChild(el('span', 'a', g.subA || '—'));
+      h.appendChild(el('b', null, g.t));
+      h.appendChild(el('span', 'b', g.subB || '—'));
+      blk.appendChild(h);
+      g.rows.forEach((r) => {
+        const row = el('div', 'bcmprow sp' + (r.better.some((x) => x.n || x.c) ? ' diff' : ''));
+        const side = (key) => {
+          const cell = el('div', 'bcmpsp ' + key);
+          const s = r[key];
+          if (!s) { cell.appendChild(el('span', 'none', 'absent de ce build')); return cell; }
+          s.forEach((ln, i) => {
+            if (!ln) { cell.appendChild(el('div', 'bcmpln gap', '—')); return; }
+            const b = r.better[i] || {};
+            const tone = (w) => (w === key ? ' up' : w ? ' down' : '');
+            const l = el('div', 'bcmpln');
+            l.appendChild(el('span', 'k', ln.kind + (ln.aff ? ' · ' + ln.aff : '')));
+            const cc = el('span', 'cc' + tone(b.c));
+            cc.appendChild(el('b', null, ln.crit));
+            cc.appendChild(el('small', null, 'CC'));
+            l.appendChild(cc);
+            l.appendChild(el('b', 'nv' + tone(b.n), ln.normal));
+            cell.appendChild(l);
+          });
+          if (!s.length) cell.appendChild(el('span', 'none', 'pas de dégâts chiffrés'));
+          return cell;
+        };
+        row.appendChild(side('a'));
+        const mid = el('div', 'bcmpl sp');
+        mid.appendChild(skillIcon({ id: r.id, name: r.name }));
+        mid.appendChild(el('span', null, r.name));
+        row.appendChild(mid);
+        row.appendChild(side('b'));
+        blk.appendChild(row);
+      });
+      page.appendChild(blk);
+    });
+  }
   box.appendChild(page);
   return box;
 }

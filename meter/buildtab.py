@@ -59,6 +59,7 @@ class BuildTab:
             "build_cmp_set": lambda p: self._cmp_set(p.get("side"),
                                                      p.get("file")),
             "build_cmp_close": lambda: setattr(self, "cmp", None),
+            "build_cmp_armor": lambda p: self._cmp_armor(p.get("value")),
             "build_share": self._share,
             "build_import": lambda p: self._import_code(p.get("code")),
             "build_delete": self._delete,
@@ -307,6 +308,14 @@ class BuildTab:
                                     if b.get("cls") == cls and f != file),
                                    None)
 
+    def _cmp_armor(self, value):
+        """The target's damage reduction for the spells, both builds."""
+        if self.cmp is not None:
+            try:
+                self.cmp["armor"] = max(0.0, min(90.0, float(value)))
+            except (TypeError, ValueError):
+                pass
+
     def _cmp_view(self):
         builds = dict(B.list_builds())
         a, b = builds.get(self.cmp.get("a")), builds.get(self.cmp.get("b"))
@@ -320,6 +329,12 @@ class BuildTab:
             return (v.get("open") or {}).get("atbs") or {}
 
         sa, sb = sheet(a), sheet(b)
+        # the spells, both against the same target: the left build's
+        target = dict(a.get("sim") or {})
+        if self.cmp.get("armor") is not None:
+            target["armor"] = self.cmp["armor"]
+        ma = self._sim_view(dict(a, sim=target), sa.get("raw"))
+        mb = self._sim_view(dict(b, sim=target), sb.get("raw"))
         ra, rb = sa.get("raw") or {}, sb.get("raw") or {}
         groups = []
         for key, title in (("primary", "Attributs"),
@@ -362,7 +377,14 @@ class BuildTab:
                              if x.get("cls") == bd.get("cls")) > 1],
             "pickB": [{"v": f, "t": bd.get("name")} for f, bd in builds.items()
                       if bd.get("cls") == cls_a and f != self.cmp["a"]],
-            "groups": groups}
+            "groups": groups,
+            "spells": _cmp_spells(ma, mb),
+            "armor": float((ma or {}).get("armor", 30)),
+            "target": (f"Cible de niveau "
+                       f"{(ma or {}).get('enemy') or a.get('lvl')}, la même "
+                       "pour les deux builds. Dégâts normaux et critiques "
+                       "comparés séparément : les chances de critique "
+                       "diffèrent d'un build à l'autre.")}
 
     def _open_view(self):
         b = self.build
@@ -503,7 +525,9 @@ class BuildTab:
             "lines": [{"kind": kinds.get(x["kind"], x["kind"]), "k": x["kind"],
                        "aff": element_label(x["aff"]) if x["aff"] else "",
                        "normal": fmt(x["normal"]), "crit": fmt(x["crit"]),
-                       "avg": fmt(x["avg"]),
+                       "normalv": round(x["normal"], 1),
+                       "critv": round(x["crit"], 1),
+                       "avg": fmt(x["avg"]), "avgv": round(x["avg"], 1),
                        "mit": pc(x["mit"]) if "mit" in x else ""}
                       for x in r["lines"]]}
 
@@ -675,6 +699,66 @@ def _infusion_options():
                     "tiers": [t["txt"] for t in infusion_tiers(sid)],
                     "k": (faction_label(e.get("f")), e.get("role") or "")})
     out.sort(key=lambda x: x.pop("k"))
+    return out
+
+
+def _cmp_spells(ma, mb):
+    """Two simulations' spells, source by source (main weapon, off hand,
+    arsenal, class skills), each spell once: its lines on both sides when
+    both builds have it, "—" on the side that hasn't. Where both have a
+    line, the higher average is the better one."""
+    if not ma and not mb:
+        return []
+    ga = {g["t"]: g for g in (ma or {}).get("groups") or ()}
+    gb = {g["t"]: g for g in (mb or {}).get("groups") or ()}
+    order = list(ga) + [t for t in gb if t not in ga]
+    out = []
+    for t in order:
+        a, b = ga.get(t) or {}, gb.get(t) or {}
+        # a weapon's basic attacks and its combo face the other weapon's,
+        # whatever their ids; every other spell is itself
+        def slot(s):
+            n = s.get("name") or ""
+            return ("base" if n.startswith("Attaques de base")
+                    else "combo" if n.startswith("Combo") else s["id"])
+        sa = {slot(s): s for s in a.get("skills") or ()}
+        sb = {slot(s): s for s in b.get("skills") or ()}
+        ids = list(sa) + [i for i in sb if i not in sa]
+        rows = []
+        for i in ids:
+            x, y = sa.get(i), sb.get(i)
+            # lines matched by what they are (damage / heal, element), not
+            # by position: a rune can add a line on one side only
+            def keyed(lines):
+                seen, out = {}, []
+                for ln in lines:
+                    k = (ln.get("k"), ln.get("aff"))
+                    seen[k] = seen.get(k, 0) + 1
+                    out.append(((k, seen[k]), ln))
+                return out
+            ka = keyed((x or {}).get("lines") or [])
+            kb = keyed((y or {}).get("lines") or [])
+            da, db = dict(ka), dict(kb)
+            keys = [k for k, _ in ka] + [k for k, _ in kb if k not in da]
+            la = [da.get(k) for k in keys]
+            lb = [db.get(k) for k in keys]
+            def win(p, q, k):
+                if not p or not q or abs(p[k] - q[k]) < 0.5:
+                    return ""
+                return "a" if p[k] > q[k] else "b"
+            better = [{"n": win(p, q, "normalv"), "c": win(p, q, "critv")}
+                      for p, q in zip(la, lb)]
+            names = [s["name"] for s in (x, y) if s]
+            if len(set(names)) == 1:
+                name = names[0]
+            elif all(n.startswith("Combo : ") for n in names):
+                name = "Combo : " + " / ".join(n[8:] for n in names)
+            else:
+                name = " / ".join(names)
+            rows.append({"id": (x or y)["id"], "name": name,
+                         "a": x and la, "b": y and lb, "better": better})
+        out.append({"t": t, "subA": a.get("sub") or "",
+                    "subB": b.get("sub") or "", "rows": rows})
     return out
 
 

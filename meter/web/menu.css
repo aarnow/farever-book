@@ -2949,3 +2949,51 @@ html.lt-760 .sheet.card > .shero { position: static; height: 420px; }
                border: 1px solid rgba(139, 216, 106, .35); border-radius: 10px; padding: 0 7px; }
 .blisthead .bheadbtns .bcmpbtn { width: auto; max-width: none; margin: 0; }
 .bcmp { align-self: stretch; width: 100%; }
+
+
+/* Comparing two builds: the spells (build.js buildCompare) */
+.bcmpgt { display: grid; grid-template-columns: 1fr minmax(180px, 1.1fr) 1fr; align-items: baseline; gap: 10px; }
+.bcmpgt b { text-align: center; }
+.bcmpgt span { font-size: 13px; color: var(--dim); font-family: inherit; font-weight: 400; }
+.bcmpgt span.a { text-align: right; }
+.bcmprow.sp { align-items: start; padding: 8px 6px; }
+.bcmpl.sp { flex-direction: column; gap: 4px; text-align: center; }
+.bcmpl.sp .skill { width: 40px; height: 40px; }
+.bcmpsp { display: flex; flex-direction: column; gap: 4px; }
+.bcmpsp.a { align-items: flex-end; text-align: right; }
+.bcmpsp.b { align-items: flex-start; }
+.bcmpln { display: flex; flex-direction: column; }
+.bcmpsp.a .bcmpln { align-items: flex-end; }
+.bcmpln .k { font-size: 11px; color: var(--faint); }
+.bcmpln b { font-family: var(--font-head); font-size: 18px; }
+.bcmpln small { font-size: 11px; color: var(--dim); }
+.bcmpln.up b { color: #8BD86A; }
+.bcmpln.down b { color: #F2665E; }
+.bcmpsp .none { font-size: 12px; color: var(--faint); font-style: italic; padding-top: 10px; }
+.bcmpln.gap { color: var(--faint); font-family: var(--font-head); font-size: 18px; min-height: 46px; justify-content: center; }
+/* a spell's line on one row: what it is, normal / critical, the average */
+.bcmpln { flex-direction: row; align-items: baseline; gap: 10px; }
+.bcmpsp.a .bcmpln { flex-direction: row-reverse; }
+.bcmpln b { min-width: 46px; }
+.bcmpsp.a .bcmpln b { text-align: right; }
+.bcmpln.gap { min-height: 0; }
+.bcmprow.sp { padding: 6px; }
+.bcmpl.sp { flex-direction: row; justify-content: center; }
+.bcmpl.sp .skill { width: 32px; height: 32px; }
+/* the averages face each other, next to the spell's name */
+.bcmpsp.a .bcmpln { flex-direction: row; justify-content: flex-end; }
+.bcmpsp.b .bcmpln { flex-direction: row-reverse; justify-content: flex-end; }
+.bcmpsp.b .bcmpln b { text-align: left; }
+
+/* the spells' target, and each line's normal and critical values apart */
+.bcmpctl { display: flex; align-items: center; gap: 16px; padding: 12px 16px; }
+.bcmpctl .bl { color: var(--dim); font-size: 13px; white-space: nowrap; }
+.bcmpctl .bslider { flex: 1; }
+.bcmpln b.nv { font-family: var(--font-head); font-size: 18px; min-width: 40px; }
+.bcmpln .cc { display: inline-flex; align-items: baseline; gap: 3px; }
+.bcmpln .cc b { font-family: var(--font-head); font-size: 14px; color: var(--dim); min-width: 0; }
+.bcmpln .cc small { font-size: 10px; color: var(--faint); }
+.bcmpln .up, .bcmpln .up b { color: #8BD86A; }
+.bcmpln .down, .bcmpln .down b { color: #F2665E; }
+.bcmpln b.nv.up { color: #8BD86A; }
+.bcmpln b.nv.down { color: #F2665E; }
