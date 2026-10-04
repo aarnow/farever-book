@@ -433,6 +433,233 @@ function buildCompare(c, box) {
   return box;
 }
 
+/* ---- the guided build --------------------------------------------------
+   Step by step: class, level, weapons (and the off hand when the weapon
+   takes one), arsenal, the two attributes then the three stats to favour,
+   what the build is for (its infusions), a summary; the meter composes
+   the build (builds.guided_build). */
+const GUIDE = { step: 0, opts: null, cls: null, lvl: null, main: null, off: null, ars: null,
+  atbs: [null, null], stats: [null, null, null], role: null, goal: 'max' };
+const GUIDE_STEPS = ['Classe', 'Niveau', 'Armes', 'Arsenal', 'Attributs', 'Statistiques', 'Objectif', 'Résumé'];
+
+/* The goals, worded for the main attribute's role (builds.GUIDE_GOALS):
+   the infusions worn, 2 / 4 / 6 pieces reaching their tiers. */
+const GUIDE_ROLES = [{ v: 'DPS', t: 'Dégâts' }, { v: 'Support', t: 'Soins' }, { v: 'Tank', t: 'Tank' }];
+
+/* The role: the player's pick, else the main attribute's (builds.ROLE_OF). */
+function guideRole() {
+  if (GUIDE.role) return GUIDE.role;
+  const a = GUIDE.atbs[0];
+  return a === 'Vitality' ? 'Tank' : a === 'Faith' ? 'Support' : 'DPS';
+}
+
+function guideGoals() {
+  const role = { DPS: 'dps', Support: 'heal', Tank: 'tank' }[guideRole()];
+  const main = { dps: 'Dégâts', heal: 'Soins', tank: 'Survie' }[role];
+  const kind = { dps: 'Dégâts', heal: 'Soutien', tank: 'Tank' }[role];
+  const other = role === 'tank' ? 'Dégâts' : 'Tank';
+  return [
+    { v: 'max', t: main + ' maximum',
+      d: `6 pièces d’une imprégnation ${kind} (paliers 2, 4 et 6), 2 d’une autre ${kind} (palier 2)` },
+    { v: 'mix', t: role === 'tank' ? 'Survie, avec un peu de dégâts' : main + ', avec un peu de survie',
+      d: `6 pièces d’une imprégnation ${kind}, 2 d’une imprégnation ${other} (palier 2)` },
+    { v: 'surv', t: role === 'tank' ? 'Autant de dégâts que de survie' : 'Survie d’abord',
+      d: `4 pièces d’une imprégnation ${kind}, 4 d’une imprégnation ${other} (paliers 2 et 4)` }];
+}
+
+function openGuide() {
+  if (!window.pywebview) return;
+  window.pywebview.api.call('build_guide_options', {}).then((o) => {
+    if (!o) return;
+    Object.assign(GUIDE, { step: 0, opts: o, cls: null, lvl: o.maxLvl, main: null, off: null,
+      ars: null, atbs: [null, null], stats: [null, null, null], role: null, goal: 'max' });
+    drawGuide();
+  });
+}
+
+function guideWeapon(id) {
+  return ((GUIDE.opts.weapons[GUIDE.cls] || []).concat(GUIDE.opts.offhands[GUIDE.cls] || []))
+    .find((w) => w.v === id) || null;
+}
+
+function guideReady(step) {
+  if (step === 0) return !!GUIDE.cls;
+  if (step === 2) return !!GUIDE.main;
+  if (step === 3) return !!GUIDE.ars;
+  if (step === 4) return !!GUIDE.atbs[0];
+  if (step === 5) return !!GUIDE.stats[0];
+  return true;
+}
+
+function drawGuide() {
+  let back = $('#guidemodal');
+  if (!back) {
+    back = el('div', 'modalback');
+    back.id = 'guidemodal';
+    back.addEventListener('mousedown', (e) => { if (e.target === back) back.remove(); });
+    document.body.appendChild(back);
+  }
+  back.textContent = '';
+  const box = el('div', 'spanel bguide');
+  const steps = el('div', 'bgsteps');
+  GUIDE_STEPS.forEach((t, i) => {
+    const s = el('span', 'bgstep' + (i === GUIDE.step ? ' on' : i < GUIDE.step ? ' done' : ''));
+    s.appendChild(el('i', null, String(i + 1)));
+    s.appendChild(el('b', null, t));
+    steps.appendChild(s);
+  });
+  box.appendChild(steps);
+  const body = el('div', 'bgbody fadein');
+  const o = GUIDE.opts;
+  const chips = (list, cur, set, exclude) => {
+    const row = el('div', 'bgchips');
+    list.forEach((x) => {
+      if (exclude && exclude.includes(x.v)) return;
+      const c = el('button', 'bgchip' + (cur === x.v ? ' on' : ''), x.t);
+      c.type = 'button';
+      c.addEventListener('click', () => { set(cur === x.v ? null : x.v); drawGuide(); });
+      row.appendChild(c);
+    });
+    return row;
+  };
+  const weapons = (list, cur, set, exclude) => {
+    const grid = el('div', 'bgweapons');
+    list.forEach((w) => {
+      if (exclude && exclude === w.v) return;
+      const c = el('button', 'bgweapon r-' + (w.rk || 'common') + (cur === w.v ? ' on' : ''));
+      c.type = 'button';
+      const ic = el('span', 'gi');
+      if (w.img) { const im = el('img'); im.src = w.img; im.alt = ''; ic.appendChild(im); }
+      c.appendChild(ic);
+      const t = el('div');
+      t.appendChild(el('b', null, w.t));
+      t.appendChild(el('span', null, w.type + (w.hands ? ' · ' + w.hands : '')));
+      c.appendChild(t);
+      c.addEventListener('click', () => { set(w.v); drawGuide(); });
+      grid.appendChild(c);
+    });
+    return grid;
+  };
+
+  if (GUIDE.step === 0) {
+    body.appendChild(el('h3', null, 'Quelle classe ?'));
+    const row = el('div', 'bgclasses');
+    o.classes.forEach((c) => {
+      const b = el('button', 'bgclass' + (GUIDE.cls === c.v ? ' on' : ''));
+      b.type = 'button';
+      b.appendChild(classEl(c.t, c.ck, 'big'));
+      b.appendChild(el('b', null, c.t));
+      b.addEventListener('click', () => {
+        if (GUIDE.cls !== c.v) Object.assign(GUIDE, { main: null, off: null, ars: null });
+        GUIDE.cls = c.v; drawGuide();
+      });
+      row.appendChild(b);
+    });
+    body.appendChild(row);
+  } else if (GUIDE.step === 1) {
+    body.appendChild(el('h3', null, 'Quel niveau ?'));
+    body.appendChild(slider(1, o.maxLvl, GUIDE.lvl, (v) => { GUIDE.lvl = v; }, 'Niveau '));
+  } else if (GUIDE.step === 2) {
+    body.appendChild(el('h3', null, 'Quelle arme principale ?'));
+    body.appendChild(weapons(o.weapons[GUIDE.cls] || [], GUIDE.main, (v) => {
+      GUIDE.main = v; GUIDE.off = null; if (GUIDE.ars === v) GUIDE.ars = null;
+    }));
+    const w = guideWeapon(GUIDE.main);
+    if (w && w.shield && (o.offhands[GUIDE.cls] || []).length) {
+      body.appendChild(el('h3', null, 'Et dans l’autre main ?'));
+      body.appendChild(weapons(o.offhands[GUIDE.cls], GUIDE.off, (v) => { GUIDE.off = GUIDE.off === v ? null : v; }));
+      body.appendChild(el('p', 'note', 'Optionnel : un clic sur la pièce choisie la retire.'));
+    }
+  } else if (GUIDE.step === 3) {
+    body.appendChild(el('h3', null, 'Quelle arme d’arsenal ?'));
+    body.appendChild(el('p', 'note', 'La seconde arme, ses compétences en plus (pas la même que l’arme principale).'));
+    body.appendChild(weapons(o.weapons[GUIDE.cls] || [], GUIDE.ars, (v) => { GUIDE.ars = v; }, GUIDE.main));
+  } else if (GUIDE.step === 4) {
+    body.appendChild(el('h3', null, 'Attribut principal'));
+    body.appendChild(chips(o.atbs, GUIDE.atbs[0], (v) => {
+      GUIDE.atbs[0] = v; if (GUIDE.atbs[1] === v) GUIDE.atbs[1] = null;
+    }));
+    body.appendChild(el('h3', null, 'Attribut secondaire'));
+    body.appendChild(chips(o.atbs, GUIDE.atbs[1], (v) => { GUIDE.atbs[1] = v; }, [GUIDE.atbs[0]]));
+  } else if (GUIDE.step === 5) {
+    ['Statistique principale', 'Deuxième statistique', 'Troisième statistique'].forEach((t, i) => {
+      body.appendChild(el('h3', null, t));
+      const others = GUIDE.stats.filter((x, j) => j !== i && x);
+      body.appendChild(chips(o.stats, GUIDE.stats[i], (v) => { GUIDE.stats[i] = v; }, others));
+    });
+  } else if (GUIDE.step === 6) {
+    body.appendChild(el('h3', null, 'Quel rôle ?'));
+    body.appendChild(chips(GUIDE_ROLES, guideRole(), (v) => { GUIDE.role = v || guideRole(); }));
+    body.appendChild(el('h3', null, 'Que recherches-tu ?'));
+    const list = el('div', 'bggoals');
+    guideGoals().forEach((g) => {
+      const c = el('button', 'bggoal' + (GUIDE.goal === g.v ? ' on' : ''));
+      c.type = 'button';
+      c.appendChild(el('b', null, g.t));
+      c.appendChild(el('span', null, g.d));
+      c.addEventListener('click', () => { GUIDE.goal = g.v; drawGuide(); });
+      list.appendChild(c);
+    });
+    body.appendChild(list);
+    body.appendChild(el('p', 'note', 'Les pièces imprégnables sont épiques, prises prismatiques : '
+      + 'n’importe quelle imprégnation y garde son bonus, quelle que soit la faction. Chaque pièce '
+      + 'compte pour les paliers, l’imprégnation retenue est celle qui donne le plus de dégâts (de '
+      + 'soins et de dégâts pour le rôle Soins), celle de survie la plus résistante.'));
+  } else {
+    body.appendChild(el('h3', null, 'Ton build'));
+    const name = (list, v) => ((list || []).find((x) => x.v === v) || {}).t || '—';
+    const lines = [
+      ['Classe', name(o.classes, GUIDE.cls)], ['Niveau', String(GUIDE.lvl)],
+      ['Arme principale', (guideWeapon(GUIDE.main) || {}).t || '—'],
+      ['Autre main', GUIDE.off ? (guideWeapon(GUIDE.off) || {}).t : '—'],
+      ['Arsenal', (guideWeapon(GUIDE.ars) || {}).t || '—'],
+      ['Attributs', GUIDE.atbs.filter(Boolean).map((a) => name(o.atbs, a)).join(' puis ')],
+      ['Statistiques', GUIDE.stats.filter(Boolean).map((a) => name(o.stats, a)).join(', puis ')],
+      ['Rôle', name(GUIDE_ROLES, guideRole())],
+      ['Objectif', name(guideGoals(), GUIDE.goal)]];
+    const tbl = el('div', 'bgsum');
+    lines.forEach(([k, v]) => {
+      tbl.appendChild(el('span', null, k));
+      tbl.appendChild(el('b', null, v));
+    });
+    body.appendChild(tbl);
+    body.appendChild(el('p', 'note', 'Les armes sont prises en légendaire, améliorées au maximum. Pour chaque autre '
+      + 'emplacement, chaque pièce possible est essayée, puis chaque augmentation : on garde celle qui donne '
+      + 'le plus de dégâts aux compétences du build (magiques si tu privilégies la perforation magique, '
+      + 'physiques pour la perforation d’armure, et les soins en plus pour le rôle Soins), '
+      + 'tes statistiques comptant dans ton ordre. Le bonus d’imprégnation de chaque pièce vise ta première '
+      + 'statistique qu’elle n’a pas déjà. Les talents et les runes restent à choisir, tu pourras tout ajuster ensuite.'));
+  }
+  box.appendChild(body);
+
+  const nav = el('div', 'bgnav');
+  const cancel = el('button', 'rowbtn', 'Annuler');
+  cancel.type = 'button';
+  cancel.addEventListener('click', () => back.remove());
+  nav.appendChild(cancel);
+  nav.appendChild(el('span', 'sp'));
+  if (GUIDE.step > 0) {
+    const prev = el('button', 'rowbtn', '‹ Précédent');
+    prev.type = 'button';
+    prev.addEventListener('click', () => { GUIDE.step--; drawGuide(); });
+    nav.appendChild(prev);
+  }
+  const last = GUIDE.step === GUIDE_STEPS.length - 1;
+  const next = el('button', 'btn bgnext', last ? 'Composer le build' : 'Suivant ›');
+  next.type = 'button';
+  next.disabled = !guideReady(GUIDE.step);
+  next.addEventListener('click', () => {
+    if (!last) { GUIDE.step++; drawGuide(); return; }
+    BUILD_VIEW = 'stuff';
+    notify('build_guided', { cls: GUIDE.cls, lvl: GUIDE.lvl, main: GUIDE.main, off: GUIDE.off,
+      ars: GUIDE.ars, atbs: GUIDE.atbs, stats: GUIDE.stats, role: guideRole(), goal: GUIDE.goal });
+    back.remove();
+  });
+  nav.appendChild(next);
+  box.appendChild(nav);
+  back.appendChild(box);
+}
+
 /* Paste a build's share code (from another player) to add it. */
 function importCodeDialog() {
   if ($('#importmodal')) return;
@@ -491,6 +718,11 @@ function buildList(n, box) {
   imp.type = 'button';
   imp.addEventListener('click', importCodeDialog);
   btns.appendChild(imp);
+  const guide = el('button', 'btn bguidebtn', 'Build guidé');
+  guide.type = 'button';
+  guide.title = 'Compose un build étape par étape, selon tes armes et tes priorités.';
+  guide.addEventListener('click', openGuide);
+  btns.appendChild(guide);
   const cmp = el('button', 'btn bcmpbtn', 'Comparer');
   cmp.type = 'button';
   cmp.title = 'Compare deux builds de la même classe, côte à côte.';

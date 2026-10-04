@@ -55,6 +55,8 @@ class BuildTab:
             "build_open": lambda p: self._open(p.get("file")),
             "build_close": self._close,
             "build_dup": self._duplicate,
+            "build_guide_options": self._guide_options,
+            "build_guided": self._guided,
             "build_cmp_open": self._cmp_open,
             "build_cmp_set": lambda p: self._cmp_set(p.get("side"),
                                                      p.get("file")),
@@ -308,6 +310,242 @@ class BuildTab:
                                     if b.get("cls") == cls and f != file),
                                    None)
 
+    # -- the guided build -------------------------------------------------
+    def _guide_options(self):
+        """What the guide offers, asked when it opens: per class its
+        weapons (with their pictures), the attributes and the stats."""
+        d = build_data()
+        names = _fr_names("attribute")
+        out = {"classes": [{"v": c, "t": CLASS_FR[c], "ck": class_key(c)}
+                           for c in B.CLASSES],
+               "maxLvl": d.get("maxLevel") or 25,
+               "atbs": [{"v": a, "t": names.get(a) or _pretty_id(a)}
+                        for a in B.GUIDE_ATTRIBUTES],
+               "stats": [{"v": a, "t": names.get(a) or _pretty_id(a)}
+                         for a in B.GUIDE_STATS],
+               "weapons": {}, "offhands": {}}
+        for c in B.CLASSES:
+            for slot, key in (("Weapon", "weapons"), ("Offhand", "offhands")):
+                out[key][c] = sorted((
+                    {"v": k, "t": item_label(k), "img": item_icon(k),
+                     "type": item_type_label(e.get("type")),
+                     "hands": HANDS_FR.get(e.get("hands"), ""),
+                     "shield": bool(e.get("shield")),
+                     "rk": (e.get("rar") or "").lower()}
+                    for k, e in (d.get("items") or {}).items()
+                    if e.get("slot") == slot and c in e.get("cls", ())),
+                    key=lambda x: (x["type"], x["t"]))
+        return out
+
+    @staticmethod
+    def _guide_raw(b):
+        """The build's attributes, as its character sheet totals them."""
+        prof = B.to_profile(b)
+        v = character_view([], {b["name"]: prof}, b["name"], None, False)
+        return ((v.get("open") or {}).get("atbs") or {}).get("raw")
+
+    def _guide_survival(self, b):
+        """What keeps the build alive: its health over what its armour
+        lets through, from a monster of its level (armour = r/(1−r)·(385 +
+        100·level), so r = armour / (armour + 385 + 100·level))."""
+        raw = self._guide_raw(b) or {}
+        arm = max(0.0, raw.get("Armor") or 0)
+        r = arm / (arm + 385 + 100 * b["lvl"])
+        return (raw.get("MaxHealth") or 0) / max(0.05, 1 - r)
+
+    def _guide_score(self, b, mode, heals):
+        """What the guide maximises: the build's skills (its weapons', its
+        arsenal's, its class's) simulated against a common target, their
+        average hits — critical chance included — summed: magical ones only
+        when the player favours magic penetration, physical ones only for
+        armour penetration; heals too when Faith leads."""
+        from simulate import is_magic
+        raw = self._guide_raw(b)
+        sim = self._sim_view(dict(b, sim={"armor": 30, "enemy": None,
+                                          "hit": 300}), raw)
+        total = 0.0
+        for g in (sim or {}).get("groups") or ():
+            for s in g.get("skills") or ():
+                for ln in s.get("lines") or ():
+                    if ln.get("k") == "Damage":
+                        mg = is_magic(ln.get("affk"))
+                        if mode == "magic" and not mg:
+                            continue
+                        if mode == "phys" and mg:
+                            continue
+                        total += ln.get("avgv") or 0
+                    elif heals and ln.get("k") in ("Heal", "Shield"):
+                        total += ln.get("avgv") or 0
+        return total
+
+    def _guide_optimise(self, b, p):
+        """From the guide's first draft, slot by slot: every piece the slot
+        can take, then every augment, then the infusion and its stat — each
+        time the one that makes the most of the build's skills (two passes:
+        a change can open another). The wishes' own score breaks ties."""
+        from gearstats import gear_stats
+        stats = [s for s in p.get("stats") or () if s]
+        mode = ("magic" if "SpellPenetrationRating" in stats
+                and "ArmorPenetrationRating" not in stats else
+                "phys" if "ArmorPenetrationRating" in stats
+                and "SpellPenetrationRating" not in stats else "all")
+        heals = B.guide_role(p) == "Support"
+        weights = B.guide_weights(list(p.get("atbs") or ())[:2], stats[:3])
+        # the player's order of stats: a piece's own stats, the first one
+        # weighing most, raise its score by a few percent (53 of the first
+        # stat: +3.2 %, of the second: +1.6 %), enough for the order to win
+        # over the small gaps the simulation finds between them
+        prio = dict(zip(stats[:3], (0.6, 0.3, 0.1)))
+        draft = next((pc.get("inf") for pc in b["gear"].values()
+                      if pc.get("inf")), "")
+
+        def wish(kind):
+            got = gear_stats(kind, (B.item(kind) or {}).get("rar"), b["lvl"],
+                             0, [], 0)
+            vals = got[1] if got else ()
+            return (sum(prio.get(a, 0) * v for a, _n, v in vals) / 1000.0
+                    + sum(weights.get(a, 0) * v for a, _n, v in vals) / 1e5)
+
+        def score(bd):
+            return self._guide_score(bd, mode, heals)
+
+        best = score(b)
+        for _pass in range(2):
+            changed = False
+            for slot in B.SLOT_KIND:
+                if slot.startswith(("Weapon", "Offhand")):
+                    continue
+                cur = b["gear"].get(slot)
+                taken = {pc["id"] for s, pc in b["gear"].items() if s != slot}
+                pick, pick_v = cur, best * (1 + (wish(cur["id"]) if cur
+                                                 else 0))
+                for kind in B.options(b, slot):
+                    if kind in taken or (cur and kind == cur["id"]):
+                        continue
+                    e = B.item(kind) or {}
+                    pc = {"id": kind, "rar": e.get("rar") or "Rare",
+                          "lvl": b["lvl"], "up": 0, "prism": False,
+                          "augs": {}, "inf": "", "istat": ""}
+                    if B.infusable(pc):
+                        # epic: prismatic, infused, its bonus on a wish
+                        pc.update(prism=True, inf=draft,
+                                  istat=B.guide_istat(pc, stats))
+                    b["gear"][slot] = pc
+                    val = score(b) * (1 + wish(kind))
+                    if val > pick_v + 1e-9:
+                        pick, pick_v = pc, val
+                if pick is None:
+                    b["gear"].pop(slot, None)
+                else:
+                    b["gear"][slot] = pick
+                if pick is not cur:
+                    changed = True
+                best = score(b)
+            if not changed and _pass:
+                break
+        # the augments, slot by slot
+        augs = build_data().get("augments") or {}
+        for slot, pc in b["gear"].items():
+            for kind in B.aug_kinds(pc["id"]):
+                cands = [a for a in (augs.get(kind) or {}).get("items") or ()
+                         if kind != "AugmentDemonSigil" or B.sigil_ok(b, a)]
+                keep, keep_v = pc["augs"].get(kind), best
+                for aid in cands:
+                    pc["augs"][kind] = aid
+                    val = score(b)
+                    if val > keep_v + 1e-9:
+                        keep, keep_v = aid, val
+                if keep:
+                    pc["augs"][kind] = keep
+                else:
+                    pc["augs"].pop(kind, None)
+                best = keep_v
+        plan = self._guide_infusions(b, p, stats, score)
+        best = score(b)
+        return B.normalize(b), best, mode, plan
+
+    def _guide_infusions(self, b, p, stats, score):
+        """The infusions the goal asks for (builds.GUIDE_GOALS): its groups
+        in order, each the infusion of its role that does the most —
+        damage (or heals) for a damage or support role, health over what
+        the armour lets through for a tank — the others kept to theirs.
+        The pieces that take one are epic at least, so prismatic: any
+        infusion's bonus holds on them, whatever their faction, and the
+        bonus aims at the player's first stat the piece can roll."""
+        infs = infusion_data().get("infusions") or {}
+        pieces = [pc for pc in b["gear"].values() if B.infusable(pc)]
+        for pc in pieces:
+            pc["prism"] = True
+            pc["istat"] = B.guide_istat(pc, stats)
+        main = B.guide_role(p)
+        other = "DPS" if main == "Tank" else "Tank"
+        goal = p.get("goal") if p.get("goal") in B.GUIDE_GOALS else "max"
+        plan = B.GUIDE_GOALS[goal]
+        groups = []                         # [[sid, pieces]], in order
+
+        def wear():
+            left = list(pieces)
+            for sid, n in groups:
+                for pc in left[:n]:
+                    pc["inf"] = sid
+                left = left[n:]
+            for pc in left:
+                pc["inf"] = ""
+
+        pref = {s: i for i, s in enumerate(B.GUIDE_INFUSION_PREF)}
+        for who, n in plan:
+            role = main if who == "main" else other
+            taken = {sid for sid, _n in groups}
+            cands = sorted((sid for sid, e in infs.items()
+                            if sid.endswith("_" + role) and sid not in taken),
+                           key=lambda s: pref.get(s, 99))
+            pick, pick_v = None, None
+            # survival asked for: not an infusion that costs some (the
+            # demons' 4 pieces: Vitality −4 %)
+            wear()
+            floor = (self._guide_survival(b) * 0.999
+                     if goal != "max" and role != "Tank" else None)
+            for sid in cands:
+                groups.append([sid, n])
+                wear()
+                if floor and self._guide_survival(b) < floor:
+                    groups.pop()
+                    continue
+                val = (self._guide_survival(b) if role == "Tank"
+                       else score(b))
+                groups.pop()
+                # a real gain only: else the preferred one stays
+                if pick_v is None or val > pick_v * 1.001:
+                    pick, pick_v = sid, val
+            if pick:
+                groups.append([pick, n])
+        wear()
+        out, done = [], 0
+        for sid, n in groups:
+            k = max(0, min(n, len(pieces) - done))
+            done += k
+            if k:
+                out.append({"name": (infs.get(sid) or {}).get("name") or sid,
+                            "n": k})
+        return out
+
+    def _guided(self, p):
+        b = B.guided_build(p or {})
+        b, score, mode, plan = self._guide_optimise(b, p or {})
+        cls = CLASS_FR.get(b["cls"], b["cls"])
+        n = sum(1 for _ in B.list_builds() if True) + 1
+        b["name"] = f"{cls} guidé {n}"
+        self.cmp = None
+        self.file, self.build = B.save_build(b), b
+        self.slot, self.confirm_delete = None, False
+        what = {"magic": "dégâts magiques", "phys": "dégâts physiques"}.get(
+            mode, "dégâts")
+        worn = ", ".join(f"{x['name']} ×{x['n']}" for x in plan)
+        self._toast(f"Build « {b['name']} » composé pour le maximum de "
+                    f"{what} de ses compétences ({len(b['gear'])} pièces"
+                    + (f", imprégnations {worn}" if worn else "") +
+                    "). Les talents et les runes restent à choisir.")
+
     def _cmp_armor(self, value):
         """The target's damage reduction for the spells, both builds."""
         if self.cmp is not None:
@@ -528,6 +766,7 @@ class BuildTab:
                        "normalv": round(x["normal"], 1),
                        "critv": round(x["crit"], 1),
                        "avg": fmt(x["avg"]), "avgv": round(x["avg"], 1),
+                       "affk": x["aff"] or "",
                        "mit": pc(x["mit"]) if "mit" in x else ""}
                       for x in r["lines"]]}
 
@@ -656,9 +895,10 @@ class BuildTab:
                 "augs": augs, "infusable": B.infusable(p),
                 "inf": p.get("inf") or "", "istat": p.get("istat") or "",
                 "infOptions": [{"v": "", "t": "Aucune"}] + _infusion_options(),
+                # only what the piece can roll: not a stat it already has
                 "statOptions": [{"v": "", "t": "Aucun"}] + [
                     {"v": s, "t": attr.get(s) or _pretty_id(s)}
-                    for s in B.INFUSION_STATS],
+                    for s in B.istat_options(p)],
                 "g": entry}
         order = {k: i for i, k in enumerate(FILTER_STAT_ORDER)}
         return {"slot": slot, "label": SLOT_LABELS.get(slot, slot),

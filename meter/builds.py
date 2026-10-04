@@ -305,7 +305,7 @@ def normalize(b):
             p["prism"] = False
         elif p.get("inf") not in (d.get("infusions") or ()):
             p.pop("inf", None)
-        if p.get("istat") not in INFUSION_STATS:
+        if p.get("istat") not in istat_options(p):
             p["istat"] = None           # set on its own: a planned bonus
         gear[slot] = p
     b["gear"] = gear
@@ -483,3 +483,179 @@ def delete_build(file):
         return True
     except OSError:
         return False
+
+
+# ---- the guided build ----------------------------------------------------------
+# What the player wants (class, level, weapons, two attributes, three stats)
+# made a build: each slot gets the piece whose stats fit those wishes best,
+# each augment slot the augment that does, the faction armour an infusion,
+# the class's skills their slots. Talents and runes are left to the player.
+GUIDE_ATTRIBUTES = ("Vitality", "Strength", "Dexterity", "Faith", "Intellect")
+GUIDE_STATS = ("CritChanceRating", "FervorRating", "ArmorPenetrationRating",
+               "SpellPenetrationRating")
+# how much each wish counts: main attribute, second; first stat, 2nd, 3rd;
+# and a little vitality, which everyone needs
+GUIDE_WEIGHTS = {"atb": (1.0, 0.55), "stat": (0.9, 0.6, 0.35),
+                 "vitality": 0.15}
+ROLE_OF = {"Vitality": "Tank", "Faith": "Support"}      # else DPS
+GUIDE_ROLES = ("DPS", "Support", "Tank")
+
+
+def guide_role(p):
+    """The role the player picked, else the one the main attribute says."""
+    return p.get("role") if p.get("role") in GUIDE_ROLES else \
+        ROLE_OF.get((p.get("atbs") or [None])[0], "DPS")
+# the guide's last question, what the build is for: the infusions it wears,
+# as (role, pieces) — "main" the main attribute's role, "other" Tank (DPS
+# for a tank). Infusions count by piece, whatever its faction
+# (ent.Hero.refreshInfusions), and reach their tiers at 2, 4 and 6.
+GUIDE_GOALS = {"max": (("main", 6), ("main", 2)),
+               "mix": (("main", 6), ("other", 2)),
+               "surv": (("main", 4), ("other", 4))}
+# a 2-piece tier is an effect the sheet can't weigh: those that work with
+# no condition first (in combat: a shield every 5 s, a mastery bonus...)
+GUIDE_INFUSION_PREF = ("Infusion_Bee_Tank", "Infusion_Manfish_Tank",
+                       "Infusion_Crimson_DPS", "Infusion_Kobold_DPS",
+                       "Infusion_Crimson_Support", "Infusion_Kobold_Support")
+
+
+def istat_options(piece):
+    """The infusion bonus stats a piece can roll: $HInfusion.
+    pickInfusionBonusStat draws one of the four at random when the piece
+    drops, leaving out those the piece already has."""
+    from gearstats import gear_stats
+    e = item(piece.get("id")) or {}
+    got = gear_stats(piece.get("id"), piece.get("rar") or e.get("rar"),
+                     piece.get("lvl"), 0, [], 0)
+    own = {a for a, _n, _v in (got[1] if got else ())}
+    return [s for s in INFUSION_STATS if s not in own]
+
+
+def guide_istat(piece, stats):
+    """The bonus a guided build aims for: the player's first stat the piece
+    can roll, else the first it can."""
+    can = istat_options(piece)
+    return next((s for s in stats if s in can), can[0] if can else "")
+
+
+def guide_weights(atbs, stats):
+    w = {"Vitality": GUIDE_WEIGHTS["vitality"]}
+    for k, v in zip(atbs, GUIDE_WEIGHTS["atb"]):
+        if k:
+            w[k] = w.get(k, 0) + v
+    for k, v in zip(stats, GUIDE_WEIGHTS["stat"]):
+        if k:
+            w[k] = w.get(k, 0) + v
+    return w
+
+
+def _best(cands, weights):
+    """The candidate whose values fit the weights best: each attribute
+    counted against the best value any candidate has of it (so a rating
+    of 60 weighs like a primary of 20 when those are each slot's tops)."""
+    tops = {}
+    for _k, vals in cands:
+        for a, v in vals.items():
+            tops[a] = max(tops.get(a, 0), v)
+
+    def score(vals):
+        return sum(w * vals.get(a, 0) / tops[a]
+                   for a, w in weights.items() if tops.get(a))
+    ranked = sorted(cands, key=lambda kv: -score(kv[1]))
+    return [k for k, vals in ranked if score(vals) > 0] or \
+        [k for k, _v in ranked]
+
+
+def guided_build(p):
+    """A build from the guide's answers ({cls, lvl, main, off, ars, atbs:
+    [main, second], stats: [1st, 2nd, 3rd]}), within the rules."""
+    from gamedata import _augments_data, infusion_data
+    from gearstats import gear_stats
+    cls = p.get("cls") if p.get("cls") in CLASSES else "Priest"
+    b = new_build("Build guidé", cls, p.get("lvl"))
+    lvl = b["lvl"]
+    weights = guide_weights(list(p.get("atbs") or ())[:2],
+                            list(p.get("stats") or ())[:3])
+
+    def piece(kind):
+        e = item(kind) or {}
+        rar = e.get("rar") or "Rare"
+        return {"id": kind, "rar": rar, "lvl": lvl,
+                "up": max_upgrades(rar, kind), "prism": False, "augs": {},
+                "inf": "", "istat": ""}
+
+    def top(kind):
+        """A weapon at its best: legendary, fully upgraded."""
+        pc = piece(kind)
+        pc["rar"] = "Legendary"
+        pc["up"] = max_upgrades("Legendary", kind)
+        return pc
+
+    for slot, key in (("Weapon1", "main"), ("Weapon2", "ars")):
+        if p.get(key) in options(b, slot):
+            b["gear"][slot] = top(p[key])
+    if p.get("off") and p["off"] in options(b, "OffhandWeapon"):
+        b["gear"]["OffhandWeapon"] = top(p["off"])
+
+    def stats_of(kind):
+        got = gear_stats(kind, (item(kind) or {}).get("rar"), lvl, 0, [], 0)
+        return {a: v for a, _n, v in (got[1] if got else ())}
+
+    used = set()
+    for slot in SLOT_KIND:
+        if slot.startswith(("Weapon", "Offhand")):
+            continue
+        cands = [(k, stats_of(k)) for k in options(b, slot) if k not in used]
+        cands = [c for c in cands if c[1]]
+        if not cands:
+            continue
+        kind = _best(cands, weights)[0]
+        used.add(kind)                      # two rings: two different ones
+        b["gear"][slot] = piece(kind)
+
+    # each augment slot: the augment whose effects fit (those that only
+    # grant a skill or a talent are the player's call)
+    augs = (build_data().get("augments") or {})
+    adata = _augments_data()
+    for slot, pc in b["gear"].items():
+        for kind in aug_kinds(pc["id"]):
+            cands = []
+            for aid in (augs.get(kind) or {}).get("items") or ():
+                if kind == "AugmentDemonSigil" and not sigil_ok(b, aid):
+                    continue
+                vals = {}
+                for a, v in (adata.get(aid) or {}).get("a") or ():
+                    vals[a] = vals.get(a, 0) + v
+                if vals and all(v > 0 for v in vals.values()):
+                    cands.append((aid, vals))
+            if cands:
+                pc["augs"][kind] = _best(cands, weights)[0]
+
+    # the faction armour: the infusion of the faction most of it is from,
+    # for the role the main attribute says, its bonus on the first stat
+    infs = infusion_data().get("infusions") or {}
+    role = ROLE_OF.get((p.get("atbs") or [None])[0], "DPS")
+    pieces = [pc for pc in b["gear"].values() if infusable(pc)]
+    facs = {}
+    for pc in pieces:
+        f = (item(pc["id"]) or {}).get("fac")
+        facs[f] = facs.get(f, 0) + 1
+    if facs:
+        fac = max(facs, key=facs.get)
+        inf = next((sid for sid, e in infs.items()
+                    if e.get("f") == fac and sid.endswith("_" + role)),
+                   next((sid for sid, e in infs.items() if e.get("f") == fac),
+                        ""))
+        for pc in pieces:
+            pc["inf"], pc["prism"] = inf, True
+            pc["istat"] = guide_istat(pc, p.get("stats") or ())
+
+    b = normalize(b)
+    # the class's skills, in their slots (the weapons' come with them)
+    opts, slots = skill_options(b)
+    if not any(b["skills"].get("class") or ()):
+        b["skills"]["class"] = list(opts.get("class") or ())[:4]
+    if not any(b["skills"].get("arsenal") or ()):
+        b["skills"]["arsenal"] = list(opts.get("arsenal") or ())[
+            :slots.get("arsenal", 0)]
+    return normalize(b)
