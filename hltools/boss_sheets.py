@@ -74,21 +74,30 @@ def unit_stats(units, uid):
 
 
 def _effects(node, out, tick=None):
-    """Every damage / heal effect under a skill's steps."""
+    """Every effect under a skill's steps: damage (0), heal (1), and the
+    others (a status applied, a resource given) without a value. One entry
+    per scaling line: the normal and heroic values are two lines of the
+    same effect, told apart by their own `conds.heroic`."""
     if isinstance(node, dict):
         t = ((node.get("props") or {}).get("loop") or {}).get("tick", tick)
         for e in node.get("effects") or ():
-            sc = (e.get("scaling") or [{}])
-            out.append({
-                "kind": "heal" if e.get("effect") == 1 else "dmg",
-                "aff": e.get("affinity") or "",
-                "ratio": sc[0].get("ratio") if sc and sc[0] else None,
-                "atb": sc[0].get("atb") if sc and sc[0] else None,
-                "heroic": e.get("heroic", (sc[0].get("conds") or {}).get(
-                    "heroic") if sc and sc[0] else None),
-                "status": e.get("status"),
-                "knock": bool((e.get("sideEffects") or {}).get("knockBack")),
-                "tick": t})
+            kind = {0: "dmg", 1: "heal"}.get(e.get("effect"), "other")
+            base = {"kind": kind, "aff": e.get("affinity") or "",
+                    "status": e.get("status"),
+                    "knock": bool((e.get("sideEffects") or {}).get(
+                        "knockBack")),
+                    "tick": t}
+            lines = [sc for sc in e.get("scaling") or () if sc.get("ratio")]
+            if kind == "other" or not lines:
+                out.append(dict(base, ratio=None, atb=None,
+                                value=e.get("baseVal") or None,
+                                heroic=e.get("heroic")))
+                continue
+            for sc in lines:
+                hero = (sc.get("conds") or {}).get("heroic", e.get("heroic"))
+                out.append(dict(base, ratio=sc["ratio"], atb=sc.get("atb"),
+                                value=e.get("baseVal") or None,
+                                heroic=hero))
         for k, v in node.items():
             if k != "effects":
                 _effects(v, out, t)
@@ -159,9 +168,15 @@ def build(cdb, bosses):
             for st in s["statuses"]:
                 r = skills.get(st) or {}
                 stp = (r.get("props") or {}).get("status") or {}
+                # a poison or a burn deals its damage itself
+                se = []
+                _effects(r.get("steps"), se)
+                _effects(r.get("props"), se)
                 out["statuses"][st] = {"duration": r.get("duration"),
                                        "stacks": stp.get("maxStacks"),
-                                       "vars": r.get("vars") or {}}
+                                       "vars": r.get("vars") or {},
+                                       "effects": [e for e in se
+                                                   if e["ratio"]]}
             for sm in s["summons"]:
                 if sm["unit"] in units and sm["unit"] not in out["units"]:
                     out["units"][sm["unit"]] = unit_sheet(units, skills,

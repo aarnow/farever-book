@@ -163,7 +163,7 @@ function bsSkill(s, small) {
   const t = el('div', 'bst');
   const nm = el('div', 'bsn', s.name);
   if (s.aff) nm.appendChild(el('span', 'bsaff ' + (s.magic ? 'magic' : 'phys'),
-    s.aff + (s.magic && s.aff !== 'Magique' ? ' · magique' : '')));
+    s.aff + (s.magic && s.aff !== 'Magie' ? ' · magique' : '')));
   t.appendChild(nm);
   if (s.fx) t.appendChild(el('div', 'bsfx', s.fx));
   if ((s.tags || []).length) {

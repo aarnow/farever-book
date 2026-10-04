@@ -17,14 +17,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 
 from common import ANALYSIS, _n, _pretty_id, element_label
 from gamedata import (_fr_desc, _fr_ref, _skill_label, _unit_label,
                       build_data, gear_stats_data)
 from simulate import is_magic
 
-# the bosses whose sheet is shown (the others once checked against the game)
-BOSS_SHEETS_READY = {"Nepsilon"}
+# the bosses whose sheet is shown. Not yet: Cleodora (a trio: only she is
+# listed), MunsterChuck (a machine run by its script), Phrixes (several
+# forms) — their skills don't fit the sheet as it is.
+BOSS_SHEETS_READY = {"Nepsilon", "Reblochonk", "Ratsar", "Crabgantua",
+                     "Gatsbee", "Mokshi", "SpongeBlob", "Golcano", "RobinHoof"}
 
 _DATA = None
 
@@ -117,16 +121,21 @@ def _icon_ok(sid):
 
 def _status_text(sid, data):
     st = (data.get("statuses") or {}).get(sid) or {}
-    name = _skill_label(sid)
+    name = _skill_label(sid).rstrip(".")
     if name == _pretty_id(sid):
         return None
     desc = _fr_desc("skill").get(sid) or ""
     for k, v in (st.get("vars") or {}).items():
         desc = desc.replace(f"::{k}%#::", f"{_num(v * 100, 1)} %")
+        desc = desc.replace(f"::{k}::", _num(v, 1))
+    said = "::duration::" in desc       # then not said again below
+    if st.get("duration"):
+        desc = desc.replace("::duration::", f"{_num(st['duration'], 1)} s")
+    desc = re.sub(r"::[^:]+::", "X", desc)
     bits = [_fr_ref(desc).strip().rstrip(".")] if desc else []
     if st.get("stacks") and st["stacks"] < 1000:
         bits.append(f"jusqu'à {st['stacks']} cumuls")
-    if st.get("duration"):
+    if st.get("duration") and not said:
         bits.append(f"{_num(st['duration'], 1)} s")
     return {"id": sid, "name": name, "t": " · ".join(b for b in bits if b)}
 
@@ -145,31 +154,42 @@ def _when(sid, phases):
 
 def _skills(sheet, level, heroic, data, phases, owner=None):
     power = stat(sheet, "FoePower", level, heroic) or 0
-    out = []
+    out, seen = [], set()
     for s in sheet.get("skills") or ():
         if s.get("heroicOnly") and not heroic:
             continue
         effs = [e for e in s.get("effects") or ()
                 if _applies(e.get("heroic"), heroic)]
-        hits = [e for e in effs if e.get("ratio")]
+        hits = [e for e in effs if e.get("ratio")
+                and e.get("kind") in ("dmg", "heal")]
         main = hits[0] if hits else None
+        via = None                          # the damage is the status's own
+        if main is None:
+            for st in s.get("statuses") or ():
+                se = [e for e in ((data.get("statuses") or {}).get(st) or {})
+                      .get("effects") or () if _applies(e.get("heroic"),
+                                                        heroic)]
+                if se:
+                    main, via = se[0], st
+                    break
         name = "Attaque de base" if s.get("auto") else _skill_label(s["id"])
         if name == _pretty_id(s["id"]):
             name = ("Soin" if main and main.get("kind") == "heal"
-                    else "Compétence")
+                    else "Compétence sans nom")
         aff = (main or (effs[0] if effs else {})).get("aff") or ""
         tags = []
         if s.get("auto"):
-            tags.append(f"Toutes les {_num(s['cooldown'], 1)} s"
-                        if s.get("cooldown") else "Attaque de base")
+            if s.get("cooldown"):
+                tags.append(f"Toutes les {_num(s['cooldown'], 1)} s")
         elif s.get("cooldown"):
             tags.append(f"Recharge {_num(s['cooldown'], 1)} s")
         when = _when(s["id"], phases)
         if when:
             tags.append(when)
-        if s.get("range"):
-            tags.append(("Mêlée " if s.get("auto") else "Portée ")
-                        + f"{_num(s['range'], 1)} m")
+        rng = s.get("range")
+        if rng and rng <= 100:              # past that: the whole arena
+            tags.append(("Mêlée " if s.get("auto") and rng <= 6 else "Portée ")
+                        + f"{_num(rng, 1)} m")
         fx = []
         if main and main.get("kind") == "heal" and owner:
             fx.append(f"soigne {owner}")
@@ -178,13 +198,21 @@ def _skills(sheet, level, heroic, data, phases, owner=None):
         for st in sorted({e["status"] for e in effs if e.get("status")}):
             t = _status_text(st, data)
             fx.append(f"applique {t['name']}" if t else "ralentit")
+        called = {}
         for sm in s.get("summons") or ():
             if _applies(sm.get("heroic"), heroic):
-                fx.append(f"invoque {_unit_label(sm['unit'])}")
+                called[sm["unit"]] = called.get(sm["unit"], 0) + 1
+        for u, k in called.items():
+            fx.append(f"invoque {k} × {_unit_label(u)}" if k > 1
+                      else f"invoque {_unit_label(u)}")
         val = per = ""
-        if main:
+        if main and power * main["ratio"] >= 0.5:
             val = _num(power * main["ratio"])
-            if main.get("tick"):
+            if via:
+                per = "par cumul"
+                if main.get("tick"):
+                    per += f", toutes les {_num(main['tick'], 1)} s"
+            elif main.get("tick"):
                 n = 1 / main["tick"]
                 per = (f"par impact, {_num(n, 1)} par seconde" if n > 1
                        else "par seconde" if n == 1
@@ -194,13 +222,19 @@ def _skills(sheet, level, heroic, data, phases, owner=None):
         own = sorted((x for x in s.get("statuses") or ()
                       if x.startswith(s["id"] + "_")), reverse=True)
         icon = next((i for i in [s["id"]] + own if _icon_ok(i)), "")
+        if not val and not fx and not s.get("auto") and not when:
+            continue                        # nothing to tell (a resource...)
+        row_key = (name, aff, val, per)
+        if row_key in seen:
+            continue                        # the same skill, listed twice
+        seen.add(row_key)
         out.append({
             "id": s["id"], "name": name, "icon": icon,
             "aff": element_label(aff) if aff else "",
             "magic": bool(aff) and is_magic(aff),
             "heal": bool(main) and main.get("kind") == "heal",
             "v": val, "per": per,
-            "coef": (f"×{_num(main['ratio'], 2)} puissance" if main else ""),
+            "coef": (f"×{_num(main['ratio'], 2)} puissance" if val else ""),
             "tags": tags,
             "fx": (fx[0][0].upper() + ", ".join(fx)[1:] + ".") if fx else ""})
     return out
@@ -240,16 +274,20 @@ def boss_sheet_view(boss, heroic=True, level=None):
             t = _status_text(st, data)
             if t and t["id"] not in {x["id"] for x in statuses} and t["t"]:
                 statuses.append(t)
-    summons = []
+    summons, met = [], set()
     for s in sheet.get("skills") or ():
         for sm in s.get("summons") or ():
             u = (data.get("units") or {}).get(sm["unit"])
-            if not u or not _applies(sm.get("heroic"), heroic):
+            if not u or not _applies(sm.get("heroic"), heroic) \
+                    or sm["unit"] in met:
                 continue
+            met.add(sm["unit"])
             st = _unit(u, level, heroic, data)
             summons.append({
                 "name": _unit_label(sm["unit"]),
-                "by": ("Invoqué par " + _skill_label(s["id"])),
+                "by": ("Invoqué par " + _skill_label(s["id"])
+                       if _skill_label(s["id"]) != _pretty_id(s["id"])
+                       else "Invoqué pendant le combat"),
                 "hp": _num(st["hp"]) if st["hp"] else "—",
                 "armor": _num(st["armor"]) if st["armor"] else "—",
                 "armorPct": _num(st["armorPct"]),
@@ -269,7 +307,9 @@ def boss_sheet_view(boss, heroic=True, level=None):
         "phases": [{"at": round(p["at"] * 100),
                     "t": next((x["name"] for x in _skills(
                         sheet, level, heroic, data, phases)
-                        if x["id"] == p["skill"]
-                        or x["id"].endswith("_" + (p["skill"] or ""))), "")}
+                        if p.get("skill") and (
+                            x["id"] == p["skill"]
+                            or x["id"].endswith("_" + p["skill"]))),
+                        "Palier")}
                    for p in phases],
         "summons": summons, "statuses": statuses}

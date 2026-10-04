@@ -376,6 +376,9 @@ ELEMENT_LABELS = {
     "Physical": "Physique", "Magic": "Magie", "Fire": "Feu",
     "Spark": "Étincelle", "Earth": "Terre", "Water": "Eau", "Faith": "Foi",
     "Light": "Lumière", "Raw": "Brut", "Cheese": "Fromage", "Chaos": "Chaos",
+    "Nature": "Nature", "Wind": "Vent", "Shadow": "Ombre", "Honey": "Miel",
+    "Flower": "Fleur", "Lava": "Lave", "Electric": "Électrique",
+    "Violence": "Violence",
     "None": "Aucun", "?": "Autre",
 }
 

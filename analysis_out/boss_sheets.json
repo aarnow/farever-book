@@ -164,22 +164,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.8,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.8,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -195,22 +197,24 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 1.2,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1.2,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 3,
-"atb": "FoePower",
-"heroic": true,
 "status": "ManfishBoss_Bubble_Roam_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 3,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [
@@ -233,22 +237,24 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 2,
-"atb": "FoePower",
-"heroic": true,
 "status": "ManfishBoss_Bubble_Roam_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 2,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -266,12 +272,13 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.2,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": 0.125
+"tick": 0.125,
+"ratio": 0.2,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -287,22 +294,24 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 1,
-"atb": "FoePower",
-"heroic": null,
 "status": "ManfishBoss_Bubble_Roam_Status_Slow",
 "knock": false,
-"tick": 0.25
+"tick": 0.25,
+"ratio": 1,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": "ManfishBoss_Bubble_Roam_Status",
 "knock": false,
-"tick": 0.25
+"tick": 0.25,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -500,22 +509,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -531,32 +542,35 @@
 {
 "kind": "dmg",
 "aff": "Cheese",
+"status": null,
+"knock": false,
+"tick": 1,
 "ratio": 0.6,
 "atb": "FoePower",
-"heroic": null,
-"status": null,
-"knock": false,
-"tick": 1
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Cheese",
+"status": null,
+"knock": false,
+"tick": 1,
 "ratio": 1.2,
 "atb": "FoePower",
-"heroic": null,
-"status": null,
-"knock": false,
-"tick": 1
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Cheese",
-"ratio": 0,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -572,12 +586,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 2,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 2,
+"atb": "FoePower",
+"value": null,
+"heroic": false
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"status": null,
+"knock": true,
+"tick": null,
+"ratio": 5,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -746,32 +772,35 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.8,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.8,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": true,
 "status": "Ratsar_Heroic_Attack_Bleed",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -789,12 +818,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.4,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.4,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -810,42 +840,68 @@
 {
 "kind": "dmg",
 "aff": "Physical",
+"status": null,
+"knock": false,
+"tick": 0.25,
 "ratio": 0.3,
 "atb": "FoePower",
-"heroic": false,
+"value": null,
+"heroic": false
+},
+{
+"kind": "dmg",
+"aff": "Physical",
 "status": null,
 "knock": false,
-"tick": 0.25
+"tick": 0.25,
+"ratio": 0.6,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 },
 {
 "kind": "dmg",
 "aff": "Fire",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": null
-},
-{
-"kind": "dmg",
-"aff": "",
-"ratio": null,
-"atb": null,
-"heroic": true,
-"status": "Ratsar_Heroic_Burn",
-"knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Fire",
+"status": null,
+"knock": true,
+"tick": null,
 "ratio": 1,
 "atb": "FoePower",
-"heroic": null,
+"value": null,
+"heroic": true
+},
+{
+"kind": "other",
+"aff": "",
+"status": "Ratsar_Heroic_Burn",
+"knock": false,
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": true
+},
+{
+"kind": "dmg",
+"aff": "Fire",
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1051,22 +1107,24 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 2,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 2,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 20,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1082,22 +1140,24 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 4,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 4,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 20,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1113,32 +1173,35 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": "R1CrabBoss_Heroic_Bubble_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": "R1CrabBoss_Heroic_Bubble_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": "R1CrabBoss_Heroic_Bubble_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1156,12 +1219,13 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 10,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": 0.1
+"tick": 0.1,
+"ratio": 10,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1177,32 +1241,35 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": "R1CrabBoss_Heroic_Bubble_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": "R1CrabBoss_Heroic_Bubble_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": "R1CrabBoss_Heroic_Bubble_Status",
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1220,12 +1287,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 2,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": 0.1
+"tick": 0.1,
+"ratio": 2,
+"atb": "FoePower",
+"value": null,
+"heroic": false
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"status": null,
+"knock": true,
+"tick": 0.1,
+"ratio": 4,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1241,12 +1320,13 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.4,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.4,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1415,22 +1495,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1,
-"atb": "FoePower",
-"heroic": false,
 "status": "HoneyCovered",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.8,
-"atb": "FoePower",
-"heroic": true,
 "status": "HoneyCovered",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.8,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1448,22 +1530,24 @@
 {
 "kind": "dmg",
 "aff": "Honey",
-"ratio": 0.55,
-"atb": "FoePower",
-"heroic": false,
 "status": "HoneyCovered",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.55,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Honey",
-"ratio": 1.1,
-"atb": "FoePower",
-"heroic": true,
 "status": "HoneyCovered",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.1,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1479,14 +1563,15 @@
 "auto": false,
 "effects": [
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": "Gastbee_Heroic_Swarm_Status",
 "knock": false,
-"tick": 1
+"tick": 1,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1657,22 +1742,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.8,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.8,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.8,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.8,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1688,12 +1775,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.7,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.7,
+"atb": "FoePower",
+"value": null,
+"heroic": false
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"status": null,
+"knock": false,
+"tick": null,
+"ratio": 1.4,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1709,22 +1808,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.85,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 0.85,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1740,12 +1841,13 @@
 {
 "kind": "dmg",
 "aff": "Honey",
-"ratio": 0.8,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.8,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1761,12 +1863,13 @@
 {
 "kind": "dmg",
 "aff": "Honey",
-"ratio": 0.8,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.8,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -1949,22 +2052,24 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -1980,32 +2085,35 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": true,
 "status": "Spongeblob_Suffocation",
 "knock": false,
-"tick": null
-},
-{
-"kind": "dmg",
-"aff": "",
+"tick": null,
 "ratio": null,
 "atb": null,
-"heroic": null,
+"value": null,
+"heroic": true
+},
+{
+"kind": "other",
+"aff": "",
 "status": "Stun",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2022,14 +2130,15 @@
 "auto": false,
 "effects": [
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 50,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2045,32 +2154,35 @@
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": 0.9,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.9,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": true,
 "status": "Spongeblob_Suffocation",
 "knock": false,
-"tick": null
-},
-{
-"kind": "dmg",
-"aff": "",
+"tick": null,
 "ratio": null,
 "atb": null,
-"heroic": null,
+"value": null,
+"heroic": true
+},
+{
+"kind": "other",
+"aff": "",
 "status": "Stun",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2251,22 +2363,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1,
+"atb": "FoePower",
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -2282,12 +2396,13 @@
 {
 "kind": "dmg",
 "aff": "Fire",
-"ratio": 0.2,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": 5
+"tick": 5,
+"ratio": 0.2,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2303,42 +2418,46 @@
 {
 "kind": "dmg",
 "aff": "Fire",
+"status": null,
+"knock": true,
+"tick": 1,
 "ratio": 1.2,
 "atb": "FoePower",
-"heroic": false,
-"status": null,
-"knock": true,
-"tick": 1
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Fire",
+"status": null,
+"knock": true,
+"tick": 1,
 "ratio": 2,
 "atb": "FoePower",
-"heroic": true,
-"status": null,
-"knock": true,
-"tick": 1
+"value": null,
+"heroic": true
 },
 {
 "kind": "dmg",
 "aff": "Fire",
+"status": null,
+"knock": false,
+"tick": null,
 "ratio": 0.8,
 "atb": "FoePower",
-"heroic": false,
-"status": null,
-"knock": false,
-"tick": null
+"value": null,
+"heroic": false
 },
 {
 "kind": "dmg",
 "aff": "Fire",
-"ratio": 1.6,
-"atb": "FoePower",
-"heroic": true,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.6,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -2354,12 +2473,13 @@
 {
 "kind": "dmg",
 "aff": "Fire",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2530,12 +2650,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2551,12 +2672,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2572,12 +2694,13 @@
 {
 "kind": "dmg",
 "aff": "Light",
-"ratio": 1.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2593,12 +2716,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.1,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 1.1,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2614,12 +2738,13 @@
 {
 "kind": "dmg",
 "aff": "Fire",
-"ratio": 1.2,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": 1
+"tick": 1,
+"ratio": 1.2,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2743,12 +2868,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.45,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.45,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2764,12 +2890,13 @@
 {
 "kind": "heal",
 "aff": "",
-"ratio": 0.00125,
-"atb": "MaxHealth",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": 1
+"tick": 1,
+"ratio": 0.00125,
+"atb": "MaxHealth",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2926,12 +3053,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.1,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": 1.1,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2947,12 +3075,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.8,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.8,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -2968,22 +3097,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.6,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.6,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.6,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.6,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3173,12 +3304,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.45,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.45,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3194,12 +3326,13 @@
 {
 "kind": "dmg",
 "aff": "Light",
-"ratio": 0.45,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.45,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3215,12 +3348,13 @@
 {
 "kind": "dmg",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 1,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3236,12 +3370,13 @@
 {
 "kind": "heal",
 "aff": "",
-"ratio": 1,
-"atb": "MaxHealth",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": 0.5
+"tick": 0.5,
+"ratio": 1,
+"atb": "MaxHealth",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3257,12 +3392,13 @@
 {
 "kind": "dmg",
 "aff": "Chaos",
-"ratio": 0.45,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.45,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3278,12 +3414,13 @@
 {
 "kind": "dmg",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 10,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3299,12 +3436,13 @@
 {
 "kind": "dmg",
 "aff": "Raw",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 666666,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3320,12 +3458,13 @@
 {
 "kind": "dmg",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": 1,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3341,12 +3480,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.45,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.45,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3362,12 +3502,13 @@
 {
 "kind": "dmg",
 "aff": "Chaos",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3383,22 +3524,24 @@
 {
 "kind": "dmg",
 "aff": "Chaos",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Chaos",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3689,12 +3832,13 @@
 {
 "kind": "dmg",
 "aff": "Chaos",
-"ratio": 0.5,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.5,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3832,12 +3976,13 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 0.65,
-"atb": "FoePower",
-"heroic": null,
 "status": "Wolf_Auto_Status",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": 0.65,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3853,14 +3998,15 @@
 "auto": false,
 "effects": [
 {
-"kind": "dmg",
+"kind": "other",
 "aff": "",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": "Wolf_Skill1_Status",
 "knock": false,
-"tick": null
+"tick": null,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -3878,12 +4024,24 @@
 {
 "kind": "dmg",
 "aff": "Physical",
-"ratio": 1.2,
-"atb": "FoePower",
-"heroic": false,
 "status": null,
 "knock": false,
-"tick": 0.1
+"tick": 0.1,
+"ratio": 1.2,
+"atb": "FoePower",
+"value": null,
+"heroic": false
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"status": null,
+"knock": false,
+"tick": 0.1,
+"ratio": 2.4,
+"atb": "FoePower",
+"value": null,
+"heroic": true
 }
 ],
 "summons": [],
@@ -3986,22 +4144,24 @@
 {
 "kind": "heal",
 "aff": "",
-"ratio": 0.6,
-"atb": "FoePower",
-"heroic": null,
 "status": null,
 "knock": false,
-"tick": 1
+"tick": 1,
+"ratio": 0.6,
+"atb": "FoePower",
+"value": null,
+"heroic": null
 },
 {
 "kind": "dmg",
 "aff": "Water",
-"ratio": null,
-"atb": null,
-"heroic": null,
 "status": null,
 "knock": true,
-"tick": 0.05
+"tick": 0.05,
+"ratio": null,
+"atb": null,
+"value": null,
+"heroic": null
 }
 ],
 "summons": [],
@@ -4016,59 +4176,118 @@
 "Wolf_Auto_Status": {
 "duration": 9,
 "stacks": null,
-"vars": {}
+"vars": {},
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"status": null,
+"knock": false,
+"tick": 2,
+"ratio": 0.45,
+"atb": "FoePower",
+"value": null,
+"heroic": null
+}
+]
 },
 "Wolf_Skill1_Status": {
 "duration": 10,
 "stacks": null,
-"vars": {}
+"vars": {},
+"effects": []
 },
 "Spongeblob_Suffocation": {
 "duration": null,
 "stacks": 10,
-"vars": {}
+"vars": {},
+"effects": []
 },
 "Stun": {
 "duration": null,
 "stacks": null,
-"vars": {}
+"vars": {},
+"effects": []
 },
 "HoneyCovered": {
 "duration": 5,
 "stacks": null,
-"vars": {}
+"vars": {},
+"effects": []
 },
 "Gastbee_Heroic_Swarm_Status": {
 "duration": 60,
 "stacks": 10000,
-"vars": {}
+"vars": {},
+"effects": [
+{
+"kind": "dmg",
+"aff": "Magic",
+"status": null,
+"knock": false,
+"tick": 2,
+"ratio": 0.1,
+"atb": "FoePower",
+"value": null,
+"heroic": null
+}
+]
 },
 "R1CrabBoss_Heroic_Bubble_Status": {
 "duration": 6,
 "stacks": null,
-"vars": {}
+"vars": {},
+"effects": []
 },
 "Ratsar_Heroic_Attack_Bleed": {
 "duration": 6,
 "stacks": 10,
-"vars": {}
+"vars": {},
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"status": null,
+"knock": false,
+"tick": 2,
+"ratio": 1.2,
+"atb": "FoePower",
+"value": null,
+"heroic": null
+}
+]
 },
 "Ratsar_Heroic_Burn": {
 "duration": 9,
 "stacks": 1000,
-"vars": {}
+"vars": {},
+"effects": [
+{
+"kind": "dmg",
+"aff": "Fire",
+"status": null,
+"knock": false,
+"tick": 2,
+"ratio": 1.2,
+"atb": "FoePower",
+"value": null,
+"heroic": null
+}
+]
 },
 "ManfishBoss_Bubble_Roam_Status": {
 "duration": 60,
 "stacks": 15,
 "vars": {
 "var1": 0.2
-}
+},
+"effects": []
 },
 "ManfishBoss_Bubble_Roam_Status_Slow": {
 "duration": 10,
 "stacks": null,
-"vars": {}
+"vars": {},
+"effects": []
 }
 },
 "maxPlayers": 4
