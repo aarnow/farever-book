@@ -2774,3 +2774,44 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .shero.is3d[data-st="ready"] .hid .clsicon,
 .shero.is3d[data-st="ready"] .hid .hhint,
 .shero.is3d[data-st="loading"] .hid .hhint { display: none; }
+
+/* ---- a build's sheet as a card: hero | gear in three lines | attributes ---- */
+.sheet.card { grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(220px, 250px);
+              align-items: start; }
+.sheet.card > .shero { position: sticky; top: 8px; height: 540px; min-height: 0; }
+.sgearcol { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.sgear .sgrow { display: grid; grid-template-columns: repeat(8, minmax(0, 58px)); gap: 8px; }
+.sgear .sgrow .slot { width: 100%; height: auto; aspect-ratio: 1; }
+.sgear .sgrow .slot img { width: 86%; height: 86%; }
+.sgear .sgrow .slot img.ghost { width: 70%; height: 70%; }
+html.lt-1100 .sheet.card { grid-template-columns: 220px minmax(0, 1fr) 230px; }
+html.lt-1100 .sheet.card > :nth-child(3) { grid-column: auto; }
+html.lt-900 .sheet.card { grid-template-columns: 220px minmax(0, 1fr); }
+html.lt-900 .sheet.card > :nth-child(3) { grid-column: 1 / -1; }
+html.lt-760 .sheet.card { grid-template-columns: minmax(0, 1fr); }
+html.lt-760 .sheet.card > .shero { position: static; height: 420px; }
+
+/* the card's second titles: a banner fading out, its left edge cut */
+.sheet.card .sgear .sptitle { display: block; width: min(100%, 420px); margin: 0 0 12px -2px;
+  padding: 7px 18px 6px 20px; border: 0; font-size: 14px; letter-spacing: 1.2px;
+  text-transform: uppercase; color: #fff;
+  background: linear-gradient(90deg, rgba(242, 201, 76, .34), rgba(242, 201, 76, .12) 55%, transparent);
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 calc(100% - 0px)); }
+.sheet.card .sgear .sptitle ~ .sptitle { margin-top: 18px; }
+.sheet.card .sgear { padding: 16px 16px 18px; }
+/* the hero's plate, over its feet */
+.sheet.card > .shero .hplate { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  pointer-events: none; padding: 54px 16px 14px;
+  background: linear-gradient(0deg, rgba(33, 31, 58, .97) 0%, rgba(33, 31, 58, .9) 55%, transparent 100%); }
+.hplate .pn { display: block; font-family: var(--font-head); font-size: 24px; letter-spacing: 1px;
+              text-transform: uppercase; color: var(--accent); text-shadow: 0 2px 6px rgba(0, 0, 0, .5);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hplate .pc { display: flex; align-items: center; gap: 6px; margin-top: 2px; color: #fff;
+              font-family: var(--font-head); font-size: 13px; letter-spacing: .6px; text-transform: uppercase; }
+.hplate .pc .clsicon { width: 20px; height: 20px; }
+.hplate .pchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.hplate .pchips span { padding: 2px 9px; border-radius: 10px; font-size: 11px; color: #E2DEFF;
+                       background: rgba(255, 255, 255, .08); border: 1px solid var(--line); }
+/* the plate says it all: no second name over the hero */
+.sheet.card > .shero .hid .hn, .sheet.card > .shero .hid .hl { display: none; }
+.sheet.card > .shero.is3d[data-st="ready"] .hid { display: none; }

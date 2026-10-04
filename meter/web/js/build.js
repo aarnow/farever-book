@@ -49,7 +49,7 @@ function buildBuild(n) {
                                (slot) => notify('build_slot', { slot: slot }),
                                { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
                                  center: o.editor ? editorPanel(o.editor) : null,
-                                 model: o.model,
+                                 model: o.model, layout: 'card',
                                  active: o.editor ? o.editor.slot : null }));
     if ((o.infusions || []).length) {
       main.appendChild(el('div', 'sub2', 'Imprégnations'));

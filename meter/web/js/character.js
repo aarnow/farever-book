@@ -180,6 +180,9 @@ function infusionCards(list) {
    slot, empty or not, calls it with the slot's name. `extra` adds
    elements under the hero ({below}) and under the weapons ({arms}). */
 const WEAPON_KEYS = { w0: 'Weapon1', w1: 'OffhandWeapon', ars: 'Weapon2' };
+// the card layout's lines (a build's sheet): the armour, then the jewels
+const CARD_ARMOUR = ['Head', 'Shoulders', 'Chest', 'Back', 'Hands', 'Waist', 'Legs', 'Feet'];
+const CARD_JEWELS = ['Neck', 'FingerLeft', 'FingerRight', 'Trinket'];
 
 function charSheet(o, onSlot, extra) {
   const sh = o.sheet || { left: [], right: [], weapons: [], arsenal: null };
@@ -267,6 +270,23 @@ function charSheet(o, onSlot, extra) {
     return b;
   };
 
+  const weaponCard = (w, key) => {
+    const c = el('div', 'wcard');
+    const top = el('div', 'wtop');
+    top.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, key));
+    const t = el('div', 'wt');
+    t.appendChild(el('b', null, w.label));
+    t.appendChild(el('span', null, w.g ? w.g.name : 'vide'));
+    top.appendChild(t);
+    c.appendChild(top);
+    if ((w.skills || []).length) {
+      const sk = el('div', 'wsk');
+      w.skills.forEach((x) => sk.appendChild(skillIcon(x)));
+      c.appendChild(sk);
+    }
+    return c;
+  };
+
   const doll = el('div', 'spanel sdoll');
   const colL = el('div', 'scol');
   (sh.left || []).forEach((c) => colL.appendChild(slotEl(c, c.slot)));
@@ -278,7 +298,8 @@ function charSheet(o, onSlot, extra) {
   (sh.weapons || []).forEach((w, i) => { all['w' + i] = w.g; });
   if (sh.arsenal) all.ars = sh.arsenal.g;
   const picked = pick ? all[pick] : null;
-  const center = extra && extra.center;
+  const card = !!(extra && extra.layout === 'card');
+  const center = extra && !card ? extra.center : null;
   const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : '') + (picked ? ' detail' : '')
     + (center ? ' editing' : ''));
   if (center) {
@@ -301,11 +322,61 @@ function charSheet(o, onSlot, extra) {
     // a build: the hero in 3D, wearing it; the name over its feet
     if (extra && extra.model && m3dSupported()) {
       hero.classList.add('is3d');
-      hero.appendChild(m3dCanvas(extra.model, (st) => { hero.dataset.st = st; }, { pitch: 0.12, dist: 1.12, lift: 0.1 }));
+      hero.appendChild(m3dCanvas(extra.model, (st) => { hero.dataset.st = st; }, { pitch: 0.12, dist: card ? 0.9 : 1.12, lift: card ? -0.12 : 0.1 }));
       hero.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
       hero.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
     }
     hero.appendChild(hid);
+  }
+  if (card) {
+    // a build: the hero on the left; the gear in three lines (armour,
+    // jewels, weapons), what the build adds under it; the attributes right
+    wrap.classList.add('card');
+    wrap.appendChild(hero);
+    const mid = el('div', 'scolumn sgearcol');
+    const gear = el('div', 'spanel sgear');
+    const line = (title, slots) => {
+      gear.appendChild(el('div', 'sptitle', title));
+      const row = el('div', 'sgrow');
+      slots.forEach((k) => {
+        const c = cells[k];
+        if (c) row.appendChild(slotEl(c, k));
+      });
+      gear.appendChild(row);
+    };
+    const cells = {};
+    (sh.left || []).concat(sh.right || []).forEach((c) => { cells[c.slot] = c; });
+    line('Équipement', CARD_ARMOUR);
+    line('Accessoires', CARD_JEWELS);
+    // the weapons as the rest: a slot each (their skills are on the bar)
+    gear.appendChild(el('div', 'sptitle', 'Armes'));
+    const wrow = el('div', 'sgrow');
+    (sh.weapons || []).forEach((w, i) => wrow.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, 'w' + i)));
+    if (sh.arsenal) wrow.appendChild(slotEl({ g: sh.arsenal.g, label: sh.arsenal.label, icon: '' }, 'ars'));
+    gear.appendChild(wrow);
+    // under the hero's feet, faded over them: its name, class and level,
+    // and how much of the gear is worn
+    const all15 = Object.values(cells).map((c) => c.g)
+      .concat((sh.weapons || []).map((w) => w.g), sh.arsenal ? [sh.arsenal.g] : []);
+    const plate = el('div', 'hplate');
+    plate.appendChild(el('b', 'pn', o.n));
+    const pc = el('div', 'pc');
+    if (o.ck) pc.appendChild(classEl(o.cls, o.ck));
+    pc.appendChild(el('span', null, o.cls || ''));
+    plate.appendChild(pc);
+    const chips = el('div', 'pchips');
+    chips.appendChild(el('span', null, 'Niveau ' + (o.lvl || '?')));
+    chips.appendChild(el('span', null, all15.filter(Boolean).length + ' / ' + all15.length + ' pièces'));
+    plate.appendChild(chips);
+    hero.appendChild(plate);
+    mid.appendChild(gear);
+    if (extra.center) mid.appendChild(extra.center);
+    if (extra.below) mid.appendChild(extra.below);
+    if (extra.arms) mid.appendChild(extra.arms);
+    wrap.appendChild(mid);
+    wrap.appendChild(attrs);
+    box.appendChild(wrap);
+    return box;
   }
   doll.appendChild(colL);
   doll.appendChild(hero);
@@ -320,22 +391,6 @@ function charSheet(o, onSlot, extra) {
   }
 
   const arms = el('div', 'spanel sarms');
-  const weaponCard = (w, key) => {
-    const c = el('div', 'wcard');
-    const top = el('div', 'wtop');
-    top.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, key));
-    const t = el('div', 'wt');
-    t.appendChild(el('b', null, w.label));
-    t.appendChild(el('span', null, w.g ? w.g.name : 'vide'));
-    top.appendChild(t);
-    c.appendChild(top);
-    if ((w.skills || []).length) {
-      const sk = el('div', 'wsk');
-      w.skills.forEach((x) => sk.appendChild(skillIcon(x)));
-      c.appendChild(sk);
-    }
-    return c;
-  };
   arms.appendChild(el('div', 'sptitle', 'Armes'));
   (sh.weapons || []).forEach((w, i) => arms.appendChild(weaponCard(w, 'w' + i)));
   if (sh.arsenal) {
