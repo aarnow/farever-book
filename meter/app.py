@@ -39,6 +39,7 @@ from gamedata import (
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot,
     _overheal_note, _rate_text, _report_name)
+from bosssheet import boss_sheet_view
 from views import (
     RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
@@ -1803,6 +1804,9 @@ class App:
                    {"k": "section", "t": "Historique"},
                    {"k": "riftcards", "id": "dungeon_runs", "groups": days,
                     "empty": "Aucun run pour ce donjon."}]
+            sheet = boss_sheet_view(dg.get("boss")) if dg else None
+            if sheet:
+                out += [{"k": "section", "t": "Fiche du boss"}, sheet]
             if dg and dg.get("loot"):
                 out += [{"k": "section", "t": "Butin possible"},
                         {"k": "note", "t":

@@ -622,6 +622,19 @@ def main():
         out_dg.write_text(json.dumps(dungeons, indent=0), encoding="utf-8")
         print(f"[written] {out_dg} ({len(dungeons)} dungeons)")
         try:
+            import boss_sheets
+            import pak_extract
+            cdb_bs = json.loads(pak_extract.read_entry(
+                Path(hlboot).parent / "res.light.pak", "data.cdb"))
+            bs = boss_sheets.build(cdb_bs, [d["boss"] for d in dungeons
+                                            if d.get("boss")])
+            (_OUT_DIR / "boss_sheets.json").write_text(
+                json.dumps(bs, indent=0), encoding="utf-8")
+            print(f"[written] {_OUT_DIR / 'boss_sheets.json'} "
+                  f"({len(bs['bosses'])} bosses)")
+        except Exception as e:
+            print(f"[!] boss sheets skipped ({e})")
+        try:
             n = extract_boss_portraits(Path(hlboot).parent,
                                        [d["boss"] for d in dungeons],
                                        _OUT_DIR / "boss_portraits")
@@ -777,7 +790,7 @@ FR_SHEETS = ("ach", "activity", "attribute", "faction", "gatherable",
 # Sheets whose French descriptions the app shows (the collection's details,
 # a monster's page).
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc"),
-           "unit": ("texts.desc",)}
+           "unit": ("texts.desc",), "skill": ("texts.desc",)}
 
 
 def extract_fr_names(game_dir):

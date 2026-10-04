@@ -505,6 +505,7 @@ function buildNode(n) {
     case 'statcards': return buildStatCards(n);
     case 'report': return buildReport(n);
     case 'droptable': return buildDropTable(n);
+    case 'bosssheet': return buildBossSheet(n);
     case 'collection': return buildCollection(n);
     case 'hunt': return buildHunt(n);
     case 'huntmon': return buildHuntMon(n);

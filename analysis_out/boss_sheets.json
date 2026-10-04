@@ -1,0 +1,4075 @@
+{
+"bosses": {
+"Nepsilon": {
+"id": "Nepsilon",
+"lvl": 5,
+"type": "Manfish",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 9,
+"heroic": null,
+"from": "D_Base_Elite"
+},
+{
+"m": 0.6,
+"heroic": false,
+"from": "Nepsilon"
+},
+{
+"m": 3,
+"heroic": true,
+"from": "Nepsilon"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "Nepsilon"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": true,
+"from": "Nepsilon"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": true,
+"from": "Nepsilon"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "ManfishBoss_Auto",
+"cooldown": 3,
+"range": 3,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "ManfishBoss_Aoe",
+"cooldown": 16,
+"range": 7,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 1.2,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 3,
+"atb": "FoePower",
+"heroic": true,
+"status": "ManfishBoss_Bubble_Roam_Status",
+"knock": true,
+"tick": null
+}
+],
+"summons": [
+{
+"unit": "Nepsilon_Totem",
+"heroic": true
+}
+],
+"statuses": [
+"ManfishBoss_Bubble_Roam_Status"
+]
+},
+{
+"id": "ManfishBoss_WaterVolley",
+"cooldown": 16,
+"range": 30,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 2,
+"atb": "FoePower",
+"heroic": true,
+"status": "ManfishBoss_Bubble_Roam_Status",
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"ManfishBoss_Bubble_Roam_Status"
+]
+},
+{
+"id": "ManfishBoss_WaterBreath",
+"cooldown": null,
+"range": 40,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.2,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": 0.125
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "ManfishBoss_Bubble_Roam",
+"cooldown": null,
+"range": 3,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 1,
+"atb": "FoePower",
+"heroic": null,
+"status": "ManfishBoss_Bubble_Roam_Status_Slow",
+"knock": false,
+"tick": 0.25
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": "ManfishBoss_Bubble_Roam_Status",
+"knock": false,
+"tick": 0.25
+}
+],
+"summons": [],
+"statuses": [
+"ManfishBoss_Bubble_Roam_Status",
+"ManfishBoss_Bubble_Roam_Status_Slow"
+]
+}
+],
+"phases": [
+{
+"at": 0.7,
+"skill": "WaterBreath"
+},
+{
+"at": 0.4,
+"skill": "WaterBreath"
+}
+],
+"heroicPhases": [
+{
+"at": 0.7,
+"skill": "WaterBreath"
+},
+{
+"at": 0.4,
+"skill": "WaterBreath"
+},
+{
+"at": 0.25,
+"skill": "ManfishBoss_Bubble_Roam"
+},
+{
+"at": 0.1,
+"skill": "ManfishBoss_Bubble_Roam"
+}
+]
+},
+"Reblochonk": {
+"id": "Reblochonk",
+"lvl": 8,
+"type": "Kobold",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 9,
+"heroic": null,
+"from": "D_Base_Elite"
+},
+{
+"m": 3.5,
+"heroic": true,
+"from": "Reblochonk"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "Reblochonk"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": true,
+"from": "Reblochonk"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": true,
+"from": "Reblochonk"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Reblochonk_Auto",
+"cooldown": 2,
+"range": 10,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Reblochonk_CheeseShot",
+"cooldown": 18,
+"range": 15,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Cheese",
+"ratio": 0.6,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 1
+},
+{
+"kind": "dmg",
+"aff": "Cheese",
+"ratio": 1.2,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 1
+},
+{
+"kind": "dmg",
+"aff": "Cheese",
+"ratio": 0,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Reblochonk_Skill1",
+"cooldown": 18,
+"range": 30,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 2,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"Ratsar": {
+"id": "Ratsar",
+"lvl": 10,
+"type": "Kobold",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 16,
+"heroic": false,
+"from": "Ratsar"
+},
+{
+"m": 45,
+"heroic": true,
+"from": "Ratsar"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "Ratsar"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": null,
+"from": "Ratsar"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": null,
+"from": "Ratsar"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Ratsar_Attack",
+"cooldown": 3,
+"range": 10,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": true,
+"status": "Ratsar_Heroic_Attack_Bleed",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"Ratsar_Heroic_Attack_Bleed"
+]
+},
+{
+"id": "Ratsar_GreatSlam",
+"cooldown": 36,
+"range": 8,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.4,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Ratsar_Spin",
+"cooldown": 25,
+"range": 30,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.3,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": 0.25
+},
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": true,
+"status": "Ratsar_Heroic_Burn",
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 1,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"Ratsar_Heroic_Burn"
+]
+}
+],
+"phases": [
+{
+"at": 0.75,
+"skill": "SparkAbsorption"
+},
+{
+"at": 0.5,
+"skill": "SparkAbsorption"
+},
+{
+"at": 0.25,
+"skill": "SparkAbsorption"
+}
+],
+"heroicPhases": [
+{
+"at": 0.8,
+"skill": "SparkAbsorption"
+},
+{
+"at": 0.6,
+"skill": "SparkAbsorption"
+},
+{
+"at": 0.4,
+"skill": "SparkAbsorption"
+},
+{
+"at": 0.2,
+"skill": "TrainWave"
+}
+]
+},
+"Crabgantua": {
+"id": "Crabgantua",
+"lvl": 8,
+"type": "Crab",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 23,
+"heroic": false,
+"from": "Crabgantua"
+},
+{
+"m": 45,
+"heroic": true,
+"from": "Crabgantua"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 3,
+"heroic": false,
+"from": "Crabgantua"
+},
+{
+"m": 4,
+"heroic": true,
+"from": "Crabgantua"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": null,
+"from": "Crabgantua"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": null,
+"from": "Crabgantua"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "R1CrabBoss_TidalSlash",
+"cooldown": 0,
+"range": 17,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 2,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "R1CrabBoss_TidalSlash_Heroic",
+"cooldown": 0,
+"range": 17,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 4,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "R1CrabBoss_Heroic_Bubble",
+"cooldown": 20,
+"range": 10000,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": "R1CrabBoss_Heroic_Bubble_Status",
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": "R1CrabBoss_Heroic_Bubble_Status",
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": "R1CrabBoss_Heroic_Bubble_Status",
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"R1CrabBoss_Heroic_Bubble_Status"
+]
+},
+{
+"id": "R1CrabBoss_NayasFury",
+"cooldown": 15,
+"range": 70,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 10,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": 0.1
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "R1CrabBoss_Heroic_Bubble",
+"cooldown": 20,
+"range": 10000,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": "R1CrabBoss_Heroic_Bubble_Status",
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": "R1CrabBoss_Heroic_Bubble_Status",
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": "R1CrabBoss_Heroic_Bubble_Status",
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"R1CrabBoss_Heroic_Bubble_Status"
+]
+},
+{
+"id": "R1CrabBoss_HuntDown",
+"cooldown": 35,
+"range": 95,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 2,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": 0.1
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "R1CrabBoss_ChitinousExoskeleton_Spike",
+"cooldown": null,
+"range": 4,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.4,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"Gatsbee": {
+"id": "Gatsbee",
+"lvl": 12,
+"type": "Bee",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 9,
+"heroic": null,
+"from": "D_Base_Elite"
+},
+{
+"m": 4,
+"heroic": true,
+"from": "Gatsbee"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "Gatsbee"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": true,
+"from": "Gatsbee"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": true,
+"from": "Gatsbee"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Gatsbee_Auto",
+"cooldown": 3,
+"range": 4,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1,
+"atb": "FoePower",
+"heroic": false,
+"status": "HoneyCovered",
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.8,
+"atb": "FoePower",
+"heroic": true,
+"status": "HoneyCovered",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"HoneyCovered"
+]
+},
+{
+"id": "Gatsbee_Barrage",
+"cooldown": 20,
+"range": 3.5,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Honey",
+"ratio": 0.55,
+"atb": "FoePower",
+"heroic": false,
+"status": "HoneyCovered",
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Honey",
+"ratio": 1.1,
+"atb": "FoePower",
+"heroic": true,
+"status": "HoneyCovered",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"HoneyCovered"
+]
+},
+{
+"id": "Gatsbee_Heroic_Swarm",
+"cooldown": 30,
+"range": 10,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": "Gastbee_Heroic_Swarm_Status",
+"knock": false,
+"tick": 1
+}
+],
+"summons": [],
+"statuses": [
+"Gastbee_Heroic_Swarm_Status"
+]
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"Mokshi": {
+"id": "Mokshi",
+"lvl": 13,
+"type": "Bee",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 25,
+"heroic": false,
+"from": "Mokshi"
+},
+{
+"m": 54,
+"heroic": true,
+"from": "Mokshi"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "Mokshi"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": null,
+"from": "Mokshi"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": null,
+"from": "Mokshi"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Mokshi_Attack",
+"cooldown": 0,
+"range": 6.5,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.8,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Mokshi_Leaves",
+"cooldown": 25,
+"range": 500,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.7,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Mokshi_DeadlyBlossom",
+"cooldown": 50,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.85,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Mokshi_Barrage",
+"cooldown": 20,
+"range": 8.5,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Honey",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Mokshi_ChrysalisLaser",
+"cooldown": 3,
+"range": 4,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Honey",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [
+{
+"at": 0.6,
+"skill": "Mokshi_Phase2Screech"
+}
+],
+"heroicPhases": [
+{
+"at": 0.6,
+"skill": "Mokshi_Phase2Screech"
+},
+{
+"at": 0.1,
+"skill": "Mokshi_Heroic_Last_Stand"
+}
+]
+},
+"SpongeBlob": {
+"id": "SpongeBlob",
+"lvl": 16,
+"type": "Golem",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 9,
+"heroic": null,
+"from": "D_Base_Elite"
+},
+{
+"m": 3.5,
+"heroic": true,
+"from": "SpongeBlob"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "SpongeBlob"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": true,
+"from": "SpongeBlob"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": true,
+"from": "SpongeBlob"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Spongeblob_Auto",
+"cooldown": 3,
+"range": 20,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Spongeblob_Skill1",
+"cooldown": 20,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": true,
+"status": "Spongeblob_Suffocation",
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": "Stun",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"Spongeblob_Suffocation",
+"Stun"
+]
+},
+{
+"id": "Spongeblob_Skill2",
+"cooldown": null,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Spongeblob_Heroic_Bubble_Wall",
+"cooldown": 15,
+"range": 70,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": 0.9,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": true,
+"status": "Spongeblob_Suffocation",
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": "Stun",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"Spongeblob_Suffocation",
+"Stun"
+]
+}
+],
+"phases": [
+{
+"at": 0.66,
+"skill": "Spongeblob_Skill2"
+},
+{
+"at": 0.33,
+"skill": "Spongeblob_Skill2"
+}
+],
+"heroicPhases": []
+},
+"Golcano": {
+"id": "Golcano",
+"lvl": 15,
+"type": "Golem",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 9,
+"heroic": null,
+"from": "D_Base_Elite"
+},
+{
+"m": 4,
+"heroic": true,
+"from": "Golcano"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 1.5,
+"heroic": true,
+"from": "Golcano"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": true,
+"from": "Golcano"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": true,
+"from": "Golcano"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Golcano_Auto",
+"cooldown": 3,
+"range": 12,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Golcano_ShieldApply",
+"cooldown": 2,
+"range": 50,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 0.2,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 5
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Golcano_Eruption",
+"cooldown": 18,
+"range": 20,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 1.2,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": true,
+"tick": 1
+},
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 2,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": true,
+"tick": 1
+},
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 1.6,
+"atb": "FoePower",
+"heroic": true,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Golem_Explosion_Elite",
+"cooldown": null,
+"range": 40,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [
+{
+"at": 0.75,
+"skill": "GolcanoInterphase"
+},
+{
+"at": 0.5,
+"skill": "GolcanoInterphase"
+},
+{
+"at": 0.25,
+"skill": "GolcanoInterphase"
+}
+],
+"heroicPhases": []
+},
+"Cleodora": {
+"id": "Cleodora",
+"lvl": 20,
+"type": "Bee",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 12.5,
+"heroic": null,
+"from": "Cleodora"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": null,
+"from": "Cleodora"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": null,
+"from": "Cleodora"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Cleodora_Devastation",
+"cooldown": null,
+"range": 110,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Cleodora_Phase3Entry",
+"cooldown": null,
+"range": 30,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Cleodora_RoyalSmash",
+"cooldown": 25,
+"range": 25,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Light",
+"ratio": 1.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Cleodora_Strike",
+"cooldown": 3,
+"range": 6.5,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.1,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Cleodora_SparkRay",
+"cooldown": 45,
+"range": 5,
+"heroicOnly": true,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Fire",
+"ratio": 1.2,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 1
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"MunsterChuck": {
+"id": "MunsterChuck",
+"lvl": 19,
+"type": "Kobold",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+2000,
+22000
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2.5,
+3.5,
+4.5
+]
+},
+"heroic": null,
+"from": "MunsterChuck"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+15,
+540
+],
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": null,
+"from": "MunsterChuck"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": null,
+"from": "MunsterChuck"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "MChuck_Attack",
+"cooldown": 2,
+"range": 6,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.45,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "MChuck_IsolatedHeal",
+"cooldown": null,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "heal",
+"aff": "",
+"ratio": 0.00125,
+"atb": "MaxHealth",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 1
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [
+{
+"at": 0.75,
+"skill": "ChangeRoom"
+},
+{
+"at": 0.5,
+"skill": "ChangeRoom"
+},
+{
+"at": 0.25,
+"skill": "ChangeRoom"
+}
+],
+"heroicPhases": []
+},
+"RobinHoof": {
+"id": "RobinHoof",
+"lvl": 23,
+"type": "Human",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 9,
+"heroic": null,
+"from": "D_Base_Elite"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "RobinHoof_Auto",
+"cooldown": null,
+"range": 35,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.1,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "RobinHoof_Disengage",
+"cooldown": 10,
+"range": 7,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.8,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "RobinHoof_Arrow",
+"cooldown": 10,
+"range": 3,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.6,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.6,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "RobinHoof_Summon",
+"cooldown": null,
+"range": 1,
+"heroicOnly": false,
+"auto": false,
+"effects": [],
+"summons": [
+{
+"unit": "RobinHoofDog01",
+"heroic": null
+},
+{
+"unit": "RobinHoofDog01",
+"heroic": null
+}
+],
+"statuses": []
+}
+],
+"phases": [
+{
+"at": 0.75,
+"skill": "RobinHoof_Summon"
+},
+{
+"at": 0.5,
+"skill": "RobinHoof_Summon"
+},
+{
+"at": 0.25,
+"skill": "RobinHoof_Summon"
+}
+],
+"heroicPhases": []
+},
+"Phrixes": {
+"id": "Phrixes",
+"lvl": 25,
+"type": "Human",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 27,
+"heroic": null,
+"from": "Phrixes"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.4
+},
+"heroic": null,
+"from": "Phrixes"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.4
+},
+"heroic": null,
+"from": "Phrixes"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Phrixes_Strike",
+"cooldown": 3,
+"range": 6,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.45,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_LightBolt",
+"cooldown": 5,
+"range": 50,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Light",
+"ratio": 0.45,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_Phase1End",
+"cooldown": null,
+"range": 100,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_Phase2Entry",
+"cooldown": null,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "heal",
+"aff": "",
+"ratio": 1,
+"atb": "MaxHealth",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 0.5
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_NightBolt",
+"cooldown": 5,
+"range": 50,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Chaos",
+"ratio": 0.45,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_Phase3Entry",
+"cooldown": null,
+"range": 300,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_EternalNight",
+"cooldown": null,
+"range": 500,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Raw",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_Phase4Entry",
+"cooldown": null,
+"range": 10,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_DemonicStrike",
+"cooldown": 5,
+"range": 8,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.45,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_NightSalvo",
+"cooldown": 5,
+"range": 80,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Chaos",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_PowerExpulsion",
+"cooldown": 20,
+"range": 4,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Chaos",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+},
+{
+"kind": "dmg",
+"aff": "Chaos",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+},
+{
+"id": "Phrixes_Demon_Summon",
+"cooldown": 35,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [],
+"summons": [
+{
+"unit": "Phrixes_ChaoticPortal",
+"heroic": null
+}
+],
+"statuses": []
+}
+],
+"phases": [
+{
+"at": 0.7,
+"skill": "Phrixes_Phase3Entry"
+},
+{
+"at": 0.25,
+"skill": null
+}
+],
+"heroicPhases": []
+}
+},
+"units": {
+"Phrixes_ChaoticPortal": {
+"id": "Phrixes_ChaoticPortal",
+"lvl": null,
+"type": "Human",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 0.7,
+"heroic": null,
+"from": "Phrixes_ChaoticPortal"
+}
+],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Phrixes_Demon_Gate_Summon",
+"cooldown": null,
+"range": null,
+"heroicOnly": false,
+"auto": false,
+"effects": [],
+"summons": [
+{
+"unit": "ImpDemon_Summoned",
+"heroic": null
+}
+],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"ImpDemon_Summoned": {
+"id": "ImpDemon_Summoned",
+"lvl": null,
+"type": "Demon",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+41,
+1125
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 0.8,
+"heroic": null,
+"from": "W_Base_Small"
+},
+{
+"m": 0.7,
+"heroic": null,
+"from": "ImpDemon_Summoned"
+}
+],
+"spec": [],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+15,
+540
+],
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"armorReduction": 0.25
+},
+"heroic": null,
+"from": "W_Base_Small"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+},
+{
+"s": {
+"magicReduction": 0.25
+},
+"heroic": null,
+"from": "W_Base_Small"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "ImpDemon_Auto",
+"cooldown": 0,
+"range": 30,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Chaos",
+"ratio": 0.5,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"RobinHoofDog01": {
+"id": "RobinHoofDog01",
+"lvl": 23,
+"type": "Wolf",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+53.3,
+1462.5
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+2,
+3,
+4,
+5.1,
+6.1,
+7.1,
+8,
+8.7,
+9.5,
+10.3,
+11.1,
+12,
+13,
+14,
+15,
+16,
+17,
+18
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+19.5,
+702
+],
+"heroic": null
+},
+"mults": [],
+"spec": [
+{
+"s": {
+"playerCount": [
+1,
+1,
+1,
+1
+]
+},
+"heroic": null,
+"from": "D_Base"
+}
+],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "Wolf_Elite_Auto",
+"cooldown": 4,
+"range": 8,
+"heroicOnly": false,
+"auto": true,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 0.65,
+"atb": "FoePower",
+"heroic": null,
+"status": "Wolf_Auto_Status",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"Wolf_Auto_Status"
+]
+},
+{
+"id": "Wolf_Skill1",
+"cooldown": 15,
+"range": 14,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": "Wolf_Skill1_Status",
+"knock": false,
+"tick": null
+}
+],
+"summons": [],
+"statuses": [
+"Wolf_Skill1_Status"
+]
+},
+{
+"id": "Wolf_Skill2",
+"cooldown": 15,
+"range": 30,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "dmg",
+"aff": "Physical",
+"ratio": 1.2,
+"atb": "FoePower",
+"heroic": false,
+"status": null,
+"knock": false,
+"tick": 0.1
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+},
+"Nepsilon_Totem": {
+"id": "Nepsilon_Totem",
+"lvl": null,
+"type": "Totem",
+"stats": {
+"CritChance": {
+"base": {
+"value": 5,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"CritDamage": {
+"base": {
+"value": 150,
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": 10
+},
+"Vitality": {
+"base": {
+"scale": [
+41,
+1125
+],
+"heroic": null
+},
+"mults": [
+{
+"m": 2,
+"heroic": true,
+"from": "Nepsilon_Totem"
+}
+],
+"spec": [],
+"diff": null
+},
+"FoePower": {
+"base": {
+"scale": [
+15,
+540
+],
+"heroic": null
+},
+"mults": [],
+"spec": [],
+"diff": null
+},
+"Armor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"armorReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+},
+"MagicArmor": {
+"base": null,
+"mults": [],
+"spec": [
+{
+"s": {
+"magicReduction": 0.3
+},
+"heroic": null,
+"from": "W_Base"
+}
+],
+"diff": null
+}
+},
+"skills": [
+{
+"id": "ManfishBoss_Totem_HealBeam",
+"cooldown": null,
+"range": 15,
+"heroicOnly": false,
+"auto": false,
+"effects": [
+{
+"kind": "heal",
+"aff": "",
+"ratio": 0.6,
+"atb": "FoePower",
+"heroic": null,
+"status": null,
+"knock": false,
+"tick": 1
+},
+{
+"kind": "dmg",
+"aff": "Water",
+"ratio": null,
+"atb": null,
+"heroic": null,
+"status": null,
+"knock": true,
+"tick": 0.05
+}
+],
+"summons": [],
+"statuses": []
+}
+],
+"phases": [],
+"heroicPhases": []
+}
+},
+"statuses": {
+"Wolf_Auto_Status": {
+"duration": 9,
+"stacks": null,
+"vars": {}
+},
+"Wolf_Skill1_Status": {
+"duration": 10,
+"stacks": null,
+"vars": {}
+},
+"Spongeblob_Suffocation": {
+"duration": null,
+"stacks": 10,
+"vars": {}
+},
+"Stun": {
+"duration": null,
+"stacks": null,
+"vars": {}
+},
+"HoneyCovered": {
+"duration": 5,
+"stacks": null,
+"vars": {}
+},
+"Gastbee_Heroic_Swarm_Status": {
+"duration": 60,
+"stacks": 10000,
+"vars": {}
+},
+"R1CrabBoss_Heroic_Bubble_Status": {
+"duration": 6,
+"stacks": null,
+"vars": {}
+},
+"Ratsar_Heroic_Attack_Bleed": {
+"duration": 6,
+"stacks": 10,
+"vars": {}
+},
+"Ratsar_Heroic_Burn": {
+"duration": 9,
+"stacks": 1000,
+"vars": {}
+},
+"ManfishBoss_Bubble_Roam_Status": {
+"duration": 60,
+"stacks": 15,
+"vars": {
+"var1": 0.2
+}
+},
+"ManfishBoss_Bubble_Roam_Status_Slow": {
+"duration": 10,
+"stacks": null,
+"vars": {}
+}
+},
+"maxPlayers": 4
+}
