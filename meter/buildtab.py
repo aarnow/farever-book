@@ -276,7 +276,8 @@ class BuildTab:
             "tree": tree, "bar": bar, "passives": passives,
             # the hero in 3D, wearing the build's armour
             "model": "hero:" + ".".join(
-                (b["gear"].get(s) or {}).get("id") or "" for s in HERO_SLOTS),
+                f"{s}={(b['gear'].get(s) or {}).get('id')}" for s in HERO_SLOTS
+                if (b["gear"].get(s) or {}).get("id")),
             "sim": self._sim_view(b, (o.get("atbs") or {}).get("raw")),
             "editor": self._editor_view(o) if self.slot else None}
 
@@ -531,8 +532,8 @@ FILTER_STAT_ORDER = ("Vitality", "Strength", "Dexterity", "Faith", "Intellect",
 ROLE_FR = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 
 
-# the pieces the hero model wears (the main set of weapons in hand)
-HERO_SLOTS = ("Weapon1", "OffhandWeapon", "Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
+# the pieces the hero model wears (its weapons holstered, both sets)
+HERO_SLOTS = ("Weapon1", "OffhandWeapon", "Weapon2", "Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
 
 def _infusion_options():
     """The infusions, by faction then role, each named with both: the

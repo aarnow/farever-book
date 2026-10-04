@@ -25,7 +25,6 @@ import base64
 import io
 import json
 import math
-import re
 import struct
 from pathlib import Path
 
@@ -549,9 +548,12 @@ def idle_frames(game_dir, rig, names=("Idle",)):
                      and p.endswith(f"/Anim_{rig}_Common_{nm}.fbx")), None)
         if path:
             break
-    if not path:
-        return None
-    raw = _read(res, path)
+    return anim_file_frames(game_dir, path) if path else None
+
+
+def anim_file_frames(game_dir, path):
+    """One animation file sampled at ANIM_FPS: (frames, fps), or None."""
+    raw = _read(Path(game_dir) / "res.pak", path)
     if not raw or raw[:3] != b"HMD":
         return None
     d = read_hmd(raw)
@@ -861,12 +863,13 @@ HERO_BARE = {"Chest": "Chest_Naked", "Legs": "Legs_Naked",
 HERO_FACE = ("MainHead_Naked", "Eyes/Eyes_01_A", "Eyebrows/Eyebrows_01_A")
 
 
-def hero_models(game_dir, item_ids):
-    """The models of a hero wearing these pieces, for item_model: the
-    armour on the body, the weapons in hand (the jewels are not seen)."""
+def hero_models(game_dir, gear):
+    """The models of a hero wearing `gear` ({slot: item id}), for item_model:
+    the armour on the body, the weapons holstered, the set in use (Weapon1,
+    OffhandWeapon) and the other (Weapon2); the jewels are not seen."""
     items = _sheets(game_dir)["item"]
     prefabs, covered = [], set()
-    worn = [items.get(i) or {} for i in item_ids]
+    worn = [items.get(i) or {} for i in gear.values() if i]
     if any((it.get("visuals") or {}).get("hideLegs") for it in worn):
         # a long robe: no legs under it
         covered.add("Legs")
@@ -882,26 +885,28 @@ def hero_models(game_dir, item_ids):
     prefabs += [HERO_BODY + bare + ".prefab" for t, bare in HERO_BARE.items()
                 if t not in covered]
     out = [m for p in prefabs for m in prefab_models(game_dir, p)]
-    for it in worn:
-        out += _weapon_models(game_dir, it)
+    for slot, which in (("Weapon1", "primary"), ("OffhandWeapon", "primary"),
+                        ("Weapon2", "secondary")):
+        if gear.get(slot):
+            out += _holstered_models(game_dir, items.get(gear[slot]) or {}, which)
     return out
 
 
-# ---- the weapons in hand ---------------------------------------------------
-# A weapon type's setup prefab (itemType.setup, inherited) hangs a stand-in,
-# "Target" (and "Target2", the other hand), on an ATTACH joint of the hero;
-# the item's models (visuals.models, in that order) take the stand-ins'
-# places. Those joints have no rest place of their own (it is the bind
-# space, at the feet): the setup's animation puts them in the hand. The body
+# ---- the weapons, holstered ------------------------------------------------
+# A weapon rests on the hero's back or hips: its type's holster (itemType
+# slot.holster, inherited) names a socket per model (visuals.models, in
+# order), "primary" for the set in use, "secondary" for the other. The
+# sockets are Body.prefab's, grouped on the chest and the pelvis. The body
 # parts' prefabs turn the hero a quarter (their ROOT).
 HERO_SKELETON = "Character/Hero/Body/Sources/Hero_N.fbx"
 HERO_ROOT = _local({"rotationZ": 90})
-_SKEL = {}
+HERO_IDLE = "Anim/Human/Common/Anim_Human_Common_Idle.fbx"
+_SKEL, _SOCKETS = {}, {}
 
 
 def _hero_skeleton(game_dir):
-    """(joints, root matrix G as rest_pose finds it, index of the root bound
-    joint) of the hero's skeleton, or None."""
+    """(joints, root matrix G as rest_pose finds it) of the hero's skeleton,
+    or None."""
     key = str(game_dir)
     if key not in _SKEL:
         _SKEL[key] = None
@@ -917,126 +922,116 @@ def _hero_skeleton(game_dir):
             bound = [i for i, j in enumerate(joints) if j["bind"] >= 0]
             if bound:
                 root = min(bound, key=lambda i: depth[i])
-                _SKEL[key] = (joints, _mul(_mat_post(joints[root]["trans"]), absm[root]), root)
+                _SKEL[key] = (joints, _mul(_mat_post(joints[root]["trans"]), absm[root]))
     return _SKEL[key]
 
 
-def _attach_matrix(game_dir, joint, anim):
-    """Where a joint of the hero puts what hangs on it, in the space its parts
-    are shown in (as modelled, moved by the root: rest_pose): its place in
-    the first frame of `anim`, against its nearest bound ancestor, carried
-    to where that one's bind puts it — so it meets the hand as the mesh has
-    it. None when the skeleton lacks it."""
+def _joint(game_dir, name):
+    """(joints, G, index) of one of the hero's bound joints, or None."""
     sk = _hero_skeleton(game_dir)
-    if not sk:
+    i = next((n for n, j in enumerate(sk[0]) if j["name"] == name
+              and j["bind"] >= 0), None) if sk else None
+    return None if i is None else (sk[0], sk[1], i)
+
+
+def _follow_column(game_dir, name, frames):
+    """How the hero's joint `name` moves what it carries, frame by frame, as
+    skin_animation's columns: what hangs on the chest moves with it."""
+    got = _joint(game_dir, name) if name else None
+    if not got:
         return None
-    joints, G, root = sk
-    i = next((n for n, j in enumerate(joints) if j["name"] == joint), None)
-    if i is None:
-        return None
-    pose = {}
-    raw = _read(Path(game_dir) / "res.pak", anim) if anim else None
-    if raw and raw[:3] == b"HMD":
-        d = read_hmd(raw)
-        if d["anims"]:
-            pose = anim_frames(raw, d, d["anims"][0])[0]
-    absm = []
-    for j in joints:
-        loc = _pose_matrix(j, pose.get(j["name"]))
-        absm.append(loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]]))
-    k = i
-    while k >= 0 and joints[k]["bind"] < 0:
-        k = joints[k]["parent"]
-    if k < 0:
-        # hung on the skeleton's root (ATTACH_World_…): held by the hand of
-        # its side, which the mannequin's arms do not hold where the pose does
-        side = joint[-2:] if joint[-2:] in ("_L", "_R") else ""
-        k = next((n for n, j in enumerate(joints) if j["name"] == "B_Wrist" + side), root)
-    rel = _mul(absm[i], _inv(absm[k]))
-    return _mul(rel, _mul(_inv(_mat_post(joints[k]["trans"])), G))
+    joints, G, i = got
+    chain = []
+    while i >= 0:
+        chain.append(i)
+        i = joints[i]["parent"]
+    pre = _mul(_inv(_SWAP), _mul(_inv(HERO_ROOT), _inv(G)))
+    post = _mul(HERO_ROOT, _SWAP)
+    col = []
+    for fr in frames:
+        absm = _IDENTITY
+        for k in reversed(chain):
+            absm = _mul(_pose_matrix(joints[k], fr.get(joints[k]["name"])), absm)
+        P = _mul(_mat_post(joints[chain[0]]["trans"]), absm)
+        col.append(_mul(pre, _mul(P, post)))
+    return col
 
 
-def _setup_targets(game_dir, item_type):
-    """([(stand-in's own matrix, joint name)], animation) of a weapon type's
-    setup, Target first: the hands its models go in, and the pose that holds
-    them."""
-    types = _sheets(game_dir)["itemType"]
-    t, setup, moveset = types.get(item_type), None, None
-    for _ in range(8):
-        if not t:
-            break
-        moveset = moveset or t.get("moveSet")
-        setup = t.get("setup")
-        if setup:
-            break
-        t = types.get(t.get("inherit"))
-    raw = _read(Path(game_dir) / "res.pak", setup) if setup else None
-    if not raw:
-        return [], None
-    tree = hbson.loads(raw)
-    joint_of, mats, anim = {}, {}, []
-    _walk(tree, lambda o: joint_of.__setitem__(
-        str(o.get("object", "")).split(".")[-1], str(o.get("target", "")).split(".")[-1])
-        if o.get("type") == "constraint" else None)
-    _walk(tree, lambda o: mats.__setitem__(o.get("name"), _local(o))
-          if o.get("name") in ("Target", "Target2") else None)
-    _walk(tree, lambda o: anim.append(o["animation"])
-          if str(o.get("animation", "")).endswith(".fbx") else None)
-    anim = anim[0] if anim else None
-    # the idle that holds the weapon at rest: the type's move set's, else
-    # the style the setup names (posed on an attack, or on a file since
-    # moved: Anim/Human/Staff/… is now Polearm/_Staff/…)
-    res = Path(game_dir) / "res.pak"
-    _read(res, "")
-    index = next((v[0] for k, v in _DIRS.items() if k[0] == str(res)), {})
-    style = re.search(r"/Anim_Human_([A-Za-z]+)_", anim or "")
-    for name in (moveset, style and style[1]):
-        tail = f"/anim_human_{name}_idle.fbx".lower() if name else None
-        hit = tail and next((p for p in sorted(index)
-                             if p.startswith("Anim/Human/") and p.lower().endswith(tail)), None)
-        if hit:
-            anim = hit
-            break
-    if anim not in index:
-        # none left (the scepter's): a one-handed weapon's
-        anim = "Anim/Human/OneHanded/Anim_Human_OneHanded_Idle.fbx"
-    return ([(mats[n], joint_of[n]) for n in ("Target", "Target2")
-             if n in mats and n in joint_of], anim)
+def _sockets(game_dir):
+    """{socket name: (its matrix, the joint it rides)} of the hero's body."""
+    key = str(game_dir)
+    if key not in _SOCKETS:
+        out = {}
+        raw = _read(Path(game_dir) / "res.pak", HERO_BODY + "Body.prefab")
+        if raw:
+            tree = hbson.loads(raw)
+            rides = {}
+            _walk(tree, lambda o: rides.__setitem__(
+                str(o.get("object")), str(o.get("target", "")).split(".")[-1])
+                if o.get("type") == "constraint" else None)
+            for group in tree.get("children") or ():
+                joint = rides.get(group.get("name"))
+                for c in (group.get("children") or ()) if joint else ():
+                    out[c.get("name")] = (_local(c), joint)
+        _SOCKETS[key] = out
+    return _SOCKETS[key]
 
 
-def _weapon_models(game_dir, it):
-    """A weapon's models in the hero's hands (prefab_models' form); none
-    for what is not a weapon with a setup."""
+def _holstered_models(game_dir, it, which):
+    """A weapon's models on its holster's sockets (prefab_models' form, each
+    following its joint), `which` set: "primary" or "secondary"."""
     vis = it.get("visuals") or {}
     prefabs = [str((m or {}).get("prefab", "")) for m in vis.get("models") or ()]
-    if not prefabs:
-        return []
-    targets, anim = _setup_targets(game_dir, it.get("type"))
+    types = _sheets(game_dir)["itemType"]
+    t, holes = types.get(it.get("type")), []
+    for _ in range(8):
+        if not t or holes:
+            break
+        holes = ((t.get("slot") or {}).get("holster") or {}).get(which) or []
+        t = types.get(t.get("inherit"))
+    sockets = _sockets(game_dir)
     out = []
-    for pf, (T, joint) in zip(prefabs, targets):
-        J = _attach_matrix(game_dir, joint, anim) if pf.endswith(".prefab") else None
-        if J is None:
+    for pf, hole in zip(prefabs, holes):
+        sock = sockets.get((hole or {}).get("socket"))
+        got = _joint(game_dir, sock[1]) if sock else None
+        if not pf.endswith(".prefab") or not got:
             continue
-        place = _mul(T, _mul(J, HERO_ROOT))
-        out += [dict(m, matrix=_mul(m["matrix"], place)) for m in prefab_models(game_dir, pf)]
+        joints, G, i = got
+        # the joint as the mesh has it: where its bind puts it
+        place = _mul(sock[0], _mul(_mul(_inv(_mat_post(joints[i]["trans"])), G), HERO_ROOT))
+        out += [dict(m, matrix=_mul(m["matrix"], place), follow=sock[1])
+                for m in prefab_models(game_dir, pf)]
     return out
 
 
-def item_model(game_dir, item_id, anim=False, models=None):
+def hero_model(game_dir, gear, anim=True):
+    """The viewer's payload for a hero wearing `gear` ({slot: item id}), in
+    its idle."""
+    idle = anim_file_frames(game_dir, HERO_IDLE) if anim else None
+    if idle:
+        # a slow breath: every other frame is enough, the viewer blends them
+        # (the body's 117 joints make a palette as heavy as its mesh)
+        idle = (idle[0][::2], idle[1] / 2)
+    return item_model(game_dir, "hero", models=hero_models(game_dir, gear), idle=idle)
+
+
+def item_model(game_dir, item_id, anim=False, models=None, idle=None):
     """The viewer's payload for one collectible (or monster), or None when
     it has no model this reader can make sense of. A prefab of several
     models comes as one mesh. With `anim`, a unit's idle animation too.
-    `models` instead of the item's: a dressed hero (hero_models)."""
+    `models` instead of the item's: a dressed hero (hero_models), `idle`
+    its animation (anim_file_frames)."""
     prefab = item_prefab(game_dir, item_id) if models is None else None
     if not prefab and models is None:
         return None
-    mount = (_sheets(game_dir)["item"].get(item_id) or {}).get("type") == "Mount"
-    idle = (idle_frames(game_dir, item_rig(game_dir, item_id),
-                        ("MountIdle", "Idle") if mount else ("Idle",))
-            if anim else None)
+    if idle is None and anim:
+        mount = (_sheets(game_dir)["item"].get(item_id) or {}).get("type") == "Mount"
+        idle = idle_frames(game_dir, item_rig(game_dir, item_id),
+                           ("MountIdle", "Idle") if mount else ("Idle",))
     frames = idle[0] if idle else None
     pos, nor, uv, uv2, groups = [], [], [], [], []
-    jv, wv, cols, spans = bytearray(), bytearray(), [], []
+    # cols: each joint's matrices over the frames; jv: four per vertex
+    jv, wv, cols = [], bytearray(), []
     for mdl in prefab_models(game_dir, prefab) if models is None else models:
         raw = _read(Path(game_dir) / "res.pak", mdl["source"])
         if not raw or raw[:3] != b"HMD":
@@ -1047,20 +1042,19 @@ def item_model(game_dir, item_id, anim=False, models=None):
         m, parts, am = got
         if frames:
             # each model's joints after the ones before; a model the
-            # animation doesn't move hangs on one still joint
+            # animation doesn't move hangs on one still joint, or on the
+            # hero's joint it follows (a holstered weapon on the chest)
             first = len(cols)
             if am:
                 jl, wl, mats = am
-                cols.append(mats)
-                jv += bytes(first_slot + j for first_slot, j in
-                            ((sum(len(c[0]) for c in cols[:-1]), j) for j in jl))
+                cols += [[row[s] for row in mats] for s in range(len(mats[0]))]
+                jv += [first + j for j in jl]
                 wv += wl
             else:
-                cols.append([[_IDENTITY]] * len(frames))
-                base_slot = sum(len(c[0]) for c in cols[:-1])
-                jv += bytes([base_slot, 0, 0, 0] * m["n"])
+                cols.append(_follow_column(game_dir, mdl.get("follow"), frames)
+                            or [_IDENTITY] * len(frames))
+                jv += [first] * (4 * m["n"])
                 wv += bytes([255, 0, 0, 0] * m["n"])
-            spans.append(first)
         base = len(pos) // 3
         pos += m["pos"]
         nor += m["nor"]
@@ -1094,17 +1088,27 @@ def item_model(game_dir, item_id, anim=False, models=None):
                "pos": _b64("f", pos), "nor": _b64("b", nb),
                "uv": _b64("f", uv), "uv2": _b64("f", uv2),
                "lines": lines_png(game_dir), "parts": out}
-    if frames and any(any(c is not _IDENTITY for c in col[0]) for col in cols):
-        nj = sum(len(c[0]) for c in cols)
+    if frames and any(any(M is not _IDENTITY for M in col) for col in cols):
+        # the parts of a body share its joints: one column for each
+        uniq, remap, kept = {}, [], []
+        for col in cols:
+            key = tuple(round(x, 4) for M in col for r in M for x in r)
+            if key not in uniq:
+                uniq[key] = len(kept)
+                kept.append(col)
+            remap.append(uniq[key])
+        nj = len(kept)
         if nj <= 255:
+            jv = [remap[j] for j in jv]
+            cols = kept
             # [frame][joint] three columns of four: (m0c, m1c, m2c, m3c)
             flat = []
             for f in range(len(frames)):
                 for col in cols:
-                    for M in col[f]:
-                        for c in range(3):
-                            flat += (M[0][c], M[1][c], M[2][c], M[3][c])
-            allm = [[M for col in cols for M in col[f]] for f in range(len(frames))]
+                    M = col[f]
+                    for c in range(3):
+                        flat += (M[0][c], M[1][c], M[2][c], M[3][c])
+            allm = [[col[f] for col in cols] for f in range(len(frames))]
             sample = list(range(0, n, max(1, n // 6000)))
 
             def skinned(f):

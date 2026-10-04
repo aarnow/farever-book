@@ -1027,7 +1027,7 @@ def locate_hlboot(pid):
 # 3D models, for the Collection's viewer
 # ---------------------------------------------------------------------------
 MODELS_DIR = ANALYSIS / "models"
-MODEL_FORMAT = 12
+MODEL_FORMAT = 13
 _model_lock = threading.Lock()
 
 
@@ -1049,14 +1049,16 @@ def item_model_json(item_id):
     game's files the first time (a second or so), from the cache after. The
     cache is keyed to res.pak, so a game patch rebuilds it. None when the
     item has no model this reader understands, or the game isn't found.
-    "<id>@anim" asks for a monster's idle animation with it; "hero:<id>.<id>…"
-    the hero wearing those pieces (a build's)."""
+    "<id>@anim" asks for a monster's idle animation with it;
+    "hero:<slot>=<id>.<slot>=<id>…" the hero wearing those pieces (a
+    build's), in its idle."""
     hero = None
     if str(item_id or "").startswith("hero:"):
-        hero = sorted(i for i in str(item_id)[5:].split(".")
-                      if re.fullmatch(r"[A-Za-z0-9_]+", i))
+        hero = dict(p.split("=", 1) for p in str(item_id)[5:].split(".")
+                    if re.fullmatch(r"[A-Za-z0-9_]+=[A-Za-z0-9_]+", p))
         anim = False
-        item_id = "hero_" + hashlib.sha1(".".join(hero).encode()).hexdigest()[:12]
+        item_id = "hero_" + hashlib.sha1(
+            ".".join(f"{k}={v}" for k, v in sorted(hero.items())).encode()).hexdigest()[:12]
     else:
         m_ = re.fullmatch(r"([A-Za-z0-9_]+)(@anim)?", str(item_id or ""))
         if not m_:
@@ -1081,8 +1083,8 @@ def item_model_json(item_id):
             sys.path.insert(0, str(ROOT / "hltools"))
         try:
             import hmd_model
-            m = (hmd_model.item_model(game, item_id, models=hmd_model.hero_models(game, hero))
-                 if hero is not None else hmd_model.item_model(game, item_id, anim=anim))
+            m = (hmd_model.hero_model(game, hero) if hero is not None
+                 else hmd_model.item_model(game, item_id, anim=anim))
         except Exception as e:
             # not cached: a fix to the reader should get its chance
             print(f"[meter] model of {item_id} failed: {e!r}", file=sys.stderr)
