@@ -611,6 +611,7 @@ window.applyState = function (json) {
   updateEventsBadge();
   renderLinkSteps();
   renderBuildEditor();
+  if (JSON.stringify(s.update) !== JSON.stringify(prev.update)) renderUpdate(s.update);
 };
 
 /* A new tab's page comes in softly: its blocks rise and fade in, one

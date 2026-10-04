@@ -109,6 +109,10 @@ BUILDS_DIR = _WRITABLE / "builds"       # one JSON per build (Build tab)
 # The game's folder, when the player had to show it (welcome screen): its
 # install was not where the drives' search looks.
 GAME_PATH_FILE = _WRITABLE / ".meter_gamepath.json"
+# The third-party components' licences, installed with the app (written at
+# build time by packaging/third_party.py): none in a source run.
+THIRD_PARTY_FILE = (Path(sys._MEIPASS) / "THIRD_PARTY_LICENSES.txt"
+                    if FROZEN else None)
 
 
 # What the account owns (mounts, gliders, companions), as last read in game.

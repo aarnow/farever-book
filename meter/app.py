@@ -15,7 +15,7 @@ from buildtab import BuildTab
 
 from common import (
     ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
-    SETTINGS_TOPICS,
+    SETTINGS_TOPICS, THIRD_PARTY_FILE,
     APP_TAB_LABELS,
     BEST_TIMES_CACHE, CODEX_FILE, COLLECTION_FILE, DATA_HOME, DUNGEONS_DIR,
     ELEMENTS_FILE, EVENTS_MAX, FAREVER_STEAM_APPID, HELP_DIR, HELP_GROUPS,
@@ -50,6 +50,7 @@ from views import (
     bestiary_view, character_view, collection_view, droptable_view,
     hunt_detail_view, map_view, rift_rewards_view)
 from reports import render_rift_report_image, report_view
+from updater import RELEASES_URL, Updater, clean_downloads
 from bridge import MenuBridge, _Scheduler, _parse_help
 from gamelink import GameLink
 
@@ -122,6 +123,9 @@ class App:
         self.buildtab = BuildTab(self.menubridge.invalidate, self._toast_msg)
         # the overlays over the game: the group meter and the goals
         self.goals = G.Goals()
+        # new versions, from the releases repository (updater.py)
+        clean_downloads()
+        self.updater = Updater(self.menubridge.invalidate)
         # one's own last known state, shown with the game closed
         self.me = MeStore()
         stock, _at = self.me.got("stock")
@@ -676,6 +680,13 @@ class App:
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "open_log": self._open_log_folder,
+            # updates
+            "update_check": lambda: self.updater.check(manual=True),
+            "update_install": lambda: self.updater.install(self.request_quit),
+            "update_later": self.updater.later,
+            "update_close": self.updater.close,
+            "update_page": self._open_releases,
+            "open_licences": self._open_licences,
             "settings_topic": lambda p: setattr(
                 self, "_settings_topic",
                 p.get("id") if p.get("id") in SETTINGS_TOPICS
@@ -758,6 +769,7 @@ class App:
 
     def _refresh(self):
         self._auto_self_profile()
+        self.updater.check()                # at launch, then hourly
         self.me.flush()
         self._tick_rift()
         self._tick_parse()
@@ -782,6 +794,8 @@ class App:
         return {
             "version": VERSION,
             "dataGen": DATA_GENERATION[0],
+            # a new version's offer (not over the welcome screen)
+            "update": None if self._setup else self.updater.state,
             "zoom": int(self._zoom),
             "shard": self.ui_state.server() or "",
             "link": self._link_spec(),
@@ -2113,8 +2127,27 @@ class App:
                    "min": 50, "max": 200, "step": 5, "unit": "%"}},
         ]
 
+    def _open_licences(self):
+        try:
+            os.startfile(THIRD_PARTY_FILE)
+        except (OSError, TypeError) as e:
+            print(f"[meter] couldn't open the licences: {e}", file=sys.stderr)
+
+    def _open_releases(self):
+        import webbrowser
+        webbrowser.open(RELEASES_URL)
+
     def _settings_config(self):
         return [
+            {"k": "section", "t": "Version"},
+            {"k": "note", "t": f"Farever France {VERSION}. Les nouvelles "
+                               "versions sont proposées d'elles-mêmes au "
+                               "lancement, puis toutes les heures."},
+            {"k": "button", "id": "update_check",
+             "t": "Rechercher une mise à jour"},
+            *([{"k": "button", "id": "open_licences",
+                "t": "Licences des composants"}]
+              if THIRD_PARTY_FILE and THIRD_PARTY_FILE.is_file() else []),
             {"k": "section", "t": "Fichiers"},
             {"k": "button", "id": "open_parses",
              "t": "Dossier des rapports de faille"},

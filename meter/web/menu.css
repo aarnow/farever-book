@@ -3253,3 +3253,13 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .setic svg { width: 17px; height: 17px; fill: currentColor; }
 .setitem.on { color: #fff; background: rgba(166, 210, 59, .1); border-color: rgba(166, 210, 59, .45); }
 .setitem.on .setic { color: #1F2A06; border-color: #D6F08E; background: linear-gradient(180deg, #C4E66A, var(--lime-2)); }
+
+
+/* A new version's offer (frame.js renderUpdate) */
+.upbox { width: min(580px, 92vw); }
+.uplead { margin: 6px 0 10px; color: #fff; font-size: 14px; }
+.upsub { margin: 4px 0 6px; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .08em;
+         text-transform: uppercase; }
+.upnotes { max-height: 220px; overflow-y: auto; white-space: pre-wrap; padding: 10px 12px; border-radius: 8px;
+           background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font-size: 13px; line-height: 1.5; }
+.upbox .wbar { margin: 16px 0 8px; }

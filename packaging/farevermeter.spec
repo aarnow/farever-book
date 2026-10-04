@@ -7,6 +7,7 @@
 # PATH" and "pip install frida" from the user's side entirely.
 #
 # Run from the project root, not from packaging/.
+import sys
 from pathlib import Path
 
 ROOT = Path(SPECPATH).resolve().parent
@@ -43,6 +44,14 @@ datas = [
     *[(str(f), "res/web/js")
       for f in sorted((ROOT / "meter" / "web" / "js").glob("*.js"))],
 ]
+
+# The third-party components' licences, gathered from the packages being
+# bundled (packaging/third_party.py), shipped beside the app's own files.
+sys.path.insert(0, str(ROOT / "packaging"))
+import third_party  # noqa: E402
+(ROOT / "build").mkdir(exist_ok=True)
+_licences = third_party.write(ROOT / "build" / "THIRD_PARTY_LICENSES.txt")
+datas.append((str(_licences), "."))
 
 # The Help tab's articles. Globbed rather than listed, because a help topic
 # exists to be added to — a new .md file should ship by being written.

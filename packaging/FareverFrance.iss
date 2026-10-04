@@ -81,6 +81,8 @@ const
   TrayClass = 'FareverFranceTray';
 
 function AskToStopMeter(const Verb: String; Silent: Boolean): Boolean;
+var
+  i: Integer;
 begin
   Result := True;
   if FindWindowByClassName(TrayClass) = 0 then
@@ -92,6 +94,14 @@ begin
   begin
     Result := False;
     Exit;
+  end;
+  { Opened by the app's own update, which closes it right after: give it
+    up to 10 s to be gone before asking anything. }
+  for i := 1 to 40 do
+  begin
+    if FindWindowByClassName(TrayClass) = 0 then
+      Exit;
+    Sleep(250);
   end;
   while FindWindowByClassName(TrayClass) <> 0 do
   begin

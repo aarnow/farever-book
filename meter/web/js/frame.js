@@ -531,3 +531,62 @@ function buildSetNav(n) {
   });
   return nav;
 }
+
+
+/* A new version (updater.py): offered, downloaded with its progress, then
+   its installer opened and the app closed. Also the manual check's answer. */
+function renderUpdate(u) {
+  let back = $('#updatemodal');
+  if (!u) { if (back) back.remove(); return; }
+  if (!back) {
+    back = el('div', 'modalback');
+    back.id = 'updatemodal';
+    document.body.appendChild(back);
+  }
+  back.textContent = '';
+  const box = el('div', 'spanel bdialog upbox');
+  const btn = (t, cls, id) => {
+    const b = el('button', cls, t);
+    b.type = 'button';
+    b.addEventListener('click', () => notify(id, {}));
+    return b;
+  };
+  const row = el('div', 'bbtns');
+  if (u.stage === 'offer') {
+    box.appendChild(el('div', 'sptitle', 'Nouvelle version disponible'));
+    box.appendChild(el('p', 'uplead', 'Farever France ' + u.v + ' est disponible (vous avez la ' + u.mine + ').'));
+    if (u.notes) {
+      box.appendChild(el('div', 'upsub', 'Nouveautés'));
+      box.appendChild(el('div', 'upnotes', u.notes));
+    }
+    box.appendChild(el('p', 'note', 'La mise à jour télécharge l’installeur' + (u.mb ? ' (' + u.mb + ' Mo)' : '')
+      + ', l’ouvre et ferme Farever France. Suivez l’installeur : il relance l’application à la fin. '
+      + 'Vos builds et votre historique sont conservés.'));
+    row.appendChild(btn('Plus tard', 'rowbtn', 'update_later'));
+    row.appendChild(btn('Mettre à jour', 'btn go', 'update_install'));
+  } else if (u.stage === 'download' || u.stage === 'installing') {
+    box.appendChild(el('div', 'sptitle', 'Mise à jour vers la ' + u.v));
+    const pct = u.stage === 'installing' ? 100 : (u.pct || 0);
+    const bar = el('div', 'wbar');
+    const fill = el('i');
+    fill.style.width = Math.max(2, pct) + '%';
+    bar.appendChild(fill);
+    box.appendChild(bar);
+    box.appendChild(el('p', 'note', u.stage === 'installing'
+      ? 'Ouverture de l’installeur, Farever France va se fermer…'
+      : 'Téléchargement de l’installeur : ' + pct + ' %'));
+  } else if (u.stage === 'checking') {
+    box.appendChild(el('div', 'sptitle', 'Recherche d’une mise à jour…'));
+  } else if (u.stage === 'uptodate') {
+    box.appendChild(el('div', 'sptitle', 'Farever France est à jour'));
+    box.appendChild(el('p', 'note', 'Vous avez déjà la dernière version.'));
+    row.appendChild(btn('Fermer', 'btn go', 'update_close'));
+  } else {
+    box.appendChild(el('div', 'sptitle', 'Mise à jour impossible'));
+    box.appendChild(el('p', 'werr', u.t || 'Une erreur est survenue.'));
+    if (u.page) row.appendChild(btn('Page des versions', 'rowbtn', 'update_page'));
+    row.appendChild(btn('Fermer', 'btn go', 'update_close'));
+  }
+  if (row.children.length) box.appendChild(row);
+  back.appendChild(box);
+}
