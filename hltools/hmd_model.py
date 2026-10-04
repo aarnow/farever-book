@@ -25,6 +25,7 @@ import base64
 import io
 import json
 import math
+import re
 import struct
 from pathlib import Path
 
@@ -67,7 +68,7 @@ def _sheets(game_dir):
         sh = {s["name"]: s for s in cdb["sheets"]}
         _CDB[key] = {n: {r["id"]: r for r in sh[n].get("lines") or ()
                          if isinstance(r.get("id"), str)}
-                     for n in ("item", "model", "gradient", "unit")}
+                     for n in ("item", "model", "gradient", "unit", "itemType")}
     return _CDB[key]
 
 
@@ -861,8 +862,8 @@ HERO_FACE = ("MainHead_Naked", "Eyes/Eyes_01_A", "Eyebrows/Eyebrows_01_A")
 
 
 def hero_models(game_dir, item_ids):
-    """The models of a hero wearing these pieces (armour: the weapons and
-    jewels are left out), for item_model."""
+    """The models of a hero wearing these pieces, for item_model: the
+    armour on the body, the weapons in hand (the jewels are not seen)."""
     items = _sheets(game_dir)["item"]
     prefabs, covered = [], set()
     worn = [items.get(i) or {} for i in item_ids]
@@ -880,7 +881,145 @@ def hero_models(game_dir, item_ids):
     prefabs += [HERO_BODY + p + ".prefab" for p in HERO_FACE]
     prefabs += [HERO_BODY + bare + ".prefab" for t, bare in HERO_BARE.items()
                 if t not in covered]
-    return [m for p in prefabs for m in prefab_models(game_dir, p)]
+    out = [m for p in prefabs for m in prefab_models(game_dir, p)]
+    for it in worn:
+        out += _weapon_models(game_dir, it)
+    return out
+
+
+# ---- the weapons in hand ---------------------------------------------------
+# A weapon type's setup prefab (itemType.setup, inherited) hangs a stand-in,
+# "Target" (and "Target2", the other hand), on an ATTACH joint of the hero;
+# the item's models (visuals.models, in that order) take the stand-ins'
+# places. Those joints have no rest place of their own (it is the bind
+# space, at the feet): the setup's animation puts them in the hand. The body
+# parts' prefabs turn the hero a quarter (their ROOT).
+HERO_SKELETON = "Character/Hero/Body/Sources/Hero_N.fbx"
+HERO_ROOT = _local({"rotationZ": 90})
+_SKEL = {}
+
+
+def _hero_skeleton(game_dir):
+    """(joints, root matrix G as rest_pose finds it, index of the root bound
+    joint) of the hero's skeleton, or None."""
+    key = str(game_dir)
+    if key not in _SKEL:
+        _SKEL[key] = None
+        raw = _read(Path(game_dir) / "res.pak", HERO_SKELETON)
+        model = next((m for m in read_hmd(raw)["models"] if m.get("skin")), None) if raw else None
+        if model:
+            joints = model["skin"]["joints"]
+            absm, depth = [], []
+            for j in joints:
+                loc = _mat(j["pos"])
+                absm.append(loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]]))
+                depth.append(0 if j["parent"] < 0 else depth[j["parent"]] + 1)
+            bound = [i for i, j in enumerate(joints) if j["bind"] >= 0]
+            if bound:
+                root = min(bound, key=lambda i: depth[i])
+                _SKEL[key] = (joints, _mul(_mat_post(joints[root]["trans"]), absm[root]), root)
+    return _SKEL[key]
+
+
+def _attach_matrix(game_dir, joint, anim):
+    """Where a joint of the hero puts what hangs on it, in the space its parts
+    are shown in (as modelled, moved by the root: rest_pose): its place in
+    the first frame of `anim`, against its nearest bound ancestor, carried
+    to where that one's bind puts it — so it meets the hand as the mesh has
+    it. None when the skeleton lacks it."""
+    sk = _hero_skeleton(game_dir)
+    if not sk:
+        return None
+    joints, G, root = sk
+    i = next((n for n, j in enumerate(joints) if j["name"] == joint), None)
+    if i is None:
+        return None
+    pose = {}
+    raw = _read(Path(game_dir) / "res.pak", anim) if anim else None
+    if raw and raw[:3] == b"HMD":
+        d = read_hmd(raw)
+        if d["anims"]:
+            pose = anim_frames(raw, d, d["anims"][0])[0]
+    absm = []
+    for j in joints:
+        loc = _pose_matrix(j, pose.get(j["name"]))
+        absm.append(loc if j["parent"] < 0 else _mul(loc, absm[j["parent"]]))
+    k = i
+    while k >= 0 and joints[k]["bind"] < 0:
+        k = joints[k]["parent"]
+    if k < 0:
+        # hung on the skeleton's root (ATTACH_World_…): held by the hand of
+        # its side, which the mannequin's arms do not hold where the pose does
+        side = joint[-2:] if joint[-2:] in ("_L", "_R") else ""
+        k = next((n for n, j in enumerate(joints) if j["name"] == "B_Wrist" + side), root)
+    rel = _mul(absm[i], _inv(absm[k]))
+    return _mul(rel, _mul(_inv(_mat_post(joints[k]["trans"])), G))
+
+
+def _setup_targets(game_dir, item_type):
+    """([(stand-in's own matrix, joint name)], animation) of a weapon type's
+    setup, Target first: the hands its models go in, and the pose that holds
+    them."""
+    types = _sheets(game_dir)["itemType"]
+    t, setup, moveset = types.get(item_type), None, None
+    for _ in range(8):
+        if not t:
+            break
+        moveset = moveset or t.get("moveSet")
+        setup = t.get("setup")
+        if setup:
+            break
+        t = types.get(t.get("inherit"))
+    raw = _read(Path(game_dir) / "res.pak", setup) if setup else None
+    if not raw:
+        return [], None
+    tree = hbson.loads(raw)
+    joint_of, mats, anim = {}, {}, []
+    _walk(tree, lambda o: joint_of.__setitem__(
+        str(o.get("object", "")).split(".")[-1], str(o.get("target", "")).split(".")[-1])
+        if o.get("type") == "constraint" else None)
+    _walk(tree, lambda o: mats.__setitem__(o.get("name"), _local(o))
+          if o.get("name") in ("Target", "Target2") else None)
+    _walk(tree, lambda o: anim.append(o["animation"])
+          if str(o.get("animation", "")).endswith(".fbx") else None)
+    anim = anim[0] if anim else None
+    # the idle that holds the weapon at rest: the type's move set's, else
+    # the style the setup names (posed on an attack, or on a file since
+    # moved: Anim/Human/Staff/… is now Polearm/_Staff/…)
+    res = Path(game_dir) / "res.pak"
+    _read(res, "")
+    index = next((v[0] for k, v in _DIRS.items() if k[0] == str(res)), {})
+    style = re.search(r"/Anim_Human_([A-Za-z]+)_", anim or "")
+    for name in (moveset, style and style[1]):
+        tail = f"/anim_human_{name}_idle.fbx".lower() if name else None
+        hit = tail and next((p for p in sorted(index)
+                             if p.startswith("Anim/Human/") and p.lower().endswith(tail)), None)
+        if hit:
+            anim = hit
+            break
+    if anim not in index:
+        # none left (the scepter's): a one-handed weapon's
+        anim = "Anim/Human/OneHanded/Anim_Human_OneHanded_Idle.fbx"
+    return ([(mats[n], joint_of[n]) for n in ("Target", "Target2")
+             if n in mats and n in joint_of], anim)
+
+
+def _weapon_models(game_dir, it):
+    """A weapon's models in the hero's hands (prefab_models' form); none
+    for what is not a weapon with a setup."""
+    vis = it.get("visuals") or {}
+    prefabs = [str((m or {}).get("prefab", "")) for m in vis.get("models") or ()]
+    if not prefabs:
+        return []
+    targets, anim = _setup_targets(game_dir, it.get("type"))
+    out = []
+    for pf, (T, joint) in zip(prefabs, targets):
+        J = _attach_matrix(game_dir, joint, anim) if pf.endswith(".prefab") else None
+        if J is None:
+            continue
+        place = _mul(T, _mul(J, HERO_ROOT))
+        out += [dict(m, matrix=_mul(m["matrix"], place)) for m in prefab_models(game_dir, pf)]
+    return out
 
 
 def item_model(game_dir, item_id, anim=False, models=None):

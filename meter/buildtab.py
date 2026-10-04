@@ -531,8 +531,8 @@ FILTER_STAT_ORDER = ("Vitality", "Strength", "Dexterity", "Faith", "Intellect",
 ROLE_FR = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 
 
-# the pieces the hero model wears
-HERO_SLOTS = ("Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
+# the pieces the hero model wears (the main set of weapons in hand)
+HERO_SLOTS = ("Weapon1", "OffhandWeapon", "Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
 
 def _infusion_options():
     """The infusions, by faction then role, each named with both: the
