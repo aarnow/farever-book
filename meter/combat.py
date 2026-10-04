@@ -9,7 +9,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 
 from common import (
-    BOSS_PULL_BACKLAG_SECS, COMBAT_TIMEOUT_SECS, RECENT_EVENT_MAX, _OVERLAY,
+    BOSS_PULL_BACKLAG_SECS, COMBAT_TIMEOUT_SECS, RECENT_EVENT_MAX, _APP,
     _class_tag)
 from gamedata import _summon_label, dungeon_name
 
@@ -55,8 +55,8 @@ def _overheal_pct(total, landed):
 class HealSizeEstimator:
     """How big was that heal? The client is never told, so this estimates it.
 
-    Measured 2026-08-03 (`frida/run_heal.py`, 40 heal events across 6 healers
-    and 4 skills): of the fifteen heal entry points in the build, ONLY
+    Measured 2026-08-03 (40 heal events across 6 healers and 4 skills): of
+    the fifteen heal entry points in the build, ONLY
     `ent.Unit.playHitHealFX` runs client-side, and its `HitData.amount` reads
     0.000. `receiveHeal`, `computeHeal`, `evalHeal`, the four `*HealEval`
     callbacks, `applyHeal`, `rpcDisplayHeal(__impl)` and
@@ -174,7 +174,7 @@ class HealSizeEstimator:
                 ev["sized"] = "none"
         # A size can never make a measured heal smaller than it actually was.
         ev["amount"] = max(landed, spec)
-        # Ground truth, collected from ordinary play rather than a probe: a
+        # Ground truth, collected from ordinary play: a
         # heal that LANDED in full is a direct measurement of what that heal
         # was worth, so a computed size below it means the formula is wrong.
         # (Above it is expected and means nothing — the target was topped off.)
@@ -813,9 +813,9 @@ class DungeonTracker:
         print(f"[dungeon] loot ({phase}): {p.get('count')}x {p['item']} "
               f"{p.get('rarity') or ''}", file=sys.stderr)
         # A finished run is already saved: rewrite it with the chest's loot.
-        ov = _OVERLAY["ref"]
-        if run["done"] and run["file"] and ov is not None:
-            ov.on_dungeon_loot(run["file"], list(run["loot"]))
+        app = _APP["ref"]
+        if run["done"] and run["file"] and app is not None:
+            app.on_dungeon_loot(run["file"], list(run["loot"]))
 
     def _leave(self):
         run, self.run = self.run, None
@@ -850,9 +850,9 @@ class DungeonTracker:
             "wipes": run["wipes"]})
         print(f"[dungeon] {run['kind']} {result} in {duration:.1f}s "
               f"({run['deaths']} deaths, {run['wipes']} wipes)", file=sys.stderr)
-        ov = _OVERLAY["ref"]
-        if ov is not None:
-            ov.on_dungeon_run(report)
+        app = _APP["ref"]
+        if app is not None:
+            app.on_dungeon_run(report)
 
 
 class WorldSnapshot:

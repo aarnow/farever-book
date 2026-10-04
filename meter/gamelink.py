@@ -8,7 +8,7 @@ import time
 import frida
 
 from common import (
-    BOSS_PULL_BACKLAG_SECS, NULLIFIED_BLOCKERS, STOP, TARGET_PROCESS, _OVERLAY,
+    BOSS_PULL_BACKLAG_SECS, NULLIFIED_BLOCKERS, STOP, TARGET_PROCESS, _APP,
     _mmss)
 from winsys import _process_age, _window_rect_of_pid
 from gamedata import (
@@ -59,9 +59,9 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
                        rift_rec, heal_sizer).run()
 
 
-def _overlay():
+def _app():
     """The app's window, once it exists."""
-    return _OVERLAY["ref"]
+    return _APP["ref"]
 
 
 class GameSession:
@@ -75,7 +75,7 @@ class GameSession:
     BOOTING_GRACE = 120.0       # a game still booting is retried meanwhile
 
     # Messages the window takes as they come: kind -> its handler there.
-    TO_OVERLAY = {"stock": "on_stock",
+    TO_APP = {"stock": "on_stock",
                   "collection": "on_collection", "codex": "on_codex",
                   "itemcodex": "on_item_codex",
                   "achievements": "on_achievements",
@@ -314,9 +314,9 @@ class GameSession:
                 # we are the ones leaving: unload and detach properly
                 _unload_hook(self.script)
                 self._detach()
-            ov = _overlay()
-            if ov is not None:
-                ov.on_game_disconnected()
+            app = _app()
+            if app is not None:
+                app.on_game_disconnected()
             self.dungeon.disconnect()           # kept as abandoned
             self.ui_state.set_rift(False)
             self.rift_rec.set_rift(False)
@@ -339,10 +339,10 @@ class GameSession:
         handler = self.handlers.get(k)
         if handler is not None:
             handler(p)
-        elif k in self.TO_OVERLAY:
-            ov = _overlay()
-            if ov is not None:
-                getattr(ov, self.TO_OVERLAY[k])(p)
+        elif k in self.TO_APP:
+            app = _app()
+            if app is not None:
+                getattr(app, self.TO_APP[k])(p)
 
     def _on_hit(self, p):
         dropped = "blocker" in p and self._tally_nullified(p)
@@ -406,9 +406,9 @@ class GameSession:
     def _show_rift_report(self, report):
         # the classes are frozen into the report: it is reopened days later
         _stamp_report_classes(report, self.world)
-        ov = _overlay()
-        if ov is not None:
-            ov.show_rift_report(report)
+        app = _app()
+        if app is not None:
+            app.show_rift_report(report)
 
     def _on_rift(self, p):
         state = bool(p.get("state"))
@@ -416,9 +416,9 @@ class GameSession:
         what = self.rift_rec.set_rift(state)
         print(f"[meter] rift: {state}"
               + (f" (recording: {what})" if what else ""), file=sys.stderr)
-        ov = _overlay()
-        if what == "abandoned" and ov is not None:
-            ov.on_rift_dropped("la faille s’est terminée avant le boss")
+        app = _app()
+        if what == "abandoned" and app is not None:
+            app.on_rift_dropped("la faille s’est terminée avant le boss")
 
     def _on_bossbar(self, p):
         """The game's boss / elite bar went up or down. A fight starts on
@@ -447,8 +447,8 @@ class GameSession:
         print(f"[meter] boss fight started: "
               f"{', '.join(k for k in kinds if k) or '?'}", file=sys.stderr)
         self.rift_rec.on_boss_pull()        # the rift report's phase edge
-        ov = _overlay()
-        if ov is not None and ov.auto_reset_boss():
+        app = _app()
+        if app is not None and app.auto_reset_boss():
             # the bar is polled, so the opening burst has already landed:
             # the last seconds are kept
             kept = self.session.reset_keeping_recent()
@@ -463,18 +463,18 @@ class GameSession:
         print("[meter] last boss bar down — pull reset re-armed",
               file=sys.stderr)
         t0, self.boss_t0 = self.boss_t0, None
-        ov = _overlay()
-        if t0 is not None and ov is not None:
+        app = _app()
+        if t0 is not None and app is not None:
             kinds = self.boss_kinds or (
                 (bar.get("kind"),) if bar.get("kind") else ())
-            ov.on_boss_timed_kill(kinds, time.monotonic() - t0)
+            app.on_boss_timed_kill(kinds, time.monotonic() - t0)
         report = self.rift_rec.on_boss_kill()
         if report is not None:
             _stamp_report_classes(report, self.world)
-            if ov is not None:
+            if app is not None:
                 print("[meter] rift complete — showing the end-of-rift "
                       "report", file=sys.stderr)
-                ov.show_rift_report(report)
+                app.show_rift_report(report)
 
     def _end_boss_fight(self):
         """A fight that ended without a kill: no time recorded."""
@@ -490,10 +490,10 @@ class GameSession:
         print("[meter] boss fight ended without a kill (no boss bar "
               f"for {p.get('polls', 0)} polls) — pull reset re-armed",
               file=sys.stderr)
-        ov = _overlay()
-        if ov is not None and ov.auto_reset_boss():
+        app = _app()
+        if app is not None and app.auto_reset_boss():
             self.session.reset()
-            ov.on_boss_giveup()
+            app.on_boss_giveup()
 
     def _on_zone(self, p):
         """A loading screen (or, first, where we already are)."""
@@ -511,9 +511,9 @@ class GameSession:
         if self.rift_rec.on_zone():     # a wipe or a walk-out, not a run
             print("[meter] rift recording dropped (zone change)",
                   file=sys.stderr)
-            ov = _overlay()
-            if ov is not None:
-                ov.on_rift_dropped("changement de zone avant la victoire")
+            app = _app()
+            if app is not None:
+                app.on_rift_dropped("changement de zone avant la victoire")
         self._end_boss_fight()
         print(f"[meter] zone change ({p.get('sig')!r}"
               + (f"; {extra}" if extra else "") + ") — meter reset",
@@ -534,9 +534,9 @@ class GameSession:
         """The local hero, re-reported every 3 s with the group: only a new
         one is logged, and never by name (the log is often on screen)."""
         name = p.get("name")
-        ov = _overlay()
-        if ov is not None and name:
-            ov.on_hero_seen(name, p.get("uid"), p.get("acct"))
+        app = _app()
+        if app is not None and name:
+            app.on_hero_seen(name, p.get("uid"), p.get("acct"))
         if name and name != self.hero_name:
             first = self.hero_name is None
             self.link.step("hero", "ok", name)
@@ -546,9 +546,9 @@ class GameSession:
 
     def _on_pickup(self, p):
         self.dungeon.pickup(p)
-        ov = _overlay()
-        if ov is not None:
-            ov.on_pickup(p)
+        app = _app()
+        if app is not None:
+            app.on_pickup(p)
 
     def _on_log(self, p):
         msg = str(p.get("msg") or "")
@@ -590,7 +590,7 @@ class GameLink:
     watching once it closes — so the meter can stay open across game sessions,
     and everything it saved is readable without the game.
 
-    State is read by the overlay (the status light) and changed only here."""
+    State is read by the app (the status light) and changed only here."""
 
     CLOSED, CONNECTING, CONNECTED, FAILED = (
         "closed", "connecting", "connected", "failed")
@@ -619,7 +619,7 @@ class GameLink:
         # mistaken for the game starting again.
         self._gone_pid = None
 
-    # -- read by the overlay ---------------------------------------------
+    # -- read by the app -------------------------------------------------
     def status(self):
         with self._lock:
             return self._state, self._detail, self._pid
@@ -649,9 +649,9 @@ class GameLink:
                 st["state"] = state
             if detail is not None:
                 st["detail"] = detail
-        ov = _OVERLAY["ref"]
-        if ov is not None:
-            ov.on_link_steps()
+        app = _APP["ref"]
+        if app is not None:
+            app.on_link_steps()
 
     def steps_detail(self, key):
         with self._lock:
@@ -685,9 +685,9 @@ class GameLink:
             self._pid = pid if state == self.CONNECTED else None
         print(f"[meter] game link: {state}"
               + (f" ({detail})" if detail else ""), file=sys.stderr)
-        ov = _OVERLAY["ref"]
-        if ov is not None:
-            ov.on_link_changed()
+        app = _APP["ref"]
+        if app is not None:
+            app.on_link_changed()
 
     def start(self):
         self._thread = threading.Thread(target=self._loop, daemon=True,

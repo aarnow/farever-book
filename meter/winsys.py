@@ -13,7 +13,7 @@ from pathlib import Path
 
 from common import (
     CLAIM_MUTEX, CLAIM_WAIT_MS, DATA_HOME, LOCK_DIR, LOCK_FILE,
-    METER_IMAGE_NAMES, QUIT_WAIT_SECS, RIFTS_DIR, ROOT, STOP, _OVERLAY,
+    METER_IMAGE_NAMES, QUIT_WAIT_SECS, RIFTS_DIR, ROOT, STOP, _APP,
     request_stop)
 
 
@@ -23,9 +23,7 @@ from common import (
 # Windows scales an application that never says otherwise. This one never did:
 # there is no dpiAware entry in the shipped manifest and no awareness call
 # anywhere, so at a 300% system scale the desktop composer bitmap-stretched
-# every overlay window to three times its size and blurred it on the way. The
-# size sliders could not fight that, because the stretch happens after Tk has
-# finished drawing.
+# every window to three times its size and blurred it on the way.
 #
 # Declaring per-monitor-v2 turns the stretching off. It also puts every
 # coordinate this process handles into one space — ours AND the game's, since
@@ -42,7 +40,7 @@ USER_DEFAULT_SCREEN_DPI = 96
 def declare_dpi_awareness():
     """Opt out of Windows' bitmap stretching. Returns what was achieved.
 
-    Must run before this process owns its first window — the tray icon's, Tk's,
+    Must run before this process owns its first window — the tray icon's
     or a message box's — because awareness is latched at that moment and cannot
     be changed afterwards. Each fallback is a older-Windows entry point for the
     same idea, tried newest first.
@@ -129,8 +127,7 @@ def _monitor_containing(x, y):
 
 def _window_rect_of_pid(pid):
     """(left, top, right, bottom) of a process's largest visible top-level
-    window, or None. Used to centre the control menu on the game rather than on
-    whichever monitor Windows calls primary."""
+    window, or None: the game has a window once it has booted."""
     if sys.platform != "win32":
         return None
     from ctypes import wintypes
@@ -213,13 +210,11 @@ MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_NOREPEAT = 0x0001, 0x0002, 0x0004, 0x4000
 REBIND_TO = [0]
 
 
-# Shift+\ (reset the encounter) is the only key the meter still owns — every
-# other control moved onto the in-game control menu. Plain \ and / are left
-# alone now so the game keeps them.
+# The one key the meter owns: Shift+\ by default, reset the encounter.
 HK_RESET = 1
 
 
-# The reset keybind, rebindable from the control menu. A dict rather than a
+# The reset keybind, rebindable in Réglages. A dict rather than a
 # constant because the hook thread reads it on every keypress: rebinding is
 # then a matter of writing new values here, with no hook to tear down and
 # reinstall. Mutated in place for the same reason — the thread closed over this
@@ -282,192 +277,174 @@ def bind_label(bind=None):
     return " + ".join(parts)
 
 
-def start_hotkeys(callbacks: dict, target_pid):
-    """Run the keyboard hook that owns Shift+\\, on its own thread with its own
-    message pump. `target_pid` may be a callable: the game can start, close
-    and start again while the meter runs."""
-    if sys.platform != "win32":
-        return
+class _KBD(ctypes.Structure):
+    _fields_ = [("vkCode", wintypes.DWORD), ("scanCode", wintypes.DWORD),
+                ("flags", wintypes.DWORD), ("time", wintypes.DWORD),
+                ("dwExtraInfo", ctypes.c_void_p)]
 
-    def _game_pid():
-        return target_pid() if callable(target_pid) else target_pid
 
-    def pump():
-        from ctypes import wintypes
-        u = ctypes.windll.user32
-        LRESULT = ctypes.c_ssize_t
-        HHOOK = ctypes.c_void_p
+class _MSLL(ctypes.Structure):
+    _fields_ = [("pt_x", wintypes.LONG), ("pt_y", wintypes.LONG),
+                ("mouseData", wintypes.DWORD), ("flags", wintypes.DWORD),
+                ("time", wintypes.DWORD), ("dwExtraInfo", ctypes.c_void_p)]
 
-        class KBD(ctypes.Structure):
-            _fields_ = [("vkCode", wintypes.DWORD), ("scanCode", wintypes.DWORD),
-                        ("flags", wintypes.DWORD), ("time", wintypes.DWORD),
-                        ("dwExtraInfo", ctypes.c_void_p)]
 
-        HOOKPROC = ctypes.WINFUNCTYPE(LRESULT, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
-        u.SetWindowsHookExW.restype = HHOOK
-        u.SetWindowsHookExW.argtypes = [ctypes.c_int, HOOKPROC, ctypes.c_void_p, wintypes.DWORD]
-        u.CallNextHookEx.restype = LRESULT
-        u.CallNextHookEx.argtypes = [HHOOK, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM]
+class _ResetHotkey:
+    """The reset key, on its own thread with its own message pump: a
+    low-level keyboard hook (and a mouse one, for the side buttons) that
+    fires and swallows the bound key only while Farever has the focus, every
+    other key left to the game. Without the hook, a global RegisterHotKey
+    (whatever has the focus). `game_pid` is a callable: the game can start,
+    close and start again while the meter runs."""
+
+    def __init__(self, callbacks, game_pid):
+        self.callbacks = callbacks
+        self.game_pid = game_pid
+        self.keys_down = set()          # a held key fires once
+        u = self.u = ctypes.windll.user32
+        self.HOOKPROC = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, ctypes.c_int,
+                                           wintypes.WPARAM, wintypes.LPARAM)
+        u.SetWindowsHookExW.restype = ctypes.c_void_p
+        u.SetWindowsHookExW.argtypes = [ctypes.c_int, self.HOOKPROC,
+                                        ctypes.c_void_p, wintypes.DWORD]
+        u.CallNextHookEx.restype = ctypes.c_ssize_t
+        u.CallNextHookEx.argtypes = [ctypes.c_void_p, ctypes.c_int,
+                                     wintypes.WPARAM, wintypes.LPARAM]
         u.GetForegroundWindow.restype = wintypes.HWND
-        u.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        u.GetWindowThreadProcessId.argtypes = [
+            wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
         u.GetAsyncKeyState.restype = ctypes.c_short
 
-        keys_down = set()
+    # ---- the binding ----------------------------------------------------
+    def _pressed(self, vk):
+        return bool(self.u.GetAsyncKeyState(vk) & 0x8000)
 
-        def pressed(vk):
-            return bool(u.GetAsyncKeyState(vk) & 0x8000)
+    def _fg_pid(self):
+        h = self.u.GetForegroundWindow()
+        if not h:
+            return 0
+        pid = wintypes.DWORD()
+        self.u.GetWindowThreadProcessId(h, ctypes.byref(pid))
+        return pid.value
 
-        def fg_pid():
-            h = u.GetForegroundWindow()
-            if not h:
-                return 0
-            pid = wintypes.DWORD()
-            u.GetWindowThreadProcessId(h, ctypes.byref(pid))
-            return pid.value
+    def _matches(self, vk):
+        """The bound key, Farever in front, and every modifier exactly as
+        bound (Shift+\\ must not fire on Ctrl+Shift+\\). RESET_BIND is read
+        each time: a rebind takes effect at once."""
+        b = RESET_BIND
+        return (vk == b.get("vk") and self._fg_pid() == self.game_pid()
+                and self._pressed(VK_SHIFT) == bool(b.get("shift"))
+                and self._pressed(VK_CONTROL) == bool(b.get("ctrl"))
+                and self._pressed(VK_MENU) == bool(b.get("alt")))
 
-        def proc(nCode, wParam, lParam):
-            if nCode != HC_ACTION:
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            kbd = ctypes.cast(lParam, ctypes.POINTER(KBD))[0]
-            vk = kbd.vkCode
-            if wParam in (WM_KEYUP, WM_SYSKEYUP):
-                keys_down.discard(vk)
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            if wParam not in (WM_KEYDOWN, WM_SYSKEYDOWN) or vk in keys_down:
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            keys_down.add(vk)
-            # The bound key only, and only while Farever has focus. Everything
-            # else falls through untouched so the game keeps its own bindings —
-            # which matters more than usual here, because the branch below
-            # SWALLOWS the keypress.
-            #
-            # RESET_BIND is read fresh every time rather than captured: that's
-            # what makes rebinding take effect immediately instead of at the
-            # next launch.
-            if vk != RESET_BIND.get("vk") or fg_pid() != _game_pid():
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            # Every modifier has to match exactly — a binding of Shift+\ must
-            # not fire on Ctrl+Shift+\, which is somebody else's shortcut.
-            if (pressed(VK_SHIFT) != bool(RESET_BIND.get("shift"))
-                    or pressed(VK_CONTROL) != bool(RESET_BIND.get("ctrl"))
-                    or pressed(VK_MENU) != bool(RESET_BIND.get("alt"))):
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            cb = callbacks.get(HK_RESET)
-            if cb:
-                try:
-                    cb()
-                except Exception as e:
-                    print("[hotkey]", e, file=sys.stderr)
-            return 1
+    def _fire(self, key=HK_RESET):
+        cb = self.callbacks.get(key)
+        if cb:
+            try:
+                cb()
+            except Exception as e:
+                print("[hotkey]", e, file=sys.stderr)
 
-        class MSLL(ctypes.Structure):
-            _fields_ = [("pt_x", wintypes.LONG), ("pt_y", wintypes.LONG),
-                        ("mouseData", wintypes.DWORD),
-                        ("flags", wintypes.DWORD), ("time", wintypes.DWORD),
-                        ("dwExtraInfo", ctypes.c_void_p)]
+    # ---- the low-level hooks ----------------------------------------------
+    def _on_key(self, code, wparam, lparam):
+        if code == HC_ACTION:
+            vk = ctypes.cast(lparam, ctypes.POINTER(_KBD))[0].vkCode
+            if wparam in (WM_KEYUP, WM_SYSKEYUP):
+                self.keys_down.discard(vk)
+            elif wparam in (WM_KEYDOWN, WM_SYSKEYDOWN) \
+                    and vk not in self.keys_down:
+                self.keys_down.add(vk)
+                if self._matches(vk):
+                    self._fire()
+                    return 1                # swallowed
+        return self.u.CallNextHookEx(None, code, wparam, lparam)
 
-        def mouse_proc(nCode, wParam, lParam):
-            # A separate hook because WH_KEYBOARD_LL cannot see mouse buttons
-            # at all — nor can RegisterHotKey, which is why a mouse binding
-            # only works on this path.
-            # First line, and it matters: a low-level mouse hook is called for
-            # every WM_MOUSEMOVE too, which on a 1000Hz mouse is a thousand
-            # trips into Python a second, each one in front of the input it's
-            # inspecting. Everything that isn't a button press leaves here.
-            if wParam not in (WM_MBUTTONDOWN, WM_XBUTTONDOWN):
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            if nCode != HC_ACTION:
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            vk = 0
-            if wParam == WM_MBUTTONDOWN:
-                vk = 0x04
-            elif wParam == WM_XBUTTONDOWN:
-                # Which side button is in the HIGH word of mouseData: 1 or 2.
-                ms = ctypes.cast(lParam, ctypes.POINTER(MSLL))[0]
-                vk = 0x04 + ((ms.mouseData >> 16) & 0xFFFF)     # -> 0x05, 0x06
-            if vk != RESET_BIND.get("vk") or fg_pid() != _game_pid():
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            if (pressed(VK_SHIFT) != bool(RESET_BIND.get("shift"))
-                    or pressed(VK_CONTROL) != bool(RESET_BIND.get("ctrl"))
-                    or pressed(VK_MENU) != bool(RESET_BIND.get("alt"))):
-                return u.CallNextHookEx(None, nCode, wParam, lParam)
-            cb = callbacks.get(HK_RESET)
-            if cb:
-                try:
-                    cb()
-                except Exception as e:
-                    print("[hotkey]", e, file=sys.stderr)
-            return 1
+    def _on_mouse(self, code, wparam, lparam):
+        # every mouse move comes through here (a thousand a second on a
+        # 1000 Hz mouse): anything that isn't a button press leaves first
+        if code == HC_ACTION and wparam in (WM_MBUTTONDOWN, WM_XBUTTONDOWN):
+            vk = 0x04                       # middle button
+            if wparam == WM_XBUTTONDOWN:    # side button 1 or 2: 0x05, 0x06
+                ms = ctypes.cast(lparam, ctypes.POINTER(_MSLL))[0]
+                vk += (ms.mouseData >> 16) & 0xFFFF
+            if self._matches(vk):
+                self._fire()
+                return 1
+        return self.u.CallNextHookEx(None, code, wparam, lparam)
 
-        cproc = HOOKPROC(proc)
-        cmproc = HOOKPROC(mouse_proc)
-        hMod = ctypes.windll.kernel32.GetModuleHandleW(None)
-        hook = u.SetWindowsHookExW(WH_KEYBOARD_LL, cproc, hMod, 0)
-        from ctypes import wintypes
-        if hook:
-            # Installed unconditionally rather than only when a mouse button is
-            # bound: the binding can change at any moment from the menu, and a
-            # hook that has to be installed from this thread can't be added
-            # later without waking it up.
-            if not u.SetWindowsHookExW(WH_MOUSE_LL, cmproc, hMod, 0):
-                print("[meter] mouse hook failed; mouse buttons can't be bound.",
-                      file=sys.stderr)
+    def _pump(self):
+        msg = wintypes.MSG()
+        while self.u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            self.u.TranslateMessage(ctypes.byref(msg))
+            self.u.DispatchMessageW(ctypes.byref(msg))
+
+    def run(self):
+        u = self.u
+        # kept on the instance: a callback collected while hooked crashes
+        self._procs = (self.HOOKPROC(self._on_key),
+                       self.HOOKPROC(self._on_mouse))
+        module = ctypes.windll.kernel32.GetModuleHandleW(None)
+        if u.SetWindowsHookExW(WH_KEYBOARD_LL, self._procs[0], module, 0):
+            # always installed: a mouse button can be bound at any moment,
+            # and a hook can only be added from this thread
+            if not u.SetWindowsHookExW(WH_MOUSE_LL, self._procs[1], module, 0):
+                print("[meter] mouse hook failed; mouse buttons can't be "
+                      "bound.", file=sys.stderr)
             print("[meter] focus-conditional hotkeys active.", file=sys.stderr)
-            msg = wintypes.MSG()
-            while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
-                u.TranslateMessage(ctypes.byref(msg))
-                u.DispatchMessageW(ctypes.byref(msg))
-            return
-        # ---- Fallback: global RegisterHotKey (fires regardless of focus) ----
+            self._pump()
+        else:
+            self._run_global()
+
+    # ---- without the hook ---------------------------------------------------
+    def _register(self):
+        u = self.u
+        u.UnregisterHotKey(None, HK_RESET)
+        mods = MOD_NOREPEAT
+        for key, mod in (("shift", MOD_SHIFT), ("ctrl", MOD_CONTROL),
+                         ("alt", MOD_ALT)):
+            if RESET_BIND.get(key):
+                mods |= mod
+        if not u.RegisterHotKey(None, HK_RESET, mods,
+                                RESET_BIND.get("vk", VK_OEM_5)):
+            print(f"[meter] {bind_label()} unavailable (another app owns "
+                  "it): the encounter still resets on a zone change or after "
+                  "a lull, but the manual reset won't fire.", file=sys.stderr)
+
+    def _run_global(self):
         print("[meter] LL hook failed; using global RegisterHotKey fallback.",
               file=sys.stderr)
-
-        def register():
-            u.UnregisterHotKey(None, HK_RESET)
-            mods = MOD_NOREPEAT
-            if RESET_BIND.get("shift"):
-                mods |= MOD_SHIFT
-            if RESET_BIND.get("ctrl"):
-                mods |= MOD_CONTROL
-            if RESET_BIND.get("alt"):
-                mods |= MOD_ALT
-            if not u.RegisterHotKey(None, HK_RESET, mods,
-                                    RESET_BIND.get("vk", VK_OEM_5)):
-                print(f"[meter] {bind_label()} unavailable (another app owns "
-                      "it) — the encounter still resets itself on a zone "
-                      "change or after a lull, but the manual reset won't "
-                      "fire.", file=sys.stderr)
-
-        register()
-        # RegisterHotKey belongs to the thread that called it, so a rebind
-        # can't just re-register from the Tk thread. The overlay posts
-        # WM_REBIND here instead and this thread does it — see _rebind_reset.
+        self._register()
+        # a hotkey belongs to the thread that registered it: a rebind is
+        # posted here (WM_REBIND) for this thread to redo it
         REBIND_TO[0] = ctypes.windll.kernel32.GetCurrentThreadId()
-        msg = wintypes.MSG()
+        u, msg = self.u, wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             if msg.message == WM_REBIND:
-                register()
+                self._register()
                 continue
             if msg.message == WM_HOTKEY:
-                cb = callbacks.get(msg.wParam)
-                if cb:
-                    try:
-                        cb()
-                    except Exception as e:
-                        print("[hotkey]", e, file=sys.stderr)
+                self._fire(msg.wParam)
             u.TranslateMessage(ctypes.byref(msg))
             u.DispatchMessageW(ctypes.byref(msg))
 
-    threading.Thread(target=pump, daemon=True, name="hotkeys").start()
+
+def start_hotkeys(callbacks: dict, target_pid):
+    """The reset key's thread (see _ResetHotkey). `target_pid`: the game's
+    pid, or a callable giving it."""
+    if sys.platform != "win32":
+        return
+    game_pid = target_pid if callable(target_pid) else (lambda: target_pid)
+    hotkey = _ResetHotkey(callbacks, game_pid)
+    threading.Thread(target=hotkey.run, daemon=True, name="hotkeys").start()
 
 
 # ---------------------------------------------------------------------------
 # Tray icon
 # ---------------------------------------------------------------------------
-# With no console there is no Ctrl+C, and the overlay windows are borderless and
-# click-through — so without this there would be no way to stop the meter except
-# Task Manager, which is exactly the force-kill that leaves a half-attached
-# agent in the game. The icon exists to make the clean exit reachable.
+# Closing the window quits, but the tray icon is also there before the
+# window opens and when it is hidden: the clean exit is always reachable,
+# never the Task Manager's force-kill that leaves a half-attached agent in
+# the game.
 #
 # Hand-rolled on ctypes rather than pystray: the file already talks to user32
 # directly for click-through, hotkeys and window enumeration, and a tray icon is
@@ -551,7 +528,7 @@ class TrayIcon:
 
     Owns a hidden window on its own thread: tray callbacks are window messages,
     and they're delivered to the thread that created the window, so it needs a
-    pump of its own rather than sharing Tk's."""
+    pump of its own."""
 
     def __init__(self, on_quit, tip="Farever France"):
         self.on_quit = on_quit
@@ -572,8 +549,8 @@ class TrayIcon:
         self._ready.wait(timeout=5.0)
 
     def stop(self):
-        """Called from the Tk thread on the way out. PostMessage rather than a
-        direct call because the window belongs to the tray thread."""
+        """Called from the app's loop on the way out. PostMessage rather than
+        a direct call because the window belongs to the tray thread."""
         if self.hwnd:
             try:
                 ctypes.windll.user32.PostMessageW(self.hwnd, WM_CLOSE, 0, 0)
@@ -635,11 +612,10 @@ class TrayIcon:
         if cmd == TRAY_QUIT:
             self.on_quit()
         elif cmd == TRAY_SETTINGS:
-            # The tray runs on its own thread; the overlay's Tk work has to be
-            # queued onto the Tk one.
-            ov = _OVERLAY["ref"]
-            if ov is not None:
-                ov._enqueue(ov.open_settings_from_tray)()
+            # the tray's own thread: queued onto the app's loop
+            app = _APP["ref"]
+            if app is not None:
+                app._enqueue(app.open_settings_from_tray)()
         elif cmd == TRAY_LOG:
             try:
                 DATA_HOME.mkdir(parents=True, exist_ok=True)
@@ -748,8 +724,8 @@ class TrayIcon:
             self.hicon = self._load_icon()
             self._add()
         except Exception as e:
-            print(f"[tray] icon unavailable ({e}) — use the control menu's Quit "
-                  "button to stop the meter.", file=sys.stderr)
+            print(f"[tray] icon unavailable ({e}): close the window to stop "
+                  "the meter.", file=sys.stderr)
             self._ready.set()
             return
         print("[meter] tray icon active.", file=sys.stderr)
@@ -911,7 +887,7 @@ def _quit_flag(pid):
 
 def quit_requested():
     """Has a newly-started instance asked us to stand down? Polled by the
-    overlay's own loop, so the answer is acted on within one refresh tick."""
+    app's loop, so the answer is acted on within one refresh tick."""
     try:
         return _quit_flag(os.getpid()).exists()
     except OSError:
@@ -922,14 +898,10 @@ def watch_for_quit_request():
     """Poll the stand-down flag on a background thread, for the stretches where
     nothing else is polling it.
 
-    The overlay checks the flag on its own refresh tick, but the overlay doesn't
-    exist yet while we're waiting for Farever to launch or for the hook's memory
-    scan to finish — and those are precisely the stretches a newly-started meter
-    has to displace us through. Without this, an instance that hasn't reached
-    the overlay ignores the request entirely and gets force-killed twelve
-    seconds later, which is the outcome the whole polite handover exists to
-    avoid. It matters more now that the meter is built to be started *before*
-    the game, and so spends real time waiting."""
+    The app checks the flag on its refresh tick, but not before it exists:
+    without this, an instance still starting ignores the request and is
+    force-killed twelve seconds later, the outcome the polite handover
+    exists to avoid."""
     def work():
         while not STOP.is_set():
             if quit_requested():

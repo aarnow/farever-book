@@ -21,17 +21,17 @@ class MenuBridge:
 
     The panel runs in its own process (menu_host.py explains why) and speaks
     line-JSON over its stdin and stdout. This class owns that process: starting
-    it, pushing state at it, translating what comes back into actions on the Tk
-    thread, and noticing when it dies.
+    it, pushing state at it, translating what comes back into actions on the
+    app's loop, and noticing when it dies.
 
     It is deliberately forgiving. Nothing here may take the meter down: the
-    overlay, the hook and the damage numbers all work perfectly well with no
+    app, the hook and the damage numbers all work perfectly well with no
     settings panel at all, so every failure path ends in "no panel" rather than
     an exception reaching the refresh loop.
     """
 
-    def __init__(self, overlay):
-        self.overlay = overlay
+    def __init__(self, app):
+        self.app = app
         self.proc = None
         self.ready = False
         self.geom = {}                  # last reported x/y/w/h
@@ -80,9 +80,8 @@ class MenuBridge:
         return self.proc is not None and self.proc.poll() is None
 
     def pid(self):
-        """The panel's process id, or None. Used by the overlay's focus test —
-        the panel takes focus like any other window, and the meter has to know
-        that is still 'us'."""
+        """The panel's process id, or None. Used by the focus test: the
+        panel takes focus like any other window, and is still 'us'."""
         return self.proc.pid if self.alive() else None
 
     def stop(self):
@@ -144,15 +143,14 @@ class MenuBridge:
         self._last_push = None
 
     def dirty(self):
-        """True if a push is owed. Lets the overlay skip building the spec at
-        all on the ticks in between — see PANEL_PUSH_TICKS."""
+        """True if a push is owed: the app skips building the spec on the
+        ticks in between."""
         return self._last_push is None
 
     # -- receiving --------------------------------------------------------
     def _read(self):
         """One thread, for the panel's lifetime. Everything it decides to do
-        is handed to the Tk thread through the overlay's action queue — this
-        thread must never touch a widget."""
+        is handed to the app's loop through its action queue."""
         proc = self.proc
         try:
             for line in proc.stdout:
@@ -195,8 +193,8 @@ class MenuBridge:
             self.ready = True
             self.invalidate()
         elif t == "geom":
-            # Straight onto the object; the save path reads it on the Tk
-            # thread and a torn read of four ints is not a real hazard here.
+            # Straight onto the object: a torn read of four ints by the
+            # app's loop is not a real hazard.
             got = {k: msg.get(k) for k in ("x", "y", "w", "h")}
             if got != self.geom:
                 self.geom = got
@@ -208,12 +206,12 @@ class MenuBridge:
         elif t == "call":
             self._dispatch(msg)
         elif t == "closed":
-            self.overlay._enqueue(self.overlay._panel_closed)()
+            self.app._enqueue(self.app._panel_closed)()
 
     def _dispatch(self, msg):
         method, params = msg.get("m"), msg.get("p") or {}
         cid = msg.get("id") or 0
-        fn = self.overlay._menu_actions().get(method)
+        fn = self.app._menu_actions().get(method)
         if fn is None:
             print(f"[meter] panel asked for unknown action {method!r}",
                   file=sys.stderr)
@@ -235,8 +233,8 @@ class MenuBridge:
             if cid:
                 self.send({"t": "ret", "id": cid, "r": result})
 
-        # Onto the Tk thread, like every hotkey and every old menu button.
-        self.overlay._enqueue(run)()
+        # Onto the app's loop, like every other action.
+        self.app._enqueue(run)()
 
 
 def _parse_help(text):
@@ -324,8 +322,8 @@ def _wants_params(fn):
 
 
 class _Scheduler:
-    """after()/after_cancel()/quit() for code written against Tk's root: the
-    engine has no Tk, and runs these from its own loop (App.run)."""
+    """Delayed calls (after / after_cancel), run by the app's loop
+    (App.run)."""
 
     def __init__(self):
         self._jobs = {}

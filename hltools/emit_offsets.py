@@ -143,12 +143,11 @@ def hook_layout(code):
         # `blocker` and `effect` are read for the nullified-hit diagnostic: the
         # meter counts a hit's _amount whether or not the target actually took
         # it, so damage against a boss in an immunity phase inflates the parse.
-        # Which of _block / blocker / effect marks that is not settled yet —
-        # these ship so the hook can report them from normal play instead of
-        # needing a probe session timed to an immune phase.
+        # Which of _block / blocker / effect marks that is not settled yet:
+        # the hook reports them from normal play.
         "DamageResult": {k: dr[k][0] for k in
             ["_amount", "affinity", "_critical", "_kill", "_block",
-             "blocker", "effect", "target", "baseSkill"]},
+             "blocker", "effect", "baseSkill"]},
         # dynVal1-3 are how MOST player heal skills carry their amount: the
         # cdb's skill@steps@effects rows name `dynVal` rather than a baseVal or
         # a scaling ratio, and these three f64s are hxbit-replicated, so the
@@ -179,15 +178,15 @@ def hook_layout(code):
                  "layer": hero["layer"][0],
                  # the hero's containers (pickups, the goals' counts)
                  "loadout": hero["loadout"][0],
-                 # The class ("Warrior"/"Priest"/"Rogue"/"Mage") and level, for
-                 # the Social tab's roster. st.player.HeroData would be the
-                 # tidier home for both, but it is null on the client for every
-                 # player including yourself — the entity is the only source.
+                 # The class ("Warrior"/"Priest"/"Rogue"/"Mage") and level.
+                 # st.player.HeroData would be the tidier home for both, but
+                 # it is null on the client for every player including
+                 # yourself: the entity is the only source.
                  "kind": hero["kind"][0], "level": hero["_level"][0]},
         "Loadout": {"inventory": loadout["inventory"][0],
                     "equipment": loadout["equipment"][0],
-                    # the bank's tabs (hxbit.ArrayProxyData), for the goals
-                    # overlay's "owned" count; read-only like the rest
+                    # the bank's tabs (hxbit.ArrayProxyData), for the goals'
+                    # "owned" count
                     "banks": loadout["banks"][0]},
         # content is an ArrayObj of SLOT VIRTUALS, not of items: each entry is
         # a standalone hl vvirtual carrying inline {count:Int, item:st.Item}.
@@ -286,13 +285,12 @@ def hook_layout(code):
         "TimeState": {"serverNow": tstate["serverNow"][0]},
         # `uid` is the player's STEAM ACCOUNT ID, not an internal handle:
         # "S" + the id's bytes as hex in LITTLE-ENDIAN order, trailing zero
-        # bytes trimmed. Measured 2026-08-02 (frida/steamid_probe.js) and
-        # calibrated against both steam_get_steam_id() and the registry's
-        # ActiveUser. Read the digits big-endian and you get a wrong,
-        # plausible-looking number — see steam64_from_uid() in the meter.
-        # `hero` is the player's live ent.Hero; it was populated for 24/24
-        # players on the layer when measured, which is what lets the Social
-        # tab show a class for everyone rather than only for people nearby.
+        # bytes trimmed (measured 2026-08-02 against steam_get_steam_id() and
+        # the registry's ActiveUser: read big-endian, it is a wrong,
+        # plausible-looking number).
+        # `hero` is the player's live ent.Hero: populated for 24/24 players on
+        # the layer when measured, so every player has a class, not only those
+        # nearby.
         "Player": {"name": player["name"][0], "group": player["group"][0],
                    "isMe": player["isMe"][0], "lobbyId": player["lobbyId"][0],
                    "uid": player["uid"][0], "hero": player["hero"][0],
@@ -305,13 +303,11 @@ def hook_layout(code):
                    # player — where a dungeon's DungeonContext lives on the
                    # client (Activity.globalCtx reads null there).
                    "activityCtx": player["activityCtx"][0]},
-        # Collected critters (companions), measured 2026-08-07
-        # (frida/critter_probe.js): Collection.pets is an hxbit proxy array of
-        # plain UNIT KINDS ("Turtle_Grey", "Frog_Demon") — the same string as
-        # ent.Unit.kind, which is what lets the map filter compare them at all.
-        # The game's own "already caught?" check is Collection.hasPet(kind),
-        # seen firing live with exactly these strings. NOT item ids: only two
-        # Critter_* items exist in the cdb and both are special grants.
+        # Collected critters (companions), measured 2026-08-07:
+        # Collection.pets is an hxbit proxy array of plain UNIT KINDS
+        # ("Turtle_Grey", "Frog_Demon"), the same string as ent.Unit.kind (the
+        # game's own "already caught?" check, Collection.hasPet(kind), takes
+        # exactly these). NOT item ids.
         "AccountProgress": {"collection": acct["collection"][0],
                             "achievements": acct["achievements"][0]},
         # mounts / gliders: the same proxy arrays, of item kinds.
@@ -392,13 +388,6 @@ def hook_layout(code):
         # only 7 classes descend from ent.Foe, so this is a small closed set,
         # and a summon's class is not reliably the literal "ent.Foe".
         "foeClasses": descendants("ent.Foe"),
-        # Which runtime classes are units — the set a DamageResult.target must
-        # belong to before `Unit.kind` may be read off it. `target` is typed
-        # ent.GameObject, which is two levels above ent.Unit, so `kind`@600 is
-        # past the end of the object on a GameObject that isn't a unit. 12
-        # classes descend from ent.Unit (heroes, foes, bosses and the two
-        # vehicles), so this is the same small closed set foeClasses is.
-        "unitClasses": descendants("ent.Unit"),
     }
     return meta
 
@@ -607,9 +596,7 @@ def extract_heal_specs(game_dir):
 
 
 def extract_display_names(game_dir):
-    """id -> texts.name for the cdb's unit sheet — what names a boss toast
-    and a combat history dataset. The item sheet was read here too until
-    the mount and glider features were removed; nothing labels items now."""
+    """id -> texts.name for the cdb's unit sheet (the boss events' names)."""
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
     e = next(x for x in entries if x.path.endswith("data.cdb"))

@@ -10,8 +10,8 @@ release yet costs the offer, not the app.
 Installing is the installer's job, run the way a person would run it:
 opened visibly (ShellExecute) once the player said yes, this app quitting
 so nothing is in its way, its last page starting the new version. No
-hidden script waiting for us to exit and no silent install: Farever+'s
-updater did that and Windows Defender quarantined it as defense evasion."""
+hidden script waiting for us to exit and no silent install: an updater
+doing that was quarantined by Windows Defender as defense evasion."""
 import json
 import os
 import sys

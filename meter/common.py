@@ -117,11 +117,8 @@ TARGET_PROCESS = "Farever.exe"
 FAREVER_STEAM_APPID = 3672400
 
 
-# One meter at a time. The lock deliberately lives OUTSIDE the project folder:
-# copies of this script run from different directories have to find each other,
-# and that's the case that actually bites — an old copy left running while a
-# newer one is launched from somewhere else, with only the old overlay on screen
-# to show for it. A per-project lock would miss exactly that.
+# One meter at a time. The lock lives outside the project folder: copies run
+# from different folders (or installed) have to find each other.
 LOCK_DIR = DATA_HOME
 
 
@@ -140,9 +137,8 @@ METER_IMAGE_NAMES = frozenset({EXE_NAME.lower(), "farevermeter.exe",
 
 
 # Set once at startup, before stderr is redirected: is there a console for a
-# human to read? False under the installed (windowed) build and under
-# pythonw.exe. Decides whether a prompt is a terminal question or a dialog, and
-# whether the control menu still warns about closing the console window.
+# human to read? False under the installed (windowed) build and pythonw.exe;
+# without one, the output goes to the log file.
 HAS_CONSOLE = sys.stderr is not None and sys.stdout is not None
 
 
@@ -211,9 +207,8 @@ MAX_SKILL_ROWS = 8
 
 
 # 60s Parse Mode: a fixed-length sample, so two runs are comparable in a way
-# "whatever that pull happened to be" never is. The pre-roll exists because the
-# button is clicked from the escape menu — you need those seconds to close it
-# and get your hands back on the keyboard.
+# "whatever that pull happened to be" never is. The pre-roll leaves time to
+# go back to the game after clicking.
 PARSE_PREROLL_SECS = 8
 
 
@@ -450,31 +445,28 @@ def setup_logging():
         traceback.print_exception(exc_type, exc, tb, file=sys.stderr)
         f.flush()
     sys.excepthook = hook
-    # Overlay work happens on the Tk thread but the hook, hotkeys and tray all
-    # run on their own; a thread dying quietly would otherwise take a feature
-    # with it and leave no trace.
+    # The hook, the hotkey and the tray run on their own threads: one dying
+    # quietly would otherwise take a feature with it and leave no trace.
     def thook(args):
         hook(args.exc_type, args.exc_value, args.exc_traceback)
     threading.excepthook = thook
 
 
-# The meter can be asked to stop long before there's an overlay to stop — most
-# obviously while it sits waiting for Farever to launch, which with no console
-# is a stretch where the tray icon is the only sign of life and so must be the
-# way out too. STOP is what the pre-overlay waits watch; once the overlay
-# exists it takes over, because only it can unload the hook on the way down.
+# The meter can be asked to stop before the app exists (the tray icon is the
+# way out then): STOP is what those early waits watch. Once the app exists it
+# takes over, because only it can unload the hook on the way down.
 STOP = threading.Event()
 
 
-_OVERLAY = {"ref": None}
+_APP = {"ref": None}
 
 
 def request_stop():
     """Stop the meter. Safe from any thread and at any point in startup."""
     STOP.set()
-    ov = _OVERLAY["ref"]
-    if ov is not None:
-        ov.request_quit()
+    app = _APP["ref"]
+    if app is not None:
+        app.request_quit()
 
 
 def message_box(text, title="Farever France", flags=0x40):

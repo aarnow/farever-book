@@ -1714,7 +1714,7 @@ class App:
 
     def _coll_model(self, item_id):
         """The viewer asked for a collectible's 3D model: built (or read from
-        the cache) off the Tk thread, and sent on its own channel — half a
+        the cache) off the app's loop, and sent on its own channel — half a
         megabyte that has no business riding along in every state push."""
         def work():
             d = item_model_json(item_id)
@@ -2088,9 +2088,7 @@ class App:
                                "combat."},
             {"k": "section", "t": "Raccourci clavier"},
             {"k": "field", "t": "Réinitialiser le combat",
-             "c": {"k": "label", "t": ("appuie sur une touche…"
-                                       if self._binding_now
-                                       else bind_label())}},
+             "c": {"k": "label", "t": self._bind_prompt()}},
             {"k": "button", "id": "begin_bind", "t": "Changer cette touche"},
             {"k": "note", "t": "Le raccourci ne fonctionne que lorsque Farever "
                                "est au premier plan, et n'affiche rien dans le "
@@ -2152,7 +2150,7 @@ class App:
             {"k": "button", "id": "open_log", "t": "Dossier du journal"},
         ]
 
-    # ---- carried over from the old overlay, unchanged but for the shims above ----
+    # ---- boss records, rift reports ----
     @staticmethod
     def _load_best_times():
         """The record book, tolerantly: a missing file is an empty one, and a
@@ -2210,8 +2208,8 @@ class App:
 
     def on_boss_timed_kill(self, kinds, secs):
         """The LAST boss bar went down killed — the fight is formally over and
-        its clock has a reading. Called from the hook thread alongside the
-        victory cue; the record and the toast belong to the Tk one.
+        its clock has a reading. Called from the hook's thread: the record
+        and the event are done on the app's loop.
 
         Not opt-in, deliberately: a record you had to switch on beforehand is
         a record you don't have when you finally want it."""
@@ -2429,15 +2427,8 @@ class App:
     def _begin_bind_capture(self):
         """Listen for the next keypress and make it the reset bind.
 
-        POLLED, not bound. The obvious version — focus the button and take a
-        Tk <KeyPress> — silently never fires unless something has deliberately
-        claimed the keyboard first: the overlay windows are overrideredirect,
-        and every one of them except the control menu carries WS_EX_NOACTIVATE
-        precisely so that clicking it can't steal focus from the game, which
-        also means it never receives a keystroke. The menu is the exception
-        only while a Social search box has focus (see _stop_typing) — and
-        _set_menu_tab ends that on the way to this tab, so by the time you are
-        looking at this button the keyboard belongs to Farever again.
+        Polled (GetAsyncKeyState), not taken from the window: the key is
+        meant for the game, which has the keyboard.
 
         GetAsyncKeyState doesn't care who has focus, needs no hook, and reads
         the same virtual-key codes the hook will later match against — so what
@@ -2446,6 +2437,7 @@ class App:
             self._end_bind_capture()
             return
         self._binding_now = True
+        self._bind_refused = None
         self._bind_poll_job = None
         # The prompt is drawn from _binding_now by _menu_spec, not written to a
         # button here — the panel lives in another process.
@@ -2476,24 +2468,37 @@ class App:
             # binding Mouse 4 on its own is the normal thing to do.
             if (not (shift or ctrl or alt) and not (0x70 <= vk <= 0x87)
                     and vk not in VK_MOUSE):
-                break                       # keep listening; they'll try again
+                # keep listening, and say why nothing happened
+                refused = bind_label({"vk": vk})
+                if refused != self._bind_refused:
+                    self._bind_refused = refused
+                    self.menubridge.invalidate()
+                break
             self._set_reset_bind({"vk": vk, "shift": shift, "ctrl": ctrl,
                                   "alt": alt})
             self._end_bind_capture()
             return
         self._bind_poll_job = self.root.after(40, self._poll_bind_capture)
 
+    def _bind_prompt(self):
+        if not self._binding_now:
+            return bind_label()
+        if getattr(self, "_bind_refused", None):
+            return (f"{self._bind_refused} seul ne marche pas, "
+                    "ajoute Ctrl, Maj ou Alt")
+        return "appuie sur une touche…"
+
     def _end_bind_capture(self):
         self._binding_now = False
+        self._bind_refused = None
         if getattr(self, "_bind_poll_job", None):
             try:
                 self.root.after_cancel(self._bind_poll_job)
             except Exception:
                 pass
             self._bind_poll_job = None
-        # Nothing to unbind: the capture is polled through GetAsyncKeyState
-        # (see _begin_bind_capture) and never went through a Tk widget. The new
-        # label reaches the panel with the next state push.
+        # Nothing to unbind: the capture is polled (see _begin_bind_capture).
+        # The new label reaches the window with the next state push.
         self.menubridge.invalidate()
 
     def _set_reset_bind(self, bind):
@@ -2694,16 +2699,15 @@ class App:
 
     @staticmethod
     def _tick(on, label):
-        """The panel's checkbox convention, unchanged from the Tk menu: a
-        standing setting reads as its STATE, not as the action that would
-        change it."""
+        """A setting's button reads as its state, not as the action that
+        would change it."""
         return ("☑  " if on else "☐  ") + label
 
 
     def _enqueue(self, fn):
-        """Wrap `fn` so it runs on the Tk thread at the next refresh. Hotkey and
-        mouse-hook callbacks arrive on their own threads, and Tk is not
-        thread-safe; menu buttons use it too so every action takes one path."""
+        """Wrap `fn` so it runs on the app's loop at the next refresh: the
+        hotkey, the tray, the hook and the window's actions all arrive on
+        their own threads, and every action takes this one path."""
         def handler():
             with self._q_lock:
                 self._action_q.append(fn)

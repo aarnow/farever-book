@@ -221,10 +221,9 @@ def _unit_names():
     own data.cdb rows, extracted by emit_offsets.py on the same self-heal
     cycle as the offsets. Loaded once; {} when the file is absent.
 
-    Names the boss kill toast and every combat history dataset: a unit's kind
-    is routinely NOT the name the game shows (measured: 'Cleodora' displays as
-    'Queen Honeyzabeth', 'Phrixes' as 'High Inquisitor Chakram' — the kind
-    often names the LAIR, not the boss)."""
+    A unit's kind is routinely NOT the name the game shows (measured:
+    'Cleodora' displays as 'Queen Honeyzabeth', 'Phrixes' as 'High
+    Inquisitor Chakram': the kind often names the lair, not the boss)."""
     return _table("unit_names.json")
 
 def _fr_names(sheet):

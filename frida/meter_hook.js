@@ -1145,7 +1145,7 @@ function refreshElements() {
 }
 
 // ---- the players around, and their profiles (the Character tab) ----
-// Measured 2026-09-28 (a probe over ~25 players): for EVERY hero on the
+// Measured 2026-09-28 (~25 players): for EVERY hero on the
 // layer the client holds its class, level, equipment (Hero.loadout's
 // equipment container, in slot order), its talents
 // (HeroSpecialization.talents, a StringMap of talent ids), the skills in its
@@ -1557,10 +1557,9 @@ function readParty(hero) {
     return names;
 }
 
-// ---- the shard roster (Social tab) ----
+// ---- the shard roster (every player's class) ----
 // st.GameLayer.players is EVERY player the client holds state for, not just
-// the ones streamed in around you — which is the whole point, since `units`
-// (what the minimap sweeps) only ever contains your neighbours.
+// the ones streamed in around you.
 //
 // Each entry carries the player's Steam account id in `uid`, as
 // "S" + the id's bytes in LITTLE-ENDIAN hex with trailing zero bytes trimmed.
@@ -1633,9 +1632,8 @@ function sweepShard() {
 // Set by a timer, consumed on the game thread by the camera hook. The lookup
 // itself must NOT run on the timer: getHero is an HL call, and an HL call off
 // the game thread kills the game with "Can't lock GC in unregistered thread".
-// This shipped calling refreshLocalHero() straight from a setInterval, which
-// is the same pattern that killed a probe on its ~10th tick — it survived only
-// because the window is narrow, not because it was safe.
+// Calling refreshLocalHero() straight from a setInterval is that pattern:
+// it may survive a while, it is not safe.
 let heroRefreshDue = false;
 
 function refreshLocalHero() {
@@ -1728,7 +1726,7 @@ function main() {
     }, 400);
 
     // The shard roster, on its own slow clock. A hub list of 30 people is not
-    // worth rebuilding at the minimap's 150ms, and sweepShard() suppresses
+    // worth rebuilding often, and sweepShard() suppresses
     // resends of an unchanged list anyway — so this costs one array walk every
     // two seconds and usually sends nothing.
     if (OFF.Player && OFF.Player.uid != null
@@ -1748,36 +1746,6 @@ function main() {
     const daddr = base.add(fi * 8).readPointer();
     const DR = OFF.DamageResult, BS = OFF.BaseSkill;
 
-    // Who the hit landed ON. `DamageResult.target` is typed ent.GameObject,
-    // which is two levels above ent.Unit — so `Unit.kind`@600 is only a field
-    // at all when the object really is a unit, and reading it off anything
-    // else is a read past the end of the object. The type check against the
-    // shipped unitClasses set is what makes it safe, exactly as FOE_CLASS
-    // gates `Foe.summonOwner` for summon attribution.
-    //
-    // The raw kind goes to the host, not a display name: naming it would mean
-    // an HL call (inf -> texts -> name) inside the damage hook, and the host
-    // already maps kinds through the cdb's own unit sheet — which is where
-    // "Cleodora" becomes "Queen Honeyzabeth".
-    const UNIT_CLASS = {};
-    (OFF.unitClasses || []).forEach(function (c) { UNIT_CLASS[c] = 1; });
-    const canNameTargets = Object.keys(UNIT_CLASS).length > 0
-        && OFF.Unit && OFF.Unit.kind != null && DR.target != null;
-    if (!canNameTargets)
-        log("!! hit targets will not be named (offsets file predates "
-            + "unitClasses) — combat history datasets fall back to the zone "
-            + "name alone. Delete analysis_out and restart to regenerate it.");
-
-    function targetKindOf(dr) {
-        if (!canNameTargets) return "";
-        try {
-            const t = dr.add(DR.target).readPointer();
-            if (!t || t.isNull() || t.compare(ptr("0x10000")) <= 0) return "";
-            if (!UNIT_CLASS[typeName(t)]) return "";
-            return hlStr(t.add(OFF.Unit.kind).readPointer()) || "";
-        } catch (e) { return ""; }
-    }
-
     // Read the common hit fields off a st.skill.DamageResult* (heals reuse the
     // same struct — evalHeal/onInflictHealEval mirror the damage pipeline).
     function readResult(dr) {
@@ -1796,11 +1764,6 @@ function main() {
             crit: dr.add(DR._critical).readU8() ? 1 : 0,
             kill: dr.add(DR._kill).readU8() ? 1 : 0,
         };
-        // Only when there is one to give: a hit whose target reads back as
-        // something other than a unit sends no field at all, so the host can
-        // tell "not a unit" from "a unit named empty string".
-        const tk = targetKindOf(dr);
-        if (tk) out.target = tk;
         // Nullified-hit diagnostic. The meter counts `amount` whether or not
         // the target took it, so a boss in an immunity phase inflates the
         // parse. These three fields are the candidates for marking that, and
@@ -1900,7 +1863,7 @@ function main() {
     // other people's damage on the wielder's row — a rift wielder topped the
     // meter for work the group did.
     //
-    // Measured 2026-08-04 (frida/boost_probe.js, 235 procs, 7 status
+    // Measured 2026-08-04 (235 procs, 7 status
     // instances, run from a BUFFED ALLY's client so caster and swinger were
     // different objects): the blessing is a status skill instantiated PER
     // ALLY, and `DamageResult.baseSkill.owner` is the ally carrying it — the
@@ -1974,7 +1937,7 @@ function main() {
 
     // ---- healing ----
     // A client is never told how much a heal healed for. Measured 2026-08-03
-    // (frida/run_heal.py, 40 heal events across 6 healers and 4 skills): of the
+    // (40 heal events across 6 healers and 4 skills): of the
     // fifteen heal entry points in this build, ONLY ent.Unit.playHitHealFX runs
     // on a client, and its HitData.amount reads 0.000. receiveHeal, computeHeal,
     // evalHeal, the four *HealEval callbacks, applyHeal, rpcDisplayHeal(__impl)

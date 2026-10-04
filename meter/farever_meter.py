@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 from common import (
-    HAS_CONSOLE, LOG_FILE, MENU_FLAG, STOP, TOOL_FLAG, _OVERLAY,
+    HAS_CONSOLE, LOG_FILE, MENU_FLAG, STOP, TOOL_FLAG, _APP,
     message_box, request_stop, run_bundled_tool,
     seed_analysis, setup_logging)
 from winsys import (
@@ -45,9 +45,8 @@ from app import App
 
 
 def main():
-    # First, before anything that can put a window on screen — the tray icon,
-    # Tk, or an update message box. Windows latches DPI awareness at the first
-    # window and ignores every later attempt to change it.
+    # First, before anything that can put a window on screen (the tray icon,
+    # a message box): Windows latches DPI awareness at the first window.
     print(f"[meter] dpi awareness: {declare_dpi_awareness()} "
           f"(display at {display_scale():.2f}x)", file=sys.stderr)
     seed_analysis()
@@ -69,7 +68,7 @@ def main():
     # and the hook's memory scan can run for minutes on a slow machine — with no
     # console, an icon that only appeared afterwards would leave the user
     # staring at nothing, with Task Manager as their only way to change their
-    # mind. Its quit callback works throughout, overlay or not.
+    # mind. Its quit callback works throughout, app or not.
     tray = TrayIcon(request_stop)
     tray.start()
     try:
@@ -85,23 +84,21 @@ def main():
 def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     """The interface first, the game whenever it turns up."""
     link = GameLink(session, ui_state, world, rift_rec, heal_sizer)
-    overlay = App(session, ui_state, world, link=link)
-    # From here the overlay owns shutdown: it's the only thing that can return
-    # from the mainloop and let the finally below unload the hook and detach.
-    _OVERLAY["ref"] = overlay
-    overlay._setup_begin()          # before the link: it waits for consent
+    app = App(session, ui_state, world, link=link)
+    # From here the app owns shutdown: only its loop returning lets the
+    # finally below unload the hook and detach.
+    _APP["ref"] = app
+    app._setup_begin()              # before the link: it waits for consent
     link.start()
     if STOP.is_set():
-        overlay.request_quit()
+        app.request_quit()
     try:
-        overlay.run()
+        app.run()
     finally:
-        _OVERLAY["ref"] = None
+        _APP["ref"] = None
         try:
-            # End the settings panel's process. It is already off the screen —
-            # _quit hides it along with every Tk window before the mainloop
-            # breaks — so this is just the process going away.
-            overlay.menubridge.stop()
+            # the window's process
+            app.menubridge.stop()
         except Exception:
             pass
         STOP.set()
