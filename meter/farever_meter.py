@@ -21,7 +21,7 @@ The modules, by responsibility:
   this file  startup and shutdown
 
 Shipped as a windowed program, it has no console: it logs to
-%LOCALAPPDATA%\\FareverMeter\\meter.log and puts a tray icon in the notification
+%LOCALAPPDATA%\\FareverFrance\\meter.log and puts a tray icon in the notification
 area. Quitting through the window or the tray unloads the hook and detaches
 cleanly; force-killing the process skips that.
 """
@@ -90,6 +90,7 @@ def _run(tray, session, ui_state, world, rift_rec, heal_sizer):
     # From here the overlay owns shutdown: it's the only thing that can return
     # from the mainloop and let the finally below unload the hook and detach.
     _OVERLAY["ref"] = overlay
+    overlay._setup_begin()          # before the link: it waits for consent
     link.start()
     if STOP.is_set():
         overlay.request_quit()

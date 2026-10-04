@@ -69,7 +69,7 @@ Farever France se lance depuis les sources (Windows). Il faut
 **`Installer Farever France.cmd`** : il installe les modules (dans les bonnes
 versions) et crée le raccourci **Farever France** sur le Bureau et dans le menu
 Démarrer. Le raccourci lance l'application sans console ; son journal est alors
-dans `%LOCALAPPDATA%\FareverMeter\meter.log` (bouton dans les Réglages).
+dans `%LOCALAPPDATA%\FareverFrance\meter.log` (bouton dans les Réglages).
 
 À la main, avec la console (pratique pour lire le journal en direct) :
 

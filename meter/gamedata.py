@@ -14,7 +14,8 @@ import threading
 from pathlib import Path
 
 from common import (
-    ANALYSIS, CREATE_NO_WINDOW, FRIDA_DIR, FROZEN, ROOT, TOOL_FLAG, _pretty_id)
+    ANALYSIS, CREATE_NO_WINDOW, FRIDA_DIR, FROZEN, GAME_PATH_FILE, ROOT,
+    TOOL_FLAG, _pretty_id)
 
 
 def dungeon_name(kind):
@@ -556,6 +557,13 @@ DATA_STAMP = ANALYSIS / ".data_stamp.json"
 # Set while regenerate_data runs: the title band says the game's data is
 # being re-read, rather than a bare "Connexion…" for a minute.
 REGENERATING = threading.Event()
+# One regenerate at a time: the first launch's and the game link's would
+# otherwise write the same files together. The second, once the first is
+# done, finds the stamp current and returns at once.
+_REGEN_LOCK = threading.Lock()
+# Bumped by each regenerate that wrote new files: the window resends the
+# pictures (skills, collection, dungeons...) when it changes.
+DATA_GENERATION = [0]
 
 
 # Top-level keys the current hook needs out of the two generated files. Data
@@ -862,11 +870,56 @@ def forget_loaded_data():
     """Drop every table loaded from analysis_out/, so the next use reads the
     files a regenerate just wrote (Réparer)."""
     g = globals()
+    _ITEM_ICONS.clear()                 # a missing icon was cached as ""
+    for mod, name in (("bosssheet", "_DATA"), ("bosssheet", "_PLACEHOLDER"),
+                      ("goals", "_TYPES")):
+        m = sys.modules.get(mod)
+        if m is not None:
+            setattr(m, name, None)
     for name in ("_BUILD_DATA", "_GEAR_STATS", "_COLLECTION", "_CODEX_ITEMS", "_SPARK", "_BESTIARY", "_CODEX_SETS", "_ITEM_TYPES", "_AUGMENTS", "_TALENTS", "_LUCK", "_ACHIEVEMENTS", "_RIFT_REWARDS", "_INFUSIONS", "_OFFSETS", "_WORLD_MAP", "_UNIT_NAMES", "_FR_NAMES", "_ITEM_RARITY", "_DUNGEONS", "_HEAL_SPECS",):
         g[name] = None
 
 
-def regenerate_data(hlboot=None, force=False, on_step=None):
+def regenerate_data(hlboot=None, force=False, on_step=None,
+                    on_progress=None):
+    with _REGEN_LOCK:
+        return _regenerate_data(hlboot, force, on_step, on_progress)
+
+
+def needs_first_data():
+    """The installed app's first launch: its data folder holds only the few
+    tables it ships with — no pictures, icons, models, build data. The
+    welcome screen asks the player before reading them off the game."""
+    return not (ANALYSIS / "build_data.json").is_file()
+
+
+# Set once the player has agreed to the game's files being read (the
+# welcome screen), or at once when the data is already there. The game link
+# waits for it before its own regenerate.
+DATA_CONSENT = threading.Event()
+
+
+def game_folder_hlboot(folder):
+    """The hlboot.dat of a folder the player picked (the game's own, or
+    Farever.exe or hlboot.dat itself), remembered for the next launches.
+    None when there is no Farever there."""
+    p = Path(str(folder or "").strip().strip('"'))
+    if p.is_file():
+        p = p.parent
+    hb = p / "hlboot.dat"
+    if not (hb.is_file() and (p / "res.pak").is_file()):
+        return None
+    try:
+        GAME_PATH_FILE.write_text(json.dumps({"hlboot": str(hb)}),
+                                  encoding="utf-8")
+    except OSError as e:
+        print(f"[meter] couldn't remember the game's folder: {e}",
+              file=sys.stderr)
+    return hb
+
+
+def _regenerate_data(hlboot=None, force=False, on_step=None,
+                     on_progress=None):
     """Re-run the target/offset generators against the given hlboot.dat (or the
     tools' own auto-detect when None). Self-heals the shipped JSONs after a
     Farever patch. Skips the multi-second reparse when the same hlboot.dat is
@@ -917,12 +970,51 @@ def regenerate_data(hlboot=None, force=False, on_step=None):
     env = dict(os.environ, FAREVER_ANALYSIS_OUT=str(ANALYSIS))
     REGENERATING.set()
     try:
-        return _run_generators(tools, hlboot, env, stamp, on_step)
+        ok = _run_generators(tools, hlboot, env, stamp, on_step,
+                             on_progress)
     finally:
         REGENERATING.clear()
+    if ok:
+        forget_loaded_data()
+        DATA_GENERATION[0] += 1
+    return ok
 
 
-def _run_generators(tools, hlboot, env, stamp, on_step=None):
+# What emit_offsets writes, in its order: the welcome screen's progress
+# (a "[written] <file>" line each), named for the player.
+GENERATED_STEPS = (
+    ("resolver_data.json", "le code du jeu"),
+    ("meter_offsets.json", "les structures du jeu"),
+    ("unit_names.json", "les noms des créatures"),
+    ("heal_specs.json", "les soins"),
+    ("codex_units.json", "le codex"),
+    ("unit_traits.json", "les traits des créatures"),
+    ("names_fr.json", "les textes en français"),
+    ("collection.json", "la collection et ses images"),
+    ("talents.json", "les sorts, les talents et leurs icônes"),
+    ("achievements.json", "les succès"),
+    ("infusions.json", "les imprégnations"),
+    ("build_data.json", "les données des builds"),
+    ("gear_stats.json", "les statistiques de l'équipement"),
+    ("codex_items.json", "les objets"),
+    ("bestiary.json", "le bestiaire et ses images"),
+    ("map.json", "la carte"),
+    ("dungeons.json", "les donjons"),
+    ("boss_sheets.json", "les fiches des boss"),
+    ("boss_portraits", "les portraits des boss"),
+    ("ui_logo.png", "le logo"),
+    ("augments.json", "les augmentations"),
+    ("rift_rewards.json", "les récompenses des failles"),
+    ("luck.json", "la chance"),
+    ("item_types.json", "les types d'objets"),
+    ("item_rarity.json", "les raretés"),
+    ("item_icons", "les icônes des objets"),
+    ("status_meta.json", "les effets d'état"),
+)
+
+
+def _run_generators(tools, hlboot, env, stamp, on_step=None,
+                    on_progress=None):
     labels = {"build_targets.py": "cibles du code",
               "emit_offsets.py": "structures, images et tables"}
     for t in tools:
@@ -937,10 +1029,19 @@ def _run_generators(tools, hlboot, env, stamp, on_step=None):
             cmd.append(str(hlboot))
         # Without CREATE_NO_WINDOW a console flashes up for each tool on every
         # launch of the windowed build — twice, right as the game is loading.
-        r = subprocess.run(cmd, capture_output=True, text=True, env=env,
-                           creationflags=CREATE_NO_WINDOW)
-        if r.returncode != 0:
-            print(f"[meter] {t.name} failed:\n{r.stdout}\n{r.stderr}",
+        # Read as it comes: each "[written]" line is a step of the progress.
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, text=True,
+                             encoding="utf-8", errors="replace", env=env,
+                             creationflags=CREATE_NO_WINDOW)
+        out = []
+        for line in p.stdout:
+            out.append(line)
+            if on_progress and line.startswith("[written]"):
+                on_progress(t.name, line)
+        p.wait()
+        if p.returncode != 0:
+            print(f"[meter] {t.name} failed:\n{''.join(out)}",
                   file=sys.stderr)
             return False
     if stamp is not None:
@@ -1000,7 +1101,14 @@ def locate_hlboot(pid):
             return Path(env)
         print(f"[meter] FAREVER_HLBOOT points to a missing file: {env}",
               file=sys.stderr)
-    exe = _exe_path_of_pid(pid)
+    try:
+        saved = Path(json.loads(GAME_PATH_FILE.read_text(encoding="utf-8"))
+                     ["hlboot"])
+        if saved.is_file():
+            return saved
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    exe = _exe_path_of_pid(pid) if pid else None
     if exe:
         cand = Path(exe).parent / "hlboot.dat"
         if cand.is_file():

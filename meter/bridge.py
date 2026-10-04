@@ -51,12 +51,21 @@ class MenuBridge:
                else [sys.executable, str(Path(__file__).resolve().parent
                                          / "menu_host.py"),
                      json.dumps(self.geom)])
+        # Its log lines join ours: frozen and windowed there is no console,
+        # so it writes into our log file — inheriting our (absent) stderr
+        # handle made its first log line fail with Errno 22.
+        try:
+            err = sys.stderr if sys.stderr and sys.stderr.fileno() >= 0 else None
+        except (OSError, ValueError, AttributeError):
+            err = None
+        if FROZEN and err is None:
+            err = subprocess.DEVNULL
         try:
             self.proc = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 # Where the window finds the boss portraits it inlines.
                 env=dict(os.environ, FAREVER_ANALYSIS=str(ANALYSIS)),
-                stderr=None,            # its log lines join ours
+                stderr=err,
                 text=True, encoding="utf-8", bufsize=1,
                 creationflags=CREATE_NO_WINDOW if sys.platform == "win32" else 0)
         except OSError as e:

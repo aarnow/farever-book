@@ -1,9 +1,9 @@
-; Inno Setup script for Farever France.
+﻿; Inno Setup script for Farever France.
 ;
 ; Compiled by packaging/build.ps1, which passes AppVersion in from the VERSION
 ; constant in meter/common.py so the two can't drift:
 ;
-;   ISCC.exe /DAppVersion=2.1 packaging\FareverMeter.iss
+;   ISCC.exe /DAppVersion=2.1 packaging\FareverFrance.iss
 ;
 ; Installs per-user under %LOCALAPPDATA%\Programs — no UAC prompt, no admin
 ; rights, and nothing written outside the user's own profile. Farever doesn't
@@ -14,7 +14,7 @@
 #endif
 
 #define AppName "Farever France"
-#define AppExe "FareverMeter.exe"
+#define AppExe "FareverFrance.exe"
 
 [Setup]
 ; Stable across releases — it's how Windows knows an install is an upgrade of
@@ -22,7 +22,7 @@
 AppId={{8B4B1F2E-9C6A-4E7D-93A5-2F1D6C0B7A34}
 AppName={#AppName}
 AppVersion={#AppVersion}
-DefaultDirName={autopf}\FareverMeter
+DefaultDirName={autopf}\FareverFrance
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
@@ -32,7 +32,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
-OutputBaseFilename=FareverMeter-{#AppVersion}-Setup
+OutputBaseFilename=FareverFrance-{#AppVersion}-Setup
 SetupIconFile=..\assets\farevermeter.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} {#AppVersion}
@@ -46,28 +46,29 @@ WizardStyle=modern
 CloseApplications=no
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
+; French: the app speaks only French, its installer too
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"
+Name: "desktopicon"; Description: "Créer un raccourci sur le &Bureau"; GroupDescription: "Raccourcis :"
 
 [Files]
 ; The whole PyInstaller onedir output: the exe plus _internal, which carries
 ; Python, frida, Pillow, Tk and the meter's own data files. This is what means
 ; the user installs nothing else.
-Source: "..\dist\FareverMeter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\FareverFrance\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
-Name: "{group}\Farever France log folder"; Filename: "{localappdata}\FareverMeter"
+Name: "{group}\Dossier du journal de Farever France"; Filename: "{localappdata}\FareverFrance"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Start the {#AppName} now"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName} maintenant"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; The bundle only. %LOCALAPPDATA%\FareverMeter is deliberately left alone: it
+; The bundle only. %LOCALAPPDATA%\FareverFrance is deliberately left alone: it
 ; holds the user's parse screenshots and window positions, and an uninstall
 ; (including the one that precedes an upgrade) has no business deleting those.
 Type: filesandordirs; Name: "{app}\_internal"
@@ -77,7 +78,7 @@ Type: filesandordirs; Name: "{app}\_internal"
   in meter/winsys.py, and is the most reliable way to tell a running meter
   from any other process that happens to share the executable name. }
 const
-  TrayClass = 'FareverMeterTray';
+  TrayClass = 'FareverFranceTray';
 
 function AskToStopMeter(const Verb: String; Silent: Boolean): Boolean;
 begin
@@ -94,13 +95,12 @@ begin
   end;
   while FindWindowByClassName(TrayClass) <> 0 do
   begin
-    if MsgBox('Farever France is still running.' + #13#10#13#10 +
-              'Right-click its icon in the notification area (by the clock - ' +
-              'click the ^ arrow if you don''t see it) and choose "Stop the ' +
-              'meter". You can also use the Stop button in the meter''s control ' +
-              'menu, which opens with the game''s Esc menu.' + #13#10#13#10 +
-              'Stopping it that way lets it detach from Farever cleanly. Then ' +
-              'click Retry to carry on with the ' + Verb + '.',
+    if MsgBox('Farever France est encore ouvert.' + #13#10#13#10 +
+              'Fais un clic droit sur son icône dans la zone de notification ' +
+              '(près de l''horloge, clique sur la flèche ^ si tu ne la vois ' +
+              'pas) et choisis « Arrêter le compteur ».' + #13#10#13#10 +
+              'L''arrêter ainsi le détache proprement de Farever. Clique ' +
+              'ensuite sur Réessayer pour continuer ' + Verb + '.',
               mbError, MB_RETRYCANCEL) = IDCANCEL then
     begin
       Result := False;
@@ -111,10 +111,10 @@ end;
 
 function InitializeSetup(): Boolean;
 begin
-  Result := AskToStopMeter('install', WizardSilent);
+  Result := AskToStopMeter('l''installation', WizardSilent);
 end;
 
 function InitializeUninstall(): Boolean;
 begin
-  Result := AskToStopMeter('uninstall', UninstallSilent);
+  Result := AskToStopMeter('la désinstallation', UninstallSilent);
 end;

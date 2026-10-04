@@ -137,5 +137,5 @@ def _tiles(game_dir, out_dir):
             im = Image.open(io.BytesIO(f.read(e.size))).convert("RGB")
             imgcache.save(im.resize((TILE_PX, TILE_PX), Image.LANCZOS),
                           Path(out_dir) / f"{tx}_{ty}.webp", quality=78,
-                          method=6)
+                          method=4)
     return found

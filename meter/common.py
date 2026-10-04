@@ -35,9 +35,9 @@ FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = (Path(sys._MEIPASS) / "res") if FROZEN else Path(__file__).resolve().parent.parent
 
 
-# %LOCALAPPDATA%\FareverMeter. Already the home of the single-instance lock, so
+# %LOCALAPPDATA%\FareverFrance. Already the home of the single-instance lock, so
 # the installed build isn't inventing a location — just keeping more there.
-DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()) / "FareverMeter"
+DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()) / "FareverFrance"
 
 
 _WRITABLE = DATA_HOME if FROZEN else ROOT
@@ -106,6 +106,9 @@ def _move_rift_reports():
 
 DUNGEONS_DIR = _WRITABLE / "donjons"    # one JSON per dungeon run
 BUILDS_DIR = _WRITABLE / "builds"       # one JSON per build (Build tab)
+# The game's folder, when the player had to show it (welcome screen): its
+# install was not where the drives' search looks.
+GAME_PATH_FILE = _WRITABLE / ".meter_gamepath.json"
 
 
 # What the account owns (mounts, gliders, companions), as last read in game.
@@ -154,10 +157,12 @@ LOCK_FILE = LOCK_DIR / "instance.json"
 # Process images that count as "another meter" when the lock file names them.
 # The installed executable's name is here as a literal rather than read from
 # sys.executable, so a source run recognises an installed one and vice versa.
-EXE_NAME = "FareverMeter.exe"
+# FareverMeter.exe, its earlier name: an older install still counts.
+EXE_NAME = "FareverFrance.exe"
 
 
-METER_IMAGE_NAMES = frozenset({EXE_NAME.lower(), "python.exe", "pythonw.exe"})
+METER_IMAGE_NAMES = frozenset({EXE_NAME.lower(), "farevermeter.exe",
+                               "python.exe", "pythonw.exe"})
 
 
 # Set once at startup, before stderr is redirected: is there a console for a
@@ -175,7 +180,7 @@ QUIT_WAIT_SECS = 12.0
 # Serialises the claim in claim_single_instance(). "Local\" scopes it to the
 # logon session, which is the right boundary — two users on one machine each get
 # their own meter, their own lock file and their own game.
-CLAIM_MUTEX = "Local\\FareverMeterClaim"
+CLAIM_MUTEX = "Local\\FareverFranceClaim"
 
 
 CLAIM_WAIT_MS = 30000       # comfortably longer than a full QUIT_WAIT_SECS wait
@@ -455,7 +460,7 @@ CREATE_NO_WINDOW = 0x08000000   # ...or every regenerate flashes a console up
 
 
 def run_bundled_tool(name, argv_rest):
-    """Entry point for `FareverMeter.exe --run-hltool build_targets.py ...`.
+    """Entry point for `FareverFrance.exe --run-hltool build_targets.py ...`.
 
     The tools are plain top-level scripts that do their work on import and exit
     via SystemExit, so they're run as scripts rather than imported — which also
@@ -581,7 +586,7 @@ def message_box(text, title="Farever France", flags=0x40):
 # This used to hand off to a detached, hidden PowerShell script that polled
 # until this process died, ran the installer with /SILENT /SUPPRESSMSGBOXES,
 # and relaunched the replaced exe. Every one of those steps is a step malware
-# takes, and Windows Defender agreed: it quarantined FareverMeter.exe as
+# takes, and Windows Defender agreed: it quarantined FareverMeter.exe (its name then) as
 # `Behavior:Win32/DefenseEvasion.A!ml` — a BEHAVIOURAL detection, on more than
 # one machine, each time right after an update.
 #
@@ -593,7 +598,7 @@ def message_box(text, title="Farever France", flags=0x40):
 #
 # None of it was ever necessary. The helper existed only because a /SILENT run
 # REFUSES to proceed while the meter is running (see AskToStopMeter in
-# FareverMeter.iss — a silent run has nobody to answer its prompt, so it bails
+# FareverFrance.iss — a silent run has nobody to answer its prompt, so it bails
 # rather than hang), so something had to wait for us to die first. Run the
 # installer the way a person would — visibly — and Inno asks politely on its
 # own, and its [Run] entry offers to start the meter again afterwards. That
@@ -613,7 +618,7 @@ def _pretty_id(sid: str) -> str:
 # Bump this on every release, and tag the repo with the same string — it's the
 # left-hand side of the comparison below, so a release that forgets it tells
 # everyone they're out of date forever.
-VERSION = "1.13.3"
+VERSION = "1.14.0"
 
 
 # ---------------------------------------------------------------------------

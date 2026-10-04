@@ -9,7 +9,7 @@ Dans Steam, clic droit sur **Farever** → **Propriétés** → **Général** �
 **Options de lancement**, et colle ceci sur une seule ligne :
 
 ```
-cmd /c start "" "C:\Users\TOI\AppData\Local\Programs\FareverMeter\FareverMeter.exe" & %command%
+cmd /c start "" "C:\Users\TOI\AppData\Local\Programs\FareverFrance\FareverFrance.exe" & %command%
 ```
 
 Remplace `TOI` par ton nom d'utilisateur Windows.

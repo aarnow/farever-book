@@ -323,14 +323,14 @@ def _backdrops(game_dir, out_dir, paths, full=()):
             continue
         h = round(img.height * BACKDROP_W / img.width)
         imgcache.save(img.resize((BACKDROP_W, h), Image.LANCZOS),
-                      out_dir / f"{Path(path).stem}.webp", quality=70, method=6)
+                      out_dir / f"{Path(path).stem}.webp", quality=70, method=4)
         if path in full:
             # full size, but no wider than a screen (the title art is 5000)
             if img.width > 1920:
                 img = img.resize((1920, round(img.height * 1920 / img.width)),
                                  Image.LANCZOS)
             imgcache.save(img, out_dir / f"{Path(path).stem}_hd.webp",
-                          quality=82, method=6)
+                          quality=82, method=4)
 
 
 def _images(game_dir, out_dir, gfx):
@@ -360,4 +360,4 @@ def _images(game_dir, out_dir, gfx):
                 x = y = 0
             imgcache.save(img.crop((x, y, x + n, y + n)).resize(
                 (IMG_PX, IMG_PX), Image.LANCZOS),
-                out_dir / f"{uid}.webp", quality=80, method=6)
+                out_dir / f"{uid}.webp", quality=80, method=4)

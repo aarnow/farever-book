@@ -327,4 +327,4 @@ def _images(game_dir, out_dir, gfx):
                 continue
             tile = img.crop((x, y, x + n, y + n)).resize((IMG_PX, IMG_PX),
                                                          Image.LANCZOS)
-            imgcache.save(tile, out_dir / f"{iid}.webp", quality=82, method=6)
+            imgcache.save(tile, out_dir / f"{iid}.webp", quality=82, method=4)

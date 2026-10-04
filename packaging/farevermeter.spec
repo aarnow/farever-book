@@ -2,7 +2,7 @@
 #
 #   py -m PyInstaller --clean --noconfirm packaging/farevermeter.spec
 #
-# Produces dist/FareverMeter/ — a windowed (console-free) build carrying its own
+# Produces dist/FareverFrance/ — a windowed (console-free) build carrying its own
 # Python, frida and Pillow, which is what removes "install Python", "tick Add to
 # PATH" and "pip install frida" from the user's side entirely.
 #
@@ -35,8 +35,9 @@ datas = [
     # in menu_host.py, which reads and inlines them into a single document at
     # startup — so they stay editable, and there is no file:// origin to get
     # wrong. Required, not optional: without them the panel opens blank.
-    (str(ROOT / "meter" / "web" / "menu.html"), "res/web"),
-    (str(ROOT / "meter" / "web" / "menu.css"), "res/web"),
+    # Globbed: the in-game overlays' overlay.css went missing from a list.
+    *[(str(f), "res/web")
+      for f in sorted((ROOT / "meter" / "web").glob("*.*"))],
     *[(str(f), "res/web/js")
       for f in sorted((ROOT / "meter" / "web" / "js").glob("*.js"))],
 ]
@@ -55,18 +56,19 @@ for f in _help:
 # recover from a patch without a new release.
 # pak_extract is emit_offsets' import for the item-name table (data.cdb out
 # of res.light.pak) — same self-heal argument as the rest.
-for tool in ("build_targets.py", "emit_offsets.py", "hlbc_parser.py",
-             "gamepath.py", "pak_extract.py",
-             # the Collection's 3D viewer converts models on demand
-             "hbson.py", "hmd_model.py"):
-    datas.append((str(ROOT / "hltools" / tool), "res/hltools"))
+# All of them: emit_offsets imports a generator per table (build data, skills,
+# boss sheets, collection, map...) and skips, silently, any it can't import —
+# a short list here left the installed app without its Build tab's data.
+_tools = sorted((ROOT / "hltools").glob("*.py"))
+for tool in _tools:
+    datas.append((str(tool), "res/hltools"))
 
 # Pillow is imported inside the parse-image functions rather than at module
 # level. PyInstaller does find nested imports, but naming them makes the parse
 # screenshots a guaranteed part of the build rather than a lucky one — users
 # should never see "pip install pillow" either.
 hiddenimports = ["PIL.Image", "PIL.ImageDraw", "PIL.ImageFont",
-                 # The settings panel's process. FareverMeter.exe re-enters
+                 # The settings panel's process. FareverFrance.exe re-enters
                  # itself with --menu-host and imports this, so nothing in the
                  # import graph points at it and PyInstaller cannot find it on
                  # its own.
@@ -74,13 +76,17 @@ hiddenimports = ["PIL.Image", "PIL.ImageDraw", "PIL.ImageFont",
                  # pywebview picks its backend at runtime by importing it, so
                  # the WinForms/EdgeChromium one is invisible to the analysis
                  # too. clr is pythonnet's entry point into .NET.
-                 "webview.platforms.winforms", "clr"]
+                 "webview.platforms.winforms", "clr",
+                 # The tools above run from source files in the bundle, so
+                 # nothing points the analysis at what THEY import (xml,
+                 # zlib...): naming them brings their dependencies along.
+                 *[t.stem for t in _tools]]
 
 a = Analysis(
     [str(ROOT / "meter" / "farever_meter.py")],
     # meter/ as well as the root, so the "menu_host" hidden import above
     # resolves — it is a sibling module, not a package member.
-    pathex=[str(ROOT), str(ROOT / "meter")],
+    pathex=[str(ROOT), str(ROOT / "meter"), str(ROOT / "hltools")],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
@@ -98,7 +104,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="FareverMeter",
+    name="FareverFrance",
     debug=False,
     strip=False,
     upx=False,          # UPX-packed binaries are a reliable antivirus trigger,
@@ -112,5 +118,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="FareverMeter",
+    name="FareverFrance",
 )

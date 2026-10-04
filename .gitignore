@@ -21,6 +21,9 @@ __pycache__/
 # Your fastest boss kills. Records, not configuration — and personal either way.
 .meter_besttimes.json
 
+# Where Farever is installed, when the welcome screen had to ask. Per-machine.
+.meter_gamepath.json
+
 # Your own additions to the sound pools. The shipped defaults live in
 # assets/victory and assets/codex and ARE tracked; this is the folder the meter
 # also reads so that what you add survives an update. Yours, not the project's.

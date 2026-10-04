@@ -54,12 +54,12 @@ L'application s'ouvre dans sa propre fenêtre (pratique sur un second écran)
 et se connecte à Farever dès que le jeu est lancé. Rien n'est à installer :
 Python et ses modules sont dans le dossier « python ».
 
-Si rien ne s'ouvre : le journal est dans %LOCALAPPDATA%\FareverMeter\meter.log
+Si rien ne s'ouvre : le journal est dans %LOCALAPPDATA%\FareverFrance\meter.log
 (et « erreur-demarrage.txt » à côté du lanceur si le démarrage a échoué).
 
 Après une mise à jour du jeu, si la connexion échoue : Aide > Réparer.
 Tes données (failles, donjons, builds, réglages) sont rangées dans le
-dossier « app ». Le journal est dans %LOCALAPPDATA%\\FareverMeter.
+dossier « app ». Le journal est dans %LOCALAPPDATA%\\FareverFrance.
 
 Usage personnel : l'application lit les données du jeu, elle ne modifie
 rien dans Farever.
@@ -144,7 +144,7 @@ SOURCE_README = """Farever France {v} — le projet
 Si Windows affiche un avertissement sur le .cmd (fichier venu d'Internet) :
 « Informations complémentaires » puis « Exécuter quand même ».
 Après une mise à jour du jeu, si la connexion échoue : Aide > Réparer.
-Le journal est dans %LOCALAPPDATA%\\FareverMeter\\meter.log.
+Le journal est dans %LOCALAPPDATA%\\FareverFrance\\meter.log.
 """
 
 

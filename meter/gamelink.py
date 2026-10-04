@@ -12,8 +12,8 @@ from common import (
     _mmss)
 from winsys import _process_age, _window_rect_of_pid
 from gamedata import (
-    _boss_label, _zone_label, build_script_source, locate_hlboot,
-    regenerate_data)
+    DATA_CONSENT, _boss_label, _zone_label, build_script_source,
+    locate_hlboot, regenerate_data)
 from combat import DungeonTracker, _stamp_report_classes
 
 
@@ -65,6 +65,10 @@ def _game_session(link, device, proc, session, ui_state, world, rift_rec,
     # directory, so a version/install mismatch — the usual cause of a slow or
     # failed table search — is impossible. Skipped when the file is unchanged.
     link.step("data", "run", "comparaison avec la version installée")
+    # not before the player has agreed to it (the welcome screen)
+    while not DATA_CONSENT.wait(0.5):
+        if STOP.is_set():
+            return False
     hlboot = locate_hlboot(pid)
     if hlboot is None:
         print("[meter] using the shipped data files as-is (couldn't locate "

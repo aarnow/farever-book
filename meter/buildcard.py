@@ -16,10 +16,11 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from common import ANALYSIS, ROOT, SHIPPED_ANALYSIS, DATA_HOME
+from common import ANALYSIS, DATA_HOME, FROZEN, ROOT, SHIPPED_ANALYSIS
 
 WIDTH = 1200
-WEB = Path(__file__).resolve().parent / "web"
+# the page's scripts: beside this file, or under res/ in the installed build
+WEB = (ROOT / "web") if FROZEN else Path(__file__).resolve().parent / "web"
 ASSETS = ROOT / "assets"
 WORK = DATA_HOME / "cards"              # the pictures' scratch: pages, heroes
 RARITY = {"common": "#C8C4BA", "uncommon": "#7BD88F", "rare": "#5B8DEF",
@@ -411,7 +412,7 @@ h1 {{ margin:10px 0 6px; font-family:var(--fh); font-size:58px; line-height:1.02
    <div class="box"><h4>Talents<em>{pts.get("used", 0)} / {pts.get("total", 0)}</em></h4><div class="tgs">{tal_txt}</div></div>
    <div class="box"><h4>Runes</h4><div class="tgs">{rune_txt}</div></div></div>
  </div>
- <div class="foot"><span>Fiche de build générée par Farever France</span><span>Farever France</span></div>
+ <div class="foot"><span>Fiche de build générée par Farever France</span></div>
 </div><script>document.body.dataset.h=Math.ceil(document.body.getBoundingClientRect().height)</script>
 </body></html>'''
 

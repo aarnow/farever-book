@@ -735,13 +735,13 @@ class TrayIcon:
         self._wndproc = WNDPROC(wndproc)      # kept alive: Windows holds a raw
         cls = WNDCLASSW()                     # pointer to it for the window's life
         cls.lpfnWndProc = self._wndproc
-        cls.lpszClassName = "FareverMeterTray"
+        cls.lpszClassName = "FareverFranceTray"
         cls.hInstance = ctypes.windll.kernel32.GetModuleHandleW(None)
         try:
             if not u.RegisterClassW(ctypes.byref(cls)):
                 raise OSError(ctypes.get_last_error())
             u.CreateWindowExW.restype = wintypes.HWND
-            self.hwnd = u.CreateWindowExW(0, "FareverMeterTray", "Farever France tray",
+            self.hwnd = u.CreateWindowExW(0, "FareverFranceTray", "Farever France tray",
                                           0, 0, 0, 0, 0, None, None,
                                           cls.hInstance, None)
             if not self.hwnd:

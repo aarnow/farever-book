@@ -35,7 +35,9 @@ from gamedata import (
     dungeon_catalogue,
     item_rarity,
     dungeon_name, forget_loaded_data, item_icon, item_label, item_type,
-    item_model_json, locate_hlboot, regenerate_data, world_map)
+    item_model_json, locate_hlboot, regenerate_data, world_map,
+    DATA_GENERATION, DATA_CONSENT, GENERATED_STEPS, game_folder_hlboot,
+    needs_first_data)
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot,
     _overheal_note, _rate_text, _report_name)
@@ -152,6 +154,7 @@ class App:
         self._rift_view = None              # the rift report being read
         self._launching_until = 0           # Play was clicked: until then
         self._repairing = False             # Réparer is running
+        self._setup = None                  # the welcome screen's state
         self._self_prof = None              # own luck counters (hook, 1 min)
         self._repair_note = None            # (ok, text) once it has run
         # a rift's gates: the game's running count when it began, and the
@@ -454,6 +457,80 @@ class App:
         except Exception as e:
             print(f"[meter] couldn't open {DATA_HOME}: {e}", file=sys.stderr)
 
+    # ---- the first launch: the welcome screen ----------------------------
+    def _setup_begin(self):
+        """At startup: the data is there (consent goes without saying), or
+        the welcome screen asks — with the game's folder found, or asked."""
+        if not needs_first_data():
+            DATA_CONSENT.set()
+            self._setup = None
+            return
+        hb = locate_hlboot(None)
+        self._setup = ({"stage": "ask", "path": str(hb.parent)} if hb
+                       else {"stage": "locate"})
+
+    def _setup_folder(self, path):
+        """The folder the player picked: Farever's, or said so."""
+        if not self._setup or self._setup.get("stage") == "run":
+            return
+        hb = game_folder_hlboot(path)
+        if hb is None:
+            self._setup = dict(self._setup, err=(
+                "Farever n'est pas dans ce dossier : choisissez celui qui "
+                "contient Farever.exe et hlboot.dat (souvent "
+                "Steam\\steamapps\\common\\Farever)."))
+        else:
+            self._setup = {"stage": "ask", "path": str(hb.parent)}
+
+    def _setup_start(self):
+        """The player agreed: read the game's data, step by step."""
+        if not self._setup or self._setup.get("stage") not in ("ask",
+                                                                  "error"):
+            return
+        DATA_CONSENT.set()
+        path = self._setup.get("path")
+        hb = Path(path) / "hlboot.dat"
+        names = [n for n, _t in GENERATED_STEPS]
+        self._setup = {"stage": "run", "path": path, "done": 0,
+                       "total": len(names), "label": GENERATED_STEPS[0][1]}
+
+        def progress(tool, line):
+            st = self._setup
+            if not st or st.get("stage") != "run":
+                return
+            done = st["done"] + 1
+            nxt = GENERATED_STEPS[done][1] if done < len(names) \
+                else "les dernières finitions"
+            self._setup = dict(st, done=min(done, st["total"]), label=nxt)
+            self.menubridge.invalidate()
+
+        def work():
+            ok = False
+            try:
+                ok = regenerate_data(hb, force=True, on_progress=progress)
+            except Exception as e:
+                print(f"[meter] first data read failed: {e!r}",
+                      file=sys.stderr)
+            self._setup = ({"stage": "done"} if ok else
+                           {"stage": "error", "path": path})
+            self.menubridge.invalidate()
+        threading.Thread(target=work, daemon=True, name="first-data").start()
+
+    def _setup_finish(self):
+        if self._setup and self._setup.get("stage") == "done":
+            self._setup = None
+            self._menu_tab = APP_TAB_DEFAULT
+
+    def _setup_spec(self):
+        """The welcome screen, in place of the tabs."""
+        st = dict(self._setup)
+        st["needs"] = ["les images de la collection, du bestiaire et de "
+                       "la carte", "les icônes des sorts et des objets",
+                       "les modèles 3D des personnages et des montures",
+                       "les données des builds, des donjons et des boss",
+                       "les textes du jeu en français"]
+        return {"k": "welcome", "id": "welcome", **st}
+
     def _repair(self):
         """Réparer (Aide): what a game patch needs, by hand — read the game's
         data again from scratch, forget everything loaded from the old files,
@@ -570,6 +647,10 @@ class App:
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),
             "help_close": lambda: setattr(self, "_help_open", None),
             "repair_data": self._repair,
+            # the first launch's welcome screen
+            "setup_folder": lambda p: self._setup_folder(p.get("path")),
+            "setup_start": self._setup_start,
+            "setup_finish": self._setup_finish,
         }
         acts.update(self.buildtab.actions())
         return acts
@@ -663,6 +744,7 @@ class App:
     def _spec(self):
         return {
             "version": VERSION,
+            "dataGen": DATA_GENERATION[0],
             "zoom": int(self._zoom),
             "shard": self.ui_state.server() or "",
             "link": self._link_spec(),
@@ -670,11 +752,14 @@ class App:
                           else []),
             "rift": self._rift_clock(),
             "toast": self._toast,
-            "tab": self._menu_tab,
+            # the first launch: the welcome screen alone, no tabs
+            "tab": "Welcome" if self._setup else self._menu_tab,
             # The app's own tabs, after the game's, behind a divider.
-            "tabs": [{"v": t, "t": APP_TAB_LABELS[t],
-                      "sep": t == APP_TABS_APP_FIRST} for t in APP_TABS],
-            "page": self._page(self._menu_tab),
+            "tabs": [] if self._setup else [
+                {"v": t, "t": APP_TAB_LABELS[t],
+                 "sep": t == APP_TABS_APP_FIRST} for t in APP_TABS],
+            "page": ([self._setup_spec()] if self._setup
+                     else self._page(self._menu_tab)),
             # the events window (title band button), always up to date
             "events": [{"when": time.strftime("%H:%M",
                                               time.localtime(e["at"])),
@@ -2592,6 +2677,11 @@ class App:
         if state == GameLink.CONNECTED:
             self._launching_until = 0
             return {"state": "ingame", "t": "En jeu"}
+        if REGENERATING.is_set() and not self._repairing \
+                and not self._setup:
+            return {"state": "connecting", "t": "Mise à jour…",
+                    "tip": "lecture des données du jeu (images, icônes, "
+                           "modèles), quelques minutes au premier lancement"}
         if state == GameLink.CONNECTING or self._repairing:
             if REGENERATING.is_set():
                 return {"state": "connecting", "t": "Mise à jour…",

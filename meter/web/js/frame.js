@@ -355,3 +355,89 @@ function initWindowFrame() {
 /* Called by the host with a JSON *string*: the state carries player names,
    and interpolating those into a script expression would break the page the
    first time somebody had a quote in their name. */
+
+
+/* The first launch: the welcome screen, alone in the window (no tabs) until
+   the game's data has been read (app.py _setup_*). It asks before reading
+   the game's folder, shows the progress, then lets the player in. */
+function welcomePick() {
+  if (!window.pywebview || !window.pywebview.api.pick_folder) return;
+  window.pywebview.api.pick_folder().then((p) => {
+    if (p) notify('setup_folder', { path: p });
+  });
+}
+
+function buildWelcome(n) {
+  const box = el('div', 'welcome');
+  const card = el('div', 'wcard');
+  const crest = el('span', 'emblem wcrest');
+  crest.appendChild(el('i'));
+  card.appendChild(crest);
+  const btn = (text, cls, fn) => {
+    const b = el('button', cls, text);
+    b.type = 'button';
+    b.addEventListener('click', fn);
+    return b;
+  };
+
+  if (n.stage === 'done') {
+    card.appendChild(el('h1', null, 'Tout est prêt !'));
+    card.appendChild(el('p', 'wlead', 'Merci d’utiliser Farever France. Les images, les icônes et les '
+      + 'données du jeu sont en place, tous les modules sont accessibles.'));
+    card.appendChild(el('p', 'wgame', 'Bon jeu sur Farever !'));
+    card.appendChild(btn('Commencer', 'wgo', () => notify('setup_finish', {})));
+    box.appendChild(card);
+    return box;
+  }
+
+  card.appendChild(el('h1', null, 'Bienvenue sur Farever France'));
+  card.appendChild(el('p', 'wlead', 'L’outil qui vous accompagne dans vos aventures sur Farever !'));
+
+  if (n.stage === 'run') {
+    const pct = n.total ? Math.round(100 * n.done / n.total) : 0;
+    card.appendChild(el('p', 'wtext', 'Récupération des données du jeu en cours, ça ne prend '
+      + 'qu’une minute environ.'));
+    const bar = el('div', 'wbar');
+    const fill = el('i');
+    fill.style.width = Math.max(3, pct) + '%';
+    bar.appendChild(fill);
+    card.appendChild(bar);
+    const st = el('div', 'wstep');
+    st.appendChild(el('span', null, 'En cours : ' + (n.label || '…')));
+    st.appendChild(el('b', null, pct + ' %'));
+    card.appendChild(st);
+    box.appendChild(card);
+    return box;
+  }
+
+  card.appendChild(el('p', 'wtext', 'Pour accéder aux divers modules, nous avons besoin d’accéder '
+    + 'au dossier du jeu Farever afin d’y récupérer :'));
+  const ul = el('ul', 'wneeds');
+  (n.needs || []).forEach((t) => ul.appendChild(el('li', null, t)));
+  card.appendChild(ul);
+  card.appendChild(el('p', 'wsafe', 'Le jeu est seulement lu : rien n’y est modifié, et rien ne '
+    + 'quitte votre ordinateur.'));
+
+  if (n.stage === 'error') {
+    card.appendChild(el('p', 'werr', 'La récupération n’a pas abouti. Vérifiez que Farever est à '
+      + 'jour, puis réessayez. Le détail est dans le journal (Réglages, Dossier du journal).'));
+  }
+  if (n.stage === 'locate') {
+    card.appendChild(el('p', 'wwarn', 'Nous n’avons pas trouvé Farever sur cet ordinateur. '
+      + 'Indiquez-nous son dossier, celui qui contient Farever.exe.'));
+    if (n.err) card.appendChild(el('p', 'werr', n.err));
+    card.appendChild(btn('Parcourir…', 'wgo', welcomePick));
+  } else {
+    const where = el('div', 'wpath');
+    where.appendChild(el('span', null, 'Dossier du jeu'));
+    where.appendChild(el('b', null, n.path || ''));
+    const other = btn('Ce n’est pas le bon dossier ?', 'wlink', welcomePick);
+    where.appendChild(other);
+    card.appendChild(where);
+    if (n.err) card.appendChild(el('p', 'werr', n.err));
+    card.appendChild(btn(n.stage === 'error' ? 'Réessayer' : 'Autoriser et commencer', 'wgo',
+      () => notify('setup_start', {})));
+  }
+  box.appendChild(card);
+  return box;
+}

@@ -1,10 +1,10 @@
 """Create the "Farever France" shortcut on the Desktop and in the Start menu.
 
 It starts the app through pythonw.exe — the same Python, without a console
-window (the app then logs to %LOCALAPPDATA%\\FareverMeter\\meter.log). Run by
+window (the app then logs to %LOCALAPPDATA%\\FareverFrance\\meter.log). Run by
 "Installer Farever France.cmd"; safe to run again, it only rewrites the shortcuts.
 
-The icon is copied to %LOCALAPPDATA%\\FareverMeter under a name made of its
+The icon is copied to %LOCALAPPDATA%\\FareverFrance under a name made of its
 content (farevermeter-<hash>.ico), and the shortcuts point there. Windows'
 icon cache keys on the path: pointed at assets\\farevermeter.ico, a shortcut
 keeps showing the old icon after the file changes. A new icon is a new path,
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "FareverMeter"
+DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "FareverFrance"
 PINNED = (Path(os.environ.get("APPDATA") or Path.home()) / "Microsoft"
           / "Internet Explorer" / "Quick Launch" / "User Pinned" / "TaskBar"
           / "Farever France.lnk")

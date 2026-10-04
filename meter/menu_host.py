@@ -88,7 +88,10 @@ SWP_NOZORDER, SWP_NOACTIVATE, SWP_NOSIZE = 0x0004, 0x0010, 0x0001
 
 def _log(msg):
     """The meter collects our stderr into its own log."""
-    print(f"[window] {msg}", file=sys.stderr, flush=True)
+    try:
+        print(f"[window] {msg}", file=sys.stderr, flush=True)
+    except (OSError, ValueError, AttributeError):
+        pass                # no log to write to: the window carries on
 
 
 class Pipe:
@@ -168,6 +171,19 @@ class Api:
 
     def typing(self, on):
         """Kept for the page's search boxes; nothing depends on it now."""
+
+    def pick_folder(self):
+        """The welcome screen's Parcourir: Windows' folder picker, over the
+        window. The folder, or "" when cancelled."""
+        host = self._host
+        if host is None:
+            return ""
+        try:
+            got = host.window.create_file_dialog(webview.FOLDER_DIALOG)
+        except Exception as e:
+            _log(f"folder picker failed: {e!r}")
+            return ""
+        return str(got[0]) if got else ""
 
     def win(self, action, arg=None):
         """The page's own title bar: drag, resize from an edge, minimise,
@@ -341,6 +357,13 @@ class AppWindow:
         page is up, in batches: inlined, they took the page past WebView2's
         2 MB limit on an HTML string, and the window came up blank."""
         self._images_sent = True
+        try:
+            self.window.evaluate_js(
+                "window.addPortraits && window.addPortraits("
+                + json.dumps(json.dumps({"portraits": _boss_portraits(),
+                                         "logo": _title_logo()})) + ")")
+        except Exception as e:
+            _log(f"portraits push failed: {e!r}")
         for ns, folder in (("coll", "collection_img"),
                            ("best", "bestiary_img"), ("map", "map_tiles"),
                            ("skill", "skill_img"), ("dbg", "dungeon_bg")):
@@ -368,6 +391,12 @@ class AppWindow:
     def _push(self, data):
         """Hand one state object to the page — as a JSON string argument,
         never interpolated: it carries player names straight off the wire."""
+        # again once the game's data has been (re)read: the first launch
+        # starts with none
+        gen = data.get("dataGen")
+        if gen is not None and gen != getattr(self, "_images_gen", gen):
+            self._images_sent = False
+        self._images_gen = gen
         if not getattr(self, "_images_sent", False):
             self._send_collection_images()
         try:

@@ -29,5 +29,20 @@ function brandLogo() {
   brand.appendChild(el('span', 'fr', 'France'));
 }
 
+/* The bosses' portraits and the wordmark, sent again once the game's data
+   has been read (menu_host.py): the page is redrawn to show them. */
+window.addPortraits = function (json) {
+  let d;
+  try { d = JSON.parse(json); } catch (e) { return; }
+  const had = Object.keys(window.__PORTRAITS__ || {}).length;
+  window.__PORTRAITS__ = d.portraits || {};
+  if (d.logo && !window.__LOGO__) { window.__LOGO__ = d.logo; brandLogo(); }
+  if (Object.keys(window.__PORTRAITS__).length !== had && typeof STATE !== 'undefined') {
+    NODES.forEach((v) => v.el.remove());
+    NODES = new Map();
+    renderPage(STATE.page || []);
+  }
+};
+
 window.addEventListener('pywebviewready', boot);
 if (window.pywebview) boot();
