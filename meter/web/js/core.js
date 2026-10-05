@@ -491,6 +491,7 @@ function buildNode(n) {
     case 'setnav': return buildSetNav(n);
     case 'themes': return buildThemes(n);
     case 'langs': return buildLangs(n);
+    case 'linkcards': return buildLinkCards(n);
     case 'collection': return buildCollection(n);
     case 'hunt': return buildHunt(n);
     case 'huntmon': return buildHuntMon(n);
@@ -608,6 +609,7 @@ window.applyState = function (json) {
   renderLinkSteps();
   renderBuildEditor();
   if (JSON.stringify(s.update) !== JSON.stringify(prev.update)) renderUpdate(s.update);
+  if (s.updateAvail !== prev.updateAvail) renderUpdateButton(s.updateAvail);
 };
 
 /* Entry animation, on a tab change only: live redraws must not animate. */

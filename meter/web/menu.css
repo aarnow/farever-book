@@ -3109,6 +3109,29 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .thname { font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: .4px; }
 .theme.on .thname { color: var(--accent); }
 
+/* Aide › Liens utiles: the cards (frame.js buildLinkCards) */
+.lcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 4px; }
+.lcard { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 16px 18px;
+         border-radius: 14px; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+         text-align: center; font: inherit; }
+.lcard.open { cursor: pointer; transition: border-color .16s ease, transform .16s ease; }
+.lcard.open:hover { border-color: var(--accent); transform: translateY(-2px); }
+.lcard .lic { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px;
+              background: var(--bg-2); }
+.lcard .lic svg { width: 30px; height: 30px; fill: currentColor; }
+.lcard b { font-family: var(--font-head); font-size: 16px; color: #fff; }
+.lcard .lmeta { color: var(--dim); font-size: 13px; line-height: 1.45; }
+.lcard.l-discord .lic { color: #5865F2; }
+.lcard.l-github .lic { color: #FFFFFF; }
+
+/* the header's update button (frame.js renderUpdateButton): the Play
+   button's look, in green */
+#updslot:empty { display: none; }
+.playbtn.upbtn { background: linear-gradient(180deg, #A6E37A, #6FBF4A 45%, #4E9A32);
+                 border-color: #C4F09E; color: #13300A; }
+.playbtn.upbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4;
+                     stroke-linecap: round; stroke-linejoin: round; }
+
 /* Réglages › Affichage: the languages (frame.js buildLangs) */
 .langs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .lang { display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 12px; border-radius: 10px;

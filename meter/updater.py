@@ -20,8 +20,9 @@ import urllib.request
 from common import DATA_HOME, FROZEN, VERSION
 from i18n import tr
 
-RELEASES_REPO = "aarnow/farever-book-releases"
-RELEASES_URL = f"https://github.com/{RELEASES_REPO}/releases"
+RELEASES_REPO = "aarnow/farever-book"     # the code and its releases
+REPO_URL = f"https://github.com/{RELEASES_REPO}"
+RELEASES_URL = f"{REPO_URL}/releases"
 API_LATEST = f"https://api.github.com/repos/{RELEASES_REPO}/releases/latest"
 TIMEOUT = 8.0
 RECHECK_SECS = 3600.0
@@ -124,6 +125,16 @@ class Updater:
         print(f"[update] {v} is available (running {VERSION}).",
               file=sys.stderr)
         if manual or self._dismissed != v:
+            self._offer()
+
+    def available(self):
+        """The newer version found, or None: the header's "Mettre à jour"
+        button stays while it is there, put off or not."""
+        return self._release["v"] if self._release else None
+
+    def offer(self):
+        """The header's button: the offer again."""
+        if self._release:
             self._offer()
 
     def _offer(self):

@@ -1,188 +1,68 @@
 # Farever Book
 
-Compagnon de second écran pour **Farever**, en français. Une seule fenêtre
-Windows, à côté du jeu, qui lit ce qui se passe en jeu et le garde consultable
-même jeu fermé :
+**Farever Book** est une application qui vient se placer à côté de
+**Farever**, sur ton second écran. Elle suit tes sessions en direct (dégâts,
+soins, failles, donjons, butin…) et peut aussi s'utiliser **hors jeu**, pour
+explorer un sujet ou composer un build.
 
-* **externe au jeu** : aucun overlay, rien n'est jamais dessiné dans Farever, le
-  HUD du jeu reste intact ;
-* **en lecture** : les données du jeu sont lues en mémoire, jamais modifiées ;
-* **usage personnel** : le projet n'est pas redistribué.
+Disponible en anglais et en français, **pour Windows uniquement** (Windows 10
+ou 11).
 
-## Position du studio
+## Ce qu'elle propose
 
-Message de Steven, community manager de Shiro Games, sur le Discord de Farever,
-le 27/05/2026 :
+* **En jeu** : le compteur de dégâts et de soins, ton groupe, tes chances de
+  butin.
+* **Failles et donjons** : le butin, les rapports de chaque faille et de chaque
+  run, tes records.
+* **Collection, Codex, Succès, Carte** : ta progression, ce qu'il te manque et
+  comment l'obtenir.
+* **Inspecter** : l'équipement, les talents et les sorts des joueurs autour de
+  toi.
+* **Build** : composer et comparer des builds, avec leurs statistiques et une
+  simulation des dégâts, puis les partager.
 
-> I'll confirm what has been said earlier
->
-> While we won't promote the use of add-ons during the EA (to keep players on
-> the intended experience at first), we won't condemn personal use of add-ons
-> like minimaps or DPS meter 🙏
+## Lecture seule
 
-Autrement dit : pendant l'accès anticipé, le studio ne met pas en avant les
-add-ons, mais tolère leur usage personnel. C'est le cadre de ce projet : usage
-personnel, sans diffusion. Cette tolérance peut évoluer, à surveiller.
+Farever Book s'appuie entièrement sur les données de **ta version installée du
+jeu**, et sur tes sessions quand il tourne en même temps que Farever.
 
-Pour être exact sur ce que fait Farever Book dans le jeu : il ne modifie
-aucune donnée et n'envoie rien sur le réseau, mais Frida s'injecte dans le
-processus du jeu et dévie quelques fonctions en mémoire pour être prévenu des
-coups et des soins. En cas de plantage à signaler aux développeurs, reproduis-le
-sans Farever Book avant de l'envoyer.
+Il ne fait **que lire** : rien n'est jamais écrit ni modifié dans le jeu, et
+rien n'y est affiché. Aucune donnée n'est collectée : tout ce que l'application
+garde reste sur ton ordinateur. Son code est public pour que chacun puisse le
+vérifier.
 
-## Les onglets
+## Installation
 
-| Onglet | Contenu |
-|---|---|
-| **En direct** | Dégâts et soins du groupe (ou de tous les joueurs), détail du joueur sélectionné (sorts, critiques, types de dégâts), durée du combat, parse 60 s. Ta **chance de butin** (compteurs du Puits des âmes, offrandes actives) et tes **statistiques**, relues chaque minute. |
-| **Failles** | Tes compteurs de failles, puis chaque faille terminée avec son rapport : phase de faille et phase du boss, durée, DPS, HPS, MVP, classements, types de dégâts ; copiable en image ou en texte. Suppression par sélection, nombre de failles conservées réglable. Récompenses des failles et chances (paliers de portails, armes légendaires). |
-| **Donjons** | Chaque run enregistré : difficulté, résultat, temps, morts, groupe, rapport en deux phases et butin. Records par donjon et difficulté, table de butin du donjon. |
-| **Collection** | Montures, planeurs, compagnons, apparences d'équipement et objets du Codex, avec pour chacun la façon de l'obtenir d'après les données du jeu. |
-| **Chasse** | Tes kills par monstre (Codex du jeu) et leur rang, par région. |
-| **Carte** | La carte de Siagarta avec les points de complétion (coffres, orbes rouges, obélisques…), trouvés ou à récupérer. |
-| **Succès** | Les succès du compte, leur progression et leurs récompenses. |
-| **Inspecter** | Les joueurs du serveur et, sur demande, la fiche d'un joueur comme en jeu : équipement par emplacement avec les **statistiques de chaque pièce**, **attributs** et stats secondaires, armes et arsenal, imprégnations, barre de sorts, talents et runes. |
-| **Build** | Des builds enregistrés (dans `builds/`) et simulés : classe et niveau, équipement de la classe (une ou deux mains, bouclier, arsenal) avec rareté, niveau, améliorations, augmentations (cadeaux corrompus, formules, broderies, gemmes…) et imprégnation, arbre de talents et compétences, sous les règles du jeu. La fiche affiche les statistiques de chaque pièce, les attributs et les sets d'imprégnation. Un build peut partir d'un joueur analysé (Inspecter → « Créer un build »). |
-| **Réglages** (⚙) | Colonnes de soins, réinitialisation au pull d'un boss, raccourci clavier, taille de l'interface, dossiers. |
-| **Aide** (?) | Utilisation, lancement avec Steam, et **Réparer** après une mise à jour du jeu. |
-| **Événements** (☰) | Fenêtre des kills de boss, records, fins de faille et donjons ; une pastille compte les nouveaux. |
+Farever Book fonctionne **uniquement sous Windows** (10 ou 11). Télécharge
+l'installateur `FareverBook-<version>-Setup.exe` dans les
+[**releases de ce dépôt**](https://github.com/aarnow/farever-book/releases),
+uniquement, puis lance-le. Au premier démarrage, l'application lit les données
+de ton jeu : c'est l'affaire de quelques instants.
 
-En haut, le minuteur de la prochaine faille, puis l'état du jeu : **Jouer**
-(lance Farever par Steam), **Connexion…**, ou **En jeu** avec le serveur. Un
-clic sur cet état ouvre le **suivi de connexion**, étape par étape.
+## Mises à jour
 
-Les statistiques d'équipement et les attributs sont **calculés comme le fait
-le jeu**, à partir de ses données : un équipement ne garde en mémoire que son
-niveau, ses améliorations et ses augmentations, et le jeu en dérive ses
-statistiques (voir `hltools/gear_stats_data.py`).
+* **Une nouvelle version de Farever Book** : un bouton **Mettre à jour**
+  apparaît dans l'en-tête de l'application. Un clic suffit : elle télécharge et
+  installe la nouvelle version, en gardant tes builds et ton historique.
+* **Une mise à jour du jeu** : l'application relit d'elle-même les données du
+  jeu quand elles changent. Si un module ne fonctionne plus, le bouton
+  **Réparer** de l'onglet Aide le remet en état dans la plupart des cas.
 
-### Réinitialiser en plein combat
+## Projet de fan
 
-Un raccourci clavier global (par défaut **Maj + \\**) réinitialise le combat
-sans quitter le jeu des yeux. Il ne fonctionne que lorsque Farever est au
-premier plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
+Farever Book est un projet de fan, communautaire et gratuit. Il n'est **ni
+affilié à Shiro Games, ni approuvé par le studio**. Farever et ses contenus
+appartiennent à Shiro Games.
 
-## Installation et lancement
-
-Farever Book s'installe avec `FareverBook-<version>-Setup.exe`, publié
-dans les releases de
-[aarnow/farever-book-releases](https://github.com/aarnow/farever-book-releases).
-L'application vérifie elle-même les nouvelles versions et propose de les
-installer. Son journal est dans `%LOCALAPPDATA%\FareverBook\meter.log`
-(bouton dans les Réglages).
-
-Depuis les sources, avec la console (pratique pour lire le journal en direct) :
-
-```
-pip install frida==17.18.0 pillow pywebview
-python meter/farever_book.py
-```
-
-La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
-
-**Frida doit être en 17.18.0.** La 17.19.0 fait planter tout processus dont
-elle se détache, donc Farever à la fermeture de Farever Book (mesuré le
-28/09/2026 sur Windows 11 build 26200). Farever Book refuse de s'attacher
-avec la 17.19.0 et l'indique dans sa fenêtre.
-
-Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône près de l'horloge.
-Farever Book se détache alors proprement du jeu. **Ne l'arrête pas depuis le
-Gestionnaire des tâches** : le processus serait tué avant de s'être détaché, ce
-qui peut déstabiliser Farever.
-
-## Où sont les fichiers
-
-Installé, tout est écrit dans `%LOCALAPPDATA%\FareverBook` ; depuis les
-sources, dans le dossier du projet :
-
-| Quoi | Où |
-|---|---|
-| Rapports de faille (`.json`, `.txt`, `.png`) | `failles/` |
-| Runs de donjon | `donjons/` |
-| Builds | `builds/` |
-| Collection, kills par monstre, succès, carte | `.meter_collection.json`, `.meter_codex.json`, `.meter_achievements.json`, `.meter_elements.json` |
-| Réglages, position de la fenêtre, records de boss | `.meter_settings.json`, `.meter_position.json`, `.meter_besttimes.json` |
-| Données tirées du jeu | `analysis_out/` |
-
-## Après une mise à jour de Farever
-
-Les index de fonctions et les positions des champs changent d'une version du
-jeu à l'autre. À chaque connexion, Farever Book compare le `hlboot.dat` du
-jeu en cours avec celui qui a servi à générer `analysis_out/`, et **régénère
-les données tout seul** si besoin (une dizaine de secondes ; l'indicateur
-affiche « Mise à jour… »). Le bouton **Réparer** de l'Aide refait cette lecture
-depuis zéro et se reconnecte, sans relancer l'application.
-
-Si Farever est installé à un endroit inhabituel, indique le chemin complet de
-`hlboot.dat` dans la variable d'environnement `FAREVER_HLBOOT`.
-
-## Comment ça marche
-
-Farever tourne sur **HashLink** : `Farever.exe` exécute `hlboot.dat`, un
-bytecode qui garde les noms de toutes les classes, champs et méthodes du jeu.
-
-1. **Données du jeu** (`hltools/`) : le parseur lit `hlboot.dat` (index des
-   fonctions, positions des champs) ; les générateurs tirent de `res.pak` et `data.cdb` les
-   noms français, images, catalogues et règles de jeu dans `analysis_out/`.
-2. **Lecture en jeu** (`frida/meter_hook.js`) : le script injecté retrouve la
-   table des fonctions de HashLink et observe, en lecture seule, les coups,
-   les soins, les barres de boss, la faille, la zone, le groupe, les joueurs du
-   serveur, la collection, le Codex et les profils. Il n'écrit rien dans le jeu
-   et n'affiche rien.
-3. **Moteur** (`meter/`, un module par responsabilité) :
-
-   | Module | Rôle |
-   |---|---|
-   | `farever_book.py` | démarrage et arrêt |
-   | `app.py` | l'application : état, actions, pages |
-   | `gamelink.py` | la connexion au jeu (attache, hook, reconnexion, étapes) |
-   | `combat.py` | comptage dégâts/soins, enregistrement des failles et donjons |
-   | `gamedata.py` | les tables tirées du jeu et leur régénération |
-   | `gearstats.py` | statistiques d'équipement et attributs, comme le jeu |
-   | `views.py` | construction des pages à partir des données |
-   | `builds.py` | les builds : règles du jeu, modèle, enregistrement |
-   | `buildtab.py` | l'onglet Build : état, actions, page |
-   | `reports.py` | rapports de faille : page et image |
-   | `bridge.py` | le processus de la fenêtre et le canal vers elle |
-   | `winsys.py` | Windows : DPI, raccourci, icône, presse-papiers, instance unique |
-   | `common.py` | chemins, constantes, petits utilitaires |
-
-4. **Fenêtre** (`meter/menu_host.py` + `meter/web/`) : une fenêtre WebView2
-   sans cadre, dans son propre processus, reliée au moteur par ses
-   entrées/sorties standard. Le moteur lui envoie l'état de la page plusieurs
-   fois par seconde ; elle lui renvoie les clics.
-
-Les soins ne sont jamais transmis tels quels au client : leur montant est
-reconstitué à partir de l'effet de soin joué sur la cible et de la hausse de
-ses points de vie, et leur taille réelle est estimée à partir des données de
-sorts du jeu (d'où la colonne « excès »).
-
-## Organisation du dépôt
-
-```
-meter/         le moteur (modules ci-dessus) et la fenêtre (menu_host.py, web/)
-frida/         le script injecté dans le jeu (meter_hook.js)
-hltools/       le parseur de bytecode HashLink et les générateurs de données
-analysis_out/  données générées à partir du jeu
-assets/        icône, icônes de classe, images de la fiche personnage
-packaging/     construction de l'exécutable et de l'installateur (build.ps1)
-```
-
-## Limites connues
-
-* L'appartenance au groupe se fait par nom de joueur.
-* Si deux copies de Farever tournent en même temps, Farever Book se connecte
-  à la première.
-* Les attributs de la fiche ne comptent ni le blocage du bouclier ni la
-  puissance des armes ; les effets actifs sont ceux du moment de l'analyse.
-* Le suivi des morts en phase de boss attend une mise à jour du jeu (état « à
-  terre »).
+Le code est publié sous la licence [PolyForm Strict 1.0.0](LICENSE) : il peut
+être lu, vérifié et compilé, mais pas redistribué ni modifié pour en publier une
+autre version. Les idées, les bugs et les questions sont les bienvenus dans les
+**issues**. Pour proposer une modification du code (une *pull request*), tu as
+le droit de forker ce dépôt et de modifier ta copie dans ce seul but, et tu
+acceptes que ta proposition puisse être intégrée à Farever Book, sous sa
+licence.
 
 ## Remerciements
-
-Farever Book est un projet de fan, gratuit, autour du jeu Farever. Il
-n'est ni affilié à Shiro Games, ni approuvé par le studio. Farever et ses
-contenus appartiennent à Shiro Games.
 
 Farever Book existe aussi grâce à **Brudr**, auteur de **Farever+**, qui a
 généreusement partagé son code et nous a autorisés à le reprendre. Sa base,

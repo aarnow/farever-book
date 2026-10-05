@@ -54,7 +54,7 @@ from views import (
 from reports import (
     _overheal_note, _rate_text, _report_name, render_rift_report_image,
     report_view)
-from updater import RELEASES_URL, Updater, clean_downloads
+from updater import RELEASES_URL, REPO_URL, Updater, clean_downloads
 from bridge import MenuBridge, _Scheduler, _parse_help
 from gamelink import GameLink
 
@@ -63,8 +63,8 @@ from gamelink import GameLink
 HELP_LINKS = (
     {"id": "discord", "t": "Discord", "url": None,
      "meta": "Une question, un bug : contacte @Aarnow sur Discord."},
-    {"id": "github", "t": "GitHub", "url": RELEASES_URL,
-     "meta": "Les versions de Farever Book et leurs nouveautés."},
+    {"id": "github", "t": "GitHub", "url": REPO_URL,
+     "meta": "Le code de Farever Book, ses versions et leurs nouveautés."},
 )
 
 
@@ -692,6 +692,7 @@ class App:
             "update_install": lambda: self.updater.install(self.request_quit),
             "update_later": self.updater.later,
             "update_close": self.updater.close,
+            "update_offer": self.updater.offer,
             "update_page": self._open_releases,
             "open_licences": self._open_licences,
             "open_link": lambda p: self._open_link(p.get("id")),
@@ -802,6 +803,8 @@ class App:
             "dataGen": DATA_GENERATION[0],
             # a new version's offer (not over the welcome screen)
             "update": None if self._setup else self.updater.state,
+            # a newer version: the header's button, until it is installed
+            "updateAvail": None if self._setup else self.updater.available(),
             "zoom": int(self._zoom),
             "theme": self._theme,
             "lang": self._lang,
@@ -2726,11 +2729,9 @@ class App:
     @staticmethod
     def _links_nodes():
         return [{"k": "section", "t": tr("Liens utiles")},
-                {"k": "list", "id": "help:links", "rows": [
-                    {"t": ln["t"], "meta": tr(ln["meta"]),
-                     "btns": ([{"id": "open_link", "t": tr("Ouvrir"),
-                                "p": {"id": ln["id"]}}] if ln["url"] else [])}
-                    for ln in HELP_LINKS]}]
+                {"k": "linkcards", "id": "help:links", "items": [
+                    {"id": ln["id"], "t": ln["t"], "meta": tr(ln["meta"]),
+                     "open": bool(ln["url"])} for ln in HELP_LINKS]}]
 
     @staticmethod
     def _credits_nodes():
