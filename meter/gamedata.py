@@ -222,6 +222,36 @@ def _item_flag(bits, name):
 def gear_stats_data():
     return _table("gear_stats.json")
 
+def skill_tip(sid):
+    """A skill's tooltip in the interface's language, or None: {name, cd,
+    desc} for a skill without ranks, {name, cd, rows: [{r, when, t}]} for a
+    weapon skill, whose ranks 2 and 3 open after so many kills with the
+    weapon (main hand's count). From analysis_out/skill_tips.json
+    (hltools/skilltext.py)."""
+    from common import dec_sep
+    e = (_table("skill_tips.json").get("skills") or {}).get(sid)
+    if not e:
+        return None
+    t = e.get(i18n.lang()) or e.get("en") or {}
+    out = {"name": _skill_label(sid), "desc": _fr_ref(t.get("desc"))}
+    cd = e.get("cd")
+    if isinstance(cd, (int, float)) and cd > 0:
+        out["cd"] = tr("{n} s de recharge", n=f"{cd:g}".replace(".", dec_sep()))
+    ranks = [_fr_ref(r) for r in t.get("ranks") or ()]
+    if any(ranks):
+        per = skill_rank_kills()[0]
+        out["rows"] = [{"r": "R1", "when": tr("Départ"), "t": out.pop("desc")}]
+        out["rows"] += [{"r": f"R{i + 2}", "when": tr("{n} kills", n=per * (i + 1)),
+                         "t": r} for i, r in enumerate(ranks) if r]
+    return out
+
+
+def skill_rank_kills():
+    """Kills per weapon skill rank: (main hand, off hand)."""
+    k = _table("skill_tips.json").get("kills") or [20, 26]
+    return k[0], k[1]
+
+
 def build_data():
     """The Build tab's catalogue and rules: analysis_out/build_data.json
     (hltools/build_data.py), the runes' descriptions in the interface's
@@ -545,7 +575,7 @@ GENERATED_GROUPS = (
     ("Images de la collection", ("collection.json",), ("collection_img",), 19),
     ("Sorts, talents et leurs icônes", ("talents.json",), ("skill_img",), 9),
     ("Builds, équipement et succès",
-     ("achievements.json", "infusions.json", "build_data.json",
+     ("achievements.json", "infusions.json", "build_data.json", "skill_tips.json",
       "gear_stats.json", "codex_items.json"), (), 3),
     ("Bestiaire et décors des donjons", ("bestiary.json",),
      ("bestiary_img", "dungeon_bg"), 34),

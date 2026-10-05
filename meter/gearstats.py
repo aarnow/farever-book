@@ -26,6 +26,9 @@ def slot_factor(slot):
 
 # The equipment container's cells, in order: data.cdb's Slot_* lines
 # (itemType, after the item types). Weapon2 is the arsenal's weapon.
+# the pieces the hero's 3D model wears
+HERO_SLOTS = ("Weapon1", "OffhandWeapon", "Weapon2", "Head", "Shoulders",
+              "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
 EQUIP_SLOTS = ("Weapon1", "Weapon2", "OffhandWeapon", "Head", "Neck",
                "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet",
                "FingerLeft", "Trinket", "FingerRight")

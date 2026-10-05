@@ -1,20 +1,42 @@
-/* The Inspecter page: players, the character sheet, talents and runes. */
+/* The Inspecter page: the players (on the server, analysed), then one
+   open as a build is: its sheet, talents and runes. */
 
 /* ---- the Character tab ------------------------------------------------- */
 function charClass(p) {
   return classEl(p.cls, p.ck, 'cl');
 }
 
+let CHAR_NODE = null;
+let CHAR_VIEW = 'stuff';        // the open profile's tab
+let CHAR_JUMP = false;          // a piece was just picked: bring it in view
+const CHAR_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes']];
+
 function buildCharacter(n) {
+  CHAR_NODE = n;
+  const o = n.open;
+  // an analysed player open: the whole width, as an open build
+  if (o) {
+    const box = el('div', 'charpage open');
+    const back = el('button', 'btn bback', tr('‹  Revenir aux joueurs'));
+    back.type = 'button';
+    back.addEventListener('click', () => notify('char_open', { name: null }));
+    box.appendChild(back);
+    const main = el('div', 'charmain');
+    charOpen(o, main, box);
+    box.appendChild(main);
+    return box;
+  }
+  // else the players: those on the server, those analysed
   const box = el('div', 'charpage');
-  const side = el('div', 'charside');
-  const sh = el('div', 'section', 'Joueurs sur le serveur');
+  const lv = (p) => tr('niv. {n}', { n: p.lvl || '?' });
+  const side = el('div', 'charcol');
+  const sh = el('div', 'section', tr('Joueurs sur le serveur'));
   if (n.live) sh.appendChild(el('span', 'count', String(n.count || 0)));
   side.appendChild(sh);
   if (!n.live) {
-    side.appendChild(el('p', 'note', 'Lance le jeu pour voir les joueurs du serveur.'));
+    side.appendChild(el('p', 'note', tr('Lance le jeu pour voir les joueurs du serveur.')));
   } else if (!(n.near || []).length) {
-    side.appendChild(el('p', 'note', 'Personne sur le serveur.'));
+    side.appendChild(el('p', 'note', tr('Personne sur le serveur.')));
   }
   const near = el('div', 'charlist');
   (n.near || []).forEach((p) => {
@@ -22,9 +44,9 @@ function buildCharacter(n) {
     const t = el('span', 'cn');
     t.appendChild(charClass(p));
     t.appendChild(el('b', null, p.n));
-    t.appendChild(el('span', 'lv', 'niv. ' + (p.lvl || '?')));
+    t.appendChild(el('span', 'lv', lv(p)));
     row.appendChild(t);
-    const b = el('button', 'rowbtn', p.busy ? 'Analyse…' : p.saved ? 'Réanalyser' : 'Analyser');
+    const b = el('button', 'rowbtn', tr(p.busy ? 'Analyse…' : p.saved ? 'Réanalyser' : 'Analyser'));
     b.type = 'button';
     if (p.busy) b.disabled = true;
     b.addEventListener('click', () => notify('char_analyze', { name: p.n }));
@@ -32,111 +54,236 @@ function buildCharacter(n) {
     near.appendChild(row);
   });
   side.appendChild(near);
-  side.appendChild(el('div', 'section', 'Analysés pendant la session'));
-  if (!(n.saved || []).length) side.appendChild(el('p', 'note', 'Aucun pour l’instant : analyse un joueur.'));
+  box.appendChild(side);
+
+  const done = el('div', 'charcol');
+  done.appendChild(el('div', 'section', tr('Analysés pendant la session')));
+  if (!(n.saved || []).length) done.appendChild(el('p', 'note', tr('Aucun pour l’instant : analyse un joueur.')));
   const saved = el('div', 'charlist');
   (n.saved || []).forEach((p) => {
-    const row = el('div', 'charrow click' + (n.open && n.open.n === p.n ? ' on' : ''));
+    const row = el('div', 'charrow click');
     const t = el('span', 'cn');
     t.appendChild(charClass(p));
     t.appendChild(el('b', null, p.n));
-    t.appendChild(el('span', 'lv', 'niv. ' + (p.lvl || '?')));
+    t.appendChild(el('span', 'lv', lv(p)));
     row.appendChild(t);
     row.appendChild(el('span', 'wh', p.when));
     row.addEventListener('click', () => notify('char_open', { name: p.n }));
     saved.appendChild(row);
   });
-  side.appendChild(saved);
-  box.appendChild(side);
-
-  const main = el('div', 'charmain');
-  const o = n.open;
-  if (!o) {
-    main.appendChild(el('div', 'empty charempty', 'Choisis un joueur à analyser, ou un profil enregistré.'));
-  } else {
-    const head = el('div', 'charhead');
-    const lv = el('div', 'clvl');
-    lv.appendChild(el('span', null, 'Niveau'));
-    lv.appendChild(el('b', null, String(o.lvl || '?')));
-    head.appendChild(lv);
-    const ic = el('span', 'cico');
-    ic.appendChild(classEl(o.cls, o.ck, 'big'));
-    head.appendChild(ic);
-    const t = el('div', 'ct');
-    t.appendChild(el('b', null, o.n));
-    t.appendChild(el('span', null, o.cls + ' · analysé le ' + o.when));
-    head.appendChild(t);
-    const mk = el('button', 'rowbtn', 'Créer un build');
-    mk.type = 'button';
-    mk.title = 'Reprendre ce personnage dans un nouveau build modifiable';
-    mk.addEventListener('click', () => notify('char_to_build', { name: o.n }));
-    head.appendChild(mk);
-    const x = el('button', 'rowbtn', 'Retirer de la liste');
-    x.type = 'button';
-    x.addEventListener('click', () => notify('char_forget', { name: o.n }));
-    head.appendChild(x);
-    main.appendChild(head);
-
-    main.appendChild(charSheet(o));
-
-    if ((o.infusions || []).length) {
-      main.appendChild(el('div', 'sub2', 'Imprégnations'));
-      main.appendChild(infusionCards(o.infusions));
-    }
-
-    // the action bar, as the game shows it: 1-4, the prayer, A E R G
-    if ((o.bar || []).length) {
-      main.appendChild(el('div', 'sub2', 'Barre de sorts'));
-      const bar = el('div', 'skbar actionbar');
-      o.bar.forEach((sk) => {
-        if (sk.sep) bar.appendChild(el('span', 'barsep'));
-        const cell = el('div', 'barcell' + (sk.key === 'Prière' ? ' prayer' : ''));
-        const ic = skillIcon(sk.empty ? null : sk, 'big');
-        if (sk.seq) ic.title = 'Prochaine prière : ' + sk.name + ' — séquence : ' + sk.seq.join(' → ');
-        cell.appendChild(ic);
-        cell.appendChild(el('span', 'bk', sk.key));
-        bar.appendChild(cell);
-      });
-      main.appendChild(bar);
-      if ((o.passives || []).length) {
-        main.appendChild(el('div', 'sub3', 'Passifs'));
-        const pb = el('div', 'skbar');
-        o.passives.forEach((sk) => pb.appendChild(skillIcon(sk, 'big')));
-        main.appendChild(pb);
-      }
-    } else if ((o.slots || []).length) {
-      main.appendChild(el('div', 'sub2', 'Compétences placées'));
-      const bar = el('div', 'skbar');
-      o.slots.forEach((sk) => bar.appendChild(skillIcon(sk, 'big')));
-      main.appendChild(bar);
-    }
-
-    if (o.tree) {
-      main.appendChild(el('div', 'sub2', 'Talents (' + o.tree.spent + ' points)'));
-      main.appendChild(talentTree(o.tree, o.ranked));
-    }
-
-    main.appendChild(el('div', 'sub2', 'Runes (' + (o.runes || []).reduce((a2, r) => a2 + r.runes.length, 0) + ')'));
-    const runes = el('div', 'runelist');
-    (o.runes || []).forEach((r) => {
-      const row = el('div', 'runerow');
-      row.appendChild(skillIcon({ id: r.id, name: r.name }));
-      row.appendChild(el('b', null, r.name));
-      const rl = el('div', 'rl');
-      r.runes.forEach((x2) => {
-        const c = el('span', 'rune');
-        c.appendChild(skillIcon(x2, 'small'));
-        c.appendChild(el('span', null, x2.name));
-        rl.appendChild(c);
-      });
-      row.appendChild(rl);
-      runes.appendChild(row);
-    });
-    if (!(o.runes || []).length) runes.appendChild(el('span', 'none', 'aucune'));
-    main.appendChild(runes);
-  }
-  box.appendChild(main);
+  done.appendChild(saved);
+  box.appendChild(done);
   return box;
+}
+
+/* Draw the page again from the last state (a local change: a tab, a piece). */
+function redrawCharacter(box) {
+  const page = buildCharacter(CHAR_NODE);
+  box.replaceWith(page);
+  NODES.forEach((v) => { if (v.el === box) v.el = page; });   // core.js keeps the page's nodes
+}
+
+/* A piece of the sheet by its slot (WEAPON_KEYS' names for the weapons). */
+function sheetPiece(sh, slot) {
+  if (slot === 'Weapon1') return (sh.weapons || [])[0] || null;
+  if (slot === 'OffhandWeapon') return (sh.weapons || [])[1] || null;
+  if (slot === 'Weapon2') return sh.arsenal || null;
+  return (sh.left || []).concat(sh.right || []).find((c) => c.slot === slot) || null;
+}
+
+/* An analysed player, laid out as a build: the gear around the hero in 3D
+   with the spell bar and the passives, the talents, the runes. A click on a
+   piece shows it beside the gear. */
+function charOpen(o, main, box) {
+  const head = el('div', 'charhead');
+  const lv = el('div', 'clvl');
+  lv.appendChild(el('span', null, tr('Niveau')));
+  lv.appendChild(el('b', null, String(o.lvl || '?')));
+  head.appendChild(lv);
+  const ic = el('span', 'cico');
+  ic.appendChild(classEl(o.cls, o.ck, 'big'));
+  head.appendChild(ic);
+  const t = el('div', 'ct');
+  t.appendChild(el('b', null, o.n));
+  t.appendChild(el('span', null, tr('{cls} · analysé le {when}', { cls: o.cls, when: o.when })));
+  head.appendChild(t);
+  const mk = el('button', 'rowbtn', tr('Créer un build'));
+  mk.type = 'button';
+  mk.title = tr('Reprendre ce personnage dans un nouveau build modifiable');
+  mk.addEventListener('click', () => notify('char_to_build', { name: o.n }));
+  head.appendChild(mk);
+  const x = el('button', 'rowbtn', tr('Retirer de la liste'));
+  x.type = 'button';
+  x.addEventListener('click', () => notify('char_forget', { name: o.n }));
+  head.appendChild(x);
+  main.appendChild(head);
+
+  const tabs = el('div', 'btabs');
+  CHAR_VIEWS.forEach(([k, label]) => {
+    const b = el('button', 'btab' + (CHAR_VIEW === k ? ' on' : ''), tr(label));
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      if (CHAR_VIEW === k) return;
+      CHAR_VIEW = k;
+      redrawCharacter(box);
+    });
+    tabs.appendChild(b);
+  });
+  main.appendChild(tabs);
+
+  if (CHAR_VIEW === 'talents') {
+    if (o.tree) {
+      main.appendChild(el('div', 'sub2', tr('Talents ({n} points)', { n: o.tree.spent })));
+      main.appendChild(talentTree(o.tree, o.ranked));
+    } else {
+      main.appendChild(el('p', 'note', tr('Talents indisponibles pour ce profil.')));
+    }
+    return;
+  }
+  if (CHAR_VIEW === 'runes') {
+    main.appendChild(runeList(o.runes || []));
+    return;
+  }
+
+  const pick = CHAR_PICK && CHAR_PICK[0] === o.n ? CHAR_PICK[1] : null;
+  const piece = pick ? sheetPiece(o.sheet || {}, pick) : null;
+  let center = null;
+  if (piece && piece.g) {
+    center = el('div', 'spanel cpiece');
+    const ph = el('div', 'bedhead');
+    ph.appendChild(el('b', null, piece.label || piece.g.name));
+    const close = el('button', 'hclose', '×');
+    close.type = 'button';
+    close.title = tr('Revenir au personnage');
+    close.addEventListener('click', () => { CHAR_PICK = null; redrawCharacter(box); });
+    ph.appendChild(close);
+    center.appendChild(ph);
+    const gl = el('div', 'gearlist one');
+    gl.appendChild(gearRow(piece.g));
+    center.appendChild(gl);
+    if (CHAR_JUMP) {
+      CHAR_JUMP = false;
+      requestAnimationFrame(() => center.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    }
+  }
+  const bar = el('div', 'spanel bbar');
+  bar.appendChild(el('div', 'sptitle', tr('Barre de sorts')));
+  if ((o.bar || []).length) bar.appendChild(spellBar(o.bar));
+  else if ((o.slots || []).length) bar.appendChild(spellBar(o.slots.map((s) => Object.assign({ key: '' }, s))));
+  else bar.appendChild(el('p', 'anote', tr('Barre de sorts indisponible pour ce profil.')));
+  main.appendChild(charSheet({ n: o.n, cls: o.cls, ck: o.ck, lvl: o.lvl, sheet: o.sheet, atbs: o.atbs },
+    (slot) => {
+      CHAR_PICK = pick === slot ? null : [o.n, slot];
+      CHAR_JUMP = !!CHAR_PICK;
+      redrawCharacter(box);
+    },
+    { below: bar, arms: buildPassives(o.passives || []), center: center, model: o.model,
+      active: pick, hint: tr('Clique sur une pièce pour voir son détail.') }));
+  if ((o.infusions || []).length) {
+    main.appendChild(el('div', 'sub2', tr('Imprégnations')));
+    main.appendChild(infusionCards(o.infusions));
+  }
+}
+
+/* The runes chosen, each under its skill. */
+function runeList(list) {
+  const box = el('div', 'bruneswrap');
+  const n = list.reduce((a, r) => a + r.runes.length, 0);
+  box.appendChild(el('div', 'sub2', tr('Runes ({n})', { n: n })));
+  const runes = el('div', 'runelist');
+  list.forEach((r) => {
+    const row = el('div', 'runerow');
+    row.appendChild(skillIcon({ id: r.id, name: r.name }));
+    row.appendChild(el('b', null, r.name));
+    const rl = el('div', 'rl');
+    r.runes.forEach((x2) => {
+      const c = el('span', 'rune');
+      c.appendChild(skillIcon(x2, 'small'));
+      c.appendChild(el('span', null, x2.name));
+      rl.appendChild(c);
+    });
+    row.appendChild(rl);
+    runes.appendChild(row);
+  });
+  if (!list.length) runes.appendChild(el('span', 'none', tr('aucune')));
+  box.appendChild(runes);
+  return box;
+}
+
+/* ---- the spell bar and the skills' tooltips -------------------------- */
+/* A skill's tooltip, as the game shows it: its icon, name and cooldown,
+   then its description, or for a weapon skill each rank (R1 from the
+   start, R2 and R3 after so many kills with the weapon). */
+function skillTipEl(tip) {
+  const box = el('div', 'sktip');
+  const head = el('div', 'skth');
+  head.appendChild(skillIcon({ id: tip.id, name: tip.name }, 'big'));
+  const ht = el('div', 'sktt');
+  ht.appendChild(el('b', null, tip.name));
+  if (tip.cd) ht.appendChild(el('span', null, tip.cd));
+  head.appendChild(ht);
+  box.appendChild(head);
+  if (tip.desc) box.appendChild(el('p', 'skd', tip.desc));
+  (tip.rows || []).forEach((r) => {
+    const row = el('div', 'skr');
+    row.appendChild(el('span', 'skrk', r.r));
+    row.appendChild(el('span', 'skwn', r.when));
+    row.appendChild(el('span', 'sktx', r.t));
+    box.appendChild(row);
+  });
+  return box;
+}
+
+/* Show `tip` while the pointer is over `anchor`: over the whole page (no
+   panel clips it), under the anchor, or above it when the window ends
+   below; kept inside the window's width. Positions are divided by the
+   page's zoom (core.js setZoom): the box is placed in unzoomed pixels. */
+function attachTip(anchor, tip, id) {
+  if (!tip) return;
+  anchor.classList.add('hastip');
+  anchor.removeAttribute('title');
+  anchor.querySelectorAll('[title]').forEach((x) => x.removeAttribute('title'));
+  let shown = null;
+  const hide = () => { if (shown) { shown.remove(); shown = null; } };
+  anchor.addEventListener('mouseenter', () => {
+    hide();
+    shown = skillTipEl(Object.assign({ id: id }, tip));
+    document.body.appendChild(shown);
+    const z = parseFloat(document.documentElement.style.zoom) || 1;
+    const r = anchor.getBoundingClientRect();
+    const w = shown.offsetWidth * z, h = shown.offsetHeight * z;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+    const below = r.bottom + 8 + h <= window.innerHeight;
+    const top = below ? r.bottom + 8 : Math.max(8, r.top - 8 - h);
+    shown.style.left = (left / z) + 'px';
+    shown.style.top = (top / z) + 'px';
+  });
+  anchor.addEventListener('mouseleave', hide);
+  // the page redrawn under the pointer: no tooltip left behind
+  anchor.addEventListener('DOMNodeRemovedFromDocument', hide);
+}
+
+/* One cell of the spell bar: the skill, its key in the corner. */
+function barCell(c) {
+  const cell = el('div', 'barcell' + (c.big ? ' big' : ''));
+  const ic = skillIcon(c.empty || !c.id ? null : { id: c.id, name: c.name }, 'big');
+  cell.appendChild(ic);
+  if (c.key) cell.appendChild(el('span', 'bk', c.key));
+  if (c.seq) cell.title = tr('Prochaine prière : {name} — séquence : {seq}',
+    { name: c.name, seq: c.seq.join(' → ') });
+  if (c.id) attachTip(cell, c.tip, c.id);
+  return cell;
+}
+
+/* The action bar as the game draws it: 1-4, then the prayer, then the
+   class's four. */
+function spellBar(cells) {
+  const bar = el('div', 'skbar actionbar gamebar');
+  cells.forEach((c) => {
+    if (c.sep) bar.appendChild(el('span', 'barsep'));
+    bar.appendChild(barCell(c));
+  });
+  return bar;
 }
 
 /* The character sheet, laid out like the game's: the attributes, the gear
@@ -163,7 +310,7 @@ function infusionCards(list) {
     const hd = el('div', 'infuhd');
     hd.appendChild(el('b', null, s.name));
     hd.appendChild(el('span', null, [s.fac, s.role].filter(Boolean).join(' · ')));
-    hd.appendChild(el('span', 'cnt', s.n + ' pièce' + (s.n > 1 ? 's' : '')));
+    hd.appendChild(el('span', 'cnt', tr(s.n > 1 ? '{n} pièces' : '{n} pièce', { n: s.n })));
     card.appendChild(hd);
     s.tiers.forEach((t) => {
       const row = el('div', 'tier' + (t.on ? ' on' : ''));
@@ -176,21 +323,23 @@ function infusionCards(list) {
   return box;
 }
 
-/* `onSlot`, when given, makes the sheet an editor (the Build tab): every
-   slot, empty or not, calls it with the slot's name. `extra` adds
-   elements under the hero ({below}) and under the weapons ({arms}). */
+/* The sheet of a build or of an analysed player: the hero in 3D on the
+   left, the gear in three lines (armour, jewels, weapons) with what `extra`
+   adds under it ({center}: the piece open, {below}: the spell bar, {arms}:
+   the passives), the attributes on the right. Every slot, empty or not,
+   calls `onSlot` with its name; {active} is the one open, {hint} what a
+   click does, {model} the hero's 3D model. */
 const WEAPON_KEYS = { w0: 'Weapon1', w1: 'OffhandWeapon', ars: 'Weapon2' };
-// the card layout's lines (a build's sheet): the armour, then the jewels
 const CARD_ARMOUR = ['Head', 'Shoulders', 'Chest', 'Back', 'Hands', 'Waist', 'Legs', 'Feet'];
 const CARD_JEWELS = ['Neck', 'FingerLeft', 'FingerRight', 'Trinket'];
 
 function charSheet(o, onSlot, extra) {
   const sh = o.sheet || { left: [], right: [], weapons: [], arsenal: null };
   const box = el('div', 'charsheet');
-  const wrap = el('div', 'sheet');
+  const wrap = el('div', 'sheet card');
 
   const attrs = el('div', 'spanel sattrs');
-  attrs.appendChild(el('div', 'sptitle', 'Attributs'));
+  attrs.appendChild(el('div', 'sptitle', tr('Attributs')));
   const av = o.atbs || null;
   const pv = {};
   ((av && av.primary) || []).forEach((x) => { pv[x.k] = x.v; });
@@ -199,12 +348,12 @@ function charSheet(o, onSlot, extra) {
     const ic = el('span', 'aic');
     if (SHEET_ART['stat_' + k]) ic.appendChild(artImg('stat_' + k));
     r.appendChild(ic);
-    r.appendChild(el('span', 'an', label));
+    r.appendChild(el('span', 'an', tr(label)));
     r.appendChild(el('b', 'av', pv[k === 'Intelligence' ? 'Intellect' : k] || '—'));
     attrs.appendChild(r);
   });
   if (av && (av.secondary || []).length) {
-    attrs.appendChild(el('div', 'sptitle sub', 'Plus de stats'));
+    attrs.appendChild(el('div', 'sptitle sub', tr('Plus de stats')));
     av.secondary.forEach((x) => {
       const r = el('div', 'attr sec');
       r.appendChild(el('span', 'an', x.t));
@@ -214,18 +363,15 @@ function charSheet(o, onSlot, extra) {
       attrs.appendChild(r);
     });
   } else {
-    attrs.appendChild(el('p', 'anote', 'Attributs indisponibles pour ce profil.'));
+    attrs.appendChild(el('p', 'anote', tr('Attributs indisponibles pour ce profil.')));
   }
-  wrap.appendChild(attrs);
 
-  const pick = CHAR_PICK && CHAR_PICK[0] === o.n ? CHAR_PICK[1] : null;
   const slotEl = (c, key) => {
     const g = c.g;
-    const b = el('button', 'slot' + (g ? ' r-' + (g.rk || 'common') : ' empty')
-      + (pick === key || (extra && extra.active
-        && extra.active === (WEAPON_KEYS[key] || key)) ? ' on' : ''));
+    const b = el('button', 'slot edit' + (g ? ' r-' + (g.rk || 'common') : ' empty')
+      + (extra.active && extra.active === (WEAPON_KEYS[key] || key) ? ' on' : ''));
     b.type = 'button';
-    b.title = g ? g.name + (g.rar ? ' (' + g.rar + ')' : '') : c.label + ' : vide';
+    b.title = g ? g.name + (g.rar ? ' (' + g.rar + ')' : '') : tr('{slot} : vide', { slot: c.label });
     if (g && g.img) {
       const im = el('img');
       im.src = g.img;
@@ -239,7 +385,7 @@ function charSheet(o, onSlot, extra) {
     ((g && g.chips) || []).forEach((chip, i) => {
       const ch = el('span', 'chip' + (chip.img ? '' : ' none'));
       ch.style.top = (-4 + i * 19) + 'px';
-      ch.title = chip.img ? chip.name : 'Emplacement d’augmentation vide';
+      ch.title = chip.img ? chip.name : tr('Emplacement d’augmentation vide');
       if (chip.img) {
         const im = el('img');
         im.src = chip.img;
@@ -254,159 +400,73 @@ function charSheet(o, onSlot, extra) {
       const ic = el('img', 'infic skic' + (g.inf.on ? '' : ' off'));
       ic.dataset.id = g.inf.id;
       ic.alt = '';
-      ic.title = 'Imprégnation : ' + g.inf.name + (g.inf.on ? '' : ' (bonus inactif)');
+      ic.title = tr(g.inf.on ? 'Imprégnation : {name}' : 'Imprégnation : {name} (bonus inactif)',
+        { name: g.inf.name });
       const src = (window.__SKILL__ || {})[g.inf.id];
       if (src) ic.src = src;
       b.appendChild(ic);
     }
-    if (onSlot) {
-      b.classList.add('edit');
-      if (!g) b.title = c.label + ' : choisir une pièce';
-      b.addEventListener('click', () => onSlot(WEAPON_KEYS[key] || key));
-    } else if (g) b.addEventListener('click', () => {
-      CHAR_PICK = pick === key ? null : [o.n, key];
-      box.replaceWith(charSheet(o));
-    });
+    b.addEventListener('click', () => onSlot(WEAPON_KEYS[key] || key));
     return b;
   };
 
-  const weaponCard = (w, key) => {
-    const c = el('div', 'wcard');
-    const top = el('div', 'wtop');
-    top.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, key));
-    const t = el('div', 'wt');
-    t.appendChild(el('b', null, w.label));
-    t.appendChild(el('span', null, w.g ? w.g.name : 'vide'));
-    top.appendChild(t);
-    c.appendChild(top);
-    if ((w.skills || []).length) {
-      const sk = el('div', 'wsk');
-      w.skills.forEach((x) => sk.appendChild(skillIcon(x)));
-      c.appendChild(sk);
-    }
-    return c;
+  // the hero in 3D, its name over its feet
+  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : ''));
+  const hid = el('div', 'hid');
+  if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
+  hid.appendChild(el('b', 'hn', o.n));
+  hid.appendChild(el('span', 'hl', tr('{cls} · niveau {lvl}', { cls: o.cls, lvl: o.lvl || '?' })));
+  if (extra.hint) hid.appendChild(el('span', 'hhint', extra.hint));
+  if (extra.model && m3dSupported()) {
+    hero.classList.add('is3d');
+    hero.appendChild(m3dCanvas(extra.model, (st) => { hero.dataset.st = st; },
+      { pitch: 0.1, dist: 0.68, lift: -0.08, spin: false, yaw: 1.75 }));
+    hero.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
+    hero.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
+  }
+  hero.appendChild(hid);
+  wrap.appendChild(hero);
+
+  const mid = el('div', 'scolumn sgearcol');
+  const gear = el('div', 'spanel sgear');
+  const cells = {};
+  (sh.left || []).concat(sh.right || []).forEach((c) => { cells[c.slot] = c; });
+  const line = (title, slots) => {
+    gear.appendChild(el('div', 'sptitle', title));
+    const row = el('div', 'sgrow');
+    slots.forEach((k) => { if (cells[k]) row.appendChild(slotEl(cells[k], k)); });
+    gear.appendChild(row);
   };
-
-  const doll = el('div', 'spanel sdoll');
-  const colL = el('div', 'scol');
-  (sh.left || []).forEach((c) => colL.appendChild(slotEl(c, c.slot)));
-  const colR = el('div', 'scol');
-  (sh.right || []).forEach((c) => colR.appendChild(slotEl(c, c.slot)));
-  // the hero, or the picked piece in its place
-  const all = {};
-  (sh.left || []).concat(sh.right || []).forEach((c) => { all[c.slot] = c.g; });
-  (sh.weapons || []).forEach((w, i) => { all['w' + i] = w.g; });
-  if (sh.arsenal) all.ars = sh.arsenal.g;
-  const picked = pick ? all[pick] : null;
-  const card = !!(extra && extra.layout === 'card');
-  const center = extra && !card ? extra.center : null;
-  const hero = el('div', 'shero' + (o.ck ? ' c-' + o.ck : '') + (picked ? ' detail' : '')
-    + (center ? ' editing' : ''));
-  if (center) {
-    hero.appendChild(center);
-  } else if (picked) {
-    const x = el('button', 'hclose', '×');
-    x.type = 'button';
-    x.title = 'Revenir au personnage';
-    x.addEventListener('click', () => { CHAR_PICK = null; box.replaceWith(charSheet(o)); });
-    hero.appendChild(x);
-    hero.appendChild(gearRow(picked));
-  } else {
-    const hid = el('div', 'hid');
-    if (o.ck) hid.appendChild(classEl(o.cls, o.ck, 'big'));
-    hid.appendChild(el('b', 'hn', o.n));
-    hid.appendChild(el('span', 'hl', o.cls + ' · niveau ' + (o.lvl || '?')));
-    hid.appendChild(el('span', 'hhint', onSlot
-      ? 'Clique sur un emplacement pour choisir ou régler une pièce.'
-      : 'Clique sur une pièce pour voir son détail ici.'));
-    // a build: the hero in 3D, wearing it; the name over its feet
-    if (extra && extra.model && m3dSupported()) {
-      hero.classList.add('is3d');
-      hero.appendChild(m3dCanvas(extra.model, (st) => { hero.dataset.st = st; }, { pitch: 0.12, dist: card ? 0.9 : 1.12, lift: card ? -0.12 : 0.1 }));
-      hero.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
-      hero.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
-    }
-    hero.appendChild(hid);
-  }
-  if (card) {
-    // a build: the hero on the left; the gear in three lines (armour,
-    // jewels, weapons), what the build adds under it; the attributes right
-    wrap.classList.add('card');
-    wrap.appendChild(hero);
-    const mid = el('div', 'scolumn sgearcol');
-    const gear = el('div', 'spanel sgear');
-    const line = (title, slots) => {
-      gear.appendChild(el('div', 'sptitle', title));
-      const row = el('div', 'sgrow');
-      slots.forEach((k) => {
-        const c = cells[k];
-        if (c) row.appendChild(slotEl(c, k));
-      });
-      gear.appendChild(row);
-    };
-    const cells = {};
-    (sh.left || []).concat(sh.right || []).forEach((c) => { cells[c.slot] = c; });
-    line('Équipement', CARD_ARMOUR);
-    line('Accessoires', CARD_JEWELS);
-    // the weapons as the rest: a slot each (their skills are on the bar)
-    gear.appendChild(el('div', 'sptitle', 'Armes'));
-    const wrow = el('div', 'sgrow');
-    (sh.weapons || []).forEach((w, i) => wrow.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, 'w' + i)));
-    if (sh.arsenal) wrow.appendChild(slotEl({ g: sh.arsenal.g, label: sh.arsenal.label, icon: '' }, 'ars'));
-    gear.appendChild(wrow);
-    // under the hero's feet, faded over them: its name, class and level,
-    // and how much of the gear is worn
-    const all15 = Object.values(cells).map((c) => c.g)
-      .concat((sh.weapons || []).map((w) => w.g), sh.arsenal ? [sh.arsenal.g] : []);
-    const plate = el('div', 'hplate');
-    plate.appendChild(el('b', 'pn', o.n));
-    const pc = el('div', 'pc');
-    if (o.ck) pc.appendChild(classEl(o.cls, o.ck));
-    pc.appendChild(el('span', null, o.cls || ''));
-    plate.appendChild(pc);
-    const chips = el('div', 'pchips');
-    chips.appendChild(el('span', null, 'Niveau ' + (o.lvl || '?')));
-    chips.appendChild(el('span', null, all15.filter(Boolean).length + ' / ' + all15.length + ' pièces'));
-    plate.appendChild(chips);
-    hero.appendChild(plate);
-    mid.appendChild(gear);
-    if (extra.center) mid.appendChild(extra.center);
-    if (extra.below) mid.appendChild(extra.below);
-    if (extra.arms) mid.appendChild(extra.arms);
-    wrap.appendChild(mid);
-    wrap.appendChild(attrs);
-    box.appendChild(wrap);
-    return box;
-  }
-  doll.appendChild(colL);
-  doll.appendChild(hero);
-  doll.appendChild(colR);
-  if (extra && extra.below) {
-    const col = el('div', 'scolumn');
-    col.appendChild(doll);
-    col.appendChild(extra.below);
-    wrap.appendChild(col);
-  } else {
-    wrap.appendChild(doll);
-  }
-
-  const arms = el('div', 'spanel sarms');
-  arms.appendChild(el('div', 'sptitle', 'Armes'));
-  (sh.weapons || []).forEach((w, i) => arms.appendChild(weaponCard(w, 'w' + i)));
-  if (sh.arsenal) {
-    arms.appendChild(el('div', 'sptitle', 'Arsenal'));
-    arms.appendChild(weaponCard(sh.arsenal, 'ars'));
-  }
-  if (extra && extra.arms) {
-    const col = el('div', 'scolumn');
-    col.appendChild(arms);
-    col.appendChild(extra.arms);
-    wrap.appendChild(col);
-  } else {
-    wrap.appendChild(arms);
-  }
+  line(tr('Équipement'), CARD_ARMOUR);
+  line(tr('Accessoires'), CARD_JEWELS);
+  // the weapons as the rest: a slot each (their skills are on the bar)
+  gear.appendChild(el('div', 'sptitle', tr('Armes')));
+  const wrow = el('div', 'sgrow');
+  (sh.weapons || []).forEach((w, i) => wrow.appendChild(slotEl({ g: w.g, label: w.label, icon: '' }, 'w' + i)));
+  if (sh.arsenal) wrow.appendChild(slotEl({ g: sh.arsenal.g, label: sh.arsenal.label, icon: '' }, 'ars'));
+  gear.appendChild(wrow);
+  // under the hero's feet, faded over them: name, class, level, pieces worn
+  const all15 = Object.values(cells).map((c) => c.g)
+    .concat((sh.weapons || []).map((w) => w.g), sh.arsenal ? [sh.arsenal.g] : []);
+  const plate = el('div', 'hplate');
+  plate.appendChild(el('b', 'pn', o.n));
+  const pc = el('div', 'pc');
+  if (o.ck) pc.appendChild(classEl(o.cls, o.ck));
+  pc.appendChild(el('span', null, o.cls || ''));
+  plate.appendChild(pc);
+  const chips = el('div', 'pchips');
+  chips.appendChild(el('span', null, tr('Niveau {n}', { n: o.lvl || '?' })));
+  chips.appendChild(el('span', null, tr('{n} / {all} pièces',
+    { n: all15.filter(Boolean).length, all: all15.length })));
+  plate.appendChild(chips);
+  hero.appendChild(plate);
+  mid.appendChild(gear);
+  if (extra.center) mid.appendChild(extra.center);
+  if (extra.below) mid.appendChild(extra.below);
+  if (extra.arms) mid.appendChild(extra.arms);
+  wrap.appendChild(mid);
+  wrap.appendChild(attrs);
   box.appendChild(wrap);
-
   return box;
 }
 
@@ -440,10 +500,10 @@ function gearRow(g, ed) {
   const gt = el('div', 'gt');
   gt.appendChild(el('b', 'nm', g.name));
   if (ed) gt.appendChild(gearEditLine(g, ed));
-  else gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? 'niv. ' + g.lvl : '', g.prism ? 'Prismatique' : ''].filter(Boolean).join(' · ')));
+  else gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? tr('niv. {n}', { n: g.lvl }) : '', g.prism ? tr('Prismatique') : ''].filter(Boolean).join(' · ')));
   if (ed && ed.maxUp) {
     const pips = el('span', 'stars edit');
-    pips.title = 'Amélioration +' + (ed.up || 0) + ' — clique pour changer';
+    pips.title = tr('Amélioration +{n} — clique pour changer', { n: ed.up || 0 });
     for (let i = 1; i <= ed.maxUp; i++) {
       const pip = el('button', 'pipb' + (i <= (ed.up || 0) ? ' on' : ''));
       pip.type = 'button';
@@ -455,7 +515,7 @@ function gearRow(g, ed) {
     gt.appendChild(pips);
   } else if (g.up) {
     const pips = el('span', 'stars');
-    pips.title = 'Amélioration ' + g.up;
+    pips.title = tr('Amélioration {n}', { n: g.up });
     for (let i = 0; i < g.up; i++) {
       if (SHEET_ART.upgrade_pip) pips.appendChild(artImg('upgrade_pip', 'pip'));
       else pips.appendChild(document.createTextNode('◆'));
@@ -464,8 +524,8 @@ function gearRow(g, ed) {
   }
   if ((g.stats || []).length) {
     const st = el('div', 'gstats');
-    if (g.il) st.appendChild(el('span', 'gil', 'Niveau d’objet ' + g.il));
-    if (g.eff) st.appendChild(el('span', 'geff', 'Efficacité des stats de l’arsenal : ' + g.eff + ' %'));
+    if (g.il) st.appendChild(el('span', 'gil', tr('Niveau d’objet {n}', { n: g.il })));
+    if (g.eff) st.appendChild(el('span', 'geff', tr('Efficacité des stats de l’arsenal : {n} %', { n: g.eff })));
     g.stats.forEach((x) => {
       const r = el('div', 'gstat');
       r.appendChild(el('span', null, x.t));
@@ -484,22 +544,23 @@ function gearRow(g, ed) {
   (g.extras || []).forEach((x2) => {
     const line = el('span', 'gx ' + x2.k);
     line.appendChild(el('b', null, x2.name));
-    if (x2.fx) line.appendChild(document.createTextNode(' : ' + x2.fx));
+    if (x2.fx) line.appendChild(document.createTextNode(tr(' : {text}', { text: x2.fx })));
     gt.appendChild(line);
   });
   if (!g.inf && g.plan) {
-    gt.appendChild(el('span', 'gx infb off', 'Bonus d’imprégnation : ' + g.plan
-      + ' — inactif sans imprégnation'));
+    gt.appendChild(el('span', 'gx infb off', tr('Bonus d’imprégnation : {plan} — inactif sans imprégnation',
+      { plan: g.plan })));
   }
   if (g.inf) {
     const line = el('span', 'gx infu');
-    line.appendChild(el('b', null, 'Imprégnation'));
-    line.appendChild(document.createTextNode(' : ' + g.inf.name));
+    line.appendChild(el('b', null, tr('Imprégnation')));
+    line.appendChild(document.createTextNode(tr(' : {text}', { text: g.inf.name })));
     gt.appendChild(line);
     if (g.inf.bonus) {
+      const bonus = tr('Bonus ({fac}) : {bonus}',
+        { fac: g.inf.fac, bonus: g.inf.bonus + (g.inf.val ? ' +' + g.inf.val : '') });
       gt.appendChild(el('span', 'gx infb' + (g.inf.on ? '' : ' off'),
-        'Bonus (' + g.inf.fac + ') : ' + g.inf.bonus + (g.inf.val ? ' +' + g.inf.val : '')
-        + (g.inf.on ? '' : ' — inactif, faction différente')));
+        g.inf.on ? bonus : tr('{text} — inactif, faction différente', { text: bonus })));
     }
   }
   r.appendChild(gt);
@@ -526,15 +587,15 @@ function gearEditLine(g, ed) {
       box.appendChild(o);
     });
   }));
-  btn('niv. ' + ed.lvl + ' ▾', null, (b) => gearPop(b, (box, close) => {
+  btn(tr('niv. {n}', { n: ed.lvl }) + ' ▾', null, (b) => gearPop(b, (box, close) => {
     box.classList.add('lvl');
-    box.appendChild(el('span', 'gpopt', 'Niveau de la pièce'));
-    box.appendChild(slider(1, ed.maxLvl, ed.lvl, (v) => { close(); ed.onLvl(v); }, 'niv. '));
+    box.appendChild(el('span', 'gpopt', tr('Niveau de la pièce')));
+    box.appendChild(slider(1, ed.maxLvl, ed.lvl, (v) => { close(); ed.onLvl(v); }, tr('niv. ')));
   }));
   if (ed.prism !== null && ed.prism !== undefined) {
-    const p = btn(ed.prism ? '✦ Prismatique' : '✧ Non prismatique', 'prism' + (ed.prism ? ' on' : ''),
+    const p = btn(tr(ed.prism ? '✦ Prismatique' : '✧ Non prismatique'), 'prism' + (ed.prism ? ' on' : ''),
       () => ed.onPrism(!ed.prism));
-    p.title = 'Prismatique : le bonus d’imprégnation s’applique quelle que soit la faction';
+    p.title = tr('Prismatique : le bonus d’imprégnation s’applique quelle que soit la faction');
   }
   return line;
 }
@@ -601,8 +662,8 @@ function talentTree(t, ranked, onPoint) {
   const node = (x) => {
     const n = el('span', 'tnode' + (x.pts ? ' on' : '') + (x.gift ? ' gift' : '')
       + (onPoint && x.add ? ' can' : '') + (onPoint && !x.add && !x.pts ? ' locked' : ''));
-    n.title = x.name + (onPoint ? '\n' + (x.add ? 'Clic : +1' : '')
-      + (x.remove ? (x.add ? ' · ' : '') + 'Clic droit : −1' : '') : '');
+    n.title = x.name + (onPoint ? '\n' + (x.add ? tr('Clic : +1') : '')
+      + (x.remove ? (x.add ? ' · ' : '') + tr('Clic droit : −1') : '') : '');
     if (onPoint) {
       n.addEventListener('click', () => { if (x.add) onPoint(x.id, 1); });
       n.addEventListener('contextmenu', (e) => {

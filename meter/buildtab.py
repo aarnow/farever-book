@@ -10,12 +10,13 @@ import copy
 import builds as B
 from common import dec_sep, pct_sp, _n, _pretty_id, class_key, element_label
 from gamedata import (_fr_names, _skill_label, build_data, faction_label,
+                      skill_tip,
                       infusion_data, item_icon, item_label, item_type_label,
                       rarity_label)
-from gearstats import gear_stats, infusion_tiers
+from gearstats import HERO_SLOTS, gear_stats, infusion_tiers
 from i18n import tr
 from simulate import simulate
-from views import _augment_view, _talent_tree, character_view
+from views import _augment_view, _talent_tree, character_view, class_keys
 
 CLASS_FR = {"Warrior": "Guerrier", "Mage": "Mage", "Priest": "Prêtre",
             "Rogue": "Voleur"}
@@ -712,7 +713,8 @@ class BuildTab:
                     for c in cells:
                         mark(c)
         bar = self._skill_bar(b)
-        passives = [{"id": s, "name": _skill_label(s)} for s in B.passives(b)]
+        passives = [{"id": s, "name": _skill_label(s), "tip": skill_tip(s)}
+                    for s in B.passives(b)]
         return {
             "file": self.file, "name": b["name"], "cls": b["cls"],
             "clsFr": _cls_fr(b["cls"]) if b["cls"] in CLASS_FR else None,
@@ -888,20 +890,21 @@ class BuildTab:
             open_ = i < slots[group]
             c = {"key": key, "group": group, "index": i,
                  "id": sid, "name": _skill_label(sid) if sid else "",
+                 "tip": skill_tip(sid) if sid else None,
                  "open": open_}
             if not open_ and i < len(levels):
                 c["lock"] = tr("niv. {n}", n=levels[i])
             if choice and open_:
-                c["options"] = [{"id": s, "name": _skill_label(s)}
+                c["options"] = [{"id": s, "name": _skill_label(s),
+                                 "tip": skill_tip(s)}
                                 for s in opts[group]]
             return c
         wl = d.get("weaponSkillLevels") or [1, 2]
         al = d.get("arsenalLevels") or [7, 20]
         out = [cell(str(i + 1), "weapon", i, wl, False) for i in range(2)]
-        out += [dict(cell(str(i + 3), "arsenal", i, al, True),
-                     sep=(i == 0)) for i in range(2)]
+        out += [cell(str(i + 3), "arsenal", i, al, True) for i in range(2)]
         out += [dict(cell(k, "class", i, (), True), sep=(i == 0))
-                for i, k in enumerate("AERG")]
+                for i, k in enumerate(class_keys())]
         return out
 
     def _editor_view(self, o):
@@ -996,7 +999,6 @@ ROLE_FR = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 
 
 # the pieces the hero model wears (its weapons holstered, both sets)
-HERO_SLOTS = ("Weapon1", "OffhandWeapon", "Weapon2", "Head", "Shoulders", "Chest", "Back", "Hands", "Waist", "Legs", "Feet")
 
 def _infusion_options():
     """The infusions, sorted by faction then role."""

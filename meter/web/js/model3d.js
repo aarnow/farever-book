@@ -49,18 +49,21 @@ window.addModel = function (id, json) {
    `opts.anim`: with its idle animation (a monster), where WebGL2 can play it.
    `opts.dist`: how far back the camera starts (1: the model fills the view);
    `opts.lift`: how much higher than the middle the model stands, in radii
-   (room under it for a caption). */
+   (room under it for a caption). `opts.spin`: false to stand still,
+   `opts.yaw` facing that way. */
 function m3dCanvas(id, onState, opts) {
   if (!M3D.canvas) m3dInit();
   M3D.onState = onState;
   M3D.pitch0 = (opts && opts.pitch) || 0.18;
   M3D.dist0 = (opts && opts.dist) || 1;
   M3D.lift = (opts && opts.lift) || 0;
+  M3D.spin0 = !(opts && opts.spin === false);
+  M3D.yaw0 = (opts && opts.yaw) || 0.65;
   if (opts && opts.anim && M3D.gl2) id += '@anim';
   if (id !== M3D.cur) {
     M3D.cur = id;
-    M3D.spin = true;
-    M3D.yaw = 0.65;
+    M3D.spin = M3D.spin0;
+    M3D.yaw = M3D.yaw0;
     M3D.pitch = M3D.pitch0;
     if (id in M3D.models) m3dLoad(id);
     else {
@@ -213,7 +216,9 @@ function m3dInit() {
   const up = () => { M3D.drag = null; };
   c.addEventListener('pointerup', up);
   c.addEventListener('pointercancel', up);
-  c.addEventListener('dblclick', () => { M3D.spin = true; M3D.pitch = M3D.pitch0; M3D.dist = M3D.dist0; });
+  c.addEventListener('dblclick', () => {
+    M3D.spin = M3D.spin0; M3D.yaw = M3D.yaw0; M3D.pitch = M3D.pitch0; M3D.dist = M3D.dist0;
+  });
   c.addEventListener('wheel', (e) => {
     e.preventDefault();
     M3D.dist = Math.max(0.45, Math.min(2.2, M3D.dist * (e.deltaY > 0 ? 1.1 : 0.9)));

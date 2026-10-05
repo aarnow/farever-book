@@ -15,9 +15,9 @@ from gamedata import (
     bestiary_catalogue, codex_items_catalogue, collection_catalogue,
     dungeon_catalogue, dungeon_name, faction_label, item_icon, item_label,
     item_rarity, item_type, item_type_label, luck_data, rarity_label,
-    rift_rewards_data, talent_data, world_map)
+    rift_rewards_data, skill_tip, talent_data, world_map)
 from gearstats import (
-    EQUIP_SLOTS, SHEET_LEFT, SHEET_RIGHT, SLOT_ICON, _equip_by_slot,
+    EQUIP_SLOTS, HERO_SLOTS, SHEET_LEFT, SHEET_RIGHT, SLOT_ICON, _equip_by_slot,
     _gear_infusion, _hero_sheet, _infusion_sets, _scaled, gear_stats,
     infusion_bonus, slot_factor)
 from combat import DUNGEON_DIFFICULTIES
@@ -566,6 +566,14 @@ def _talent_tree(cls, ranks, granted=()):
             "cost": cost, "spent": spent}
 
 
+def class_keys():
+    """The class skills' keys as the game binds them by default: A E R G on
+    a French keyboard, Q E R G on an English one (by the interface's
+    language)."""
+    import i18n
+    return ("A", "E", "R", "G") if i18n.lang() == "fr" else ("Q", "E", "R", "G")
+
+
 def _spell_bar(prof):
     """The action bar as the game shows it: the four weapon skill slots
     (1-4), the next prayer, then the four class skills (A E R G)."""
@@ -573,17 +581,18 @@ def _spell_bar(prof):
         return []
     def sk(sid, key):
         return {"id": sid, "name": _skill_label(sid) if sid else "",
-                "key": key, "empty": not sid}
+                "key": key, "empty": not sid,
+                "tip": skill_tip(sid) if sid else None}
     weap = list(prof.get("weaponSkills") or [])[:4]
     weap += [None] * (4 - len(weap))
     out = [sk(s, str(i + 1)) for i, s in enumerate(weap)]
     prayers = prof.get("prayers") or []
     if prayers:
-        out.append(dict(sk(prayers[0], "Prière"), sep=True,
+        out.append(dict(sk(prayers[0], "T"), sep=True, big=True,
                         seq=[_skill_label(p) for p in prayers]))
-    for s, key in zip(list(prof.get("slots") or [])[:4],
-                      ("A", "E", "R", "G")):
-        out.append(dict(sk(s, key), sep=key == "A" and not prayers))
+    keys = class_keys()
+    for s, key in zip(list(prof.get("slots") or [])[:4], keys):
+        out.append(dict(sk(s, key), sep=key == keys[0]))
     return out
 
 
@@ -714,11 +723,17 @@ def character_view(roster, profiles, sel, waiting, live):
                       for t in prof.get("slots") or ()],
             "runes": _runes_view(prof.get("masteries")),
             "bar": _spell_bar(prof),
-            "passives": [{"id": t, "name": _skill_label(t)}
+            "passives": [{"id": t, "name": _skill_label(t),
+                          "tip": skill_tip(t)}
                          for t in dict.fromkeys(prof.get("skills") or ())
                          if t and (t.endswith("_Passive")
                                    or t.endswith("_P"))],
-            "infusions": _infusion_sets(gear)}
+            "infusions": _infusion_sets(gear),
+            # the hero in 3D, wearing the player's armour (as a build's)
+            "model": "hero:" + ".".join(
+                f"{EQUIP_SLOTS[i]}={e['id']}" for i, e in cells
+                if i < len(EQUIP_SLOTS) and EQUIP_SLOTS[i] in HERO_SLOTS
+                and e.get("id"))}
     return view
 
 

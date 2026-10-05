@@ -4,7 +4,8 @@
    (meter/buildtab.py); this only draws it and sends the changes. */
 
 let BUILD_NODE = null;
-const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'], ['sim', 'Simulation']];
+const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'], ['sim', 'Simulation'],
+  ['settings', 'Paramètres']];
 let BUILD_VIEW = 'stuff';        // the open build's tab
 let BUILD_FADE = false;         // the next draw follows a tab change
 let BUILD_Q = '';               // the piece editor's search
@@ -17,18 +18,18 @@ function buildBuild(n) {
   const o = n.open;
   if (n.cmp) return buildCompare(n.cmp, box);
   if (!o) { BUILD_VIEW = 'stuff'; return buildList(n, box); }
-  const back = el('button', 'btn bback', '‹  Revenir aux builds');
+  const back = el('button', 'btn bback', tr('‹  Revenir aux builds'));
   back.type = 'button';
   back.addEventListener('click', () => notify('build_close', {}));
   box.appendChild(back);
 
   const main = el('div', 'charmain');
-  main.appendChild(buildHead(o));
 
-  // the build in four tabs: the gear, the talents, the runes, the simulation
+  // the build in tabs: the gear, the talents, the runes, the simulation;
+  // its settings (name, class, level, copy, delete) last, at the right
   const tabs = el('div', 'btabs');
   BUILD_VIEWS.forEach(([k, t]) => {
-    const b = el('button', 'btab' + (BUILD_VIEW === k ? ' on' : ''), t);
+    const b = el('button', 'btab' + (BUILD_VIEW === k ? ' on' : '') + (k === 'settings' ? ' bset' : ''), tr(t));
     b.type = 'button';
     b.addEventListener('click', () => {
       if (BUILD_VIEW === k) return;
@@ -47,23 +48,26 @@ function buildBuild(n) {
   if (BUILD_VIEW === 'stuff') {
     main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
                                  sheet: o.sheet, atbs: o.atbs },
-                               (slot) => notify('build_slot', { slot: slot }),
+                               (slot) => { BUILD_JUMP = true; notify('build_slot', { slot: slot }); },
                                { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
                                  center: o.editor ? editorPanel(o.editor) : null,
-                                 model: o.model, layout: 'card',
-                                 active: o.editor ? o.editor.slot : null }));
+                                 model: o.model,
+                                 active: o.editor ? o.editor.slot : null,
+                                 hint: tr('Clique sur un emplacement pour choisir ou régler une pièce.') }));
     if ((o.infusions || []).length) {
-      main.appendChild(el('div', 'sub2', 'Imprégnations'));
+      main.appendChild(el('div', 'sub2', tr('Imprégnations')));
       main.appendChild(infusionCards(o.infusions));
     }
   } else if (BUILD_VIEW === 'talents') {
     buildTalents(o, main);
   } else if (BUILD_VIEW === 'runes') {
     main.appendChild(runesSection((o.sim && o.sim.runes) || []));
+  } else if (BUILD_VIEW === 'settings') {
+    main.appendChild(buildSettings(o));
   } else if (o.sim) {
     main.appendChild(buildSim(o.sim));
   } else {
-    main.appendChild(el('p', 'note', 'La simulation a besoin d’une classe et d’un équipement.'));
+    main.appendChild(el('p', 'note', tr('La simulation a besoin d’une classe et d’un équipement.')));
   }
   // a tab change eases in the tab's content only: the head and the tabs
   // themselves stay put
@@ -79,20 +83,20 @@ function buildBuild(n) {
 function buildTalents(o, main) {
   const left = el('div', 'btleft');
   const th = el('div', 'sub2 bsub');
-  th.appendChild(document.createTextNode('Talents — ' + o.points.used + ' / '
-    + o.points.total + ' points'));
+  th.appendChild(document.createTextNode(tr('Talents — {used} / {total} points',
+    { used: o.points.used, total: o.points.total })));
   if (o.points.used) {
-    const r = el('button', 'rowbtn', 'Tout retirer');
+    const r = el('button', 'rowbtn', tr('Tout retirer'));
     r.type = 'button';
     r.addEventListener('click', () => notify('build_talents_reset', {}));
     th.appendChild(r);
   }
   left.appendChild(th);
   if (!o.points.total) {
-    left.appendChild(el('p', 'note', 'Les talents se débloquent au niveau ' + o.points.from + '.'));
+    left.appendChild(el('p', 'note', tr('Les talents se débloquent au niveau {n}.', { n: o.points.from })));
   } else {
-    left.appendChild(el('p', 'note', 'Clic sur un talent : +1 point. Clic droit : −1. Un palier '
-      + 's’ouvre avec les points dépensés plus haut dans sa branche (chiffre à gauche).'));
+    left.appendChild(el('p', 'note', tr('Clic sur un talent : +1 point. Clic droit : −1. Un palier '
+      + 's’ouvre avec les points dépensés plus haut dans sa branche (chiffre à gauche).')));
   }
   if (o.tree) {
     left.appendChild(talentTree(o.tree, true,
@@ -116,21 +120,22 @@ function buildSim(s) {
     return f;
   };
   const arm = el('div', 'bsimf wide');
-  arm.appendChild(el('span', null, 'Réduction cible'));
+  arm.appendChild(el('span', null, tr('Réduction cible')));
   arm.appendChild(slider(0, 80, s.armor, (v) => notify('build_sim', { field: 'armor', value: v }), '', ' %'));
   ctl.appendChild(arm);
-  ctl.appendChild(num('Niveau de l’ennemi', s.enemy, 'enemy', 1, s.maxLvl));
-  ctl.appendChild(num('Coup reçu', s.hit, 'hit', 0, 100000, 10));
+  ctl.appendChild(num(tr('Niveau de l’ennemi'), s.enemy, 'enemy', 1, s.maxLvl));
+  ctl.appendChild(num(tr('Coup reçu'), s.hit, 'hit', 0, 100000, 10));
   wrap.appendChild(ctl);
-  wrap.appendChild(el('p', 'note', 'Critique ' + s.crit + ' · bonus critique ' + s.critMult
+  wrap.appendChild(el('p', 'note', tr('Critique {crit} · bonus critique {mult}'
     + ' (CC : coup critique). La moyenne tient compte des chances de critique. Les effets propres '
-    + 'à certains sorts (bonus conditionnels, cumuls, effets spéciaux codés dans le jeu) ne sont pas simulés.'));
+    + 'à certains sorts (bonus conditionnels, cumuls, effets spéciaux codés dans le jeu) ne sont pas simulés.',
+    { crit: s.crit, mult: s.critMult })));
 
   // a block per source: the weapons worn, the arsenal's, the class's skills
   const out = el('div', 'bsimgrid');
   const t = el('div', 'bsimgroups');
   const groups = (s.groups || []).filter((g) => (g.skills || []).length);
-  if (!groups.length) t.appendChild(el('p', 'anote', 'Équipe une arme pour simuler ses attaques.'));
+  if (!groups.length) t.appendChild(el('p', 'anote', tr('Équipe une arme pour simuler ses attaques.')));
   groups.forEach((g) => {
     const blk = el('div', 'bsimgroup');
     const h = el('div', 'bsimgh');
@@ -145,7 +150,7 @@ function buildSim(s) {
   out.appendChild(t);
   const d = s.defense;
   const c = el('div', 'spanel bsimdef');
-  c.appendChild(el('div', 'sptitle', 'Ce que tu reçois'));
+  c.appendChild(el('div', 'sptitle', tr('Ce que tu reçois')));
   const line = (label, v, sub) => {
     const r = el('div', 'attr sec');
     r.appendChild(el('span', 'an', label));
@@ -154,12 +159,12 @@ function buildSim(s) {
     r.appendChild(b);
     c.appendChild(r);
   };
-  line('Coup reçu', d.hit);
-  line('Physique', d.phys, 'armure −' + d.physMit);
-  line('Magique', d.magic, 'réduction −' + d.magicMit);
-  line('Dégâts reçus (ferveur)', d.taken);
-  line('Points de vie', d.hp);
-  line('Coups physiques encaissés', d.hitsPhys);
+  line(tr('Coup reçu'), d.hit);
+  line(tr('Physique'), d.phys, tr('armure −{n}', { n: d.physMit }));
+  line(tr('Magique'), d.magic, tr('réduction −{n}', { n: d.magicMit }));
+  line(tr('Dégâts reçus (ferveur)'), d.taken);
+  line(tr('Points de vie'), d.hp);
+  line(tr('Coups physiques encaissés'), d.hitsPhys);
   out.appendChild(c);
   wrap.appendChild(out);
   return wrap;
@@ -174,7 +179,7 @@ function spellCard(sk) {
   head.appendChild(el('b', null, sk.name));
   card.appendChild(head);
   if (!(sk.lines || []).length) {
-    card.appendChild(el('p', 'anote', 'Pas de dégâts ni de soin chiffrés (effet de script ou de rune).'));
+    card.appendChild(el('p', 'anote', tr('Pas de dégâts ni de soin chiffrés (effet de script ou de rune).')));
   }
   (sk.lines || []).forEach((l) => {
     const row = el('div', 'spline k-' + l.k);
@@ -184,21 +189,21 @@ function spellCard(sk) {
     row.appendChild(left);
     const v = el('div', 'spv');
     v.appendChild(el('b', null, l.normal));
-    v.appendChild(el('span', 'cc', l.crit + ' CC'));
+    v.appendChild(el('span', 'cc', tr('{n} CC', { n: l.crit })));
     row.appendChild(v);
     card.appendChild(row);
   });
   const foot = el('ul', 'spfoot');
   const item = (t) => foot.appendChild(el('li', null, t));
-  if (sk.cd) item('Recharge ' + sk.cd);
-  if (sk.range) item('Portée ' + sk.range);
+  if (sk.cd) item(tr('Recharge {cd}', { cd: sk.cd }));
+  if (sk.range) item(tr('Portée {range}', { range: sk.range }));
   // the averages: one when they are all the same, else one per line
   const lines = sk.lines || [];
   const avgs = [...new Set(lines.map((l) => l.avg))];
-  if (avgs.length === 1) item('Moyenne ' + avgs[0]);
-  else lines.forEach((l) => item('Moyenne ' + l.avg + ' (' + l.kind.toLowerCase() + ')'));
+  if (avgs.length === 1) item(tr('Moyenne {avg}', { avg: avgs[0] }));
+  else lines.forEach((l) => item(tr('Moyenne {avg} ({kind})', { avg: l.avg, kind: l.kind.toLowerCase() })));
   [...new Set(lines.map((l) => l.mit).filter(Boolean))]
-    .forEach((m) => item('Réduction cible −' + m));
+    .forEach((m) => item(tr('Réduction cible −{n}', { n: m })));
   card.appendChild(foot);
   return card;
 }
@@ -206,15 +211,15 @@ function spellCard(sk) {
 /* The runes: for each skill on the bar, its three, one to pick. */
 function runesSection(list) {
   const box = el('div', 'bruneswrap');
-  box.appendChild(el('div', 'sub2', 'Runes'));
-  box.appendChild(el('p', 'note', 'Une rune par compétence de classe, réglée pour le personnage : '
-    + 'elle vaut que la compétence soit dans la barre ou non. Clic pour la poser, re-clic pour l’enlever.'));
+  box.appendChild(el('div', 'sub2', tr('Runes')));
+  box.appendChild(el('p', 'note', tr('Une rune par compétence de classe, réglée pour le personnage : '
+    + 'elle vaut que la compétence soit dans la barre ou non. Clic pour la poser, re-clic pour l’enlever.')));
   const grid = el('div', 'brunegrid');
   const row = (g) => {
     const sk = el('div', 'bruneskill');
     sk.appendChild(skillIcon({ id: g.skill, name: g.name }, 'big'));
     sk.appendChild(el('b', null, g.name));
-    if (g.bar) sk.appendChild(el('span', 'onbar', 'dans la barre'));
+    if (g.bar) sk.appendChild(el('span', 'onbar', tr('dans la barre')));
     grid.appendChild(sk);
     const r = el('div', 'brunerow');
     g.runes.forEach((x) => {
@@ -239,16 +244,18 @@ function runesSection(list) {
    weapons), 3-4 the arsenal's and A E R G the class's (a click picks). */
 function buildBar(cells) {
   const p = el('div', 'spanel bbar');
-  p.appendChild(el('div', 'sptitle', 'Barre de sorts'));
-  const bar = el('div', 'skbar actionbar');
+  p.appendChild(el('div', 'sptitle', tr('Barre de sorts')));
+  const bar = el('div', 'skbar actionbar gamebar');
   cells.forEach((c) => {
     if (c.sep) bar.appendChild(el('span', 'barsep'));
-    const cell = el('div', 'barcell' + (c.options ? ' pick' : '') + (c.open ? '' : ' locked'));
-    const ic = skillIcon(c.id ? { id: c.id, name: c.name } : null, 'big');
-    if (!c.open) ic.title = 'Débloqué au ' + (c.lock || 'niveau suivant');
-    else if (c.options) ic.title = (c.name ? c.name + '\n' : '') + 'Clic : choisir';
-    cell.appendChild(ic);
-    cell.appendChild(el('span', 'bk', c.lock || c.key));
+    const cell = barCell(Object.assign({}, c, { key: c.open ? c.key : (c.lock || c.key) }));
+    if (c.options) cell.classList.add('pick');
+    if (!c.open) {
+      cell.classList.add('locked');
+      cell.title = tr('Débloqué au {lvl}', { lvl: c.lock || tr('niveau suivant') });
+    } else if (c.options && !c.tip) {
+      cell.title = (c.name ? c.name + '\n' : '') + tr('Clic : choisir');
+    }
     if (c.options) cell.addEventListener('click', () => skillMenu(cell, c));
     bar.appendChild(cell);
   });
@@ -258,7 +265,7 @@ function buildBar(cells) {
 
 /* The skills a bar slot can take, in a window over the page: a click
    places one in THIS slot (and only there), or empties it. */
-const SLOT_TITLES = { arsenal: 'Compétence d’arsenal', class: 'Compétence de classe' };
+const SLOT_TITLES = { arsenal: 'Compétence d’arsenal', class: 'Compétence de classe' };   // through tr() when shown
 
 function skillMenu(_anchor, c) {
   const close = () => { const x = $('#skillmodal'); if (x) x.remove(); };
@@ -269,36 +276,37 @@ function skillMenu(_anchor, c) {
   const box = el('div', 'modal skmodal');
   const x = el('button', 'hclose', '×');
   x.type = 'button';
-  x.title = 'Fermer';
+  x.title = tr('Fermer');
   x.addEventListener('click', close);
   box.appendChild(x);
   const head = el('div', 'phead');
-  head.appendChild(el('h3', null, (SLOT_TITLES[c.group] || 'Compétence') + ' — case ' + c.key));
+  head.appendChild(el('h3', null, tr('{what} — case {key}', { what: tr(SLOT_TITLES[c.group] || 'Compétence'), key: c.key })));
   box.appendChild(head);
   const body = el('div', 'skbody');
   const choose = (id) => {
     close();
     notify('build_skill', { group: c.group, index: c.index, value: id });
   };
-  if (!(c.options || []).length) body.appendChild(el('p', 'note', 'Rien à placer ici pour l’instant.'));
+  if (!(c.options || []).length) body.appendChild(el('p', 'note', tr('Rien à placer ici pour l’instant.')));
   const grid = el('div', 'skgrid');
   (c.options || []).forEach((s) => {
     const card = el('button', 'skcard' + (s.id === c.id ? ' on' : ''));
     card.type = 'button';
     card.appendChild(skillIcon(s, 'big'));
     card.appendChild(el('span', null, s.name));
+    attachTip(card, s.tip, s.id);
     card.addEventListener('click', () => choose(s.id));
     grid.appendChild(card);
   });
   body.appendChild(grid);
   const foot = el('div', 'skfoot');
   if (c.id) {
-    const clear = el('button', 'rowbtn', 'Vider la case');
+    const clear = el('button', 'rowbtn', tr('Vider la case'));
     clear.type = 'button';
     clear.addEventListener('click', () => choose(''));
     foot.appendChild(clear);
   }
-  const cancel = el('button', 'rowbtn', 'Annuler');
+  const cancel = el('button', 'rowbtn', tr('Annuler'));
   cancel.type = 'button';
   cancel.addEventListener('click', close);
   foot.appendChild(cancel);
@@ -315,12 +323,13 @@ document.addEventListener('keydown', (e) => {
 /* The passives at work, under the weapons. */
 function buildPassives(list) {
   const p = el('div', 'spanel bpass');
-  p.appendChild(el('div', 'sptitle', 'Passifs'));
-  if (!list.length) p.appendChild(el('p', 'anote', 'Aucun passif.'));
+  p.appendChild(el('div', 'sptitle', tr('Passifs')));
+  if (!list.length) p.appendChild(el('p', 'anote', tr('Aucun passif.')));
   list.forEach((s) => {
     const row = el('div', 'bprow');
     row.appendChild(skillIcon(s));
     row.appendChild(el('span', null, s.name));
+    attachTip(row, s.tip, s.id);
     p.appendChild(row);
   });
   return p;
@@ -330,12 +339,12 @@ function buildPassives(list) {
    in two columns; where they differ, the higher value is green with its
    lead, the lower red. */
 function buildCompare(c, box) {
-  const back = el('button', 'btn bback', '‹  Revenir aux builds');
+  const back = el('button', 'btn bback', tr('‹  Revenir aux builds'));
   back.type = 'button';
   back.addEventListener('click', () => notify('build_cmp_close', {}));
   box.appendChild(back);
   const page = el('div', 'bcmp');
-  page.appendChild(el('div', 'section', 'Comparer deux builds'));
+  page.appendChild(el('div', 'section', tr('Comparer deux builds')));
 
   const head = el('div', 'bcmphead');
   const side = (s, key, picks) => {
@@ -344,7 +353,7 @@ function buildCompare(c, box) {
     top.appendChild(classEl(s.cls, s.ck, 'big'));
     const t = el('div');
     t.appendChild(el('b', null, s.name));
-    t.appendChild(el('span', null, s.cls + ' · niveau ' + s.lvl));
+    t.appendChild(el('span', null, tr('{cls} · niveau {lvl}', { cls: s.cls, lvl: s.lvl })));
     top.appendChild(t);
     card.appendChild(top);
     const sel = select(picks, s.file, (v) => notify('build_cmp_set', { side: key, file: v }));
@@ -382,9 +391,9 @@ function buildCompare(c, box) {
 
   // the spells: each source, each spell once, lines face to face
   if ((c.spells || []).length) {
-    page.appendChild(el('div', 'section', 'Sorts'));
+    page.appendChild(el('div', 'section', tr('Sorts')));
     const ctl = el('div', 'spanel bcmpctl');
-    ctl.appendChild(el('span', 'bl', 'Réduction de la cible'));
+    ctl.appendChild(el('span', 'bl', tr('Réduction de la cible')));
     ctl.appendChild(slider(0, 80, Math.round(c.armor || 0),
       (v) => notify('build_cmp_armor', { value: v }), '', ' %'));
     page.appendChild(ctl);
@@ -401,7 +410,7 @@ function buildCompare(c, box) {
         const side = (key) => {
           const cell = el('div', 'bcmpsp ' + key);
           const s = r[key];
-          if (!s) { cell.appendChild(el('span', 'none', 'absent de ce build')); return cell; }
+          if (!s) { cell.appendChild(el('span', 'none', tr('absent de ce build'))); return cell; }
           s.forEach((ln, i) => {
             if (!ln) { cell.appendChild(el('div', 'bcmpln gap', '—')); return; }
             const b = r.better[i] || {};
@@ -410,12 +419,12 @@ function buildCompare(c, box) {
             l.appendChild(el('span', 'k', ln.kind + (ln.aff ? ' · ' + ln.aff : '')));
             const cc = el('span', 'cc' + tone(b.c));
             cc.appendChild(el('b', null, ln.crit));
-            cc.appendChild(el('small', null, 'CC'));
+            cc.appendChild(el('small', null, tr('CC')));
             l.appendChild(cc);
             l.appendChild(el('b', 'nv' + tone(b.n), ln.normal));
             cell.appendChild(l);
           });
-          if (!s.length) cell.appendChild(el('span', 'none', 'pas de dégâts chiffrés'));
+          if (!s.length) cell.appendChild(el('span', 'none', tr('pas de dégâts chiffrés')));
           return cell;
         };
         row.appendChild(side('a'));
@@ -440,11 +449,12 @@ function buildCompare(c, box) {
    the build (builds.guided_build). */
 const GUIDE = { step: 0, opts: null, cls: null, lvl: null, main: null, off: null, ars: null,
   atbs: [null, null], stats: [null, null, null], role: null, goal: 'max', name: '' };
-const GUIDE_STEPS = ['Classe', 'Niveau', 'Armes', 'Arsenal', 'Attributs', 'Statistiques', 'Objectif', 'Résumé'];
+const GUIDE_STEPS = ['Classe', 'Niveau', 'Armes', 'Arsenal', 'Attributs', 'Statistiques', 'Objectif', 'Résumé'];  // through tr() when shown
 
 /* The goals, worded for the main attribute's role (builds.GUIDE_GOALS):
    the infusions worn, 2 / 4 / 6 pieces reaching their tiers. */
 const GUIDE_ROLES = [{ v: 'DPS', t: 'Dégâts' }, { v: 'Support', t: 'Soins' }, { v: 'Tank', t: 'Tank' }];
+const guideRoles = () => GUIDE_ROLES.map((r) => ({ v: r.v, t: tr(r.t) }));
 
 /* The role: the player's pick, else the main attribute's (builds.ROLE_OF). */
 function guideRole() {
@@ -455,16 +465,18 @@ function guideRole() {
 
 function guideGoals() {
   const role = { DPS: 'dps', Support: 'heal', Tank: 'tank' }[guideRole()];
-  const main = { dps: 'Dégâts', heal: 'Soins', tank: 'Survie' }[role];
-  const kind = { dps: 'Dégâts', heal: 'Soutien', tank: 'Tank' }[role];
-  const other = role === 'tank' ? 'Dégâts' : 'Tank';
+  const main = { dps: 'Dégâts maximum', heal: 'Soins maximum', tank: 'Survie maximum' }[role];
+  const mix = { dps: 'Dégâts, avec un peu de survie', heal: 'Soins, avec un peu de survie',
+    tank: 'Survie, avec un peu de dégâts' }[role];
+  const kind = tr({ dps: 'Dégâts', heal: 'Soutien', tank: 'Tank' }[role]);
+  const other = tr(role === 'tank' ? 'Dégâts' : 'Tank');
   return [
-    { v: 'max', t: main + ' maximum',
-      d: `6 pièces d’une imprégnation ${kind} (paliers 2, 4 et 6), 2 d’une autre ${kind} (palier 2)` },
-    { v: 'mix', t: role === 'tank' ? 'Survie, avec un peu de dégâts' : main + ', avec un peu de survie',
-      d: `6 pièces d’une imprégnation ${kind}, 2 d’une imprégnation ${other} (palier 2)` },
-    { v: 'surv', t: role === 'tank' ? 'Autant de dégâts que de survie' : 'Survie d’abord',
-      d: `4 pièces d’une imprégnation ${kind}, 4 d’une imprégnation ${other} (paliers 2 et 4)` }];
+    { v: 'max', t: tr(main),
+      d: tr('6 pièces d’une imprégnation {kind} (paliers 2, 4 et 6), 2 d’une autre {kind} (palier 2)', { kind }) },
+    { v: 'mix', t: tr(mix),
+      d: tr('6 pièces d’une imprégnation {kind}, 2 d’une imprégnation {other} (palier 2)', { kind, other }) },
+    { v: 'surv', t: tr(role === 'tank' ? 'Autant de dégâts que de survie' : 'Survie d’abord'),
+      d: tr('4 pièces d’une imprégnation {kind}, 4 d’une imprégnation {other} (paliers 2 et 4)', { kind, other }) }];
 }
 
 function openGuide() {
@@ -506,7 +518,7 @@ function drawGuide() {
   GUIDE_STEPS.forEach((t, i) => {
     const s = el('span', 'bgstep' + (i === GUIDE.step ? ' on' : i < GUIDE.step ? ' done' : ''));
     s.appendChild(el('i', null, String(i + 1)));
-    s.appendChild(el('b', null, t));
+    s.appendChild(el('b', null, tr(t)));
     steps.appendChild(s);
   });
   box.appendChild(steps);
@@ -543,7 +555,7 @@ function drawGuide() {
   };
 
   if (GUIDE.step === 0) {
-    body.appendChild(el('h3', null, 'Quelle classe ?'));
+    body.appendChild(el('h3', null, tr('Quelle classe ?')));
     const row = el('div', 'bgclasses');
     o.classes.forEach((c) => {
       const b = el('button', 'bgclass' + (GUIDE.cls === c.v ? ' on' : ''));
@@ -558,40 +570,40 @@ function drawGuide() {
     });
     body.appendChild(row);
   } else if (GUIDE.step === 1) {
-    body.appendChild(el('h3', null, 'Quel niveau ?'));
-    body.appendChild(slider(1, o.maxLvl, GUIDE.lvl, (v) => { GUIDE.lvl = v; }, 'Niveau '));
+    body.appendChild(el('h3', null, tr('Quel niveau ?')));
+    body.appendChild(slider(1, o.maxLvl, GUIDE.lvl, (v) => { GUIDE.lvl = v; }, tr('Niveau ')));
   } else if (GUIDE.step === 2) {
-    body.appendChild(el('h3', null, 'Quelle arme principale ?'));
+    body.appendChild(el('h3', null, tr('Quelle arme principale ?')));
     body.appendChild(weapons(o.weapons[GUIDE.cls] || [], GUIDE.main, (v) => {
       GUIDE.main = v; GUIDE.off = null; if (GUIDE.ars === v) GUIDE.ars = null;
     }));
     const w = guideWeapon(GUIDE.main);
     if (w && w.shield && (o.offhands[GUIDE.cls] || []).length) {
-      body.appendChild(el('h3', null, 'Et dans l’autre main ?'));
+      body.appendChild(el('h3', null, tr('Et dans l’autre main ?')));
       body.appendChild(weapons(o.offhands[GUIDE.cls], GUIDE.off, (v) => { GUIDE.off = GUIDE.off === v ? null : v; }));
-      body.appendChild(el('p', 'note', 'Optionnel : un clic sur la pièce choisie la retire.'));
+      body.appendChild(el('p', 'note', tr('Optionnel : un clic sur la pièce choisie la retire.')));
     }
   } else if (GUIDE.step === 3) {
-    body.appendChild(el('h3', null, 'Quelle arme d’arsenal ?'));
-    body.appendChild(el('p', 'note', 'La seconde arme, ses compétences en plus (pas la même que l’arme principale).'));
+    body.appendChild(el('h3', null, tr('Quelle arme d’arsenal ?')));
+    body.appendChild(el('p', 'note', tr('La seconde arme, ses compétences en plus (pas la même que l’arme principale).')));
     body.appendChild(weapons(o.weapons[GUIDE.cls] || [], GUIDE.ars, (v) => { GUIDE.ars = v; }, GUIDE.main));
   } else if (GUIDE.step === 4) {
-    body.appendChild(el('h3', null, 'Attribut principal'));
+    body.appendChild(el('h3', null, tr('Attribut principal')));
     body.appendChild(chips(o.atbs, GUIDE.atbs[0], (v) => {
       GUIDE.atbs[0] = v; if (GUIDE.atbs[1] === v) GUIDE.atbs[1] = null;
     }));
-    body.appendChild(el('h3', null, 'Attribut secondaire'));
+    body.appendChild(el('h3', null, tr('Attribut secondaire')));
     body.appendChild(chips(o.atbs, GUIDE.atbs[1], (v) => { GUIDE.atbs[1] = v; }, [GUIDE.atbs[0]]));
   } else if (GUIDE.step === 5) {
     ['Statistique principale', 'Deuxième statistique', 'Troisième statistique'].forEach((t, i) => {
-      body.appendChild(el('h3', null, t));
+      body.appendChild(el('h3', null, tr(t)));
       const others = GUIDE.stats.filter((x, j) => j !== i && x);
       body.appendChild(chips(o.stats, GUIDE.stats[i], (v) => { GUIDE.stats[i] = v; }, others));
     });
   } else if (GUIDE.step === 6) {
-    body.appendChild(el('h3', null, 'Quel rôle ?'));
-    body.appendChild(chips(GUIDE_ROLES, guideRole(), (v) => { GUIDE.role = v || guideRole(); }));
-    body.appendChild(el('h3', null, 'Que recherches-tu ?'));
+    body.appendChild(el('h3', null, tr('Quel rôle ?')));
+    body.appendChild(chips(guideRoles(), guideRole(), (v) => { GUIDE.role = v || guideRole(); }));
+    body.appendChild(el('h3', null, tr('Que recherches-tu ?')));
     const list = el('div', 'bggoals');
     guideGoals().forEach((g) => {
       const c = el('button', 'bggoal' + (GUIDE.goal === g.v ? ' on' : ''));
@@ -602,16 +614,16 @@ function drawGuide() {
       list.appendChild(c);
     });
     body.appendChild(list);
-    body.appendChild(el('p', 'note', 'Les pièces imprégnables sont épiques, prises prismatiques : '
+    body.appendChild(el('p', 'note', tr('Les pièces imprégnables sont épiques, prises prismatiques : '
       + 'n’importe quelle imprégnation y garde son bonus, quelle que soit la faction. Chaque pièce '
       + 'compte pour les paliers, l’imprégnation retenue est celle qui donne le plus de dégâts (de '
-      + 'soins et de dégâts pour le rôle Soins), celle de survie la plus résistante.'));
+      + 'soins et de dégâts pour le rôle Soins), celle de survie la plus résistante.')));
   } else {
-    body.appendChild(el('h3', null, 'Comment s’appelle ton build ?'));
+    body.appendChild(el('h3', null, tr('Comment s’appelle ton build ?')));
     const nm = el('input', 'bname bgname');
     nm.type = 'text';
     nm.maxLength = 60;
-    nm.placeholder = 'Nom du build';
+    nm.placeholder = tr('Nom du build');
     nm.value = GUIDE.name;
     nm.addEventListener('input', () => {
       GUIDE.name = nm.value;
@@ -624,46 +636,46 @@ function drawGuide() {
     });
     body.appendChild(nm);
     setTimeout(() => nm.focus(), 0);
-    body.appendChild(el('h3', null, 'Ton build'));
+    body.appendChild(el('h3', null, tr('Ton build')));
     const name = (list, v) => ((list || []).find((x) => x.v === v) || {}).t || '—';
     const lines = [
-      ['Classe', name(o.classes, GUIDE.cls)], ['Niveau', String(GUIDE.lvl)],
-      ['Arme principale', (guideWeapon(GUIDE.main) || {}).t || '—'],
-      ['Autre main', GUIDE.off ? (guideWeapon(GUIDE.off) || {}).t : '—'],
-      ['Arsenal', (guideWeapon(GUIDE.ars) || {}).t || '—'],
-      ['Attributs', GUIDE.atbs.filter(Boolean).map((a) => name(o.atbs, a)).join(' puis ')],
-      ['Statistiques', GUIDE.stats.filter(Boolean).map((a) => name(o.stats, a)).join(', puis ')],
-      ['Rôle', name(GUIDE_ROLES, guideRole())],
-      ['Objectif', name(guideGoals(), GUIDE.goal)]];
+      [tr('Classe'), name(o.classes, GUIDE.cls)], [tr('Niveau'), String(GUIDE.lvl)],
+      [tr('Arme principale'), (guideWeapon(GUIDE.main) || {}).t || '—'],
+      [tr('Autre main'), GUIDE.off ? (guideWeapon(GUIDE.off) || {}).t : '—'],
+      [tr('Arsenal'), (guideWeapon(GUIDE.ars) || {}).t || '—'],
+      [tr('Attributs'), GUIDE.atbs.filter(Boolean).map((a) => name(o.atbs, a)).join(tr(' puis '))],
+      [tr('Statistiques'), GUIDE.stats.filter(Boolean).map((a) => name(o.stats, a)).join(tr(', puis '))],
+      [tr('Rôle'), name(guideRoles(), guideRole())],
+      [tr('Objectif'), name(guideGoals(), GUIDE.goal)]];
     const tbl = el('div', 'bgsum');
     lines.forEach(([k, v]) => {
       tbl.appendChild(el('span', null, k));
       tbl.appendChild(el('b', null, v));
     });
     body.appendChild(tbl);
-    body.appendChild(el('p', 'note', 'Les armes sont prises en légendaire, améliorées au maximum. Pour chaque autre '
+    body.appendChild(el('p', 'note', tr('Les armes sont prises en légendaire, améliorées au maximum. Pour chaque autre '
       + 'emplacement, chaque pièce possible est essayée, puis chaque augmentation : on garde celle qui donne '
       + 'le plus de dégâts aux compétences du build (magiques si tu privilégies la perforation magique, '
       + 'physiques pour la perforation d’armure, et les soins en plus pour le rôle Soins), '
       + 'tes statistiques comptant dans ton ordre. Le bonus d’imprégnation de chaque pièce vise ta première '
-      + 'statistique qu’elle n’a pas déjà. Les talents et les runes restent à choisir, tu pourras tout ajuster ensuite.'));
+      + 'statistique qu’elle n’a pas déjà. Les talents et les runes restent à choisir, tu pourras tout ajuster ensuite.')));
   }
   box.appendChild(body);
 
   const nav = el('div', 'bgnav');
-  const cancel = el('button', 'rowbtn', 'Annuler');
+  const cancel = el('button', 'rowbtn', tr('Annuler'));
   cancel.type = 'button';
   cancel.addEventListener('click', () => back.remove());
   nav.appendChild(cancel);
   nav.appendChild(el('span', 'sp'));
   if (GUIDE.step > 0) {
-    const prev = el('button', 'rowbtn', '‹ Précédent');
+    const prev = el('button', 'rowbtn', tr('‹ Précédent'));
     prev.type = 'button';
     prev.addEventListener('click', () => { GUIDE.step--; drawGuide(); });
     nav.appendChild(prev);
   }
   const last = GUIDE.step === GUIDE_STEPS.length - 1;
-  const next = el('button', 'btn bgnext', last ? 'Composer le build' : 'Suivant ›');
+  const next = el('button', 'btn bgnext', tr(last ? 'Composer le build' : 'Suivant ›'));
   next.type = 'button';
   next.disabled = !guideReady(GUIDE.step);
   next.addEventListener('click', () => {
@@ -684,15 +696,15 @@ function importCodeDialog() {
   const back = el('div', 'modalback');
   back.id = 'importmodal';
   const box = el('div', 'spanel bimport');
-  box.appendChild(el('div', 'sptitle', 'Importer un build'));
-  box.appendChild(el('p', 'note', 'Colle le code qu’un joueur t’a donné (il commence par FFB1:).'));
+  box.appendChild(el('div', 'sptitle', tr('Importer un build')));
+  box.appendChild(el('p', 'note', tr('Colle le code qu’un joueur t’a donné (il commence par FFB1:).')));
   const ta = el('textarea');
   ta.rows = 4;
   ta.placeholder = 'FFB1:…';
   box.appendChild(ta);
   const row = el('div', 'bbtns');
   const close = () => back.remove();
-  const ok = el('button', 'btn', 'Importer');
+  const ok = el('button', 'btn', tr('Importer'));
   ok.type = 'button';
   ok.addEventListener('click', () => {
     if (!ta.value.trim()) return;
@@ -700,7 +712,7 @@ function importCodeDialog() {
     notify('build_import', { code: ta.value });
     close();
   });
-  const no = el('button', 'rowbtn', 'Annuler');
+  const no = el('button', 'rowbtn', tr('Annuler'));
   no.type = 'button';
   no.addEventListener('click', close);
   row.appendChild(ok);
@@ -766,40 +778,42 @@ function newBuildDialog(n) {
     return c;
   };
   const me = (n && n.me) || null;
-  close = buildModal('newbuildmodal', 'Nouveau build', (box) => {
+  close = buildModal('newbuildmodal', tr('Nouveau build'), (box) => {
     const row = el('div', 'bnewpicks');
-    row.appendChild(pick('Manuellement', 'Un build vide : tu choisis toi-même chaque pièce, '
-      + 'les talents et les compétences.', () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); }));
-    row.appendChild(pick('Avec assistance', 'Quelques questions (classe, armes, attributs, '
-      + 'statistiques, objectif) et le build est composé pour toi.', openGuide));
-    row.appendChild(pick('Depuis mon personnage',
-      !me ? 'Lance le jeu : ton personnage doit être identifié.'
-        : me.wait ? 'Lecture de ' + me.n + '…'
-          : 'Copie l’équipement, les talents, les compétences et les runes de ' + me.n
-            + (me.when ? ' (le jeu est fermé : tel que lu le ' + me.when + ')' : '') + '.',
+    row.appendChild(pick(tr('Manuellement'), tr('Un build vide : tu choisis toi-même chaque pièce, '
+      + 'les talents et les compétences.'), () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); }));
+    row.appendChild(pick(tr('Avec assistance'), tr('Quelques questions (classe, armes, attributs, '
+      + 'statistiques, objectif) et le build est composé pour toi.'), openGuide));
+    row.appendChild(pick(tr('Depuis mon personnage'),
+      !me ? tr('Lance le jeu : ton personnage doit être identifié.')
+        : me.wait ? tr('Lecture de {name}…', { name: me.n })
+          : me.when ? tr('Copie l’équipement, les talents, les compétences et les runes de {name} '
+              + '(le jeu est fermé : tel que lu le {when}).', { name: me.n, when: me.when })
+            : tr('Copie l’équipement, les talents, les compétences et les runes de {name}.', { name: me.n }),
       () => { BUILD_VIEW = 'stuff'; notify('build_from_me', {}); }, !me || me.wait));
     box.appendChild(row);
-  }, [['Annuler', 'rowbtn', null]]);
+  }, [[tr('Annuler'), 'rowbtn', null]]);
 }
 
 /* The builds picked for deletion, listed, and a last confirmation. */
 function deleteBuildsDialog(list, box, n) {
   if (!list.length) return;
   const many = list.length > 1;
-  buildModal('delbuildsmodal', many ? 'Supprimer ' + list.length + ' builds ?' : 'Supprimer ce build ?', (b) => {
+  buildModal('delbuildsmodal', many ? tr('Supprimer {n} builds ?', { n: list.length }) : tr('Supprimer ce build ?'), (b) => {
     const ul = el('ul', 'bdellist');
     list.forEach((x) => {
       const li = el('li');
       if (CLASS_ICONS[x.ck]) li.appendChild(classEl('', x.ck));
       li.appendChild(el('b', null, x.name));
-      li.appendChild(el('span', null, (CLASS_NAMES[x.ck] || x.cls || '') + ' · niveau ' + (x.lvl || '?')));
+      li.appendChild(el('span', null, tr('{cls} · niveau {lvl}',
+        { cls: CLASS_NAMES[x.ck] ? tr(CLASS_NAMES[x.ck]) : x.cls || '', lvl: x.lvl || '?' })));
       ul.appendChild(li);
     });
     b.appendChild(ul);
-    b.appendChild(el('p', 'note', 'Es-tu vraiment sûr ? ' + (many ? 'Ces builds seront supprimés' : 'Ce build sera supprimé')
-      + ' définitivement.'));
-  }, [['Annuler', 'rowbtn', null],
-      ['Supprimer définitivement', 'btn bdelok', () => {
+    b.appendChild(el('p', 'note', tr(many ? 'Es-tu vraiment sûr ? Ces builds seront supprimés définitivement.'
+      : 'Es-tu vraiment sûr ? Ce build sera supprimé définitivement.')));
+  }, [[tr('Annuler'), 'rowbtn', null],
+      [tr('Supprimer définitivement'), 'btn bdelok', () => {
         const files = list.map((x) => x.file);
         BUILD_DEL = null;
         notify('build_delete_many', { files });
@@ -810,14 +824,14 @@ function deleteBuildsDialog(list, box, n) {
 /* The builds, as cards: a click opens one. */
 function buildList(n, box) {
   const head = el('div', 'blisthead');
-  head.appendChild(el('div', 'section', 'Mes builds'));
+  head.appendChild(el('div', 'section', tr('Mes builds')));
   // importing, a new build (blue), deleting (red); comparing at the right
   const btns = el('div', 'bheadbtns');
-  const imp = el('button', 'btn bimp', 'Importer un code');
+  const imp = el('button', 'btn bimp', tr('Importer un code'));
   imp.type = 'button';
   imp.addEventListener('click', importCodeDialog);
   btns.appendChild(imp);
-  const nb = el('button', 'btn bnew', '+ Nouveau build');
+  const nb = el('button', 'btn bnew', tr('+ Nouveau build'));
   nb.type = 'button';
   nb.addEventListener('click', () => newBuildDialog(n));
   btns.appendChild(nb);
@@ -826,8 +840,8 @@ function buildList(n, box) {
   if (BUILD_DEL) BUILD_DEL.forEach((f) => { if (!files.has(f)) BUILD_DEL.delete(f); });
   if ((n.list || []).length) {
     const del = el('button', 'btn bdelbtn' + (BUILD_DEL ? ' armed' : ''),
-      BUILD_DEL ? 'Confirmer la suppression' + (BUILD_DEL.size ? ' (' + BUILD_DEL.size + ')' : '')
-        : 'Supprimer un build');
+      BUILD_DEL ? (BUILD_DEL.size ? tr('Confirmer la suppression ({n})', { n: BUILD_DEL.size })
+        : tr('Confirmer la suppression')) : tr('Supprimer un build'));
     del.type = 'button';
     if (BUILD_DEL && !BUILD_DEL.size) del.disabled = true;
     del.addEventListener('click', () => {
@@ -836,27 +850,27 @@ function buildList(n, box) {
     });
     btns.appendChild(del);
     if (BUILD_DEL) {
-      const no = el('button', 'btn bdelno', 'Annuler');
+      const no = el('button', 'btn bdelno', tr('Annuler'));
       no.type = 'button';
       no.addEventListener('click', () => { BUILD_DEL = null; redrawBuildList(box, n); });
       btns.appendChild(no);
     }
   }
-  const cmp = el('button', 'btn bcmpbtn', 'Comparer');
+  const cmp = el('button', 'btn bcmpbtn', tr('Comparer'));
   cmp.type = 'button';
-  cmp.title = 'Compare deux builds de la même classe, côte à côte.';
+  cmp.title = tr('Compare deux builds de la même classe, côte à côte.');
   cmp.addEventListener('click', () => notify('build_cmp_open', {}));
   btns.appendChild(cmp);
   head.appendChild(btns);
   box.appendChild(head);
   if (BUILD_DEL) {
     box.appendChild(el('p', 'note bdelnote', BUILD_DEL.size
-      ? 'Clique sur d’autres builds pour les ajouter, ou sur un build choisi pour le retirer.'
-      : 'Clique sur les builds à supprimer.'));
+      ? tr('Clique sur d’autres builds pour les ajouter, ou sur un build choisi pour le retirer.')
+      : tr('Clique sur les builds à supprimer.')));
   }
   if (!(n.list || []).length) {
-    box.appendChild(el('p', 'note', 'Aucun build pour l’instant. Crée-en un, copie ton '
-      + 'personnage, ou pars d’un joueur analysé dans Inspecter (« Créer un build »).'));
+    box.appendChild(el('p', 'note', tr('Aucun build pour l’instant. Crée-en un, copie ton '
+      + 'personnage, ou pars d’un joueur analysé dans Inspecter (« Créer un build »).')));
     return box;
   }
   // one column per class, its icon and name on top, its art faint behind
@@ -874,7 +888,7 @@ function buildList(n, box) {
     }
     const h = el('div', 'bcolh');
     if (CLASS_ICONS[ck]) h.appendChild(classEl('', ck));
-    h.appendChild(el('b', null, CLASS_NAMES[ck] || (mine[0] || {}).cls || 'Autres'));
+    h.appendChild(el('b', null, CLASS_NAMES[ck] ? tr(CLASS_NAMES[ck]) : (mine[0] || {}).cls || tr('Autres')));
     h.appendChild(el('span', 'n', String(mine.length)));
     col.appendChild(h);
     mine.forEach((b) => {
@@ -883,7 +897,7 @@ function buildList(n, box) {
       c.type = 'button';
       const t = el('div', 'bct');
       t.appendChild(el('b', null, b.name));
-      t.appendChild(el('span', null, 'Niveau ' + (b.lvl || '?')));
+      t.appendChild(el('span', null, tr('Niveau {n}', { n: b.lvl || '?' })));
       c.appendChild(t);
       if (BUILD_DEL) c.appendChild(el('i', 'bdelmark', picked ? '✓' : ''));
       c.addEventListener('click', () => {
@@ -897,7 +911,7 @@ function buildList(n, box) {
       });
       col.appendChild(c);
     });
-    if (!mine.length) col.appendChild(el('p', 'note bcolnone', 'Aucun build'));
+    if (!mine.length) col.appendChild(el('p', 'note bcolnone', tr('Aucun build')));
     cols.appendChild(col);
   });
   box.appendChild(cols);
@@ -905,14 +919,22 @@ function buildList(n, box) {
 }
 
 /* Name, class, level, and the build's own buttons. */
-function buildHead(o) {
-  const head = el('div', 'bhead');
+/* The settings tab: the build's name, class and level, a line each, then
+   copying or deleting it. */
+function buildSettings(o) {
+  const head = el('div', 'spanel bsettings');
+  const row = (label, ctl) => {
+    const r = el('label', 'bsrow');
+    r.appendChild(el('span', 'bsl', label));
+    r.appendChild(ctl);
+    head.appendChild(r);
+  };
   const name = el('input', 'bname');
   name.type = 'text';
   name.value = o.name;
   name.maxLength = 60;
   name.addEventListener('change', () => notify('build_rename', { value: name.value }));
-  head.appendChild(name);
+  row(tr('Nom'), name);
 
   const cls = el('select', 'bcls');
   (o.classes || []).forEach((c) => {
@@ -922,43 +944,43 @@ function buildHead(o) {
   });
   cls.value = o.cls;
   cls.addEventListener('change', () => notify('build_class', { value: cls.value }));
-  head.appendChild(cls);
+  row(tr('Classe'), cls);
 
   const lv = el('div', 'blvl');
-  const out = el('b', null, 'Niveau ' + o.lvl);
+  const out = el('b', null, tr('Niveau {n}', { n: o.lvl }));
   const r = el('input');
   r.type = 'range';
   r.min = 1; r.max = o.maxLvl; r.value = o.lvl;
-  r.addEventListener('input', () => { out.textContent = 'Niveau ' + r.value; });
+  r.addEventListener('input', () => { out.textContent = tr('Niveau {n}', { n: r.value }); });
   r.addEventListener('change', () => notify('build_level', { value: Number(r.value) }));
   lv.appendChild(out);
   lv.appendChild(r);
-  head.appendChild(lv);
+  row(tr('Niveau'), lv);
 
   const btns = el('div', 'bbtns');
-  const share = el('button', 'rowbtn', 'Copier le code');
+  const share = el('button', 'rowbtn', tr('Copier le code'));
   share.type = 'button';
-  share.title = 'Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.';
+  share.title = tr('Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.');
   share.addEventListener('click', () => notify('build_share', {}));
   btns.appendChild(share);
-  const pic = el('button', 'rowbtn', o.imaging ? 'Création de l’image…' : 'Image à partager');
+  const pic = el('button', 'rowbtn', tr(o.imaging ? 'Création de l’image…' : 'Image à partager'));
   pic.type = 'button';
-  pic.title = 'Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
-    + 'presse-papiers et enregistrée dans Images › Farever Book.';
+  pic.title = tr('Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
+    + 'presse-papiers et enregistrée dans Images › Farever Book.');
   pic.disabled = !!o.imaging;
   pic.addEventListener('click', () => notify('build_image', {}));
   btns.appendChild(pic);
-  const dup = el('button', 'rowbtn', 'Dupliquer');
+  const dup = el('button', 'rowbtn', tr('Dupliquer'));
   dup.type = 'button';
   dup.addEventListener('click', () => notify('build_dup', {}));
   btns.appendChild(dup);
   const del = el('button', 'rowbtn' + (o.confirmDelete ? ' armed' : ''),
-    o.confirmDelete ? 'Confirmer la suppression' : 'Supprimer');
+    tr(o.confirmDelete ? 'Confirmer la suppression' : 'Supprimer'));
   del.type = 'button';
   del.addEventListener('click', () => notify('build_delete', {}));
   btns.appendChild(del);
   if (o.confirmDelete) {
-    const no = el('button', 'rowbtn', 'Annuler');
+    const no = el('button', 'rowbtn', tr('Annuler'));
     no.type = 'button';
     no.addEventListener('click', () => notify('build_delete_cancel', {}));
     btns.appendChild(no);
@@ -971,6 +993,7 @@ function buildHead(o) {
 let BUILD_SCROLL = { list: 0, right: 0 };   // kept across re-renders
 let BUILD_DROP = false;         // the piece list is open
 let BUILD_SUB = null;           // the augment / infusion whose choices are open
+let BUILD_JUMP = false;         // a slot or a piece was just clicked: bring it in view
 
 /* Redraw the piece editor alone, from the last state (a local change). */
 function refreshEditor() {
@@ -1006,7 +1029,7 @@ function editorPanel(ed) {
   head.appendChild(el('b', null, ed.label));
   const x = el('button', 'hclose', '×');
   x.type = 'button';
-  x.title = 'Revenir au personnage';
+  x.title = tr('Revenir au personnage');
   x.addEventListener('click', () => notify('build_slot_close', {}));
   head.appendChild(x);
   box.appendChild(head);
@@ -1019,14 +1042,14 @@ function editorPanel(ed) {
   const combo = el('button', 'bcombo' + (BUILD_DROP ? ' open' : '')
     + (p ? ' r-' + (p.rar || 'Common').toLowerCase() : ''));
   combo.type = 'button';
-  combo.appendChild(el('span', null, p ? p.name : 'Choisir une pièce…'));
+  combo.appendChild(el('span', null, p ? p.name : tr('Choisir une pièce…')));
   combo.appendChild(el('i', 'chev', '▾'));
   combo.addEventListener('click', () => { BUILD_DROP = !BUILD_DROP; renderDrop(); combo.classList.toggle('open', BUILD_DROP); });
   pick.appendChild(combo);
   if (p) {
     const rm = el('button', 'bsquare', '×');
     rm.type = 'button';
-    rm.title = 'Retirer la pièce';
+    rm.title = tr('Retirer la pièce');
     rm.addEventListener('click', () => notify('build_unequip', {}));
     pick.appendChild(rm);
   }
@@ -1036,7 +1059,7 @@ function editorPanel(ed) {
   const drop = el('div', 'bdrop');
   const q = el('input', 'bsearch');
   q.type = 'search';
-  q.placeholder = 'Rechercher…';
+  q.placeholder = tr('Rechercher…');
   q.value = BUILD_Q;
   drop.appendChild(q);
   const filters = el('div', 'bfilters');
@@ -1053,7 +1076,7 @@ function editorPanel(ed) {
   });
   filters.appendChild(statRow);
   if ((ed.factions || []).length) {
-    const fs = select([{ v: '', t: 'Toutes les familles' }]
+    const fs = select([{ v: '', t: tr('Toutes les familles') }]
       .concat(ed.factions.map((f) => ({ v: f, t: f }))), BUILD_F.fac,
       (v) => { BUILD_F.fac = v; fill(); });
     fs.classList.add('bfac');
@@ -1070,9 +1093,9 @@ function editorPanel(ed) {
       || it.name.toLowerCase().includes(needle) || it.type.toLowerCase().includes(needle))
       && (!BUILD_F.fac || it.fac === BUILD_F.fac)
       && [...BUILD_F.stats].every((k) => (it.stats || []).includes(k)));
-    count.textContent = shown.length + ' / ' + (ed.options || []).length + ' pièces';
+    count.textContent = tr('{n} / {all} pièces', { n: shown.length, all: (ed.options || []).length });
     if (!shown.length) list.appendChild(el('div', 'empty', ed.options.length
-      ? 'Aucune pièce ne correspond.' : 'Aucune pièce possible ici pour l’instant.'));
+      ? tr('Aucune pièce ne correspond.') : tr('Aucune pièce possible ici pour l’instant.')));
     shown.forEach((it) => {
       const row = el('div', 'bitem r-' + (it.rk || 'common') + (p && p.id === it.id ? ' on' : ''));
       const ii = el('span', 'gi');
@@ -1082,7 +1105,11 @@ function editorPanel(ed) {
       t.appendChild(el('b', 'nm', it.name));
       t.appendChild(el('span', null, it.type));
       row.appendChild(t);
-      row.addEventListener('click', () => { BUILD_DROP = false; notify('build_pick', { id: it.id }); });
+      row.addEventListener('click', () => {
+        BUILD_DROP = false;
+        BUILD_JUMP = true;
+        notify('build_pick', { id: it.id });
+      });
       list.appendChild(row);
     });
   };
@@ -1096,22 +1123,23 @@ function editorPanel(ed) {
   // the piece's settings, the whole width
   const body = el('div', 'bedcfg');
   if (!p) {
-    body.appendChild(el('p', 'note', 'Choisis une pièce dans la liste.'));
+    body.appendChild(el('p', 'note', tr('Choisis une pièce dans la liste.')));
   } else {
     // augments and infusion: lines of the card, waiting for a choice;
     // a click opens the choices right there
     const g = p.g || {};
     const choices = [];
     (p.augs || []).forEach((a) => choices.push({
-      key: 'aug:' + a.kind, t: a.t, v: a.v, options: a.options, none: 'Aucun',
+      key: 'aug:' + a.kind, t: a.t, v: a.v, options: a.options, none: tr('Aucun'),
     }));
     if (p.infusable) {
-      choices.push({ key: 'inf', t: 'Imprégnation', v: p.inf, options: p.infOptions, none: 'Aucune' });
-      choices.push({ key: 'istat', t: 'Bonus d’imprégnation', v: p.istat, options: p.statOptions,
-        none: 'Aucun', small: true,
+      choices.push({ key: 'inf', t: tr('Imprégnation'), v: p.inf, options: p.infOptions, none: tr('Aucune') });
+      choices.push({ key: 'istat', t: tr('Bonus d’imprégnation'), v: p.istat, options: p.statOptions,
+        none: tr('Aucun'), small: true,
         fx: g.inf && g.inf.bonus
-          ? '+' + (g.inf.val || '') + (g.inf.on ? '' : ' — inactif, faction différente')
-          : (g.plan ? g.plan + ' — inactif sans imprégnation' : '') });
+          ? (g.inf.on ? '+' + (g.inf.val || '')
+            : tr('{text} — inactif, faction différente', { text: '+' + (g.inf.val || '') }))
+          : (g.plan ? tr('{plan} — inactif sans imprégnation', { plan: g.plan }) : '') });
     }
     const lines = choices.map((c) => (c.key === BUILD_SUB ? choiceList(c) : choiceLine(c)));
     if (p.g) {
@@ -1129,8 +1157,8 @@ function editorPanel(ed) {
       lines.forEach((x) => body.appendChild(x));
     }
     if (!p.infusable && ['Head', 'Shoulders', 'Chest', 'Back', 'Hands', 'Waist', 'Legs', 'Feet'].includes(ed.slot)) {
-      body.appendChild(el('p', 'note', 'Imprégnation : sur une armure de faction, à partir de la rareté '
-        + (ed.infusionMin || 'Épique').toLowerCase() + '.'));
+      body.appendChild(el('p', 'note', tr('Imprégnation : sur une armure de faction, à partir de la rareté {rar}.',
+        { rar: (ed.infusionMin || tr('Épique')).toLowerCase() })));
     }
   }
   box.appendChild(body);
@@ -1140,6 +1168,12 @@ function editorPanel(ed) {
   requestAnimationFrame(() => {
     list.scrollTop = BUILD_SCROLL.list;
     body.scrollTop = BUILD_SCROLL.right;
+    // after a click on a slot or a piece: the list to choose from, or the
+    // piece's stats
+    if (BUILD_JUMP) {
+      BUILD_JUMP = false;
+      (p ? body : box).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   });
   return box;
 }
@@ -1179,7 +1213,7 @@ function choiceLine(c) {
     t.appendChild(nm);
     if (cur.fx || c.fx) t.appendChild(el('span', 'fx', cur.fx || c.fx));
   } else {
-    t.appendChild(el('b', 'wait', 'En attente de sélection'));
+    t.appendChild(el('b', 'wait', tr('En attente de sélection')));
     if (c.fx) t.appendChild(el('span', 'fx off', c.fx));
   }
   row.appendChild(t);
