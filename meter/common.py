@@ -267,29 +267,63 @@ ELEMENT_LABELS = {
 
 
 def element_label(el):
-    """The French name of an affinity, or the raw value for a new one."""
-    return ELEMENT_LABELS.get(el, str(el))
+    """An affinity's name in the interface's language (in English the game's
+    own value), or the raw value for a new one."""
+    if _french():
+        return ELEMENT_LABELS.get(el, str(el))
+    return "Other" if el == "?" else str(el)
 
 
-# Independent of the Windows locale.
-_MONTHS_FR = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.",
-              "août", "sept.", "oct.", "nov.", "déc.")
+# Numbers and dates in the interface's language, independent of the Windows
+# locale: 12 345, 33,3 % and 27 sept. in French; 12,345, 33.3% and 27 Sep in
+# English. (i18n imports this module: it is imported when called.)
+def _french():
+    import i18n
+    return i18n.lang() == "fr"
+
+
+_MONTHS = {True: ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.",
+                  "août", "sept.", "oct.", "nov.", "déc."),
+           False: ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
+                   "Sep", "Oct", "Nov", "Dec")}
+_MONTHS_FULL = {True: ("janvier", "février", "mars", "avril", "mai", "juin",
+                       "juillet", "août", "septembre", "octobre", "novembre",
+                       "décembre"),
+                False: ("January", "February", "March", "April", "May",
+                        "June", "July", "August", "September", "October",
+                        "November", "December")}
+
+
+def month_name(month, full=False):
+    """A month (1-12) by name, short ("sept.", "Sep") or full."""
+    return (_MONTHS_FULL if full else _MONTHS)[_french()][month - 1]
 
 
 def date_fr(lt, with_time=True):
-    """'27 sept. 21:07' for a time.struct_time."""
-    out = f"{lt.tm_mday} {_MONTHS_FR[lt.tm_mon - 1]}"
+    """'27 sept. 21:07' (French) / '27 Sep 21:07' for a time.struct_time."""
+    out = f"{lt.tm_mday} {month_name(lt.tm_mon)}"
     return f"{out} {lt.tm_hour:02d}:{lt.tm_min:02d}" if with_time else out
 
 
+def dec_sep():
+    """The decimal separator: "," in French, "." in English."""
+    return "," if _french() else "."
+
+
+def pct_sp():
+    """What follows a percentage: " %" in French (a no-break space), "%" in
+    English."""
+    return " %" if _french() else "%"
+
+
 def _pct1(x):
-    """A one-decimal percentage the French way: 33,3 %."""
-    return f"{x:.1f}".replace(".", ",") + " %"
+    """A one-decimal percentage: 33,3 % / 33.3%."""
+    return f"{x:.1f}".replace(".", dec_sep()) + pct_sp()
 
 
 def _n(x):
-    """A whole number with French thousands grouping: 12 345."""
-    return f"{x:,.0f}".replace(",", "\u00a0")
+    """A whole number with thousands grouping: 12 345 / 12,345."""
+    return f"{x:,.0f}".replace(",", "\u00a0") if _french() else f"{x:,.0f}"
 
 
 def element_color(name):

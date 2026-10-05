@@ -19,9 +19,10 @@ import hashlib
 import json
 import re
 
-from common import ANALYSIS, _n, _pretty_id, element_label
+from common import dec_sep, pct_sp, ANALYSIS, _n, _pretty_id, element_label
 from gamedata import (_fr_desc, _fr_ref, _skill_label, _unit_label,
                       build_data, gear_stats_data)
+from i18n import tr
 from simulate import is_magic
 
 # the bosses whose sheet is shown. Not yet: Cleodora (a trio: only she is
@@ -46,7 +47,7 @@ def boss_sheets():
 
 def _num(v, digits=0):
     if digits:
-        return f"{v:.{digits}f}".rstrip("0").rstrip(",.").replace(".", ",")
+        return f"{v:.{digits}f}".rstrip("0").rstrip(",.").replace(".", dec_sep())
     return _n(round(v))
 
 
@@ -126,7 +127,7 @@ def _status_text(sid, data):
         return None
     desc = _fr_desc("skill").get(sid) or ""
     for k, v in (st.get("vars") or {}).items():
-        desc = desc.replace(f"::{k}%#::", f"{_num(v * 100, 1)} %")
+        desc = desc.replace(f"::{k}%#::", f"{_num(v * 100, 1)}{pct_sp()}")
         desc = desc.replace(f"::{k}::", _num(v, 1))
     said = "::duration::" in desc       # then not said again below
     if st.get("duration"):
@@ -134,7 +135,7 @@ def _status_text(sid, data):
     desc = re.sub(r"::[^:]+::", "X", desc)
     bits = [_fr_ref(desc).strip().rstrip(".")] if desc else []
     if st.get("stacks") and st["stacks"] < 1000:
-        bits.append(f"jusqu'à {st['stacks']} cumuls")
+        bits.append(tr("jusqu'à {n} cumuls", n=st["stacks"]))
     if st.get("duration") and not said:
         bits.append(f"{_num(st['duration'], 1)} s")
     return {"id": sid, "name": name, "t": " · ".join(b for b in bits if b)}
@@ -147,9 +148,10 @@ def _when(sid, phases):
                                  or sid.endswith("_" + p["skill"]))]
     if not at:
         return ""
-    pcts = [f"{round(a * 100)} %" for a in at]
-    return "À " + (" et ".join([", ".join(pcts[:-1]), pcts[-1]])
-                   if len(pcts) > 1 else pcts[0])
+    pcts = [f"{round(a * 100)}{pct_sp()}" for a in at]
+    return tr("À {when}", when=tr("{a} et {b}", a=", ".join(pcts[:-1]),
+                                   b=pcts[-1])
+              if len(pcts) > 1 else pcts[0])
 
 
 def _skills(sheet, level, heroic, data, phases, owner=None):
@@ -172,51 +174,55 @@ def _skills(sheet, level, heroic, data, phases, owner=None):
                 if se:
                     main, via = se[0], st
                     break
-        name = "Attaque de base" if s.get("auto") else _skill_label(s["id"])
+        name = (tr("Attaque de base") if s.get("auto")
+                else _skill_label(s["id"]))
         if name == _pretty_id(s["id"]):
-            name = ("Soin" if main and main.get("kind") == "heal"
-                    else "Compétence sans nom")
+            name = (tr("Soin") if main and main.get("kind") == "heal"
+                    else tr("Compétence sans nom"))
         aff = (main or (effs[0] if effs else {})).get("aff") or ""
         tags = []
         if s.get("auto"):
             if s.get("cooldown"):
-                tags.append(f"Toutes les {_num(s['cooldown'], 1)} s")
+                tags.append(tr("Toutes les {n} s",
+                               n=_num(s["cooldown"], 1)))
         elif s.get("cooldown"):
-            tags.append(f"Recharge {_num(s['cooldown'], 1)} s")
+            tags.append(tr("Recharge {n} s", n=_num(s["cooldown"], 1)))
         when = _when(s["id"], phases)
         if when:
             tags.append(when)
         rng = s.get("range")
         if rng and rng <= 100:              # past that: the whole arena
-            tags.append(("Mêlée " if s.get("auto") and rng <= 6 else "Portée ")
-                        + f"{_num(rng, 1)} m")
+            tags.append(tr("Mêlée {n} m", n=_num(rng, 1))
+                        if s.get("auto") and rng <= 6
+                        else tr("Portée {n} m", n=_num(rng, 1)))
         fx = []
         if main and main.get("kind") == "heal" and owner:
-            fx.append(f"soigne {owner}")
+            fx.append(tr("soigne {owner}", owner=owner))
         if any(e.get("knock") for e in effs):
-            fx.append("projette les joueurs")
+            fx.append(tr("projette les joueurs"))
         for st in sorted({e["status"] for e in effs if e.get("status")}):
             t = _status_text(st, data)
-            fx.append(f"applique {t['name']}" if t else "ralentit")
+            fx.append(tr("applique {name}", name=t["name"]) if t
+                      else tr("ralentit"))
         called = {}
         for sm in s.get("summons") or ():
             if _applies(sm.get("heroic"), heroic):
                 called[sm["unit"]] = called.get(sm["unit"], 0) + 1
         for u, k in called.items():
-            fx.append(f"invoque {k} × {_unit_label(u)}" if k > 1
-                      else f"invoque {_unit_label(u)}")
+            fx.append(tr("invoque {n} × {unit}", n=k, unit=_unit_label(u))
+                      if k > 1 else tr("invoque {unit}", unit=_unit_label(u)))
         val = per = ""
         if main and power * main["ratio"] >= 0.5:
             val = _num(power * main["ratio"])
             if via:
-                per = "par cumul"
-                if main.get("tick"):
-                    per += f", toutes les {_num(main['tick'], 1)} s"
+                per = (tr("par cumul, toutes les {n} s",
+                          n=_num(main["tick"], 1)) if main.get("tick")
+                       else tr("par cumul"))
             elif main.get("tick"):
                 n = 1 / main["tick"]
-                per = (f"par impact, {_num(n, 1)} par seconde" if n > 1
-                       else "par seconde" if n == 1
-                       else f"toutes les {_num(main['tick'], 1)} s")
+                per = (tr("par impact, {n} par seconde", n=_num(n, 1))
+                       if n > 1 else tr("par seconde") if n == 1
+                       else tr("toutes les {n} s", n=_num(main["tick"], 1)))
         # its own picture, else the one of a status of its own (named after
         # it: the Course de bulles' slow), never another skill's
         own = sorted((x for x in s.get("statuses") or ()
@@ -234,7 +240,8 @@ def _skills(sheet, level, heroic, data, phases, owner=None):
             "magic": bool(aff) and is_magic(aff),
             "heal": bool(main) and main.get("kind") == "heal",
             "v": val, "per": per,
-            "coef": (f"×{_num(main['ratio'], 2)} puissance" if val else ""),
+            "coef": (tr("×{n} puissance", n=_num(main["ratio"], 2))
+                     if val else ""),
             "tags": tags,
             "fx": (fx[0][0].upper() + ", ".join(fx)[1:] + ".") if fx else ""})
     return out
@@ -285,9 +292,9 @@ def boss_sheet_view(boss, heroic=True, level=None):
             st = _unit(u, level, heroic, data)
             summons.append({
                 "name": _unit_label(sm["unit"]),
-                "by": ("Invoqué par " + _skill_label(s["id"])
+                "by": (tr("Invoqué par {skill}", skill=_skill_label(s["id"]))
                        if _skill_label(s["id"]) != _pretty_id(s["id"])
-                       else "Invoqué pendant le combat"),
+                       else tr("Invoqué pendant le combat")),
                 "hp": _num(st["hp"]) if st["hp"] else "—",
                 "armor": _num(st["armor"]) if st["armor"] else "—",
                 "armorPct": _num(st["armorPct"]),
@@ -310,6 +317,6 @@ def boss_sheet_view(boss, heroic=True, level=None):
                         if p.get("skill") and (
                             x["id"] == p["skill"]
                             or x["id"].endswith("_" + p["skill"]))),
-                        "Palier")}
+                        tr("Palier"))}
                    for p in phases],
         "summons": summons, "statuses": statuses}

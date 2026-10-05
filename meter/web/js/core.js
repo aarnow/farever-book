@@ -23,15 +23,36 @@ const $ = (sel) => document.querySelector(sel);
 /* The class icons, inlined by the host as data URIs: {"warrior": "data:..."}. */
 /*ICONS*/
 const CLASS_ICONS = window.__ICONS__ || {};
+
+/* The interface's language: the texts are written in French, tr() gives them
+   in the chosen one ({lang, dict: French text -> translation}, i18n.py).
+   {name} placeholders are filled from `vars`. */
+let I18N = window.__I18N__ || { lang: 'fr', dict: {} };
+function tr(s, vars) {
+  let r = (I18N.dict && I18N.dict[s]) || s;
+  if (vars) r = r.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  return r;
+}
+/* The page's own fixed texts (menu.html): data-i18n / data-i18n-title. */
+function translateStatic() {
+  document.documentElement.lang = I18N.lang || 'fr';
+  document.querySelectorAll('[data-i18n]').forEach((n) => {
+    n.dataset.i18nSrc = n.dataset.i18nSrc || n.textContent;
+    n.textContent = tr(n.dataset.i18nSrc);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((n) => {
+    n.title = tr(n.dataset.i18nTitle);
+  });
+}
 const CLASS_NAMES = { warrior: 'Guerrier', mage: 'Mage', priest: 'Prêtre',
-                      rogue: 'Voleur' };
+                      rogue: 'Voleur' };     // through tr() when shown
 
 /* A player's class: its icon when there is one, the abbreviation otherwise. */
 function classEl(tag, key, cls) {
   if (key && CLASS_ICONS[key]) {
     const im = el('img', 'clsicon' + (cls ? ' ' + cls : ''));
     im.src = CLASS_ICONS[key];
-    im.alt = im.title = CLASS_NAMES[key] || tag || '';
+    im.alt = im.title = CLASS_NAMES[key] ? tr(CLASS_NAMES[key]) : (tag || '');
     return im;
   }
   return el('span', cls || 'cls', tag || '');
@@ -156,8 +177,9 @@ function initToTop() {
   const b = el('button', 'totop');
   b.id = 'totop';
   b.type = 'button';
-  b.title = 'Revenir en haut';
-  b.setAttribute('aria-label', 'Revenir en haut');
+  b.dataset.i18nTitle = 'Revenir en haut';    // kept up to date by translateStatic
+  b.title = tr('Revenir en haut');
+  b.setAttribute('aria-label', tr('Revenir en haut'));
   b.addEventListener('click', () => page.scrollTo({ top: 0, behavior: 'smooth' }));
   page.parentNode.appendChild(b);
   // re-check the wrap when the right-hand group or the logo changes size
@@ -305,21 +327,22 @@ function buildDungeonCards(n) {
     head.appendChild(pic);
     const info = el('div', 'dcinfo');
     info.appendChild(el('div', 'dcname', c.t));
-    if (c.boss) info.appendChild(el('div', 'dcboss', 'Boss : ' + c.boss));
+    if (c.boss) info.appendChild(el('div', 'dcboss', tr('Boss : {name}', { name: c.boss })));
     const done = el('div', 'dcdone');
     if (c.runs) {
-      done.appendChild(el('span', 'dcstat', fmtN(c.runs) + ' run' + (c.runs > 1 ? 's' : '')));
+      done.appendChild(el('span', 'dcstat',
+        tr(c.runs > 1 ? '{n} runs' : '{n} run', { n: fmtN(c.runs) })));
       done.appendChild(el('span', 'dcstat' + (c.wins ? ' win' : ''),
-        fmtN(c.wins) + ' victoire' + (c.wins > 1 ? 's' : '')));
+        tr(c.wins > 1 ? '{n} victoires' : '{n} victoire', { n: fmtN(c.wins) })));
     } else {
-      done.appendChild(el('span', 'dcstat none', 'Pas encore fait'));
+      done.appendChild(el('span', 'dcstat none', tr('Pas encore fait')));
     }
     info.appendChild(done);
     if ((c.recs || []).length) {
       const recs = el('div', 'dcrecs');
       c.recs.forEach((r) => {
         const chip = el('span', 'dcrec d' + r.d);
-        chip.title = 'Record en ' + r.t;
+        chip.title = tr('Record en {d}', { d: r.t });
         const art = (window.__SHEET__ || {})['dungeon_diff_' + r.d];
         if (art) {
           const im = document.createElement('img');
@@ -336,13 +359,13 @@ function buildDungeonCards(n) {
     card.appendChild(head);
     if ((c.tiers || []).length) {
       const loot = el('div', 'dcloot');
-      loot.appendChild(el('div', 'dclabel', 'Butin possible'));
+      loot.appendChild(el('div', 'dclabel', tr('Butin possible')));
       loot.appendChild(lootTiers(c.tiers));
       card.appendChild(loot);
     }
     grid.appendChild(card);
   });
-  if (!(n.cards || []).length) grid.appendChild(el('div', 'empty', 'Aucun donjon.'));
+  if (!(n.cards || []).length) grid.appendChild(el('div', 'empty', tr('Aucun donjon.')));
   return grid;
 }
 
@@ -419,7 +442,7 @@ function buildNode(n) {
     case 'list': {
       const box = el('div', 'list');
       if (!n.rows || !n.rows.length) {
-        box.appendChild(el('div', 'empty', n.empty || "Rien pour l'instant."));
+        box.appendChild(el('div', 'empty', n.empty || tr("Rien pour l'instant.")));
         return box;
       }
       n.rows.forEach((r) => box.appendChild(buildRow(r)));
@@ -467,6 +490,7 @@ function buildNode(n) {
     case 'welcome': return buildWelcome(n);
     case 'setnav': return buildSetNav(n);
     case 'themes': return buildThemes(n);
+    case 'langs': return buildLangs(n);
     case 'collection': return buildCollection(n);
     case 'hunt': return buildHunt(n);
     case 'huntmon': return buildHuntMon(n);
@@ -517,6 +541,19 @@ function pageView(nodes) {
   const first = nodes[0] ? nodes[0].k + ':' + (nodes[0].id || 0) : '';
   return first + '|' + nodes.filter((n) => n.uid).map((n) => n.uid).join(',');
 }
+
+/* Another language: its catalogue, then everything drawn again. */
+window.applyLang = function (json) {
+  try { I18N = JSON.parse(json); } catch (e) { return; }
+  translateStatic();
+  NODES.forEach((v) => v.el.remove());
+  NODES = new Map();
+  if (typeof STATE !== 'undefined' && STATE.page) {
+    const s = STATE;
+    STATE = {};
+    window.applyState(JSON.stringify(s));
+  }
+};
 
 /* The colour theme: the whole stylesheet, recoloured by menu_host.py. */
 window.applyTheme = function (css) {
@@ -612,6 +649,11 @@ window.addImages = function (ns, json) {
   rerenderAch();
 };
 
+/* Numbers in the interface's language: 12 345 and 33 % in French, 12,345
+   and 33% in English. */
 function fmtN(v) {
-  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, I18N.lang === 'fr' ? '\u00a0' : ',');
+}
+function pctTxt(v) {
+  return v + (I18N.lang === 'fr' ? '\u00a0%' : '%');
 }

@@ -52,6 +52,7 @@ os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
 
 import webview  # noqa: E402  (must follow the environment set-up above)
 
+import i18n  # noqa: E402
 import themes  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -186,9 +187,11 @@ class AppWindow:
         self._last_geom = None
         # the colour theme, from the launch (no flash of the default one)
         self._theme = geom.get("theme") or themes.DEFAULT
+        self._lang = geom.get("lang") or i18n.DEFAULT
+        i18n.set_lang(self._lang)
         self.window = webview.create_window(
             "Farever Book",
-            html=_document(self._theme),
+            html=_document(self._theme, self._lang),
             width=int(geom.get("w") or DEFAULT_W),
             height=int(geom.get("h") or DEFAULT_H),
             x=geom.get("x"), y=geom.get("y"),
@@ -206,7 +209,8 @@ class AppWindow:
         self.overlays = []
         for oid in OVERLAY_IDS:
             try:
-                self.overlays.append(Overlay(oid, pipe, self._theme))
+                self.overlays.append(Overlay(oid, pipe, self._theme,
+                                             self._lang))
             except Exception as e:
                 _log(f"overlay {oid} unavailable: {e!r}")
 
@@ -379,6 +383,19 @@ class AppWindow:
         for o in self.overlays:
             o.set_theme(theme)
 
+    def _set_lang(self, lang):
+        """Another language: its catalogue to the window and the overlays,
+        which draw themselves again."""
+        self._lang = lang
+        i18n.set_lang(lang)
+        js = ("window.applyLang && window.applyLang("
+              + json.dumps(_i18n_json(lang)) + ")")
+        for w in [self.window] + [o.window for o in self.overlays]:
+            try:
+                w.evaluate_js(js)
+            except Exception as e:
+                _log(f"language push failed: {e!r}")
+
     def _push(self, data):
         """Hand one state object to the page as a JSON string argument, never
         interpolated: it carries player names off the wire."""
@@ -392,6 +409,9 @@ class AppWindow:
         theme = data.get("theme")
         if theme and theme != self._theme:
             self._set_theme(theme)
+        lang = data.get("lang")
+        if lang and lang != self._lang:
+            self._set_lang(lang)
         try:
             self.window.evaluate_js(
                 f"window.applyState({json.dumps(json.dumps(data))})")
@@ -436,7 +456,7 @@ class OverlayApi:
 
 
 class Overlay:
-    def __init__(self, oid, pipe, theme):
+    def __init__(self, oid, pipe, theme, lang):
         self.id = oid
         self.pipe = pipe
         self.api = OverlayApi(pipe)
@@ -450,7 +470,7 @@ class Overlay:
         self.game = None
         self.pos = None
         self.window = webview.create_window(
-            f"Farever Book — {oid}", html=_overlay_document(oid, theme),
+            f"Farever Book — {oid}", html=_overlay_document(oid, theme, lang),
             width=self.size[0], height=self.size[1], x=-4000, y=-4000,
             frameless=True, easy_drag=False, resizable=False, shadow=False,
             hidden=True, on_top=True, focus=False,
@@ -599,12 +619,18 @@ def _web(name):
         return ""
 
 
-def _overlay_document(oid, theme):
+def _i18n_json(lang):
+    """The page's language: {lang, dict} as JSON (i18n.py)."""
+    return json.dumps({"lang": lang, "dict": i18n.catalog(lang)})
+
+
+def _overlay_document(oid, theme, lang):
     return ('<!doctype html><html lang="fr"><head><meta charset="utf-8">'
             '<style id="css">' + themes.themed(_web("overlay.css"), theme)
             + "</style></head><body>"
             '<div id="ov"></div><script>window.__OVERLAY__ = '
-            + json.dumps(oid) + ";window.__ICONS__ = "
+            + json.dumps(oid) + ";window.__I18N__ = " + _i18n_json(lang)
+            + ";window.__ICONS__ = "
             + json.dumps(_class_icons()) + ";</script><script>"
             + _web("js/overlay.js") + "</script></body></html>")
 
@@ -634,7 +660,7 @@ JS_FILES = ("core", "frame", "live", "report", "dungeons", "model3d",
             "collection", "achievements", "hunt", "map", "character", "build", "boot")
 
 
-def _document(theme):
+def _document(theme, lang):
     """One self-contained HTML document: menu.html, menu.css (in the colour
     theme) and the JS."""
     html = (_web("menu.html")
@@ -642,6 +668,7 @@ def _document(theme):
             .replace("/*JS*/", "\n".join(_web(f"js/{f}.js")
                                          for f in JS_FILES))
             .replace("/*ICONS*/",
+                     "window.__I18N__ = " + _i18n_json(lang) + ";"
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
                      "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
                      + ";window.__SHEET__ = " + json.dumps(_sheet_art())

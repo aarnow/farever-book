@@ -15,6 +15,7 @@ from common import (
     CLAIM_MUTEX, CLAIM_WAIT_MS, DATA_HOME, LOCK_DIR, LOCK_FILE,
     METER_IMAGE_NAMES, QUIT_WAIT_SECS, RIFTS_DIR, ROOT, STOP, _APP,
     request_stop)
+from i18n import tr
 
 
 # ---------------------------------------------------------------------------
@@ -242,8 +243,10 @@ VK_UNBINDABLE = frozenset({0x10, 0x11, 0x12, 0x1B, 0x5B, 0x5C,
 
 
 def _vk_name(vk):
+    if 0x60 <= vk <= 0x69:
+        return tr("Pavé {n}", n=vk - 0x60)
     if vk in VK_NAMES:
-        return VK_NAMES[vk]
+        return tr(VK_NAMES[vk])
     if 0x30 <= vk <= 0x5A:          # 0-9 and A-Z share their ASCII codes
         return chr(vk)
     return f"VK {vk:#04x}"
@@ -252,7 +255,8 @@ def _vk_name(vk):
 def bind_label(bind=None):
     """Display label of a bind, e.g. "Maj + \\"."""
     b = bind or RESET_BIND
-    parts = [n for n, k in (("Ctrl", "ctrl"), ("Alt", "alt"), ("Maj", "shift"))
+    parts = [n for n, k in (("Ctrl", "ctrl"), ("Alt", "alt"),
+                            (tr("Maj"), "shift"))
              if b.get(k)]
     parts.append(_vk_name(b.get("vk", VK_OEM_5)))
     return " + ".join(parts)
@@ -558,11 +562,13 @@ class TrayIcon:
     def _menu(self):
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
-        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Afficher Farever Book")
-        u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des failles")
-        u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Ouvrir le dossier du journal")
+        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, tr("Afficher Farever Book"))
+        u.AppendMenuW(m, MF_STRING, TRAY_PARSES,
+                      tr("Ouvrir le dossier des failles"))
+        u.AppendMenuW(m, MF_STRING, TRAY_LOG,
+                      tr("Ouvrir le dossier du journal"))
         u.AppendMenuW(m, MF_SEPARATOR, 0, None)
-        u.AppendMenuW(m, MF_STRING, TRAY_QUIT, "Arrêter le compteur")
+        u.AppendMenuW(m, MF_STRING, TRAY_QUIT, tr("Arrêter le compteur"))
         pt = wintypes.POINT()
         u.GetCursorPos(ctypes.byref(pt))
         # or the menu won't close when the user clicks away

@@ -40,12 +40,12 @@ function renderHunt(box, n) {
   const main = el('div', 'huntmain');
   box.appendChild(side);
   box.appendChild(main);
-  side.appendChild(el('div', 'section', 'Tableau de chasse'));
+  side.appendChild(el('div', 'section', tr('Tableau de chasse')));
   if (n.sync) side.appendChild(el('p', 'note', n.sync));
   const stats = el('div', 'huntstats');
-  [['Monstres tués', fmtN(n.total || 0)],
-   ['Espèces chassées', hunted + ' / ' + items.length],
-   ['Codex maîtrisé', mastered + ' / ' + items.length]]
+  [[tr('Monstres tués'), fmtN(n.total || 0)],
+   [tr('Espèces chassées'), hunted + ' / ' + items.length],
+   [tr('Codex maîtrisé'), mastered + ' / ' + items.length]]
     .forEach(([t, v]) => {
       const c = el('div', 'hs');
       c.appendChild(el('span', null, t));
@@ -66,8 +66,8 @@ function renderHunt(box, n) {
     });
     return box_;
   };
-  side.appendChild(nav('views', [{ v: 'units', t: 'Monstres' }, { v: 'families', t: 'Familles' },
-    { v: 'farm', t: 'Montures' }], HUNT.view, (v) => { HUNT.view = v; }));
+  side.appendChild(nav('views', [{ v: 'units', t: tr('Monstres') }, { v: 'families', t: tr('Familles') },
+    { v: 'farm', t: tr('Montures') }], HUNT.view, (v) => { HUNT.view = v; }));
 
   // the list keeps its place across rebuilds, not across a change of list
   const listKey = [HUNT.view, HUNT.reg, HUNT.filter, HUNT.sort, HUNT.q, HUNT.farm].join('|');
@@ -91,8 +91,8 @@ function renderHunt(box, n) {
     return;
   }
 
-  side.appendChild(el('div', 'sub2', 'Régions'));
-  side.appendChild(nav('regs', [{ v: 'all', t: 'Toutes', n: items.length }]
+  side.appendChild(el('div', 'sub2', tr('Régions')));
+  side.appendChild(nav('regs', [{ v: 'all', t: tr('Toutes'), n: items.length }]
     .concat((n.regions || []).map((r) => ({ v: r.v, t: r.t, n: r.n }))),
   HUNT.reg, (v) => { HUNT.reg = v; }));
   box = main;
@@ -100,12 +100,12 @@ function renderHunt(box, n) {
   const tools = el('div', 'colltools');
   const q = el('input', 'collq huntq');
   q.type = 'text';
-  q.placeholder = 'Rechercher un monstre ou une famille';
+  q.placeholder = tr('Rechercher un monstre ou une famille');
   q.value = HUNT.q;
   q.addEventListener('input', () => { HUNT.q = q.value; rerenderHunt(); });
   tools.appendChild(q);
   const seg = el('div', 'seg');
-  [['all', 'Tous'], ['none', 'Jamais tués'], ['doing', 'En cours'], ['done', 'Maîtrisés']]
+  [['all', tr('Tous')], ['none', tr('Jamais tués')], ['doing', tr('En cours')], ['done', tr('Maîtrisés')]]
     .forEach(([v, t]) => {
       const b = el('button', HUNT.filter === v ? 'on' : '', t);
       b.type = 'button';
@@ -114,7 +114,7 @@ function renderHunt(box, n) {
     });
   tools.appendChild(seg);
   const sort = el('div', 'seg');
-  [['kills', 'Plus tués'], ['name', 'Nom']].forEach(([v, t]) => {
+  [['kills', tr('Plus tués')], ['name', tr('Nom')]].forEach(([v, t]) => {
     const b = el('button', HUNT.sort === v ? 'on' : '', t);
     b.type = 'button';
     b.addEventListener('click', () => { HUNT.sort = v; rerenderHunt(); });
@@ -135,7 +135,8 @@ function renderHunt(box, n) {
   shown.sort(HUNT.sort === 'name'
     ? (a, b) => a.name.localeCompare(b.name, 'fr')
     : (a, b) => b.kills - a.kills || a.name.localeCompare(b.name, 'fr'));
-  box.appendChild(el('div', 'collcount', shown.length + ' monstre' + (shown.length > 1 ? 's' : '')));
+  box.appendChild(el('div', 'collcount',
+    tr(shown.length > 1 ? '{n} monstres' : '{n} monstre', { n: shown.length })));
 
   const grid = el('div', 'huntgrid');
   shown.forEach((it) => {
@@ -151,17 +152,17 @@ function renderHunt(box, n) {
     body.appendChild(el('span', 'fam', it.fam || '—'));
     const k = el('div', 'kills');
     k.appendChild(el('b', null, fmtN(it.kills)));
-    k.appendChild(el('span', null, it.kills > 1 ? 'kills' : 'kill'));
+    k.appendChild(el('span', null, it.kills > 1 ? tr('kills') : tr('kill')));
     body.appendChild(k);
     const pips = el('div', 'pips');
     for (let i = 0; i < it.max; i++) pips.appendChild(el('i', i < it.rank ? 'on' : ''));
-    pips.appendChild(el('span', null, it.rank >= it.max ? 'maîtrisé'
+    pips.appendChild(el('span', null, it.rank >= it.max ? tr('maîtrisé')
       : it.next ? it.kills + ' / ' + it.next : ''));
     body.appendChild(pips);
     card.appendChild(body);
     grid.appendChild(card);
   });
-  if (!shown.length) grid.appendChild(el('div', 'empty', 'Rien à afficher.'));
+  if (!shown.length) grid.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   box.appendChild(grid);
   keepPlace(grid);
 
@@ -183,14 +184,14 @@ function buildHuntMon(n) {
   head.appendChild(pic);
   const t = el('div', 'hmt');
   t.appendChild(el('div', 'hmname', n.name));
-  t.appendChild(el('div', 'fam', [n.fam, n.faction, n.lvl ? 'niveau ' + n.lvl : '']
+  t.appendChild(el('div', 'fam', [n.fam, n.faction, n.lvl ? tr('niveau {n}', { n: n.lvl }) : '']
     .filter(Boolean).join(' · ')));
   const k = el('div', 'kills');
   k.appendChild(el('b', null, fmtN(n.kills)));
-  k.appendChild(el('span', null, n.kills > 1 ? 'kills' : 'kill'));
+  k.appendChild(el('span', null, n.kills > 1 ? tr('kills') : tr('kill')));
   const pips = el('span', 'pips');
   for (let i = 0; i < n.max; i++) pips.appendChild(el('i', i < n.rank ? 'on' : ''));
-  pips.appendChild(el('span', null, n.rank >= n.max ? 'maîtrisé'
+  pips.appendChild(el('span', null, n.rank >= n.max ? tr('maîtrisé')
     : n.next ? n.kills + ' / ' + n.next : ''));
   k.appendChild(pips);
   t.appendChild(k);
@@ -205,7 +206,7 @@ function buildHuntMon(n) {
   if (n.desc) first.appendChild(el('p', 'hmdesc', n.desc));
   first.appendChild(huntModel(n));
 
-  second.appendChild(el('div', 'section', 'Où le trouver'));
+  second.appendChild(el('div', 'section', tr('Où le trouver')));
   if (n.note) {
     second.appendChild(el('p', 'note', n.note));
   } else {
@@ -213,12 +214,12 @@ function buildHuntMon(n) {
   }
   box = page;
 
-  box.appendChild(el('div', 'section', 'Butin'));
-  box.appendChild(el('p', 'note', 'Chance par kill. « Famille » : la table commune à toute sa '
-    + 'famille ; « Ce monstre » et « Boss » : la sienne, en plus.'));
+  box.appendChild(el('div', 'section', tr('Butin')));
+  box.appendChild(el('p', 'note', tr('Chance par kill. « Famille » : la table commune à toute sa '
+    + 'famille, « Ce monstre » et « Boss » : la sienne, en plus.')));
   const tbl = el('div', 'panel droptable mondrop');
   const hd = el('div', 'drow dhead');
-  ['', 'Objet', 'Type', 'Source', 'Chance'].forEach((h) => hd.appendChild(el('span', null, h)));
+  ['', 'Objet', 'Type', 'Source', 'Chance'].forEach((h) => hd.appendChild(el('span', null, h ? tr(h) : '')));
   tbl.appendChild(hd);
   (n.loot || []).forEach((r) => {
     const row = el('div', 'drow' + (r.rk ? ' r-' + r.rk : ''));
@@ -236,7 +237,7 @@ function buildHuntMon(n) {
     row.appendChild(el('span', 'num', r.chance));
     tbl.appendChild(row);
   });
-  if (!(n.loot || []).length) tbl.appendChild(el('div', 'empty', 'Aucun butin connu.'));
+  if (!(n.loot || []).length) tbl.appendChild(el('div', 'empty', tr('Aucun butin connu.')));
   box.appendChild(tbl);
   return page;
 }
@@ -251,8 +252,8 @@ function huntModel(n) {
   if (m3dSupported()) {
     stage.classList.add('is3d');
     stage.appendChild(m3dCanvas(n.uid, (st) => { stage.dataset.st = st; }, { anim: true }));
-    stage.appendChild(el('div', 'cvwait', 'Chargement du modèle 3D…'));
-    stage.appendChild(el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer'));
+    stage.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
+    stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
   }
   v.appendChild(stage);
   return v;
@@ -282,18 +283,20 @@ function huntWhere(n) {
     if (on) b.addEventListener('click', () => pick(z || null));
     list.appendChild(b);
   };
-  if (map) item('Tout voir', '', '', true);
+  if (map) item(tr('Tout voir'), '', '', true);
   // the open world's zones with spawns; the instance zones only when no
   // instance says better where they are
   (n.zones || []).forEach((z) => {
     if (count[z]) item(z, z, String(count[z]), true);
-    else if (!insts.length) item(z, z, 'instance', false);
+    else if (!insts.length) item(z, z, tr('instance'), false);
   });
-  insts.forEach((i) => item(i.t.startsWith(i.kind) ? i.t : i.kind + ' : ' + i.t, i.t,
-    (i.doors || []).length ? 'entrée' : 'instance', (i.doors || []).length > 0));
+  // i.kind is the French "Faille" / "Donjon" (compared below): shown through tr()
+  insts.forEach((i) => item(i.t.startsWith(i.kind) || i.t.startsWith(tr(i.kind)) ? i.t
+    : tr('{kind} : {name}', { kind: tr(i.kind), name: i.t }), i.t,
+    (i.doors || []).length ? tr('entrée') : tr('instance'), (i.doors || []).length > 0));
   if ((n.keys || []).length) {
     const ks = el('div', 'hmby');
-    ks.appendChild(el('span', 'l', 'Invoqué à son autel avec'));
+    ks.appendChild(el('span', 'l', tr('Invoqué à son autel avec')));
     n.keys.forEach((k) => {
       const c = el('span', 'chip key');
       if (k.img) {
@@ -309,7 +312,7 @@ function huntWhere(n) {
   }
   if ((n.by || []).length) {
     const by = el('div', 'hmby');
-    by.appendChild(el('span', 'l', 'Invoqué par'));
+    by.appendChild(el('span', 'l', tr('Invoqué par')));
     n.by.forEach((m) => {
       const b = el('button', 'chip', m.name);
       b.type = 'button';
@@ -326,8 +329,8 @@ function huntWhere(n) {
     // nothing to draw: the list alone, and a word why there is no map
     wrap.classList.add('nomap');
     list.appendChild(el('p', 'note', insts.length
-      ? 'Pas de carte : l’entrée de cette instance n’est pas dans le monde ouvert.'
-      : 'Pas de carte : il n’apparaît pas dans le monde ouvert.'));
+      ? tr('Pas de carte : l’entrée de cette instance n’est pas dans le monde ouvert.')
+      : tr('Pas de carte : il n’apparaît pas dans le monde ouvert.')));
   }
   const keep = HUNTMON_ZONE[n.uid];
   const known = keep && (count[keep] || insts.some((i) => i.t === keep && (i.doors || []).length));
@@ -407,8 +410,8 @@ function huntMiniMap(n) {
    is what counts for a drop any of its species can give. */
 function renderFamilies(box, n) {
   const fams = n.families || [];
-  box.appendChild(el('p', 'note', 'Toutes les espèces d’une famille tirent la même table de '
-    + 'butin : c’est le total de la famille qui compte pour ses objets rares.'));
+  box.appendChild(el('p', 'note', tr('Toutes les espèces d’une famille tirent la même table de '
+    + 'butin : c’est le total de la famille qui compte pour ses objets rares.')));
   const grid = el('div', 'famgrid');
   fams.forEach((f) => {
     const card = el('div', 'famcard' + (f.kills ? ' seen' : ''));
@@ -420,14 +423,15 @@ function renderFamilies(box, n) {
     t.appendChild(el('b', 'nm', f.name));
     const k = el('div', 'kills');
     k.appendChild(el('b', null, fmtN(f.kills)));
-    k.appendChild(el('span', null, f.kills > 1 ? 'kills' : 'kill'));
+    k.appendChild(el('span', null, f.kills > 1 ? tr('kills') : tr('kill')));
     t.appendChild(k);
-    t.appendChild(el('span', 'fam', f.hunted + ' / ' + f.species + ' espèces chassées'));
+    t.appendChild(el('span', 'fam', tr('{n} / {total} espèces chassées',
+      { n: f.hunted, total: f.species })));
     top.appendChild(t);
     card.appendChild(top);
     grid.appendChild(card);
   });
-  if (!fams.length) grid.appendChild(el('div', 'empty', 'Rien à afficher.'));
+  if (!fams.length) grid.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   box.appendChild(grid);
 }
 
@@ -435,11 +439,11 @@ function renderFamilies(box, n) {
    each, the kills behind it and the chances. */
 function renderFarm(box, n) {
   const all = n.farm || [];
-  box.appendChild(el('p', 'note', 'Les montures et planeurs qui tombent sur des monstres, avec le '
+  box.appendChild(el('p', 'note', tr('Les montures et planeurs qui tombent sur des monstres, avec le '
     + 'total de tes kills sur tous ceux qui peuvent les donner (survole un portrait pour son nom). '
-    + 'Les chances « déjà eue » supposent un tirage indépendant à chaque kill.'));
+    + 'Les chances « déjà eue » supposent un tirage indépendant à chaque kill.')));
   const seg = el('div', 'seg farmseg');
-  [['missing', 'À obtenir'], ['own', 'Obtenues'], ['all', 'Toutes']].forEach(([v, t]) => {
+  [['missing', tr('À obtenir')], ['own', tr('Obtenues')], ['all', tr('Toutes')]].forEach(([v, t]) => {
     const b = el('button', HUNT.farm === v ? 'on' : '', t);
     b.type = 'button';
     b.addEventListener('click', () => { HUNT.farm = v; rerenderHunt(); });
@@ -447,7 +451,8 @@ function renderFarm(box, n) {
   });
   box.appendChild(seg);
   const shown = all.filter((m) => HUNT.farm === 'all' || (HUNT.farm === 'own') === m.own);
-  box.appendChild(el('div', 'collcount', shown.length + ' objet' + (shown.length > 1 ? 's' : '')));
+  box.appendChild(el('div', 'collcount',
+    tr(shown.length > 1 ? '{n} objets' : '{n} objet', { n: shown.length })));
   const list = el('div', 'farmlist');
   shown.forEach((m) => {
     const card = el('div', 'farmcard' + (m.own ? ' own' : '') + (m.rk ? ' r-' + m.rk : ''));
@@ -464,15 +469,19 @@ function renderFarm(box, n) {
     const t = el('div', 'ft');
     t.appendChild(el('b', 'nm', m.name));
     const nm = (m.mobs || []).length;
-    t.appendChild(el('span', 'fam', m.cat + ' · ' + nm + ' monstre' + (nm > 1 ? 's peuvent ' : ' peut ')
-      + (m.cat === 'Planeur' ? 'le' : 'la') + ' donner'));
+    // m.cat is the French "Monture" / "Planeur" (compared here): shown through tr()
+    const glider = m.cat === 'Planeur';
+    t.appendChild(el('span', 'fam', tr(nm > 1
+      ? (glider ? '{cat} · {n} monstres peuvent le donner' : '{cat} · {n} monstres peuvent la donner')
+      : (glider ? '{cat} · {n} monstre peut le donner' : '{cat} · {n} monstre peut la donner'),
+    { cat: tr(m.cat), n: nm })));
     head.appendChild(t);
-    head.appendChild(el('span', 'fstat' + (m.own ? ' own' : ''), m.own ? '✓ obtenue'
-      : m.had ? m.had + ' de chances de l’avoir déjà eue' : 'aucun kill'));
+    head.appendChild(el('span', 'fstat' + (m.own ? ' own' : ''), m.own ? tr('✓ obtenue')
+      : m.had ? tr('{pct} de chances de l’avoir déjà eue', { pct: m.had }) : tr('aucun kill')));
     card.appendChild(head);
     // one row of numbers: kills summed over every source, chance per kill
     const stats = el('div', 'fstats');
-    [[fmtN(m.kills), m.kills > 1 ? 'kills au total' : 'kill au total'],
+    [[fmtN(m.kills), m.kills > 1 ? tr('kills au total') : tr('kill au total')],
      [m.pct, m.odds]].forEach(([v, t]) => {
       const c = el('div', 'fs');
       c.appendChild(el('b', null, v));
@@ -484,13 +493,13 @@ function renderFarm(box, n) {
     const mobs = el('div', 'fmobs');
     (m.mobs || []).forEach((x) => {
       const mb = el('span', 'fmob' + (x.k ? ' seen' : ''));
-      mb.title = x.name + ' — ' + fmtN(x.k) + (x.k > 1 ? ' kills' : ' kill');
+      mb.title = tr(x.k > 1 ? '{name} — {n} kills' : '{name} — {n} kill', { name: x.name, n: fmtN(x.k) });
       mb.appendChild(huntImg(x.img));
       mobs.appendChild(mb);
     });
     card.appendChild(mobs);
     list.appendChild(card);
   });
-  if (!shown.length) list.appendChild(el('div', 'empty', 'Rien à afficher.'));
+  if (!shown.length) list.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   box.appendChild(list);
 }

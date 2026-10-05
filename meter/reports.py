@@ -6,11 +6,13 @@ import time
 from pathlib import Path
 
 from common import (
+    pct_sp,
     CLASS_ICON_DIR, _mmss, _n, _pct1, _pretty_id, class_key, date_fr,
     element_color, element_label)
 from gamedata import (
     RARITY_ORDER, item_icon, item_label, item_rarity, rarity_label)
 from combat import _overheal_pct
+from i18n import tr
 
 # A window shorter than this has no meaningful rate.
 RATE_MIN_SECS = 0.5
@@ -91,7 +93,7 @@ def report_view(data):
         healers = sorted((p for p in players if (p.get("heal") or 0) > 0.5),
                          key=lambda p: -p["heal"])
         phases.append({
-            "label": (ph.get("label") or "Phase"),
+            "label": tr(ph.get("label") or "Phase"),
             "dur": _mmss(dur),
             "dps": _rate_text(total, dur, "DPS") or "— DPS",
             "hps": _rate_text(heal, dur, "HPS") or "— HPS",
@@ -115,7 +117,7 @@ def report_view(data):
     when = date_fr(time.localtime(data.get("at") or 0))
     out = {"k": "report", "id": "report",
            "detail": _report_players(data),
-           "title": data.get("title") or "Rapport de faille",
+           "title": data.get("title") or tr("Rapport de faille"),
            "sub": data.get("sub") or "",
            "when": when, "phases": phases}
     if isinstance(data.get("loot"), list):
@@ -163,7 +165,7 @@ def _report_players(data):
                                "f": round(amt / total, 4) if total else 0,
                                "pct": _pct1(amt / total * 100 if total else 0),
                                "hits": _n(hits),
-                               "crit": f"{crits / hits * 100:.0f} %"
+                               "crit": f"{crits / hits * 100:.0f}{pct_sp()}"
                                        if hits else "—",
                                "avg": _n(amt / hits) if hits else "—",
                                "_a": amt})
@@ -199,16 +201,16 @@ def _report_players(data):
                                          "cls": p.get("cls") or "",
                                          "phases": []})
             entry["phases"].append({
-                "label": (ph.get("label") or "Phase"),
+                "label": tr(ph.get("label") or "Phase"),
                 "facts": [
-                    ["Dégâts", _n(total)],
+                    [tr("Dégâts"), _n(total)],
                     ["DPS", _n(_rate(total, dur)) if _rate(total, dur)
                      else "—"],
-                    ["Coups", _n(hits)],
-                    ["Critiques", f"{int(p.get('crits') or 0) / hits * 100:.0f} %"
+                    [tr("Coups"), _n(hits)],
+                    [tr("Critiques"), f"{int(p.get('crits') or 0) / hits * 100:.0f}{pct_sp()}"
                      if hits else "—"],
                     ["Kills", _n(int(p.get("kills") or 0))],
-                    ["Soins", _n(heal)]],
+                    [tr("Soins"), _n(heal)]],
                 "skills": skills, "heals": heals, "elements": elements})
     return out
 
@@ -231,12 +233,12 @@ def loot_view(loot):
                  it.get("level"))
             merged[k] = merged.get(k, 0) + int(it.get("count") or 1)
         if merged:
-            groups.append({"t": label, "items": [
+            groups.append({"t": tr(label), "items": [
                 {"name": item_label(item), "qty": qty,
                  "img": item_icon(item),
                  "rarity": rarity_label(rar) if rar else "",
                  "rk": (rar or "").lower(),
-                 "level": f"niv. {lvl}" if isinstance(lvl, int) and lvl > 0
+                 "level": tr("niv. {lvl}", lvl=lvl) if isinstance(lvl, int) and lvl > 0
                  else ""}
                 for (item, rar, lvl), qty in sorted(
                     merged.items(),
@@ -344,8 +346,9 @@ def render_rift_report_image(data, path=None):
             for v, cw in zip(reversed(vals), reversed(num_w)):
                 text(rx, yy, v, font, fill, "ra")
                 rx -= cw
-        text(x + ic_w + 4, y + 7, "JOUEUR", f_tiny, IMG_DIM)
-        numbers(y + 7, [rate_label, "TOTAL", "PART"], f_tiny, IMG_DIM)
+        text(x + ic_w + 4, y + 7, tr("JOUEUR"), f_tiny, IMG_DIM)
+        numbers(y + 7, [rate_label, tr("TOTAL"), tr("PART")], f_tiny,
+                IMG_DIM)
         yy = y + head_h
         for i, r in enumerate(rows):
             zero = bool(r.get("zero"))
@@ -418,7 +421,7 @@ def render_rift_report_image(data, path=None):
         gap = 8
         fw = (iw - gap * 2) // 3
         for i, (label, value) in enumerate(
-                (("DURÉE", ph["dur"]), ("DPS", ph["dps"].replace(" DPS", "")),
+                ((tr("DURÉE"), ph["dur"]), ("DPS", ph["dps"].replace(" DPS", "")),
                  ("HPS", ph["hps"].replace(" HPS", "")))):
             fx = ix + i * (fw + gap)
             d.rounded_rectangle((fx, cy, fx + fw, cy + 54), 6, fill=IMG_RAISED,
@@ -429,7 +432,7 @@ def render_rift_report_image(data, path=None):
         d.line((ix, cy, ix + iw, cy), fill=IMG_LINE)
         cy += 6
         if ph.get("empty"):
-            text(ix, cy + 10, "rien n'a été enregistré pour cette phase",
+            text(ix, cy + 10, tr("rien n'a été enregistré pour cette phase"),
                  f_row, IMG_FAINT)
             cy += 34
 
@@ -440,16 +443,16 @@ def render_rift_report_image(data, path=None):
             cy += 22
 
         if ph.get("dmg"):
-            heading("Dégâts")
+            heading(tr("Dégâts"))
             cy = table(ix, cy, iw, ph["dmg"], "DPS")
-        heading("Soins")
+        heading(tr("Soins"))
         if ph.get("heal"):
             cy = table(ix, cy, iw, ph["heal"], "HPS")
         else:
-            text(ix, cy, "aucun soin enregistré", f_row, IMG_FAINT)
+            text(ix, cy, tr("aucun soin enregistré"), f_row, IMG_FAINT)
             cy += 24
         if ph.get("types"):
-            heading("Dégâts par type")
+            heading(tr("Dégâts par type"))
             types = ph["types"]
             lh = 22
             leg_h = lh * len(types)

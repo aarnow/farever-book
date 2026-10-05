@@ -15,6 +15,7 @@ import zlib
 from common import BUILDS_DIR
 from gamedata import _offsets, build_data, talent_data
 from gearstats import EQUIP_SLOTS
+from i18n import tr
 
 CLASSES = ("Warrior", "Mage", "Priest", "Rogue")
 # the build's slots, and the catalogue's slot kind for each
@@ -53,20 +54,20 @@ def from_code(text):
     game no longer has is dropped). ValueError with a message to show."""
     m = re.search(r"FFB(\d+):([A-Za-z0-9_-]+)", str(text or ""))
     if not m:
-        raise ValueError("Ce n'est pas un code de build Farever Book.")
+        raise ValueError(tr("Ce n'est pas un code de build Farever Book."))
     if m.group(1) != "1":
-        raise ValueError("Ce code vient d'une version plus récente de "
-                         "Farever Book.")
+        raise ValueError(tr("Ce code vient d'une version plus récente de "
+                            "Farever Book."))
     body = m.group(2)
     try:
         raw = zlib.decompress(base64.urlsafe_b64decode(
             body + "=" * (-len(body) % 4)))
         data = json.loads(raw.decode("utf-8"))
     except Exception:
-        raise ValueError("Code incomplet ou abîmé : recopie-le en entier.")
+        raise ValueError(tr("Code incomplet ou abîmé : recopie-le en entier."))
     if not isinstance(data, dict) or data.get("cls") not in CLASSES:
-        raise ValueError("Code illisible : classe inconnue.")
-    b = new_build(str(data.get("name") or "Build importé")[:60],
+        raise ValueError(tr("Code illisible : classe inconnue."))
+    b = new_build(str(data.get("name") or tr("Build importé"))[:60],
                   data["cls"], data.get("lvl"))
     for k in ("gear", "skills", "talents", "runes"):
         if isinstance(data.get(k), dict):
@@ -189,8 +190,8 @@ def _tier_ok(ranks, t, talents, tiers):
 
 
 def _talents_valid(b, ranks):
-    tr = tree(b)
-    talents = tr.get("talents") or []
+    tree_ = tree(b)
+    talents = tree_.get("talents") or []
     tiers = build_data().get("tiers") or [0, 1, 2, 4, 8]
     if sum(ranks.values()) > talent_points(b):
         return False
@@ -207,11 +208,11 @@ def _talents_valid(b, ranks):
 def talent_view(b):
     """The tree with each talent's rank and whether a point can be added or
     taken back."""
-    tr = tree(b)
+    tree_ = tree(b)
     ranks = {k: int(v) for k, v in (b.get("talents") or {}).items() if v}
     gifts = set(granted_talents(b))
     out = {}
-    for t in tr.get("talents") or ():
+    for t in tree_.get("talents") or ():
         r = ranks.get(t["s"], 0)
         if t["s"] in gifts and not r:
             out[t["s"]] = {"rank": t["max"], "max": t["max"], "add": False,
@@ -379,7 +380,7 @@ def to_profile(b):
         wid = (b["gear"].get(slot) or {}).get("id")
         if wid:
             arsenals[wid] = [s for s in sk.get(group) or () if s]
-    tr = tree(b)
+    tree_ = tree(b)
     skills = ([s for s in sk.get("class") or () if s] + passives(b)
               + granted_talents(b))
     return {"n": b.get("name"), "k": b["cls"], "lvl": b["lvl"], "me": False,
@@ -391,7 +392,7 @@ def to_profile(b):
             "arsenals": arsenals, "skills": skills, "statuses": [],
             "masteries": list((b.get("runes") or {}).values()),
             "prayers": [],
-            "root": tr.get("root")}
+            "root": tree_.get("root")}
 
 
 def from_profile(prof, name):
@@ -562,7 +563,7 @@ def guided_build(p):
     from gamedata import _augments_data, infusion_data
     from gearstats import gear_stats
     cls = p.get("cls") if p.get("cls") in CLASSES else "Priest"
-    b = new_build("Build guidé", cls, p.get("lvl"))
+    b = new_build(tr("Build guidé"), cls, p.get("lvl"))
     lvl = b["lvl"]
     weights = guide_weights(list(p.get("atbs") or ())[:2],
                             list(p.get("stats") or ())[:3])

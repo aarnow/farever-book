@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from common import ANALYSIS, DATA_HOME, FROZEN, ROOT, SHIPPED_ANALYSIS
+from i18n import tr
 
 WIDTH = 1200
 # the page's scripts: beside this file, or under res/ in the installed build
@@ -40,7 +41,7 @@ def edge():
 def _edge(page, w, h, *extra, budget=6000):
     exe = edge()
     if not exe:
-        raise RuntimeError("Microsoft Edge est introuvable.")
+        raise RuntimeError(tr("Microsoft Edge est introuvable."))
     args = [str(exe), "--headless=new", "--disable-gpu", "--hide-scrollbars",
             "--no-first-run", "--disable-extensions",
             f"--user-data-dir={WORK / 'profile'}",
@@ -58,7 +59,7 @@ def _shoot(page, png, w, h, transparent=False):
     _edge(page, w, h, f"--screenshot={png}",
           *(["--default-background-color=00000000"] if transparent else []))
     if not png.is_file():
-        raise RuntimeError("Edge n'a pas produit l'image.")
+        raise RuntimeError(tr("Edge n'a pas produit l'image."))
 
 
 def _height(page, w):
@@ -161,26 +162,29 @@ def _extras(g):
         if inf.get("bonus"):
             v = f'+{inf["val"]} ' if inf.get("val") else ""
             bonus = (f'<span class="pos">{e(v)}{e(inf["bonus"])}</span>' if inf.get("on")
-                     else f'<span class="off">{e(v)}{e(inf["bonus"])} (inactif, '
-                          'pièce non prismatique d’une autre faction)</span>')
+                     else f'<span class="off">{e(v)}{e(inf["bonus"])} '
+                          + e(tr("(inactif, pièce non prismatique d’une autre "
+                                 "faction)")) + '</span>')
         rows.append(f'<div class="ex inf">{f"<img src={icon!r}>" if icon else "<i></i>"}'
                     f'<b>{e(inf.get("name"))}</b>{bonus}</div>')
     elif g.get("plan"):
-        rows.append(f'<div class="ex inf"><i></i><span class="off">Bonus visé : '
-                    f'{e(g["plan"])}</span></div>')
+        rows.append('<div class="ex inf"><i></i><span class="off">'
+                    + e(tr("Bonus visé : {plan}", plan=g["plan"]))
+                    + '</span></div>')
     return "".join(rows)
 
 
 def _piece(g, slot_label, weapon=False):
     if not g:
         return (f'<div class="pc empty"><span class="pic"></span>'
-                f'<div class="pt"><b>{e(slot_label)}</b><span>Vide</span></div></div>')
+                f'<div class="pt"><b>{e(slot_label)}</b><span>{e(tr("Vide"))}</span></div></div>')
     rk = g.get("rk") or "common"
     if weapon:
         sub = e(slot_label)
     else:
         sub = e(" · ".join(x for x in (slot_label, g.get("rar")) if x))
-    prism = '<em class="prism">✦ Prismatique</em>' if g.get("prism") else ""
+    prism = (f'<em class="prism">✦ {e(tr("Prismatique"))}</em>'
+             if g.get("prism") else "")
     return (f'<div class="pc r-{rk}{" wp" if weapon else ""}">'
             f'<span class="pic"><img src="{g.get("img") or ""}"></span>'
             f'<div class="pt"><b style="color:{RARITY.get(rk, "#fff")}">{e(g.get("name"))}</b>'
@@ -227,7 +231,7 @@ def card_html(o, hero_uri=""):
                       for w in sheet.get("weapons") or ())
     ars = sheet.get("arsenal") or {}
     if ars:
-        weapons += _piece(ars.get("g"), "Arsenal", True)
+        weapons += _piece(ars.get("g"), tr("Arsenal"), True)
     left = "".join(_piece(x.get("g"), x.get("label")) for x in sheet.get("left") or ())
     right = "".join(_piece(x.get("g"), x.get("label")) for x in sheet.get("right") or ())
     infs = ""
@@ -236,7 +240,8 @@ def card_html(o, hero_uri=""):
                         f'<span>{e(t["txt"])}</span></div>' for t in s.get("tiers") or ())
         infs += (f'<div class="set"><div class="seth"><b>{e(s["name"])}</b>'
                  f'<span>{e(s.get("fac"))} · {e(s.get("role"))}</span>'
-                 f'<em>{s["n"]} pièce{"s" if s["n"] > 1 else ""}</em></div>{tiers}</div>')
+                 f'<em>{e(tr("{n} pièces", n=s["n"]) if s["n"] > 1 else tr("{n} pièce", n=s["n"]))}</em>'
+                 f'</div>{tiers}</div>')
     pts = o.get("points") or {}
     talents = []
     for tier in (o.get("tree") or {}).get("tiers") or ():
@@ -250,9 +255,9 @@ def card_html(o, hero_uri=""):
              for s in (o.get("sim") or {}).get("runes") or ()
              for r in s.get("runes") or () if r.get("on")]
     tal_txt = ("".join(f'<span class="tg">{t}</span>' for t in talents)
-               or '<span class="none">Aucun talent choisi</span>')
+               or f'<span class="none">{e(tr("Aucun talent choisi"))}</span>')
     rune_txt = ("".join(f'<span class="tg">{r}</span>' for r in runes)
-                or '<span class="none">Aucune rune choisie</span>')
+                or f'<span class="none">{e(tr("Aucune rune choisie"))}</span>')
     bg = _img("dungeon_bg", "loading_screen4_hd")
     cls_icon = _uri(ASSETS / "classes" / f"{o.get('ck')}.png")
     hero = (f'<img class="hero3d" src="{hero_uri}">' if hero_uri
@@ -389,25 +394,25 @@ h1 {{ margin:10px 0 6px; font-family:var(--fh); font-size:58px; line-height:1.02
 .foot {{ margin-top:20px; display:flex; justify-content:space-between; color:var(--faint); font-size:12px;
   border-top:1px solid var(--line); padding-top:12px; }}
 </style></head><body>
-<div class="top">{hero}<div class="brand">Farever <span>France</span></div>
- <div class="tin"><div class="kick"><img src="{cls_icon}">{e(o.get("clsFr"))} · niveau {e(o.get("lvl"))}</div>
+<div class="top">{hero}<div class="brand">Farever <span>Book</span></div>
+ <div class="tin"><div class="kick"><img src="{cls_icon}">{tr("{cls} · niveau {lvl}", cls=e(o.get("clsFr")), lvl=e(o.get("lvl")))}</div>
   <h1>{e(o.get("name"))}</h1>
   <div class="ats">{tiles}</div>
   <div class="kss">{keys}</div>
   <div class="mns">{minor}</div></div></div>
 <div class="body">
- <div class="sec">Équipement</div>
+ <div class="sec">{e(tr("Équipement"))}</div>
  <div class="wps">{weapons}</div>
  <div class="gear"><div class="gcol">{left}</div><div class="gcol">{right}</div></div>
- <div class="sec">Sorts</div>
+ <div class="sec">{e(tr("Sorts"))}</div>
  <div class="bar">{_bar(o)}</div>
  <div class="row">
-  <div><div class="sec">Imprégnations</div>{infs or '<div class="box"><span class="none">Aucune imprégnation</span></div>'}</div>
-  <div><div class="sec">Talents et runes</div>
-   <div class="box"><h4>Talents<em>{pts.get("used", 0)} / {pts.get("total", 0)}</em></h4><div class="tgs">{tal_txt}</div></div>
-   <div class="box"><h4>Runes</h4><div class="tgs">{rune_txt}</div></div></div>
+  <div><div class="sec">{e(tr("Imprégnations"))}</div>{infs or '<div class="box"><span class="none">' + e(tr("Aucune imprégnation")) + '</span></div>'}</div>
+  <div><div class="sec">{e(tr("Talents et runes"))}</div>
+   <div class="box"><h4>{e(tr("Talents"))}<em>{pts.get("used", 0)} / {pts.get("total", 0)}</em></h4><div class="tgs">{tal_txt}</div></div>
+   <div class="box"><h4>{e(tr("Runes"))}</h4><div class="tgs">{rune_txt}</div></div></div>
  </div>
- <div class="foot"><span>Fiche de build générée par Farever Book</span></div>
+ <div class="foot"><span>{e(tr("Fiche de build générée par Farever Book"))}</span></div>
 </div><script>document.body.dataset.h=Math.ceil(document.body.getBoundingClientRect().height)</script>
 </body></html>'''
 

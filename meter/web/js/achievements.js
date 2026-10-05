@@ -20,7 +20,7 @@ function renderAch(box, n) {
   const keepQ = document.activeElement && document.activeElement.classList.contains('achq');
   const caret = keepQ ? document.activeElement.selectionStart : null;
   box.textContent = '';
-  box.appendChild(el('div', 'section', 'Succès'));
+  box.appendChild(el('div', 'section', tr('Succès')));
   box.appendChild(el('p', 'note', n.sync || ''));
   const stats = el('div', 'cards achstats');
   const pct = n.n ? Math.round(n.got / n.n * 100) : 0;
@@ -36,9 +36,9 @@ function renderAch(box, n) {
     r.appendChild(ring(pct));
     return r;
   };
-  [['Points', fmtN(n.pts || 0) + ' / ' + fmtN(n.ptsAll || 0), pic((window.__COLL__ || {}).achcat_Character)],
-   ['Succès obtenus', (n.got || 0) + ' / ' + (n.n || 0), pic((window.__SHEET__ || {}).ach_badge, 'badge')],
-   ['Progression', pct + ' %', ringBox()]].forEach(([t, v, icon]) => {
+  [[tr('Points'), fmtN(n.pts || 0) + ' / ' + fmtN(n.ptsAll || 0), pic((window.__COLL__ || {}).achcat_Character)],
+   [tr('Succès obtenus'), (n.got || 0) + ' / ' + (n.n || 0), pic((window.__SHEET__ || {}).ach_badge, 'badge')],
+   [tr('Progression'), pctTxt(pct), ringBox()]].forEach(([t, v, icon]) => {
     const c = el('div', 'card');
     if (icon) c.appendChild(icon);
     const tx = el('div', 'achtx');
@@ -50,7 +50,7 @@ function renderAch(box, n) {
   box.appendChild(stats);
 
   const cats = el('div', 'achcats');
-  [{ v: '', t: 'Toutes', got: n.got, n: n.n }].concat(n.cats || []).forEach((c) => {
+  [{ v: '', t: tr('Toutes'), got: n.got, n: n.n }].concat(n.cats || []).forEach((c) => {
     const b = el('button', 'achcat' + (ACH.cat === c.v ? ' on' : ''));
     b.type = 'button';
     if (c.img) {
@@ -64,7 +64,7 @@ function renderAch(box, n) {
     }
     const t = el('span', 'ct');
     t.appendChild(el('b', null, c.t));
-    t.appendChild(el('span', null, c.got + ' / ' + c.n + (c.pts != null ? ' · ' + c.pts + ' pts' : '')));
+    t.appendChild(el('span', null, c.got + ' / ' + c.n + (c.pts != null ? ' · ' + tr('{n} pts', { n: c.pts }) : '')));
     b.appendChild(t);
     b.addEventListener('click', () => { ACH.cat = c.v; rerenderAch(); });
     cats.appendChild(b);
@@ -74,12 +74,12 @@ function renderAch(box, n) {
   const tools = el('div', 'colltools');
   const q = el('input', 'collq achq');
   q.type = 'text';
-  q.placeholder = 'Rechercher un succès';
+  q.placeholder = tr('Rechercher un succès');
   q.value = ACH.q;
   q.addEventListener('input', () => { ACH.q = q.value; rerenderAch(); });
   tools.appendChild(q);
   const seg = el('div', 'seg');
-  [['todo', 'En cours'], ['near', 'Presque finis'], ['done', 'Terminés'], ['all', 'Tous']].forEach(([v, t]) => {
+  [['todo', tr('En cours')], ['near', tr('Presque finis')], ['done', tr('Terminés')], ['all', tr('Tous')]].forEach(([v, t]) => {
     const b = el('button', ACH.filter === v ? 'on' : '', t);
     b.type = 'button';
     b.addEventListener('click', () => { ACH.filter = v; rerenderAch(); });
@@ -94,7 +94,8 @@ function renderAch(box, n) {
     && (ACH.filter !== 'near' || (it.pct != null && it.pct >= 0.5))
     && (!needle || (it.name + ' ' + it.desc).toLowerCase().includes(needle)));
   if (ACH.filter === 'near') shown = shown.slice().sort((a, b) => b.pct - a.pct);
-  box.appendChild(el('div', 'collcount', shown.length + ' succès'));
+  box.appendChild(el('div', 'collcount',
+    tr(shown.length === 1 ? '1 succès' : '{n} succès', { n: shown.length })));
 
   const list = el('div', 'achlist');
   shown.forEach((it) => {
@@ -122,7 +123,8 @@ function renderAch(box, n) {
       fill.style.width = Math.round((it.pct || 0) * 100) + '%';
       bar.appendChild(fill);
       pr.appendChild(bar);
-      pr.appendChild(el('span', null, 'Progression : ' + fmtN(Math.floor(it.have)) + ' / ' + fmtN(it.need)));
+      pr.appendChild(el('span', null, tr('Progression : {have} / {need}',
+        { have: fmtN(Math.floor(it.have)), need: fmtN(it.need) })));
       body.appendChild(pr);
     }
     card.appendChild(body);
@@ -145,14 +147,14 @@ function renderAch(box, n) {
     foot.appendChild(el('span', 'spacer'));
     if ((it.tiers || []).length > 1) {
       const pips = el('span', 'apips');
-      it.tiers.forEach((tr) => pips.appendChild(el('i', tr.ok ? 'on' : '')));
+      it.tiers.forEach((tier) => pips.appendChild(el('i', tier.ok ? 'on' : '')));
       foot.appendChild(pips);
     }
     if (it.done) foot.appendChild(el('span', 'adone', '✓' + (it.when ? ' ' + it.when : '')));
     card.appendChild(foot);
     list.appendChild(card);
   });
-  if (!shown.length) list.appendChild(el('div', 'empty', 'Rien à afficher.'));
+  if (!shown.length) list.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   box.appendChild(list);
 
   if (keepQ) {

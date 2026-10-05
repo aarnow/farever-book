@@ -7,8 +7,8 @@ let EVENTS_SEEN = null;         // how many events there were when last seen
 function eventsButton() {
   const b = el('button', 'navicon evbtn' + (EVENTS_OPEN ? ' active' : ''));
   b.type = 'button';
-  b.title = 'Événements';
-  b.setAttribute('aria-label', 'Événements');
+  b.title = tr('Événements');
+  b.setAttribute('aria-label', tr('Événements'));
   b.appendChild(svgIcon(JOURNAL_ICON));
   b.addEventListener('click', () => toggleEvents(!EVENTS_OPEN));
   return b;
@@ -55,7 +55,7 @@ function renderEvents() {
   const box = el('div', 'modal');
   const x = el('button', 'hclose', '×');
   x.type = 'button';
-  x.title = 'Fermer';
+  x.title = tr('Fermer');
   x.addEventListener('click', () => toggleEvents(false));
   box.appendChild(x);
   const p = buildEvents({ rows: rows.map((r) => r.btn ? Object.assign({}, r, {
@@ -102,18 +102,18 @@ function renderLinkSteps() {
   const box = el('div', 'modal linkmodal');
   const x = el('button', 'hclose', '×');
   x.type = 'button';
-  x.title = 'Fermer';
+  x.title = tr('Fermer');
   x.addEventListener('click', () => toggleLinkSteps(false));
   box.appendChild(x);
   const head = el('div', 'phead');
-  head.appendChild(el('h3', null, 'Connexion au jeu'));
+  head.appendChild(el('h3', null, tr('Connexion au jeu')));
   box.appendChild(head);
   const body = el('div', 'stepbody');
   const started = steps.some((st) => st.s !== 'wait');
   if (!started) {
     body.appendChild(el('p', 'note', l.state === 'play' || l.state === 'launching'
-      ? 'Farever n’est pas encore détecté : la connexion commencera dès son lancement.'
-      : 'Aucune connexion en cours.'));
+      ? tr('Farever n’est pas encore détecté : la connexion commencera dès son lancement.')
+      : tr('Aucune connexion en cours.')));
   }
   const list = el('ol', 'steps');
   steps.forEach((st) => {
@@ -248,20 +248,20 @@ function renderLink(l, shard) {
       const tri = el('i', 'tri');
       b.appendChild(tri);
     }
-    b.appendChild(el('span', null, l.state === 'play' ? 'Jouer' : 'Réessayer'));
+    b.appendChild(el('span', null, l.state === 'play' ? tr('Jouer') : tr('Réessayer')));
     if (l.tip) b.title = l.tip;
     b.addEventListener('click', () => notify(l.state === 'play' ? 'launch_game' : 'link_retry', {}));
     box.appendChild(b);
     return;
   }
   const st = el('div', 'gamestate');
-  st.title = 'Voir le détail de la connexion';
+  st.title = tr('Voir le détail de la connexion');
   st.addEventListener('click', () => toggleLinkSteps(true));
   const top = el('div', 'gs');
   top.appendChild(el('i', 'dot'));
   top.appendChild(el('b', null, l.t || ''));
   st.appendChild(top);
-  if (l.state === 'ingame' && shard) st.appendChild(el('span', 'srv', 'Serveur ' + shard));
+  if (l.state === 'ingame' && shard) st.appendChild(el('span', 'srv', tr('Serveur {shard}', { shard: shard })));
   else if (l.tip) st.appendChild(el('span', 'srv', l.tip));
   box.appendChild(st);
 }
@@ -277,7 +277,9 @@ function winCall(action, arg) {
 function setMaxState(isMax) {
   document.body.classList.toggle('maxed', !!isMax);
   const b = document.querySelector('#winctl [data-win="max"]');
-  if (b) b.title = isMax ? 'Restaurer' : 'Agrandir';
+  if (!b) return;
+  b.dataset.i18nTitle = isMax ? 'Restaurer' : 'Agrandir';   // for translateStatic
+  b.title = tr(b.dataset.i18nTitle);
 }
 
 /* At most one rectangle per frame, never before the last one is done:
@@ -361,7 +363,7 @@ let WELCOME_RUN = null;
 
 function updateWelcomeRun(w, n) {
   const pct = n.pct || 0;
-  w.pct.textContent = pct + ' %';
+  w.pct.textContent = pctTxt(pct);
   w.fill.style.width = Math.max(2, pct) + '%';
   (n.rows || []).forEach((r, i) => {
     const li = w.rows[i];
@@ -370,7 +372,7 @@ function updateWelcomeRun(w, n) {
     li.querySelector('.wmark').textContent = r.s === 'done' ? '✓' : '';
     const has = r.n !== null && r.n !== undefined;
     li.querySelector('b').textContent = has
-      ? r.n.toLocaleString('fr-FR') + ' image' + (r.n > 1 ? 's' : '') : '';
+      ? tr(r.n > 1 ? '{n} images' : '{n} image', { n: fmtN(r.n) }) : '';
   });
 }
 
@@ -393,33 +395,33 @@ function buildWelcome(n) {
   const repair = n.mode === 'repair';
   if (repair) {
     if (n.stage === 'done') {
-      card.appendChild(el('h1', null, 'Réparation terminée'));
-      card.appendChild(el('p', 'wlead', 'Les données du jeu ont été relues et la connexion au jeu '
-        + 'relancée.'));
-      card.appendChild(el('p', 'wtext', 'Si le problème persiste, contactez @Aarnow sur Discord.'));
-      card.appendChild(btn('Revenir à l’application', 'wgo', () => notify('setup_finish', {})));
+      card.appendChild(el('h1', null, tr('Réparation terminée')));
+      card.appendChild(el('p', 'wlead', tr('Les données du jeu ont été relues et la connexion au jeu '
+        + 'relancée.')));
+      card.appendChild(el('p', 'wtext', tr('Si le problème persiste, contactez @Aarnow sur Discord.')));
+      card.appendChild(btn(tr('Revenir à l’application'), 'wgo', () => notify('setup_finish', {})));
       box.appendChild(card);
       return box;
     }
-    card.appendChild(el('h1', null, n.stage === 'error' ? 'La réparation n’a pas abouti'
-      : 'Réparation de Farever Book'));
+    card.appendChild(el('h1', null, n.stage === 'error' ? tr('La réparation n’a pas abouti')
+      : tr('Réparation de Farever Book')));
     card.appendChild(el('p', 'wlead', n.stage === 'error'
-      ? 'La nouvelle analyse du jeu s’est arrêtée avant la fin.'
-      : 'Nouvelle analyse du jeu pour résoudre les problèmes rencontrés.'));
+      ? tr('La nouvelle analyse du jeu s’est arrêtée avant la fin.')
+      : tr('Nouvelle analyse du jeu pour résoudre les problèmes rencontrés.')));
   }
   if (n.stage === 'done') {
-    card.appendChild(el('h1', null, 'Tout est prêt !'));
-    card.appendChild(el('p', 'wlead', 'Merci d’utiliser Farever Book. Les images, les icônes et les '
-      + 'données du jeu sont en place, tous les modules sont accessibles.'));
-    card.appendChild(el('p', 'wgame', 'Bon jeu sur Farever !'));
-    card.appendChild(btn('Commencer', 'wgo', () => notify('setup_finish', {})));
+    card.appendChild(el('h1', null, tr('Tout est prêt !')));
+    card.appendChild(el('p', 'wlead', tr('Merci d’utiliser Farever Book. Les images, les icônes et les '
+      + 'données du jeu sont en place, tous les modules sont accessibles.')));
+    card.appendChild(el('p', 'wgame', tr('Bon jeu sur Farever !')));
+    card.appendChild(btn(tr('Commencer'), 'wgo', () => notify('setup_finish', {})));
     box.appendChild(card);
     return box;
   }
 
   if (!repair) {
-    card.appendChild(el('h1', null, 'Bienvenue sur Farever Book'));
-    card.appendChild(el('p', 'wlead', 'L’outil qui vous accompagne dans vos aventures sur Farever !'));
+    card.appendChild(el('h1', null, tr('Bienvenue sur Farever Book')));
+    card.appendChild(el('p', 'wlead', tr('L’outil qui vous accompagne dans vos aventures sur Farever !')));
   }
 
   if (n.stage === 'run') {
@@ -428,7 +430,7 @@ function buildWelcome(n) {
     const pct = el('b');
     ring.appendChild(pct);
     card.appendChild(ring);
-    card.appendChild(el('p', 'wtext', 'Récupération des données du jeu, une trentaine de secondes.'));
+    card.appendChild(el('p', 'wtext', tr('Récupération des données du jeu, une trentaine de secondes.')));
     const bar = el('div', 'wbar');
     const fill = el('i');
     bar.appendChild(fill);
@@ -450,38 +452,38 @@ function buildWelcome(n) {
   }
 
   if (!repair) {
-    card.appendChild(el('p', 'wtext', 'Pour accéder aux divers modules, nous avons besoin d’accéder '
-      + 'au dossier du jeu Farever afin d’y récupérer :'));
+    card.appendChild(el('p', 'wtext', tr('Pour accéder aux divers modules, nous avons besoin d’accéder '
+      + 'au dossier du jeu Farever afin d’y récupérer :')));
     const ul = el('ul', 'wneeds');
     (n.needs || []).forEach((t) => ul.appendChild(el('li', null, t)));
     card.appendChild(ul);
-    card.appendChild(el('p', 'wsafe', 'Le jeu est seulement lu : rien n’y est modifié, et rien ne '
-      + 'quitte votre ordinateur.'));
+    card.appendChild(el('p', 'wsafe', tr('Le jeu est seulement lu : rien n’y est modifié, et rien ne '
+      + 'quitte votre ordinateur.')));
   }
 
   if (n.stage === 'error') {
-    card.appendChild(el('p', 'werr', 'La récupération n’a pas abouti. Vérifiez que Farever est à '
-      + 'jour, puis réessayez. Si le problème persiste, contactez @Aarnow sur Discord.'));
+    card.appendChild(el('p', 'werr', tr('La récupération n’a pas abouti. Vérifiez que Farever est à '
+      + 'jour, puis réessayez. Si le problème persiste, contactez @Aarnow sur Discord.')));
   }
   if (n.stage === 'locate') {
-    card.appendChild(el('p', 'wwarn', 'Nous n’avons pas trouvé Farever sur cet ordinateur. '
-      + 'Indiquez-nous son dossier, celui qui contient Farever.exe.'));
+    card.appendChild(el('p', 'wwarn', tr('Nous n’avons pas trouvé Farever sur cet ordinateur. '
+      + 'Indiquez-nous son dossier, celui qui contient Farever.exe.')));
     if (n.err) card.appendChild(el('p', 'werr', n.err));
-    card.appendChild(btn('Parcourir…', 'wgo', welcomePick));
+    card.appendChild(btn(tr('Parcourir…'), 'wgo', welcomePick));
   } else {
     const where = el('div', 'wpath');
-    where.appendChild(el('span', null, 'Dossier du jeu'));
+    where.appendChild(el('span', null, tr('Dossier du jeu')));
     where.appendChild(el('b', null, n.path || ''));
-    const other = btn('Ce n’est pas le bon dossier ?', 'wlink', welcomePick);
+    const other = btn(tr('Ce n’est pas le bon dossier ?'), 'wlink', welcomePick);
     where.appendChild(other);
     card.appendChild(where);
     if (n.err) card.appendChild(el('p', 'werr', n.err));
-    card.appendChild(btn(n.stage === 'error' ? 'Réessayer' : 'Autoriser et commencer', 'wgo',
+    card.appendChild(btn(n.stage === 'error' ? tr('Réessayer') : tr('Autoriser et commencer'), 'wgo',
       () => notify('setup_start', {})));
   }
   if (repair) {
     // a repair can always be left: the app was working before it
-    const back = btn('Revenir à l’application', 'wlink wback', () => notify('setup_finish', {}));
+    const back = btn(tr('Revenir à l’application'), 'wlink wback', () => notify('setup_finish', {}));
     card.appendChild(back);
   }
   box.appendChild(card);
@@ -534,22 +536,51 @@ function buildThemes(n) {
     win.appendChild(band);
     const tabs = el('div', 'thtabs');
     tabs.style.background = c.panel;
-    const on = el('span', 'on', 'En jeu');
+    const on = el('span', 'on', tr('En jeu'));
     on.style.color = c.accent;
     on.style.borderColor = c.accent;
-    const off = el('span', null, 'Failles');
+    const off = el('span', null, tr('Failles'));
     off.style.color = c.dim;
     tabs.appendChild(on);
     tabs.appendChild(off);
     win.appendChild(tabs);
     b.appendChild(win);
-    b.appendChild(el('span', 'thname', it.t + (it.id === n.on ? '  ·  actif' : '')));
+    b.appendChild(el('span', 'thname', it.id === n.on ? tr('{name}  ·  actif', { name: it.t }) : it.t));
     b.addEventListener('click', () => {
       if (it.id !== n.on) notify('set_theme', { id: it.id });
     });
     grid.appendChild(b);
   });
   return grid;
+}
+
+/* Réglages › Affichage: the languages, each its flag and its own name. */
+const LANG_FLAGS = {
+  en: '<svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice"><clipPath id="fgb"><path d="M0 0v30h60V0z"/></clipPath>'
+    + '<clipPath id="fgt"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath>'
+    + '<g clip-path="url(#fgb)"><path d="M0 0v30h60V0z" fill="#012169"/>'
+    + '<path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/>'
+    + '<path d="M0 0l60 30m0-30L0 30" clip-path="url(#fgt)" stroke="#C8102E" stroke-width="4"/>'
+    + '<path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/>'
+    + '<path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>',
+  fr: '<svg viewBox="0 0 3 2"><path fill="#0055A4" d="M0 0h1v2H0z"/>'
+    + '<path fill="#fff" d="M1 0h1v2H1z"/><path fill="#EF4135" d="M2 0h1v2H2z"/></svg>',
+};
+function buildLangs(n) {
+  const box = el('div', 'langs');
+  (n.items || []).forEach((it) => {
+    const b = el('button', 'lang' + (it.id === n.on ? ' on' : ''));
+    b.type = 'button';
+    const flag = el('span', 'lflag');
+    flag.innerHTML = LANG_FLAGS[it.id] || '';
+    b.appendChild(flag);
+    b.appendChild(el('span', 'lname', it.t));
+    b.addEventListener('click', () => {
+      if (it.id !== n.on) notify('set_lang', { id: it.id });
+    });
+    box.appendChild(b);
+  });
+  return box;
 }
 
 /* The update dialog (updater.py): offer, download progress, install; also
@@ -572,19 +603,23 @@ function renderUpdate(u) {
   };
   const row = el('div', 'bbtns');
   if (u.stage === 'offer') {
-    box.appendChild(el('div', 'sptitle', 'Nouvelle version disponible'));
-    box.appendChild(el('p', 'uplead', 'Farever Book ' + u.v + ' est disponible (vous avez la ' + u.mine + ').'));
+    box.appendChild(el('div', 'sptitle', tr('Nouvelle version disponible')));
+    box.appendChild(el('p', 'uplead', tr('Farever Book {v} est disponible (vous avez la {mine}).', { v: u.v, mine: u.mine })));
     if (u.notes) {
-      box.appendChild(el('div', 'upsub', 'Nouveautés'));
+      box.appendChild(el('div', 'upsub', tr('Nouveautés')));
       box.appendChild(el('div', 'upnotes', u.notes));
     }
-    box.appendChild(el('p', 'note', 'La mise à jour télécharge l’installeur' + (u.mb ? ' (' + u.mb + ' Mo)' : '')
-      + ', l’ouvre et ferme Farever Book. Suivez l’installeur : il relance l’application à la fin. '
-      + 'Vos builds et votre historique sont conservés.'));
-    row.appendChild(btn('Plus tard', 'rowbtn', 'update_later'));
-    row.appendChild(btn('Mettre à jour', 'btn go', 'update_install'));
+    box.appendChild(el('p', 'note', u.mb
+      ? tr('La mise à jour télécharge l’installeur ({mb} Mo), l’ouvre et ferme Farever Book. '
+        + 'Suivez l’installeur : il relance l’application à la fin. '
+        + 'Vos builds et votre historique sont conservés.', { mb: u.mb })
+      : tr('La mise à jour télécharge l’installeur, l’ouvre et ferme Farever Book. '
+        + 'Suivez l’installeur : il relance l’application à la fin. '
+        + 'Vos builds et votre historique sont conservés.')));
+    row.appendChild(btn(tr('Plus tard'), 'rowbtn', 'update_later'));
+    row.appendChild(btn(tr('Mettre à jour'), 'btn go', 'update_install'));
   } else if (u.stage === 'download' || u.stage === 'installing') {
-    box.appendChild(el('div', 'sptitle', 'Mise à jour vers la ' + u.v));
+    box.appendChild(el('div', 'sptitle', tr('Mise à jour vers la {v}', { v: u.v })));
     const pct = u.stage === 'installing' ? 100 : (u.pct || 0);
     const bar = el('div', 'wbar');
     const fill = el('i');
@@ -592,19 +627,19 @@ function renderUpdate(u) {
     bar.appendChild(fill);
     box.appendChild(bar);
     box.appendChild(el('p', 'note', u.stage === 'installing'
-      ? 'Ouverture de l’installeur, Farever Book va se fermer…'
-      : 'Téléchargement de l’installeur : ' + pct + ' %'));
+      ? tr('Ouverture de l’installeur, Farever Book va se fermer…')
+      : tr('Téléchargement de l’installeur : {pct} %', { pct: pct })));
   } else if (u.stage === 'checking') {
-    box.appendChild(el('div', 'sptitle', 'Recherche d’une mise à jour…'));
+    box.appendChild(el('div', 'sptitle', tr('Recherche d’une mise à jour…')));
   } else if (u.stage === 'uptodate') {
-    box.appendChild(el('div', 'sptitle', 'Farever Book est à jour'));
-    box.appendChild(el('p', 'note', 'Vous avez déjà la dernière version.'));
-    row.appendChild(btn('Fermer', 'btn go', 'update_close'));
+    box.appendChild(el('div', 'sptitle', tr('Farever Book est à jour')));
+    box.appendChild(el('p', 'note', tr('Vous avez déjà la dernière version.')));
+    row.appendChild(btn(tr('Fermer'), 'btn go', 'update_close'));
   } else {
-    box.appendChild(el('div', 'sptitle', 'Mise à jour impossible'));
-    box.appendChild(el('p', 'werr', u.t || 'Une erreur est survenue.'));
-    if (u.page) row.appendChild(btn('Page des versions', 'rowbtn', 'update_page'));
-    row.appendChild(btn('Fermer', 'btn go', 'update_close'));
+    box.appendChild(el('div', 'sptitle', tr('Mise à jour impossible')));
+    box.appendChild(el('p', 'werr', u.t || tr('Une erreur est survenue.')));
+    if (u.page) row.appendChild(btn(tr('Page des versions'), 'rowbtn', 'update_page'));
+    row.appendChild(btn(tr('Fermer'), 'btn go', 'update_close'));
   }
   if (row.children.length) box.appendChild(row);
   back.appendChild(box);

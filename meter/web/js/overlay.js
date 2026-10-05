@@ -1,6 +1,17 @@
 /* An overlay over the game (menu_host.Overlay): "meter" or "goals", set by
    window.__OVERLAY__. State arrives through applyOverlay(json). */
 const OV_ID = window.__OVERLAY__;
+
+/* The interface's language, as in the window (core.js): the texts are
+   written in French, tr() gives them in the chosen one ({lang, dict: French
+   text -> translation}, i18n.py). {name} placeholders are filled from `vars`. */
+let I18N = window.__I18N__ || { lang: 'fr', dict: {} };
+function tr(s, vars) {
+  let r = (I18N.dict && I18N.dict[s]) || s;
+  if (vars) r = r.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  return r;
+}
+document.documentElement.lang = I18N.lang || 'fr';
 let OV = null;                  // the last state
 let OV_SMALL = false;           // collapsed to the header
 const ADD = { open: false, q: '', res: [], pick: null, n: 1, seq: 0 };
@@ -26,6 +37,13 @@ function btn(cls, text, title, onClick) {
 window.applyTheme = function (css) {
   const st = document.getElementById('css');
   if (st) st.textContent = css;
+};
+
+/* Another language (called by the host): its catalogue, then drawn again. */
+window.applyLang = function (json) {
+  try { I18N = JSON.parse(json); } catch (e) { return; }
+  document.documentElement.lang = I18N.lang || 'fr';
+  render();
 };
 
 window.applyOverlay = function (json) {
@@ -102,24 +120,24 @@ function renderMeter(box) {
   box.className = heal ? 'heal' : '';
   const tabs = el('div', 'tabs');
   if (m.heals) {
-    [['dmg', 'Dégâts'], ['heal', 'Soins']].forEach(([k, t]) => {
+    [['dmg', tr('Dégâts')], ['heal', tr('Soins')]].forEach(([k, t]) => {
       tabs.appendChild(btn('tab' + (m.tab === k ? ' on' : ''), t, null,
         () => api() && api().notify('ov_tab', { tab: k })));
     });
   }
-  const h = head('Groupe', m.heals ? [tabs] : []);
+  const h = head(tr('Groupe'), m.heals ? [tabs] : []);
   if (m.time) h.appendChild(el('span', 'clock' + (m.fight ? ' hot' : ''), m.time));
-  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? 'Déplier' : 'Replier',
+  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
     () => { OV_SMALL = !OV_SMALL; render(); }));
   box.appendChild(h);
   if (OV_SMALL) return;
   const body = el('div', 'body');
   if (!(m.rows || []).length) {
-    body.appendChild(el('div', 'empty', 'En attente d’un combat…'));
+    body.appendChild(el('div', 'empty', tr('En attente d’un combat…')));
   } else {
     if (m.total) {
       const t = el('div', 'total');
-      t.appendChild(el('span', null, heal ? 'Soins du groupe' : 'Dégâts du groupe'));
+      t.appendChild(el('span', null, heal ? tr('Soins du groupe') : tr('Dégâts du groupe')));
       t.appendChild(el('b', null, m.total));
       body.appendChild(t);
     }
@@ -142,11 +160,11 @@ function renderMeter(box) {
 function renderGoals(box) {
   const g = OV.goals || { rows: [] };
   const done = (g.rows || []).filter((r) => r.done).length;
-  const h = head('Objectifs', [el('span', 'clock', (g.rows || []).length
+  const h = head(tr('Objectifs'), [el('span', 'clock', (g.rows || []).length
     ? done + ' / ' + g.rows.length : '')]);
-  h.appendChild(btn('ib', ADD.open ? '−' : '+', ADD.open ? 'Fermer' : 'Ajouter un objectif',
+  h.appendChild(btn('ib', ADD.open ? '−' : '+', ADD.open ? tr('Fermer') : tr('Ajouter un objectif'),
     () => { ADD.open = !ADD.open; OV_SMALL = false; if (!ADD.open) leaveTyping(); render(); }));
-  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? 'Déplier' : 'Replier',
+  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
     () => { OV_SMALL = !OV_SMALL; render(); }));
   box.appendChild(h);
   if (OV_SMALL) return;
@@ -162,8 +180,8 @@ function renderList(into) {
   const g = OV.goals || { rows: [] };
   list.textContent = '';
   if (!(g.rows || []).length) {
-    list.appendChild(el('div', 'empty', ADD.open ? 'Choisis un objet ou une rareté ci-dessous.'
-      : 'Aucun objectif. « + » pour en ajouter un.'));
+    list.appendChild(el('div', 'empty', ADD.open ? tr('Choisis un objet ou une rareté ci-dessous.')
+      : tr('Aucun objectif. « + » pour en ajouter un.')));
   }
   (g.rows || []).forEach((r) => {
     const row = el('div', 'grow' + (r.done ? ' done' : ''));
@@ -183,11 +201,11 @@ function renderList(into) {
     p.appendChild(el('span', 'gc', r.done ? '✓ ' + r.have + ' / ' + r.n : r.have + ' / ' + r.n));
     t.appendChild(p);
     row.appendChild(t);
-    row.appendChild(btn('ib x', '×', 'Retirer', () => api() && api().notify('goal_del', { id: r.id })));
+    row.appendChild(btn('ib x', '×', tr('Retirer'), () => api() && api().notify('goal_del', { id: r.id })));
     list.appendChild(row);
   });
   if (g.rows && g.rows.some((r) => !r.rk) && g.banks === 0) {
-    list.appendChild(el('div', 'note', 'Banque pas encore lue : ouvre-la une fois en jeu.'));
+    list.appendChild(el('div', 'note', tr('Banque pas encore lue : ouvre-la une fois en jeu.')));
   }
 }
 
@@ -209,15 +227,15 @@ function addForm() {
       if (e.key === 'Escape') { ADD.pick = null; render(); }
     });
     row.appendChild(n);
-    row.appendChild(btn('go', 'Ajouter', null, confirmAdd));
+    row.appendChild(btn('go', tr('Ajouter'), null, confirmAdd));
     f.appendChild(row);
-    f.appendChild(btn('chip', '‹ Changer', null, () => { ADD.pick = null; render(); }));
+    f.appendChild(btn('chip', tr('‹ Changer'), null, () => { ADD.pick = null; render(); }));
     setTimeout(() => { n.focus(); n.select(); }, 0);
     return f;
   }
   const q = el('input');
   q.type = 'text';
-  q.placeholder = 'Rechercher un objet (minerai, plante…)';
+  q.placeholder = tr('Rechercher un objet (minerai, plante…)');
   q.value = ADD.q;
   q.addEventListener('focus', enterTyping);
   q.addEventListener('keydown', (e) => {
@@ -254,8 +272,9 @@ function addForm() {
   drawRes();
   const quick = el('div', 'quick');
   ((OV.goals || {}).rarities || []).forEach((r) => {
-    quick.appendChild(btn('chip', 'Objet ' + r.t.toLowerCase(), 'Compte les objets de cette rareté ramassés à partir de maintenant',
-      () => choose({ kind: 'rarity', ref: r.v, t: 'Objet ' + r.t.toLowerCase() })));
+    const label = tr('Objet {rarity}', { rarity: r.t.toLowerCase() });
+    quick.appendChild(btn('chip', label, tr('Compte les objets de cette rareté ramassés à partir de maintenant'),
+      () => choose({ kind: 'rarity', ref: r.v, t: label })));
   });
   f.appendChild(quick);
   setTimeout(() => q.focus(), 0);

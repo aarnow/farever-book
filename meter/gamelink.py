@@ -10,6 +10,7 @@ import frida
 from common import (
     BOSS_PULL_BACKLAG_SECS, NULLIFIED_BLOCKERS, STOP, TARGET_PROCESS, _APP,
     _mmss)
+from i18n import tr
 from winsys import _process_age, _window_rect_of_pid
 from gamedata import (
     DATA_CONSENT, _zone_label, build_script_source,
@@ -142,11 +143,11 @@ class GameSession:
                   "        (Avoid repeatedly relaunching against a stuck "
                   "session — that can crash the game.)", file=sys.stderr)
             self._detach()
-            self.link.step("scan", "fail", "échec après 3 tentatives")
+            self.link.step("scan", "fail", tr("échec après 3 tentatives"))
             self.link.set_state(GameLink.FAILED,
-                                "le compteur n'a pas pu se brancher sur le "
-                                "jeu — ferme complètement Farever et "
-                                "relance-le")
+                                tr("le compteur n'a pas pu se brancher sur le "
+                                   "jeu — ferme complètement Farever et "
+                                   "relance-le"))
             return False
         self._connected()
         return True
@@ -155,7 +156,7 @@ class GameSession:
         """The data files matched to the running build's hlboot.dat, once
         the player has consented (welcome screen). Skipped when unchanged."""
         link = self.link
-        link.step("data", "run", "comparaison avec la version installée")
+        link.step("data", "run", tr("comparaison avec la version installée"))
         while not DATA_CONSENT.wait(0.5):
             if STOP.is_set():
                 return False
@@ -166,16 +167,16 @@ class GameSession:
         else:
             print(f"[*] game data: {self.hlboot}", file=sys.stderr)
             regenerate_data(self.hlboot, on_step=lambda t: link.step(
-                "data", detail=f"mise à jour du jeu détectée : relecture "
-                               f"({t})"))
-        link.step("data", "ok", "à jour")
+                "data", detail=tr("mise à jour du jeu détectée : relecture "
+                                  "({t})", t=t)))
+        link.step("data", "ok", tr("à jour"))
         return True
 
     def _attach(self):
         link, pid = self.link, self.pid
         print(f"[*] attaching to {TARGET_PROCESS} (pid {pid}) ...",
               file=sys.stderr)
-        link.step("attach", "run", "recherche du jeu en cours d'utilisation")
+        link.step("attach", "run", tr("recherche du jeu en cours d'utilisation"))
         try:
             self.fsession = self.device.attach(pid)
         except frida.ProcessNotFoundError:
@@ -184,9 +185,9 @@ class GameSession:
             return False
         except frida.PermissionDeniedError:
             link.set_state(GameLink.FAILED,
-                           "connexion refusée — si Farever tourne en "
-                           "administrateur, lance aussi le compteur en "
-                           "administrateur")
+                           tr("connexion refusée — si Farever tourne en "
+                              "administrateur, lance aussi le compteur en "
+                              "administrateur"))
             return False
         except Exception as e:
             print(f"[meter] attach to pid {pid} failed: {e}", file=sys.stderr)
@@ -200,7 +201,7 @@ class GameSession:
                     return False
                 if STOP.wait(0.5):
                     return False
-            link.set_state(GameLink.FAILED, f"connexion impossible : {e}")
+            link.set_state(GameLink.FAILED, tr("connexion impossible : {e}", e=e))
             return False
 
         def on_detached(*args):
@@ -225,8 +226,10 @@ class GameSession:
                 break
             self.ready.update(ok=None, early=False)
             self.ready_evt.clear()
-            link.step("scan", "run", "recherche de la table des fonctions"
-                      + (f" — tentative {attempt}/3" if attempt > 1 else ""))
+            link.step("scan", "run",
+                      tr("recherche de la table des fonctions — tentative "
+                         "{n}/3", n=attempt) if attempt > 1
+                      else tr("recherche de la table des fonctions"))
             link.step("hook", "wait", "")
             self.last_message = time.monotonic()
             try:
@@ -245,8 +248,8 @@ class GameSession:
                 _unload_hook(self.script)
                 self.script = None
                 attempt -= 1
-                link.step("scan", detail="le jeu n'a pas fini de charger — "
-                                         "nouvel essai dans 4 s")
+                link.step("scan", detail=tr("le jeu n'a pas fini de charger "
+                                            "— nouvel essai dans 4 s"))
                 if STOP.wait(4.0):
                     break
                 continue
@@ -257,8 +260,9 @@ class GameSession:
                 self.script = None
             if self.ready["ok"] is False and not self.ready["early"]:
                 # the function table was not found: the data, read again
-                link.step("scan", detail="introuvable — relecture des "
-                                         "données du jeu puis nouvel essai")
+                link.step("scan", detail=tr("introuvable — relecture des "
+                                            "données du jeu puis nouvel "
+                                            "essai"))
                 regenerate_data(self.hlboot, force=True)
             time.sleep(1.0)
         return False
@@ -290,9 +294,9 @@ class GameSession:
         link.script = self.script
         link.step("hook", "ok", "")
         if self.hero_name is None:
-            link.step("hero", "run", "en attente de ton personnage en jeu")
+            link.step("hero", "run", tr("en attente de ton personnage en jeu"))
         if not self.zone_seen:
-            link.step("zone", "run", "en attente")
+            link.step("zone", "run", tr("en attente"))
         link.set_state(GameLink.CONNECTED, pid=self.pid)
         print("[*] connected — everything shows in the Farever Book "
               "window; the reset hotkey is set in Réglages.", file=sys.stderr)
@@ -407,7 +411,7 @@ class GameSession:
               + (f" (recording: {what})" if what else ""), file=sys.stderr)
         app = _app()
         if what == "abandoned" and app is not None:
-            app.on_rift_dropped("la faille s’est terminée avant le boss")
+            app.on_rift_dropped(tr("la faille s’est terminée avant le boss"))
 
     def _on_bossbar(self, p):
         """The game's boss / elite bar went up or down. A fight starts on
@@ -497,7 +501,7 @@ class GameSession:
                   file=sys.stderr)
             app = _app()
             if app is not None:
-                app.on_rift_dropped("changement de zone avant la victoire")
+                app.on_rift_dropped(tr("changement de zone avant la victoire"))
         self._end_boss_fight()
         print(f"[meter] zone change ({p.get('sig')!r}) — meter reset",
               file=sys.stderr)
@@ -508,7 +512,7 @@ class GameSession:
         if p.get("initial"):
             self.link.step("zone", detail=" · ".join(
                 x for x in (self.link.steps_detail("zone"),
-                            f"serveur {p.get('name')}") if x))
+                            tr("serveur {name}", name=p.get('name'))) if x))
         print(f"[meter] shard "
               f"{'identified' if p.get('initial') else 'change'}"
               f" ({p.get('name')!r})", file=sys.stderr)
@@ -537,15 +541,16 @@ class GameSession:
         msg = str(p.get("msg") or "")
         print("[hook]", p.get("msg"), file=sys.stderr)
         if "functions_ptrs via" in msg:
-            self.link.step("scan", "ok", "fonctions trouvées")
-            self.link.step("hook", "run", "mise en place des modules")
+            self.link.step("scan", "ok", tr("fonctions trouvées"))
+            self.link.step("hook", "run", tr("mise en place des modules"))
         elif "memory scan" in msg:
-            self.link.step("scan", detail="balayage de la mémoire du jeu")
+            self.link.step("scan", detail=tr("balayage de la mémoire du jeu"))
 
     def _on_progress(self, p):
         if p.get("total"):
-            self.link.step("scan", detail=f"balayage de la mémoire : "
-                           f"{p.get('done')} / {p.get('total')} régions")
+            self.link.step("scan", detail=tr(
+                "balayage de la mémoire : {done} / {total} régions",
+                done=p.get('done'), total=p.get('total')))
         now = time.monotonic()
         if now - self.progress_printed > 5.0:
             self.progress_printed = now
@@ -555,7 +560,7 @@ class GameSession:
 
     def _on_ready(self, p):
         if p.get("ok"):
-            self.link.step("scan", "ok", "fonctions trouvées")
+            self.link.step("scan", "ok", tr("fonctions trouvées"))
             self.link.step("hook", "ok", "")
         self.ready["ok"] = p.get("ok")
         self.ready["early"] = bool(p.get("early"))
@@ -641,7 +646,7 @@ class GameLink:
                 st = self._steps.get(key) or {}
                 t0, t1 = st.get("t0"), st.get("t1")
                 secs = ((t1 or now) - t0) if t0 else None
-                out.append({"t": label, "s": st.get("state") or "wait",
+                out.append({"t": tr(label), "s": st.get("state") or "wait",
                             "d": st.get("detail") or "",
                             "secs": _mmss(secs) if secs is not None
                             and secs >= 1 else ""})
@@ -685,14 +690,15 @@ class GameLink:
                   f"{FRIDA_GOOD_VERSION}: py -m pip install "
                   f"frida=={FRIDA_GOOD_VERSION}", file=sys.stderr)
             self.set_state(self.FAILED,
-                           f"Frida {bad} ferait planter le jeu à la fermeture "
-                           f"de Farever Book. Installe la {FRIDA_GOOD_VERSION} : "
-                           f"py -m pip install frida=={FRIDA_GOOD_VERSION}")
+                           tr("Frida {bad} ferait planter le jeu à la "
+                              "fermeture de Farever Book. Installe la {good} : "
+                              "py -m pip install frida=={good}",
+                              bad=bad, good=FRIDA_GOOD_VERSION))
             return
         try:
             device = frida.get_local_device()
         except Exception as e:
-            self.set_state(self.FAILED, f"frida indisponible : {e}")
+            self.set_state(self.FAILED, tr("frida indisponible : {e}", e=e))
             return
         while not STOP.is_set():
             self.set_state(self.CLOSED)
@@ -714,7 +720,7 @@ class GameLink:
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                self.set_state(self.FAILED, f"erreur inattendue : {e}")
+                self.set_state(self.FAILED, tr("erreur inattendue : {e}", e=e))
             if STOP.is_set():
                 return
             if self.status()[0] == self.FAILED:
@@ -758,7 +764,7 @@ class GameLink:
     def _wait_booted(self, device, pid):
         """True once the game looks booted; False if it closes or we stop."""
         said = False
-        self.step("boot", "run", "Farever est lancé")
+        self.step("boot", "run", tr("Farever est lancé"))
         while not STOP.is_set():
             age = _process_age(pid)
             if age is None or age >= self.BOOT_MAX_SECS:
@@ -767,9 +773,9 @@ class GameLink:
             if age >= self.BOOT_MIN_SECS and _window_rect_of_pid(pid):
                 self.step("boot", "ok", "")
                 return True
-            self.step(detail=("le jeu finit de démarrer"
+            self.step(detail=(tr("le jeu finit de démarrer")
                               if _window_rect_of_pid(pid)
-                              else "en attente de la fenêtre du jeu"),
+                              else tr("en attente de la fenêtre du jeu")),
                       key="boot")
             if not self.game_alive(device, pid):
                 return False

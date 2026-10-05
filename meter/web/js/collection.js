@@ -61,11 +61,11 @@ function renderCollection(box, n) {
   const pct = total ? Math.round(got / total * 100) : 0;
 
   const side = el('aside', 'collside');
-  side.appendChild(el('div', 'section', 'Collection'));
+  side.appendChild(el('div', 'section', tr('Collection')));
   if (n.sync) side.appendChild(el('p', 'note', n.sync));
   const top = el('div', 'colltotal');
   top.appendChild(el('b', null, got + ' / ' + total));
-  top.appendChild(el('span', null, pct + ' %'));
+  top.appendChild(el('span', null, pctTxt(pct)));
   side.appendChild(top);
   const bar_ = el('div', 'collbar');
   const fill = el('i');
@@ -85,7 +85,8 @@ function renderCollection(box, n) {
     const t = el('div', 'tx');
     t.appendChild(el('b', null, c.t));
     t.appendChild(el('span', null, c.got + ' / ' + c.n));
-    t.appendChild(el('small', null, (c.n - c.got) + ' restant' + (c.n - c.got > 1 ? 's' : '')));
+    t.appendChild(el('small', null,
+      tr(c.n - c.got > 1 ? '{n} restants' : '{n} restant', { n: c.n - c.got })));
     card.appendChild(t);
     const first = (n.items || []).find((it) => it.c === c.v && it.own)
       || (n.items || []).find((it) => it.c === c.v);
@@ -103,12 +104,12 @@ function renderCollection(box, n) {
   const tools = el('div', 'colltools');
   const q = el('input', 'collq');
   q.type = 'text';
-  q.placeholder = 'Rechercher par nom';
+  q.placeholder = tr('Rechercher par nom');
   q.value = COLL.q;
   q.addEventListener('input', () => { COLL.q = q.value; rerenderCollection(); });
   tools.appendChild(q);
   const seg = el('div', 'seg');
-  [['all', 'Tous'], ['missing', 'Manquants'], ['own', 'Obtenus']].forEach(([v, t]) => {
+  [['all', tr('Tous')], ['missing', tr('Manquants')], ['own', tr('Obtenus')]].forEach(([v, t]) => {
     const b = el('button', COLL.filter === v ? 'on' : '', t);
     b.type = 'button';
     b.addEventListener('click', () => { COLL.filter = v; rerenderCollection(); });
@@ -146,11 +147,11 @@ function renderCollection(box, n) {
     return im;
   };
   if (gears && (n.slots || []).length) {
-    list.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.slots.map((sl) => (
+    list.appendChild(chips([{ v: '', t: tr('Tous') }].concat(n.slots.map((sl) => (
       { v: sl.v, t: sl.t, icon: art('slot_' + sl.v) }))), COLL.slot, (v) => { COLL.slot = v; }));
   }
   if (gears && (n.classes || []).length) {
-    list.appendChild(chips([{ v: '', t: 'Toutes les classes' }].concat(n.classes.map((c) => (
+    list.appendChild(chips([{ v: '', t: tr('Toutes les classes') }].concat(n.classes.map((c) => (
       { v: c.v, t: c.t, icon: classEl(c.t, c.v, 'cfic') }))), COLL.cls, (v) => { COLL.cls = v; }));
   }
   if (things && (n.itemCats || []).length) {
@@ -163,11 +164,11 @@ function renderCollection(box, n) {
       im.classList.add('cfic');
       return im;
     };
-    list.appendChild(chips([{ v: '', t: 'Tous' }].concat(n.itemCats.map((c) => (
+    list.appendChild(chips([{ v: '', t: tr('Tous') }].concat(n.itemCats.map((c) => (
       { v: c.v, t: c.t, icon: pick(c.v) }))), COLL.icat, (v) => { COLL.icat = v; }));
   }
 
-  const cat = cats.find((c) => c.v === COLL.cat) || cats[0] || { one: 'élément' };
+  const cat = cats.find((c) => c.v === COLL.cat) || cats[0] || { one: tr('élément') };
   const needle = COLL.q.trim().toLowerCase();
   const shown = (n.items || []).filter((it) => it.c === COLL.cat
     && (COLL.filter === 'all' || (COLL.filter === 'own') === it.own)
@@ -218,7 +219,7 @@ function renderCollection(box, n) {
     });
     grid.appendChild(card);
   });
-  if (!shown.length) grid.appendChild(el('div', 'empty', 'Rien à afficher.'));
+  if (!shown.length) grid.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   list.appendChild(grid);
   main.appendChild(list);
   main.appendChild(sel ? buildCollView(sel, cat) : el('div', 'collview empty'));
@@ -246,8 +247,8 @@ function buildCollView(it, cat) {
   pic.appendChild(collImg(it.id));
   stage.appendChild(pic);
   if (COLL_3D.has(it.c) && m3dSupported()) {
-    const wait = el('div', 'cvwait', 'Chargement du modèle 3D…');
-    const hint = el('div', 'cvhint', 'Glisser pour tourner · molette pour zoomer');
+    const wait = el('div', 'cvwait', tr('Chargement du modèle 3D…'));
+    const hint = el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer'));
     stage.classList.add('is3d');
     // a glider's wings read best from above
     stage.appendChild(m3dCanvas(it.id, (st) => {
@@ -259,29 +260,30 @@ function buildCollView(it, cat) {
   const head = el('div', 'cvhead');
   head.appendChild(el('h3', 'nm', it.name));
   head.appendChild(el('span', 'sub', [cat.t && cat.t.replace(/s$/, ''), it.slot, it.rar].filter(Boolean).join(' · ')));
-  head.appendChild(el('span', 'chip' + (it.own ? ' own' : ''), it.own ? '✓ Obtenu' : 'Manquant'));
+  head.appendChild(el('span', 'chip' + (it.own ? ' own' : ''), it.own ? tr('✓ Obtenu') : tr('Manquant')));
   stage.appendChild(head);
   v.appendChild(stage);
 
   const d = el('div', 'cvinfo');
   if (it.rmax) {
-    d.appendChild(el('p', 'desc', 'Obtenu ' + fmtN(it.count || 0) + ' fois · rang '
-      + (it.rank || 0) + ' / ' + it.rmax
-      + (it.uses ? ' · utilisé dans ' + it.uses + ' recette' + (it.uses > 1 ? 's' : '') : '')));
+    d.appendChild(el('p', 'desc', tr('Obtenu {n} fois · rang {rank} / {max}',
+      { n: fmtN(it.count || 0), rank: it.rank || 0, max: it.rmax })
+      + (it.uses ? ' · ' + tr(it.uses > 1 ? 'utilisé dans {n} recettes' : 'utilisé dans {n} recette',
+        { n: it.uses }) : '')));
   }
   if (it.slot && (it.lvl || it.apt)) {
-    d.appendChild(el('p', 'desc', [it.lvl ? 'Niveau ' + it.lvl : '',
-      it.apt ? 'Classes : ' + it.apt : ''].filter(Boolean).join(' · ')));
+    d.appendChild(el('p', 'desc', [it.lvl ? tr('Niveau {n}', { n: it.lvl }) : '',
+      it.apt ? tr('Classes : {list}', { list: it.apt }) : ''].filter(Boolean).join(' · ')));
   }
   if (it.desc) d.appendChild(el('p', 'desc it', it.desc));
-  d.appendChild(el('div', 'sub2', "Comment l'obtenir"));
+  d.appendChild(el('div', 'sub2', tr("Comment l'obtenir")));
   if (it.src && it.src.length) {
     const ul = el('ul', 'srcs');
     it.src.forEach((s) => ul.appendChild(el('li', null, s)));
     d.appendChild(ul);
   } else {
-    d.appendChild(el('p', 'none', "Aucune source dans les données du jeu : récompense "
-      + "spéciale (événement, précommande…), boutique, ou pas encore disponible."));
+    d.appendChild(el('p', 'none', tr("Aucune source dans les données du jeu : récompense "
+      + "spéciale (événement, précommande…), boutique, ou pas encore disponible.")));
   }
   v.appendChild(d);
   return v;

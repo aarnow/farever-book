@@ -9,8 +9,8 @@ function buildMeter(n) {
     return p;
   }
   const head = el('div', 'mline mhead');
-  ['#', 'Joueur', 'Cl.', 'Dégâts', 'DPS', '%']
-    .concat(n.heal ? ['Soins', 'Excès'] : [])
+  ['#', tr('Joueur'), tr('Cl.'), tr('Dégâts'), 'DPS', '%']
+    .concat(n.heal ? [tr('Soins'), tr('Excès')] : [])
     .forEach((h, i) => head.appendChild(el('span', i > 2 ? 'num' : '', h)));
   p.appendChild(head);
   n.rows.forEach((r) => {
@@ -63,7 +63,7 @@ function skillList(title, rows, kind) {
 function buildDetail(n) {
   const p = el('div', 'panel detail');
   if (!n.name) {
-    p.appendChild(el('h3', null, 'Détail'));
+    p.appendChild(el('h3', null, tr('Détail')));
     p.appendChild(el('div', 'empty', n.empty));
     return p;
   }
@@ -79,8 +79,8 @@ function buildDetail(n) {
   });
   p.appendChild(stats);
   const cols = el('div', 'skills' + (n.heal ? '' : ' one'));
-  cols.appendChild(skillList('Dégâts par sort', n.dmg, 'd'));
-  if (n.heal) cols.appendChild(skillList('Soins par sort', n.heal, 'h'));
+  cols.appendChild(skillList(tr('Dégâts par sort'), n.dmg, 'd'));
+  if (n.heal) cols.appendChild(skillList(tr('Soins par sort'), n.heal, 'h'));
   p.appendChild(cols);
   if (n.elements && n.elements.length) {
     const e = el('div', 'elems');
@@ -100,30 +100,32 @@ function buildDetail(n) {
 /* The local hero's loot luck counters (read by the hook every minute). */
 function buildLuck(n) {
   const box = el('div', 'luckbox');
-  box.appendChild(el('div', 'sub2', 'Chance de butin'));
+  box.appendChild(el('div', 'sub2', tr('Chance de butin')));
   if (!n.rows) {
     box.appendChild(el('p', 'note', n.empty || ''));
     return box;
   }
-  box.appendChild(el('p', 'note', 'Les compteurs de chance du jeu. Le bonus est lié à '
-    + 'l’offrande correspondante du Puits des âmes.'));
+  box.appendChild(el('p', 'note', tr('Les compteurs de chance du jeu. Le bonus est lié à '
+    + 'l’offrande correspondante du Puits des âmes.')));
   const lk = el('div', 'lucklist');
   n.rows.forEach((l) => {
     const row = el('div', 'luckrow' + (l.on ? ' on' : ''));
     const t = el('div', 'lt');
     t.appendChild(el('b', null, l.t));
     t.appendChild(el('span', null, l.grows
-      ? 'Compteur ' + l.n + ' · +' + l.inc + ' par cran · '
-        + (l.full ? 'plafond atteint' : l.steps + ' cran' + (l.steps > 1 ? 's' : '') + ' avant le plafond')
-      : 'Bonus fixe'));
+      ? (l.full ? tr('Compteur {n} · +{inc} par cran · plafond atteint', { n: l.n, inc: l.inc })
+        : tr(l.steps > 1 ? 'Compteur {n} · +{inc} par cran · {steps} crans avant le plafond'
+          : 'Compteur {n} · +{inc} par cran · {steps} cran avant le plafond',
+        { n: l.n, inc: l.inc, steps: l.steps }))
+      : tr('Bonus fixe')));
     row.appendChild(t);
     const v = el('div', 'lv');
     v.appendChild(el('b', null, '+' + l.bonus));
-    v.appendChild(el('span', null, 'sur ' + l.cap + ' max'));
+    v.appendChild(el('span', null, tr('sur {cap} max', { cap: l.cap })));
     row.appendChild(v);
     row.appendChild(el('span', 'lst' + (l.on ? ' on' : ''), l.on
-      ? 'Offrande active' + (l.left != null ? ' · ' + l.left + ' min' : '')
-      : 'Pas d’offrande'));
+      ? (l.left != null ? tr('Offrande active · {left} min', { left: l.left }) : tr('Offrande active'))
+      : tr('Pas d’offrande')));
     lk.appendChild(row);
   });
   box.appendChild(lk);
@@ -133,7 +135,7 @@ function buildLuck(n) {
 /* The local hero's statistics (Progress.counters). */
 function buildStatCards(n) {
   const box = el('div', 'statbox');
-  box.appendChild(el('div', 'sub2', 'Statistiques'));
+  box.appendChild(el('div', 'sub2', tr('Statistiques')));
   const st = el('div', 'cards statcards');
   (n.items || []).forEach((x) => {
     const c = el('div', 'card');
@@ -149,17 +151,17 @@ function buildStatCards(n) {
 function buildEvents(n) {
   const p = el('div', 'panel events');
   const head = el('div', 'phead');
-  const count = n.rows && n.rows.length ? ' (' + n.rows.length + ')' : '';
-  head.appendChild(el('h3', null, 'Événements' + count));
+  const count = n.rows && n.rows.length ? n.rows.length : 0;
+  head.appendChild(el('h3', null, count ? tr('Événements ({n})', { n: count }) : tr('Événements')));
   if (count) {
-    const clr = el('button', 'rowbtn', 'Effacer');
+    const clr = el('button', 'rowbtn', tr('Effacer'));
     clr.addEventListener('click', () => notify('clear_events', {}));
     head.appendChild(clr);
   }
   p.appendChild(head);
   if (!n.rows || !n.rows.length) {
     p.appendChild(el('div', 'empty',
-      'Les kills de boss, records et fins de faille apparaîtront ici.'));
+      tr('Les kills de boss, records et fins de faille apparaîtront ici.')));
     return p;
   }
   // newest first, in its own scrolling box so the page never grows
@@ -187,8 +189,8 @@ function buildEvents(n) {
 function buildLiveIntro(n) {
   const box = el('div', 'lintro');
   const head = el('div', 'lihead');
-  head.appendChild(el('h1', null, 'En jeu'));
-  head.appendChild(el('p', null, 'Ce module fonctionne en direct, pendant que vous jouez à Farever.'));
+  head.appendChild(el('h1', null, tr('En jeu')));
+  head.appendChild(el('p', null, tr('Ce module fonctionne en direct, pendant que vous jouez à Farever.')));
   box.appendChild(head);
   const grid = el('div', 'ligrid');
   const card = (cls, icon, title, text, extra) => {
@@ -209,20 +211,20 @@ function buildLiveIntro(n) {
   card('fight',
     '<svg viewBox="0 0 24 24"><path d="M6.9 18.5 4 21.4 2.6 20l2.9-2.9-1.4-1.4 1.4-1.4 1.8 1.8L15.7 7.7l-.4-2.9 '
     + '3.5-2.2 2.6 2.6-2.2 3.5-2.9-.4-8.4 8.4 1.8 1.8-1.4 1.4-1.4-1.4Z"/></svg>',
-    'Vos performances en combat',
-    'Les dégâts et les soins, en DPS et en HPS, pour vous-même et pour votre groupe, combat par combat. '
-    + 'Un clic sur un joueur détaille ses sorts, ses coups critiques, ses éléments et ses soins en excès.',
-    tags(['Dégâts et DPS', 'Soins et HPS', 'Votre groupe', 'Détail par joueur']));
+    tr('Vos performances en combat'),
+    tr('Les dégâts et les soins, en DPS et en HPS, pour vous-même et pour votre groupe, combat par combat. '
+    + 'Un clic sur un joueur détaille ses sorts, ses coups critiques, ses éléments et ses soins en excès.'),
+    tags([tr('Dégâts et DPS'), tr('Soins et HPS'), tr('Votre groupe'), tr('Détail par joueur')]));
   card('luck',
     '<svg viewBox="0 0 24 24"><path d="M12 2 14.6 8.6 21.6 9.2 16.3 13.8 17.9 20.7 12 17 6.1 20.7 7.7 13.8 2.4 9.2 '
     + '9.4 8.6Z"/></svg>',
-    'Vos chances de butin',
-    'Les chances de butin de votre personnage. Elles augmentent à chaque échec, jusqu’à leur maximum, '
-    + 'sur plusieurs sujets :',
+    tr('Vos chances de butin'),
+    tr('Les chances de butin de votre personnage. Elles augmentent à chaque échec, jusqu’à leur maximum, '
+    + 'sur plusieurs sujets :'),
     tags(n.luck || []));
   box.appendChild(grid);
   const foot = el('div', 'lifoot');
-  foot.appendChild(el('span', null, 'Lancez Farever : tout apparaît ici dès que le jeu est détecté.'));
+  foot.appendChild(el('span', null, tr('Lancez Farever : tout apparaît ici dès que le jeu est détecté.')));
   box.appendChild(foot);
   return box;
 }

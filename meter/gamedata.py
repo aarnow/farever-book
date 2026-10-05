@@ -16,6 +16,8 @@ from pathlib import Path
 from common import (
     ANALYSIS, CREATE_NO_WINDOW, FRIDA_DIR, FROZEN, GAME_PATH_FILE, ROOT,
     TOOL_FLAG, _pretty_id)
+import i18n
+from i18n import tr
 
 
 def dungeon_name(kind):
@@ -27,7 +29,7 @@ def dungeon_name(kind):
         return fr
     s = re.sub(r"^R\d+_POI_(Dungeon_)?", "", str(kind or ""))
     s = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", s.replace("_", " "))
-    return " ".join(s.split()) or "Donjon"
+    return " ".join(s.split()) or tr("Donjon")
 
 
 
@@ -70,14 +72,19 @@ FR_TERMS = {"Skill": ("compétence", "compétences"),
             "WeaponSkill": ("compétence d'arme", "compétences d'arme"),
             "ClassSkill": ("compétence de classe", "compétences de classe"),
             "ComboAttack": ("attaque combo", "attaques combo")}
+EN_TERMS = {"Skill": ("skill", "skills"),
+            "WeaponSkill": ("weapon skill", "weapon skills"),
+            "ClassSkill": ("class skill", "class skills"),
+            "ComboAttack": ("combo attack", "combo attacks")}
 
 
 def _fr_ref(text):
     """The game's [Id] references in a French text, replaced by names."""
     def one(m):
         rid, plural = m.group(1), m.group(2)
-        if rid in FR_TERMS:
-            return FR_TERMS[rid][1 if plural else 0]
+        terms = FR_TERMS if i18n.lang() == "fr" else EN_TERMS
+        if rid in terms:
+            return terms[rid][1 if plural else 0]
         for sheet in ("zone", "unit", "activity", "item", "itemType",
                       "unitType", "skill", "attribute", "faction"):
             name = _fr_names(sheet).get(rid)
@@ -116,9 +123,9 @@ def _codex_thresholds():
     return _table("codex_units.json").get("thresholds") or {}
 def _family_label(fam):
     if fam == "Demon_Rift":             # "Démons" too in the game's text
-        return "Démons des failles"
-    if fam == "Human":                  # the game has no French name for it
-        return "Humains"
+        return tr("Démons des failles")
+    if fam == "Human":                  # the game has no name for it
+        return tr("Humains")
     return (_fr_names("unitType").get(fam) or _pretty_id(fam)) if fam else ""
 
 
@@ -152,11 +159,31 @@ def rift_rewards_data():
     """analysis_out/rift_rewards.json (emit_offsets.extract_rift_rewards)."""
     return _table("rift_rewards.json")
 
+def _localized(name, swap):
+    """analysis_out/<name> in the interface's language: `swap(copy)` puts
+    the language's texts in place of the French ones. Cached per language."""
+    lang = i18n.lang()
+    if lang == "fr":
+        return _table(name)
+    key = (name, lang)
+    if key not in _LOCALIZED:
+        data = json.loads(json.dumps(_table(name)))
+        swap(data)
+        _LOCALIZED[key] = data
+    return _LOCALIZED[key]
+
+
+_LOCALIZED = {}
+
+
 def infusion_data():
-    """{"infusions": {skill: {f, role, name, pattern, t2, t4, t6}},
+    """{"infusions": {skill: {f, role, name, pattern, t2, t4, t6, en}},
     "item_faction": {item: faction}} from analysis_out/infusions.json
-    (hltools/infusions_data.py)."""
-    return _table("infusions.json")
+    (hltools/infusions_data.py), its texts in the interface's language."""
+    def swap(d):
+        for e in (d.get("infusions") or {}).values():
+            e.update(e.get("en") or {})
+    return _localized("infusions.json", swap)
 def _infusion_id(raw):
     """The infusion skill a gear's `infusion` field names (the skill, or
     the pattern that teaches it)."""
@@ -197,8 +224,14 @@ def gear_stats_data():
 
 def build_data():
     """The Build tab's catalogue and rules: analysis_out/build_data.json
-    (hltools/build_data.py)."""
-    return _table("build_data.json")
+    (hltools/build_data.py), the runes' descriptions in the interface's
+    language."""
+    def swap(d):
+        for info in (d.get("skillInfo") or {}).values():
+            for r in (info.get("runes") or ()) if isinstance(info, dict) else ():
+                if r.get("desc_en"):
+                    r["desc"] = r["desc_en"]
+    return _localized("build_data.json", swap)
 
 def world_map():
     """{"meta": tiles and transform, "points": [{c, id, x, y, zone,
@@ -221,11 +254,18 @@ def _unit_names():
     ('Cleodora' displays as 'Queen Honeyzabeth')."""
     return _table("unit_names.json")
 
+def _names_table():
+    """The game's names in the interface's language: names_<lang>.json
+    (names_en.json: data.cdb's own English), names_fr.json without it."""
+    lang = i18n.lang()
+    got = _table(f"names_{lang}.json") if lang != "fr" else None
+    return got or _table("names_fr.json")
+
+
 def _fr_names(sheet):
-    """id -> French display name for one of the game's sheets (activity,
-    item, rarity, unit), from analysis_out/names_fr.json (the game's own
-    translation). {} when absent."""
-    return _table("names_fr.json").get(sheet) or {}
+    """id -> display name for one of the game's sheets (activity, item,
+    rarity, unit...), in the interface's language. {} when absent."""
+    return _names_table().get(sheet) or {}
 
 def item_rarity(kind):
     """An item's base rarity from its sheet row (analysis_out/
@@ -261,14 +301,15 @@ ITEM_TYPE_FR = {"Ore": "Minerai", "Cloth": "Tissu", "Leather": "Cuir"}
 
 
 def item_type_label(t):
-    return (_fr_names("itemType").get(t) or ITEM_TYPE_FR.get(t)
+    return (_fr_names("itemType").get(t)
+            or (ITEM_TYPE_FR.get(t) if i18n.lang() == "fr" else None)
             or _pretty_id(t))
 
 
 def _fr_desc(sheet):
-    """id -> French description for a sheet (ach, item, unit), from
-    names_fr.json's "_desc"."""
-    return _table("names_fr.json").get("_desc", {}).get(sheet) or {}
+    """id -> description for a sheet (ach, item, unit, skill), in the
+    interface's language (names_<lang>.json's "_desc")."""
+    return _names_table().get("_desc", {}).get(sheet) or {}
 
 
 def item_label(kind):
@@ -281,7 +322,7 @@ def item_label(kind):
         inf = next((e for e in (infusion_data().get("infusions") or {})
                     .values() if e.get("pattern") == kind), None)
         if inf:
-            return f"Patron d'imprégnation : {inf.get('name')}"
+            return tr("Patron d'imprégnation : {name}", name=inf.get("name"))
     return name or _pretty_id(kind)
 
 
@@ -290,7 +331,8 @@ RARITY_FR = {"Common": "Ordinaire", "Uncommon": "Peu ordinaire",
 
 
 def rarity_label(r):
-    return _fr_names("rarity").get(r) or RARITY_FR.get(r) or (r or "")
+    return (_fr_names("rarity").get(r)
+            or (RARITY_FR.get(r) if i18n.lang() == "fr" else None) or (r or ""))
 
 
 
@@ -497,9 +539,9 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
 GENERATED_GROUPS = (
     ("Code et structures du jeu",
      ("resolver_data.json", "meter_offsets.json"), (), 3),
-    ("Créatures et textes en français",
+    ("Créatures et textes du jeu",
      ("unit_names.json", "heal_specs.json", "codex_units.json",
-      "unit_traits.json", "names_fr.json"), (), 2),
+      "unit_traits.json", "names_fr.json", "names_en.json"), (), 2),
     ("Images de la collection", ("collection.json",), ("collection_img",), 19),
     ("Sorts, talents et leurs icônes", ("talents.json",), ("skill_img",), 9),
     ("Builds, équipement et succès",
@@ -540,7 +582,7 @@ def _run_generators(tools, hlboot, env, stamp, on_step=None,
     for t in tools:
         print(f"[meter] regenerating {t.name} for this build ...", file=sys.stderr)
         if on_step:
-            on_step(labels.get(t.name, t.name))
+            on_step(tr(labels.get(t.name, t.name)))
         # Frozen, sys.executable is this program: re-invoke it in tool mode.
         cmd = ([sys.executable, TOOL_FLAG, t.name] if FROZEN
                else [sys.executable, str(t)])

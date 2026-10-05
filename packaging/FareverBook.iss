@@ -39,10 +39,28 @@ WizardStyle=modern
 CloseApplications=no
 
 [Languages]
+; English first: the default when Windows is in neither language
+Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
+[CustomMessages]
+english.DesktopIcon=Create a &desktop shortcut
+french.DesktopIcon=Créer un raccourci sur le &Bureau
+english.Shortcuts=Shortcuts:
+french.Shortcuts=Raccourcis :
+english.LogFolder=Farever Book log folder
+french.LogFolder=Dossier du journal de Farever Book
+english.LaunchNow=Launch Farever Book now
+french.LaunchNow=Lancer Farever Book maintenant
+english.StillOpen=Farever Book is still open.%n%nRight-click its icon in the notification area (near the clock, click the ^ arrow if you don't see it) and choose "Stop the meter".%n%nStopping it this way detaches it cleanly from Farever. Then click Retry to continue %1.
+french.StillOpen=Farever Book est encore ouvert.%n%nFais un clic droit sur son icône dans la zone de notification (près de l'horloge, clique sur la flèche ^ si tu ne la vois pas) et choisis « Arrêter le compteur ».%n%nL'arrêter ainsi le détache proprement de Farever. Clique ensuite sur Réessayer pour continuer %1.
+english.TheInstall=the installation
+french.TheInstall=l'installation
+english.TheUninstall=the uninstallation
+french.TheUninstall=la désinstallation
+
 [Tasks]
-Name: "desktopicon"; Description: "Créer un raccourci sur le &Bureau"; GroupDescription: "Raccourcis :"
+Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:Shortcuts}"
 
 [Files]
 ; the whole PyInstaller onedir output (exe + _internal)
@@ -50,12 +68,12 @@ Source: "..\dist\FareverBook\*"; DestDir: "{app}"; Flags: ignoreversion recurses
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
-Name: "{group}\Dossier du journal de Farever Book"; Filename: "{localappdata}\FareverBook"
+Name: "{group}\{cm:LogFolder}"; Filename: "{localappdata}\FareverBook"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName} maintenant"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchNow}"; Flags: nowait postinstall skipifsilent
 
 [InstallDelete]
 ; what the app's former name (Farever France) left behind: its executable and
@@ -105,12 +123,7 @@ begin
   end;
   while MeterRunning() do
   begin
-    if MsgBox('Farever Book est encore ouvert.' + #13#10#13#10 +
-              'Fais un clic droit sur son icône dans la zone de notification ' +
-              '(près de l''horloge, clique sur la flèche ^ si tu ne la vois ' +
-              'pas) et choisis « Arrêter le compteur ».' + #13#10#13#10 +
-              'L''arrêter ainsi le détache proprement de Farever. Clique ' +
-              'ensuite sur Réessayer pour continuer ' + Verb + '.',
+    if MsgBox(FmtMessage(CustomMessage('StillOpen'), [Verb]),
               mbError, MB_RETRYCANCEL) = IDCANCEL then
     begin
       Result := False;
@@ -121,10 +134,10 @@ end;
 
 function InitializeSetup(): Boolean;
 begin
-  Result := AskToStopMeter('l''installation', WizardSilent);
+  Result := AskToStopMeter(CustomMessage('TheInstall'), WizardSilent);
 end;
 
 function InitializeUninstall(): Boolean;
 begin
-  Result := AskToStopMeter('la désinstallation', UninstallSilent);
+  Result := AskToStopMeter(CustomMessage('TheUninstall'), UninstallSilent);
 end;

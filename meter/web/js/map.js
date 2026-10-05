@@ -80,7 +80,7 @@ function mapIcons() {
 function mapPanel(n) {
   // only the body scrolls, its bar clear of the panel's rounded corners
   const panel = el('div', 'mpanel');
-  panel.appendChild(el('div', 'mtitle', 'Carte de Siagarta'));
+  panel.appendChild(el('div', 'mtitle', tr('Carte de Siagarta')));
   const p = el('div', 'mbody');
   panel.appendChild(p);
   const inReg = (pt) => MAP.reg === 'all' || pt.r === MAP.reg;
@@ -94,7 +94,7 @@ function mapPanel(n) {
     const pct = mine.length ? Math.round(got / mine.length * 100) : 0;
     const prog = el('div', 'mprog');
     prog.appendChild(el('b', null, got + ' / ' + mine.length));
-    prog.appendChild(el('span', null, pct + ' %'));
+    prog.appendChild(el('span', null, pctTxt(pct)));
     p.appendChild(prog);
     const bar_ = el('div', 'collbar');
     const fill = el('i');
@@ -104,7 +104,7 @@ function mapPanel(n) {
   }
   p.appendChild(el('div', 'msync', n.sync || ''));
   const regs = el('div', 'mregs');
-  [{ v: 'all', t: 'Tout Siagarta' }].concat(n.regions || []).forEach((r) => {
+  [{ v: 'all', t: tr('Tout Siagarta') }].concat(n.regions || []).forEach((r) => {
     const b = el('button', MAP.reg === r.v ? 'on' : '', r.t);
     b.type = 'button';
     b.addEventListener('click', () => { MAP.reg = r.v; mapRefreshPanel(); mapApply(); });
@@ -113,13 +113,13 @@ function mapPanel(n) {
   p.appendChild(regs);
   if (n.known) {
     const hf = el('button', 'mhide' + (MAP.hideFound ? ' on' : ''),
-      MAP.hideFound ? '✓ Éléments trouvés masqués' : 'Masquer les éléments trouvés');
+      MAP.hideFound ? tr('✓ Éléments trouvés masqués') : tr('Masquer les éléments trouvés'));
     hf.type = 'button';
     hf.addEventListener('click', () => { MAP.hideFound = !MAP.hideFound; mapRefreshPanel(); mapApply(); });
     p.appendChild(hf);
   }
   const all = el('div', 'mall');
-  [['Tout afficher', true], ['Tout masquer', false]].forEach(([t, v]) => {
+  [[tr('Tout afficher'), true], [tr('Tout masquer'), false]].forEach(([t, v]) => {
     const b = el('button', null, t);
     b.type = 'button';
     b.addEventListener('click', () => {
@@ -151,7 +151,7 @@ function mapPanel(n) {
     b.addEventListener('click', () => { MAP.on[c.v] = !MAP.on[c.v]; mapRefreshPanel(); mapApply(); });
     grid.appendChild(b);
   });
-  p.appendChild(el('div', 'mhint', 'Glisser pour déplacer · molette pour zoomer · clic sur un point pour le détail'));
+  p.appendChild(el('div', 'mhint', tr('Glisser pour déplacer · molette pour zoomer · clic sur un point pour le détail')));
   return panel;
 }
 
@@ -262,9 +262,10 @@ function mapPopup() {
   h.appendChild(el('b', null, c.t || p.c));
   pop.appendChild(h);
   const reg = (n.regions || []).find((r) => r.v === p.r);
-  pop.appendChild(el('div', 'pz', [p.z, reg && reg.v !== 'other' ? reg.t : ''].filter(Boolean).join(' — ') || 'Zone inconnue'));
-  if (n.known) pop.appendChild(el('div', 'pf' + (p.f ? ' on' : ''), p.f ? '✓ Trouvé' : 'Pas encore trouvé'));
-  pop.appendChild(el('div', 'pc', 'n° ' + p.n + ' · x ' + Math.round(p.x) + ', y ' + Math.round(p.y)));
+  pop.appendChild(el('div', 'pz', [p.z, reg && reg.v !== 'other' ? reg.t : ''].filter(Boolean).join(' — ') || tr('Zone inconnue')));
+  if (n.known) pop.appendChild(el('div', 'pf' + (p.f ? ' on' : ''), p.f ? tr('✓ Trouvé') : tr('Pas encore trouvé')));
+  pop.appendChild(el('div', 'pc', tr('n° {n} · x {x}, y {y}',
+    { n: p.n, x: Math.round(p.x), y: Math.round(p.y) })));
   mapApply();
 }
 

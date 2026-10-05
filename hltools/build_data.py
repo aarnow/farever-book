@@ -256,7 +256,9 @@ def build(game_dir):
         runes = [{"id": m.get("id"),
                   "cd": (m.get("props") or {}).get("cooldown"),
                   "desc": rune_fr.get(m.get("id"))
-                  or (m.get("text") or {}).get("desc") or ""}
+                  or (m.get("text") or {}).get("desc") or "",
+                  # data.cdb's own text is the English one
+                  "desc_en": (m.get("text") or {}).get("desc") or ""}
                  for m in sk.get("mastery") or () if m.get("id")]
         if reach is None:
             reach = max((st["range"] for st in sk.get("steps") or ()

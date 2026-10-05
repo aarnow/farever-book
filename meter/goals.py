@@ -16,6 +16,7 @@ import time
 
 from common import ANALYSIS, _WRITABLE
 from gamedata import _fr_names, item_label, item_type_label, rarity_label
+from i18n import tr
 
 GOALS_FILE = _WRITABLE / ".meter_goals.json"
 RARITIES = ("Uncommon", "Rare", "Epic", "Legendary")
@@ -96,7 +97,7 @@ class Goals:
     def label(self, g):
         if g["kind"] == "item":
             return item_label(g["item"])
-        return "objet " + rarity_label(g["rarity"]).lower()
+        return tr("objet {rarity}", rarity=rarity_label(g["rarity"]).lower())
 
     def view(self):
         rows = []
@@ -107,8 +108,9 @@ class Goals:
                 "have": have, "done": have >= g["n"],
                 "img": picture(g["item"]) if g["kind"] == "item" else "",
                 "rk": (g.get("rarity") or "").lower(),
-                "how": ("possédés (sac, équipement, banque)"
-                        if g["kind"] == "item" else "obtenus depuis l'ajout")})
+                "how": (tr("possédés (sac, équipement, banque)")
+                        if g["kind"] == "item"
+                        else tr("obtenus depuis l'ajout"))})
         return {"rows": rows, "banks": self.banks,
                 "rarities": [{"v": r, "t": rarity_label(r)}
                              for r in RARITIES]}

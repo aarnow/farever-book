@@ -11,12 +11,14 @@ import threading
 import time
 from collections import defaultdict, deque
 from pathlib import Path
+import i18n
 import themes
+from i18n import tr
 from buildtab import BuildTab
 
 from common import (
     ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
-    SETTINGS_TOPICS, THIRD_PARTY_FILE,
+    SETTINGS_TOPICS, THIRD_PARTY_FILE, month_name,
     APP_TAB_LABELS,
     BEST_TIMES_CACHE, CODEX_FILE, COLLECTION_FILE, DATA_HOME, DUNGEONS_DIR,
     ELEMENTS_FILE, EVENTS_MAX, FAREVER_STEAM_APPID, HELP_DIR, HELP_GROUPS,
@@ -78,9 +80,6 @@ OVERLAY_HERO_SECS = 8.0
 
 # How often one's own character is re-read while playing (kept on disk).
 SELF_PROFILE_SECS = 300.0
-
-MONTHS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
-             "août", "septembre", "octobre", "novembre", "décembre")
 
 
 def _dungeon_backdrop(kind, boss, region=""):
@@ -158,6 +157,7 @@ class App:
         self._rift_auto_view = False
         self._zoom = 130                    # the window's own size, percent
         self._theme = themes.DEFAULT        # the colour theme
+        self._lang = i18n.DEFAULT           # the interface's language
 
         # ---- what the window is showing (not saved) ----
         self._menu_tab = APP_TAB_DEFAULT
@@ -240,6 +240,9 @@ class App:
                                   for m in ("shift", "ctrl", "alt")})
         if data.get("theme") in themes.THEMES:
             self._theme = data["theme"]
+        if data.get("lang") in i18n.LANGS:
+            self._lang = data["lang"]
+        i18n.set_lang(self._lang)
         z = data.get("zoom")
         if isinstance(z, int) and 50 <= z <= 200:
             self._zoom = z
@@ -272,6 +275,7 @@ class App:
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
                 "theme": self._theme,
+                "lang": self._lang,
                 "overlay_pos": self._ov_pos,
                 "overlay_on": self._ov_on,
                 "overlay_tab": self._ov_tab,
@@ -320,7 +324,7 @@ class App:
                     "best" if best else "")
 
     def _show_reset_toast(self):
-        self._event("Combat réinitialisé.")
+        self._event(tr("Combat réinitialisé."))
 
     def _set_parse_banner(self, text):
         """The parse's state, shown on the live page's cards."""
@@ -347,7 +351,7 @@ class App:
             state, _detail, pid = self.link.status()
             if state == GameLink.CONNECTED and pid:
                 self.target_pid = pid
-                self._event("Connecté à Farever.", "ok")
+                self._event(tr("Connecté à Farever."), "ok")
         self.menubridge.invalidate()
 
     def show_rift_report(self, report):
@@ -363,22 +367,30 @@ class App:
             else:
                 self._rift_gates0 = None
             best = (report.get("phases") or [{}])[-1].get("players") or []
-            who = f" — MVP {best[0]['name']}" if best else ""
-            seen = (" (victoire non vue : rapport à la fin de la faille)"
-                    if report.get("unconfirmed") else "")
-            self._event(f"Faille terminée{who}{seen}.", "rift",
-                        {"id": "open_last_rift", "t": "Voir le rapport"})
+            unseen = report.get("unconfirmed")
+            if best:
+                text = (tr("Faille terminée — MVP {name} (victoire non vue : "
+                           "rapport à la fin de la faille).",
+                           name=best[0]['name']) if unseen else
+                        tr("Faille terminée — MVP {name}.",
+                           name=best[0]['name']))
+            else:
+                text = (tr("Faille terminée (victoire non vue : rapport à la "
+                           "fin de la faille).") if unseen else
+                        tr("Faille terminée."))
+            self._event(text, "rift",
+                        {"id": "open_last_rift", "t": tr("Voir le rapport")})
         self._enqueue(done)()
 
     def on_rift_dropped(self, why):
         """A rift recording given up: said, so a missing report is never
         silent. Called from the hook thread."""
         self._enqueue(lambda: self._event(
-            f"Faille non enregistrée : {why}.", "warn"))()
+            tr("Faille non enregistrée : {why}.", why=why), "warn"))()
 
     def on_boss_giveup(self):
         self._enqueue(lambda: self._event(
-            "Combat abandonné — compteur vidé.", ""))()
+            tr("Combat abandonné — compteur vidé."), ""))()
 
     def open_settings_from_tray(self):
         """The tray's "Afficher Farever Book": bring the window to the front."""
@@ -391,8 +403,8 @@ class App:
         if in_rift == self._rift_seen:
             return
         self._rift_seen = in_rift
-        self._event("Entrée dans une faille." if in_rift
-                    else "Sortie de la faille.", "rift")
+        self._event(tr("Entrée dans une faille.") if in_rift
+                    else tr("Sortie de la faille."), "rift")
         if in_rift:
             # the game's count of gates closed, read now: the rift's own
             # gates are what it has grown by when the boss dies
@@ -429,14 +441,14 @@ class App:
     def _open_rift_file(self, name):
         data = self._read_rift_file(name)
         if data is None:
-            self._toast_msg("Ce rapport de faille est illisible.")
+            self._toast_msg(tr("Ce rapport de faille est illisible."))
             return
         self._rift_view = data
 
     def _shown_report(self):
         if self._menu_tab == "Dungeons" and self._dungeon_view is not None:
             d = self._dungeon_view
-            return dict(d, title=d.get("name") or "Donjon",
+            return dict(d, title=d.get("name") or tr("Donjon"),
                         sub=self._dungeon_sub(d))
         return self._rift_view
 
@@ -446,12 +458,12 @@ class App:
             return
         try:
             copy_image_to_clipboard(render_rift_report_image(data))
-            self._toast_msg("Image copiée dans le presse-papiers.")
+            self._toast_msg(tr("Image copiée dans le presse-papiers."))
         except Exception as e:
             print(f"[meter] image copy failed ({e}) — copying text instead.",
                   file=sys.stderr)
             if copy_text_to_clipboard(self._report_text(data)):
-                self._toast_msg("Copié en texte.")
+                self._toast_msg(tr("Copié en texte."))
 
     def _open_log_folder(self):
         try:
@@ -478,7 +490,7 @@ class App:
             return
         hb = game_folder_hlboot(path)
         if hb is None:
-            self._setup = dict(self._setup, err=(
+            self._setup = dict(self._setup, err=tr(
                 "Farever n'est pas dans ce dossier : choisissez celui qui "
                 "contient Farever.exe et hlboot.dat (souvent "
                 "Steam\\steamapps\\common\\Farever)."))
@@ -525,7 +537,7 @@ class App:
                     pct += weight * part
                 else:
                     state = "wait"
-                out.append({"t": label, "s": state,
+                out.append({"t": tr(label), "s": state,
                             "n": n if folders and state != "wait" else None})
             return out, min(99, int(100 * pct / total_w))
 
@@ -582,11 +594,12 @@ class App:
     def _setup_spec(self):
         """The welcome screen, in place of the tabs."""
         st = dict(self._setup)
-        st["needs"] = ["les images de la collection, du bestiaire et de "
-                       "la carte", "les icônes des sorts et des objets",
-                       "les modèles 3D des personnages et des montures",
-                       "les données des builds, des donjons et des boss",
-                       "les textes du jeu en français"]
+        st["needs"] = [tr("les images de la collection, du bestiaire et de "
+                          "la carte"),
+                       tr("les icônes des sorts et des objets"),
+                       tr("les modèles 3D des personnages et des montures"),
+                       tr("les données des builds, des donjons et des boss"),
+                       tr("les textes du jeu en français")]
         return {"k": "welcome", "id": "welcome", **st}
 
     def _repair(self):
@@ -672,6 +685,7 @@ class App:
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "set_theme": lambda p: self._set_theme(p.get("id")),
+            "set_lang": lambda p: self._set_lang(p.get("id")),
             "open_log": self._open_log_folder,
             # updates
             "update_check": lambda: self.updater.check(manual=True),
@@ -713,11 +727,12 @@ class App:
     def run(self):
         """The main loop: the window's actions, the timers, and the refresh
         that turns the session into what the window shows."""
-        self.menubridge.start(self._win_geom, self._theme)
+        self.menubridge.start(self._win_geom, self._theme, self._lang)
         if self.menubridge.proc is None:
-            message_box("La fenêtre de Farever Book n'a pas pu s'ouvrir "
-                        "(WebView2 ou pywebview manquant ?).\n\nLe détail est "
-                        f"dans :\n{LOG_FILE}", "Farever Book — erreur", 0x10)
+            message_box(tr("La fenêtre de Farever Book n'a pas pu s'ouvrir "
+                           "(WebView2 ou pywebview manquant ?).\n\nLe détail "
+                           "est dans :\n{log}", log=LOG_FILE),
+                        tr("Farever Book — erreur"), 0x10)
             return
         last = 0.0
         while not self._stopping:
@@ -789,6 +804,7 @@ class App:
             "update": None if self._setup else self.updater.state,
             "zoom": int(self._zoom),
             "theme": self._theme,
+            "lang": self._lang,
             "shard": self.ui_state.server() or "",
             "link": self._link_spec(),
             "linksteps": (self.link.steps_view() if self.link is not None
@@ -799,7 +815,7 @@ class App:
             "tab": "Welcome" if self._setup else self._menu_tab,
             # The app's own tabs, after the game's, behind a divider.
             "tabs": [] if self._setup else [
-                {"v": t, "t": APP_TAB_LABELS[t],
+                {"v": t, "t": tr(APP_TAB_LABELS[t]),
                  "sep": t == APP_TABS_APP_FIRST} for t in APP_TABS],
             "page": ([self._setup_spec()] if self._setup
                      else self._page(self._menu_tab)),
@@ -826,10 +842,10 @@ class App:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return [{"k": "section", "t": APP_TAB_LABELS.get(tab, tab)},
+            return [{"k": "section", "t": tr(APP_TAB_LABELS.get(tab, tab))},
                     {"k": "note", "warn": True,
-                     "t": f"Cette page n'a pas pu être construite : {e}. Le "
-                          "détail est dans le journal."}]
+                     "t": tr("Cette page n'a pas pu être construite : {e}. "
+                             "Le détail est dans le journal.", e=e)}]
 
     # ---- live
     def _page_live(self):
@@ -838,36 +854,39 @@ class App:
         if not online:
             # the game is off: what the tab does once it runs
             return [{"k": "liveintro", "id": "liveintro",
-                     "luck": [t for _k, t in LUCK_LABELS]}]
+                     "luck": [tr(t) for _k, t in LUCK_LABELS]}]
         parsing = self._parse_state is not None
         tools = [
             {"id": "toggle_mode", "on": self.mode == "all",
-             "t": "Tous les joueurs" if self.mode == "all" else "Groupe"},
-            {"id": "reset_data", "t": f"Réinitialiser  ({bind_label()})"},
+             "t": tr("Tous les joueurs") if self.mode == "all"
+             else tr("Groupe")},
+            {"id": "reset_data",
+             "t": tr("Réinitialiser  ({key})", key=bind_label())},
             {"id": "toggle_parse", "on": parsing,
              "tone": None if parsing or online else "disabled",
-             "t": ("Arrêter le parse" if parsing
-                   else f"Parse {PARSE_LENGTH_SECS} s")},
+             "t": (tr("Arrêter le parse") if parsing
+                   else tr("Parse {n} s", n=PARSE_LENGTH_SECS))},
         ]
         if self._show_heal:
             tools.insert(1, {"id": "toggle_sort", "on": self._sort_heal,
-                             "t": "Tri : soins" if self._sort_heal
-                             else "Tri : dégâts"})
+                             "t": tr("Tri : soins") if self._sort_heal
+                             else tr("Tri : dégâts")})
         party_total = sum(p.total for p in rows)
         heal_total = sum(p.heal_total for p in rows)
         cards = [
-            {"title": "Combat",
+            {"title": tr("Combat"),
              "value": _mmss(duration) if duration > 0 else "—",
-             "sub": ("en cours" if in_combat else
-                     "dernier combat" if holding else
-                     "en attente" if online else "jeu fermé"),
+             "sub": (tr("en cours") if in_combat else
+                     tr("dernier combat") if holding else
+                     tr("en attente") if online else tr("jeu fermé")),
              "tone": "hot" if in_combat else ""},
-            {"title": "Dégâts du " + ("groupe" if self.mode == "party"
-                                      else "total"),
+            {"title": (tr("Dégâts du groupe") if self.mode == "party"
+                       else tr("Dégâts du total")),
              "value": _n(party_total) if party_total else "—",
              "sub": (f"{_n(party_total / duration)} DPS"
                      if duration > 0 and party_total else "")},
-            {"title": "Soins", "value": _n(heal_total) if heal_total else "—",
+            {"title": tr("Soins"),
+             "value": _n(heal_total) if heal_total else "—",
              "sub": (f"{_n(heal_total / duration)} HPS"
                      if duration > 0 and heal_total else "")},
         ]
@@ -895,14 +914,15 @@ class App:
                 "hf": round(p.heal_total / top_heal, 4),
                 "hsf": round(p.heal_self / top_heal, 4),
                 "focus": p.name == focus})
-        title = ("GROUPE" if self.mode == "party" else "TOUS LES JOUEURS")
+        title = (tr("GROUPE") if self.mode == "party"
+                 else tr("TOUS LES JOUEURS"))
         if holding:
-            title += " · DERNIER COMBAT"
+            title = tr("{title} · DERNIER COMBAT", title=title)
         out.append({"k": "meter", "id": "meter", "title": title,
                     "heal": bool(self._show_heal), "rows": meter_rows,
-                    "empty": ("En attente d'un combat…" if online else
-                              "Lance Farever : le compteur se remplit dès le "
-                              "premier combat.")})
+                    "empty": (tr("En attente d'un combat…") if online else
+                              tr("Lance Farever : le compteur se remplit dès "
+                                 "le premier combat."))})
         out.append(self._detail_node(rows, duration, focus))
         me = self._self_prof if online else None
         if me is None:
@@ -911,8 +931,9 @@ class App:
             me = dict(counters, at=at) if isinstance(counters, dict) else None
         out.append({"k": "luck", "id": "live_luck",
                     "rows": _profile_luck(me) if me else None,
-                    "empty": ("Lecture des compteurs…" if online else
-                              "Lance Farever pour voir ta chance de butin.")})
+                    "empty": (tr("Lecture des compteurs…") if online else
+                              tr("Lance Farever pour voir ta chance de "
+                                 "butin."))})
         stats = _profile_stats(me) if me else None
         if stats:
             out.append({"k": "statcards", "id": "live_stats",
@@ -923,17 +944,18 @@ class App:
         fp = next((p for p in rows if p.name == focus), None)
         if fp is None:
             return {"k": "detail", "id": "detail", "name": "",
-                    "empty": "Clique sur un joueur pour voir son détail."}
+                    "empty": tr("Clique sur un joueur pour voir son détail.")}
         fdps = fp.total / duration if duration > 0 else 0.0
         crit = (fp.crits / fp.hits * 100) if fp.hits else 0.0
-        stats = [["Dégâts", _n(fp.total)], ["DPS", _n(fdps)],
-                 ["Coups", _n(fp.hits)], ["Critiques", f"{crit:.0f}%"]]
+        stats = [[tr("Dégâts"), _n(fp.total)], ["DPS", _n(fdps)],
+                 [tr("Coups"), _n(fp.hits)],
+                 [tr("Critiques"), f"{crit:.0f}%"]]
         if self._show_heal:
-            stats.append(["Soins", _n(fp.heal_total)])
+            stats.append([tr("Soins"), _n(fp.heal_total)])
             if fp.heal_total > 0.5:
-                stats.append(["Soin en excès", f"{fp.overheal_pct:.0f}%"])
+                stats.append([tr("Soin en excès"), f"{fp.overheal_pct:.0f}%"])
         if fp.kills:
-            stats.append(["Kills", _n(fp.kills)])
+            stats.append([tr("Kills"), _n(fp.kills)])
 
         def skills(table, total):
             out = []
@@ -966,18 +988,18 @@ class App:
         now = time.localtime()
         into = now.tm_min * 60 + now.tm_sec
         if self.ui_state.in_rift():
-            return {"title": "Faille", "value": "En cours", "sub": "",
+            return {"title": tr("Faille"), "value": tr("En cours"), "sub": "",
                     "tone": "rift"}
         if into < RIFT_PORTAL_SECS:
             left = RIFT_PORTAL_SECS - into
-            return {"title": "Portail ouvert",
+            return {"title": tr("Portail ouvert"),
                     "value": f"{left // 60}:{left % 60:02d}",
-                    "sub": "avant sa fermeture", "tone": "open"}
+                    "sub": tr("avant sa fermeture"), "tone": "open"}
         left = 3600 - into
-        return {"title": "Prochaine faille",
+        return {"title": tr("Prochaine faille"),
                 "value": f"{left // 60:02d}:{left % 60:02d}",
-                "sub": "à " + time.strftime(
-                    "%H:00", time.localtime(time.time() + left)),
+                "sub": tr("à {hour}", hour=time.strftime(
+                    "%H:00", time.localtime(time.time() + left))),
                 "tone": "rift" if left <= RIFT_STYLE_SECS else ""}
 
     # ---- rifts
@@ -1014,8 +1036,8 @@ class App:
             return
         gone = self._remove_rift_reports(names)
         self._rift_sel, self._rift_confirm = set(), False
-        self._toast_msg(f"{gone} faille{'s' if gone > 1 else ''} "
-                        f"supprimée{'s' if gone > 1 else ''}.")
+        self._toast_msg(tr("{n} failles supprimées.", n=gone) if gone > 1
+                        else tr("{n} faille supprimée.", n=gone))
 
     @staticmethod
     def _remove_rift_reports(names):
@@ -1085,7 +1107,7 @@ class App:
         players = boss.get("players") or []
         at = time.localtime(data.get("at") or 0)
         gates = data.get("gates")
-        out = {"day": f"{at.tm_mday} {MONTHS_FR[at.tm_mon - 1]} {at.tm_year}",
+        out = {"day": f"{at.tm_mday} {month_name(at.tm_mon, full=True)} {at.tm_year}",
                "time": time.strftime("%H:%M", at),
                "dur": _mmss(dur), "players": len(players),
                "gates": int(gates) if isinstance(gates, (int, float)) else None}
@@ -1095,8 +1117,8 @@ class App:
     def _page_rifts(self):
         if self._rift_view is not None:
             return [{"k": "toolbar", "id": "rift_tools", "btns": [
-                        {"id": "close_rift", "t": "‹  Toutes les failles"},
-                        {"id": "copy_rift_image", "t": "Copier l'image"}]},
+                        {"id": "close_rift", "t": tr("‹  Toutes les failles")},
+                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
                     self._report_node(self._rift_view)]
         # the rifts done, a card each, under the day they were done
         groups = []
@@ -1115,19 +1137,21 @@ class App:
                  "on": path.name in self._rift_sel})
         n = len(self._rift_sel)
         all_on = bool(names) and names <= self._rift_sel
-        bottom = [{"id": "open_parses", "t": "Ouvrir le dossier des rapports"},
+        bottom = [{"id": "open_parses",
+                   "t": tr("Ouvrir le dossier des rapports")},
                   {"id": "rift_tick_all",
-                   "t": "Tout désélectionner" if all_on else "Tout sélectionner",
+                   "t": tr("Tout désélectionner") if all_on
+                   else tr("Tout sélectionner"),
                    "tone": None if names else "disabled"}]
         if self._rift_confirm and n:
             bottom += [{"id": "rift_delete", "tone": "warn armed",
-                        "t": f"Confirmer la suppression ({n})"},
-                       {"id": "rift_delete_cancel", "t": "Annuler"}]
+                        "t": tr("Confirmer la suppression ({n})", n=n)},
+                       {"id": "rift_delete_cancel", "t": tr("Annuler")}]
         else:
             bottom.append({"id": "rift_delete",
                            "tone": "warn" if n else "disabled",
-                           "t": f"Supprimer la sélection ({n})" if n
-                           else "Supprimer la sélection"})
+                           "t": tr("Supprimer la sélection ({n})", n=n) if n
+                           else tr("Supprimer la sélection")})
         keep = [0, 10, 20, 30, 50, 100]
         if self._rift_keep not in keep:
             keep = sorted(keep + [self._rift_keep])
@@ -1137,18 +1161,19 @@ class App:
             *self._rift_stat_cards(),
             *rift_rewards_view(entry.get("counters") or {},
                                entry.get("luckUntil") or {}),
-            {"k": "section", "t": "Failles réalisées"},
-            {"k": "note", "t": "Chaque faille terminée (boss vaincu) est "
-                               "enregistrée ici avec son classement complet. "
-                               "Clique sur une faille pour la relire."},
+            {"k": "section", "t": tr("Failles réalisées")},
+            {"k": "note", "t": tr("Chaque faille terminée (boss vaincu) est "
+                                  "enregistrée ici avec son classement "
+                                  "complet. Clique sur une faille pour la "
+                                  "relire.")},
             {"k": "riftcards", "id": "rifts", "groups": groups,
-             "empty": "Aucune faille enregistrée pour l'instant."},
+             "empty": tr("Aucune faille enregistrée pour l'instant.")},
             {"k": "toolbar", "id": "rift_bottom", "btns": bottom},
-            {"k": "field", "t": "Failles conservées",
+            {"k": "field", "t": tr("Failles conservées"),
              "c": {"k": "select", "id": "set_rift_keep",
                    "v": str(self._rift_keep),
-                   "o": [{"v": str(v), "t": f"Les {v} dernières" if v
-                          else "Toutes"} for v in keep]}},
+                   "o": [{"v": str(v), "t": tr("Les {n} dernières", n=v) if v
+                          else tr("Toutes")} for v in keep]}},
         ]
 
     def _rift_stat_cards(self):
@@ -1166,7 +1191,7 @@ class App:
                 counters = entry["counters"]
         if not counters:
             return []
-        items = [{"title": label, "value": _n(counters[k]), "sub": "",
+        items = [{"title": tr(label), "value": _n(counters[k]), "sub": "",
                   "icon": RIFT_STAT_ICONS.get(k)}
                  for k, label in RIFT_STAT_LABELS
                  if isinstance(counters.get(k), (int, float))]
@@ -1184,20 +1209,24 @@ class App:
             best = self._dungeon_best(report["kind"], report.get("difficulty"),
                                       exclude=name)
             diff = DUNGEON_DIFFICULTIES.get(report.get("difficulty"), "?")
-            txt = (f"{report['name']} ({diff.lower()}) — {report['result']}"
-                   f" en {_mmss(report['duration'])}")
+            txt = tr("{name} ({diff}) — {result} en {time}",
+                     name=report['name'], diff=tr(diff).lower(),
+                     result=tr(report['result']),
+                     time=_mmss(report['duration']))
             tone = "ok"
             if report["result"] == "victoire":
                 if best is None:
-                    txt += " — premier temps enregistré"
+                    txt = tr("{run} — premier temps enregistré", run=txt)
                 elif report["duration"] < best:
-                    txt += f" — nouveau record (avant : {_mmss(best)})"
+                    txt = tr("{run} — nouveau record (avant : {best})",
+                             run=txt, best=_mmss(best))
                     tone = "best"
                 else:
-                    txt += f" — record : {_mmss(best)}"
+                    txt = tr("{run} — record : {best}", run=txt,
+                             best=_mmss(best))
             else:
                 tone = ""
-            self._event(txt, tone, {"id": "open_dungeon_run", "t": "Voir",
+            self._event(txt, tone, {"id": "open_dungeon_run", "t": tr("Voir"),
                                     "p": {"file": name}} if name else None)
         self._enqueue(done)()
 
@@ -1242,8 +1271,8 @@ class App:
         self._enqueue(done)()
 
     def _goal_reached(self, g):
-        self._event(f"Objectif atteint : {g['n']} × {self.goals.label(g)}.",
-                    "ok")
+        self._event(tr("Objectif atteint : {n} × {what}.", n=g['n'],
+                       what=self.goals.label(g)), "ok")
 
     def _goal_add(self, p):
         self.goals.add(p.get("kind"), p.get("ref"), p.get("n"))
@@ -1308,7 +1337,7 @@ class App:
     def _ov_reset(self):
         self._ov_pos = {}
         self._save_settings()
-        self._toast_msg("Overlays remis à leur place par défaut.")
+        self._toast_msg(tr("Overlays remis à leur place par défaut."))
 
     def _ov_set_tab(self, tab):
         if tab in ("dmg", "heal"):
@@ -1406,9 +1435,10 @@ class App:
         at = entry.get("at")
         els = self._elements()
         states = ((els.get("heroes") or {}).get(hero) or {}).get("states")
-        sync = (f"Succès du compte et progression de {hero}, lus en jeu le "
-                f"{date_fr(time.localtime(at))}." if at else
-                "Pas encore lus : lance le jeu avec Farever Book ouvert.")
+        sync = (tr("Succès du compte et progression de {hero}, lus en jeu le "
+                   "{date}.", hero=hero, date=date_fr(time.localtime(at)))
+                if at else
+                tr("Pas encore lus : lance le jeu avec Farever Book ouvert."))
         return [{"k": "achievements", "id": "achievements", "sync": sync,
                  **achievements_view(data.get("account") or {},
                                      entry.get("counters") or {},
@@ -1523,16 +1553,17 @@ class App:
         hero = data.get("last")
         entry = (data.get("heroes") or {}).get(hero) or {}
         at = entry.get("at")
-        sync = (f"Kills de {hero}, lus en jeu le "
-                f"{date_fr(time.localtime(at))}. Le compte est celui du jeu "
-                "(son Codex) : il inclut tout ce que tu as tué avant "
-                "Farever Book, et se met à jour tout seul quand le jeu est "
-                "ouvert." if at else
-                "Pas encore lu : lance le jeu avec Farever Book ouvert, tes "
-                "kills se rempliront tout seuls.")
+        sync = (tr("Kills de {hero}, lus en jeu le {date}. Le compte est "
+                   "celui du jeu (son Codex) : il inclut tout ce que tu as "
+                   "tué avant Farever Book, et se met à jour tout seul quand "
+                   "le jeu est ouvert.", hero=hero,
+                   date=date_fr(time.localtime(at))) if at else
+                tr("Pas encore lu : lance le jeu avec Farever Book ouvert, "
+                   "tes kills se rempliront tout seuls."))
         if self._hunt_sel:
             return [{"k": "toolbar", "id": "hunt_tools", "btns": [
-                        {"id": "hunt_close", "t": "‹  Tableau de chasse"}]},
+                        {"id": "hunt_close",
+                         "t": tr("‹  Tableau de chasse")}]},
                     {"k": "huntmon", "id": "huntmon",
                      **hunt_detail_view(self._hunt_sel,
                                         entry.get("ranks") or {})}]
@@ -1567,9 +1598,10 @@ class App:
             if p.get("missing"):
                 if mine:
                     self._me_build = None
-                    self._toast_msg("Ton personnage n'a pas pu être lu.")
+                    self._toast_msg(tr("Ton personnage n'a pas pu être lu."))
                     return
-                self._toast_msg(f"{p.get('n')} n'est plus à proximité.")
+                self._toast_msg(tr("{name} n'est plus à proximité.",
+                                   name=p.get('n')))
                 return
             prof = dict(p.get("profile") or {}, at=time.time())
             name = prof.get("n")
@@ -1607,13 +1639,13 @@ class App:
     def _analyze(self, name):
         script = self.link.script if self.link is not None else None
         if script is None:
-            self._toast_msg("Le jeu n'est pas connecté.")
+            self._toast_msg(tr("Le jeu n'est pas connecté."))
             return
         try:
             script.post({"type": "analyze", "name": name})
             self._char_wait = (name, time.time())
         except Exception as e:
-            self._toast_msg(f"Analyse impossible : {e}")
+            self._toast_msg(tr("Analyse impossible : {e}", e=e))
 
     def _forget_profile(self, name):
         self._profiles_data().pop(name, None)
@@ -1634,8 +1666,9 @@ class App:
             # the game closed: the character as last read
             prof = self.me.profiles().get(self.me.last)
             if prof is None:
-                self._toast_msg("Ton personnage n'a pas encore été lu : lance "
-                                "le jeu une fois avec Farever Book ouvert.")
+                self._toast_msg(tr("Ton personnage n'a pas encore été lu : "
+                                   "lance le jeu une fois avec Farever Book "
+                                   "ouvert."))
                 return
             self._set_tab("Build")
             self.buildtab.import_profile(prof, self.me.last)
@@ -1688,10 +1721,10 @@ class App:
         hero = data.get("last")
         entry = (data.get("heroes") or {}).get(hero) or {}
         at = entry.get("at")
-        sync = (f"Progression de {hero}, lue en jeu le "
-                f"{date_fr(time.localtime(at))}." if at else
-                "Progression pas encore lue : lance le jeu avec Farever Book "
-                "ouvert.")
+        sync = (tr("Progression de {hero}, lue en jeu le {date}.", hero=hero,
+                   date=date_fr(time.localtime(at))) if at else
+                tr("Progression pas encore lue : lance le jeu avec Farever "
+                   "Book ouvert."))
         return [{"k": "map", "id": "map", "sync": sync,
                  **map_view(entry.get("states") if at else None)}]
 
@@ -1715,10 +1748,12 @@ class App:
     def _page_collection(self):
         owned = self._collection()
         at = owned.get("at")
-        sync = (f"Lue en jeu le {date_fr(time.localtime(at))}. Elle se met "
-                "à jour toute seule quand le jeu est ouvert."
-                if at else "Pas encore lue : lance le jeu avec Farever Book "
-                           "ouvert, ta collection se remplira toute seule.")
+        sync = (tr("Lue en jeu le {date}. Elle se met à jour toute seule "
+                   "quand le jeu est ouvert.",
+                   date=date_fr(time.localtime(at)))
+                if at else tr("Pas encore lue : lance le jeu avec Farever "
+                              "Book ouvert, ta collection se remplira toute "
+                              "seule."))
         codex = self._item_codex()
         entry = (codex.get("heroes") or {}).get(codex.get("last")) or {}
         return [{"k": "collection", "id": "collection",
@@ -1839,20 +1874,24 @@ class App:
         name = Path(str(name)).name
         data = next((d for n, d in self._dungeon_runs() if n == name), None)
         if data is None:
-            self._toast_msg("Ce run de donjon est illisible.")
+            self._toast_msg(tr("Ce run de donjon est illisible."))
             return
         self._dungeon_kind = data.get("kind")
         self._dungeon_view = data
         self._menu_tab = "Dungeons"
 
     def _dungeon_sub(self, d):
-        diff = DUNGEON_DIFFICULTIES.get(d.get("difficulty"), "difficulté ?")
+        diff = tr(DUNGEON_DIFFICULTIES.get(d.get("difficulty"),
+                                           "difficulté ?"))
         deaths = int(d.get("deaths") or 0)
-        bits = [diff, str(d.get("result") or "?").capitalize()
-                + f" en {_mmss(d.get('duration') or 0)}",
-                f"{deaths} mort{'s' if deaths > 1 else ''}"]
+        bits = [diff, tr("{result} en {time}",
+                         result=tr(str(d.get("result") or "?")).capitalize(),
+                         time=_mmss(d.get('duration') or 0)),
+                tr("{n} morts", n=deaths) if deaths > 1
+                else tr("{n} mort", n=deaths)]
         if d.get("wipes"):
-            bits.append(f"{d['wipes']} wipe{'s' if d['wipes'] > 1 else ''}")
+            bits.append(tr("{n} wipes", n=d['wipes']) if d['wipes'] > 1
+                        else tr("{n} wipe", n=d['wipes']))
         return " · ".join(bits)
 
     @staticmethod
@@ -1870,8 +1909,9 @@ class App:
             node["sub"] = self._dungeon_sub(d)
             return [{"k": "toolbar", "id": "dungeon_tools", "btns": [
                         {"id": "close_dungeon_run",
-                         "t": "‹  Runs de " + dungeon_name(d.get("kind"))},
-                        {"id": "copy_rift_image", "t": "Copier l'image"}]},
+                         "t": tr("‹  Runs de {dungeon}",
+                                 dungeon=dungeon_name(d.get("kind")))},
+                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
                     self._dungeon_backdrop_node(d.get("kind")),
                     node]
         if self._dungeon_kind is not None:
@@ -1883,10 +1923,11 @@ class App:
                 best = self._dungeon_best(kind, diff)
                 won = [d for _n, d in mine if d.get("difficulty") == diff
                        and d.get("result") == "victoire"]
-                cards.append({"title": label, "art": f"dungeon_diff_{diff}",
+                cards.append({"title": tr(label), "art": f"dungeon_diff_{diff}",
                               "value": _mmss(best) if best else "—",
-                              "sub": f"{len(won)} victoire"
-                                     f"{'s' if len(won) > 1 else ''}"})
+                              "sub": tr("{n} victoires", n=len(won))
+                                     if len(won) > 1
+                                     else tr("{n} victoire", n=len(won))})
             # the runs, a card each under their day, as the rifts are
             days = []
             for n, d in mine:
@@ -1895,7 +1936,7 @@ class App:
                         and abs(d["duration"] - best) < 0.05)
                 players = d["phases"][-1].get("players") or []
                 at = time.localtime(d.get("at") or 0)
-                day = f"{at.tm_mday} {MONTHS_FR[at.tm_mon - 1]} {at.tm_year}"
+                day = f"{at.tm_mday} {month_name(at.tm_mon, full=True)} {at.tm_year}"
                 if not days or days[-1]["t"] != day:
                     days.append({"t": day, "cards": []})
                 deaths = int(d.get("deaths") or 0)
@@ -1903,14 +1944,15 @@ class App:
                     "file": n, "open": "open_dungeon_run",
                     "time": time.strftime("%H:%M", at),
                     "diff": {"d": d.get("difficulty"),
-                             "t": DUNGEON_DIFFICULTIES.get(
-                                 d.get("difficulty"), "difficulté ?")},
+                             "t": tr(DUNGEON_DIFFICULTIES.get(
+                                 d.get("difficulty"), "difficulté ?"))},
                     "result": str(d.get("result") or "?"),
                     "star": star,
-                    "facts": [["durée", _mmss(d.get("duration") or 0)],
-                              ["mort" if deaths == 1 else "morts", str(deaths)],
-                              ["joueur" if len(players) == 1 else "joueurs",
-                               str(len(players))]],
+                    "facts": [[tr("durée"), _mmss(d.get("duration") or 0)],
+                              [tr("mort") if deaths == 1 else tr("morts"),
+                               str(deaths)],
+                              [tr("joueur") if len(players) == 1
+                               else tr("joueurs"), str(len(players))]],
                     "group": ", ".join(p.get("name", "?") for p in players[:6])})
             # what the runs brought back, per difficulty
             got = {k: {} for k in DUNGEON_DIFFICULTIES}
@@ -1923,20 +1965,20 @@ class App:
                        if x["kind"] == kind), None)
             out = [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
                        {"id": "close_dungeon_kind",
-                        "t": "‹  Tous les donjons"}]},
+                        "t": tr("‹  Tous les donjons")}]},
                    self._dungeon_backdrop_node(kind),
                    {"k": "section", "t": name},
                    {"k": "cards", "id": "dungeon_records", "items": cards},
                    {"k": "gap"},
-                   {"k": "section", "t": "Historique"},
+                   {"k": "section", "t": tr("Historique")},
                    {"k": "riftcards", "id": "dungeon_runs", "groups": days,
-                    "empty": "Aucun run pour ce donjon."}]
+                    "empty": tr("Aucun run pour ce donjon.")}]
             sheet = boss_sheet_view(dg.get("boss")) if dg else None
             if sheet:
-                out += [{"k": "section", "t": "Fiche du boss"}, sheet]
+                out += [{"k": "section", "t": tr("Fiche du boss")}, sheet]
             if dg and dg.get("loot"):
-                out += [{"k": "section", "t": "Butin possible"},
-                        {"k": "note", "t":
+                out += [{"k": "section", "t": tr("Butin possible")},
+                        {"k": "note", "t": tr(
                          "D'après les données et le code du jeu. Le coffre "
                          "de fin donne une des armes du boss (tirée au "
                          "hasard) et des fragments d'Étincelle selon ton "
@@ -1944,7 +1986,7 @@ class App:
                          "d'armure de la faction, garantie : en Normal et "
                          "Vétéran une rare, tirée à parts égales parmi "
                          "celles que sa classe peut porter (les 2 dernières "
-                         "reçues sont écartées) ; en Héroïque une épique, "
+                         "reçues sont écartées), en Héroïque une épique, "
                          "parmi celles du boss pour sa classe. À 3 joueurs "
                          "une pièce de plus est donnée au hasard, 2 à 4 "
                          "joueurs. Chaque pièce a 10 % de chances d'être "
@@ -1952,9 +1994,9 @@ class App:
                          "âmes). La mort du boss peut en plus donner un objet "
                          "rare et, en Héroïque, donne toujours le patron "
                          "d'imprégnation du donjon. « Obtenu » compte ce que "
-                         "tes runs ont rapporté dans cette difficulté."},
+                         "tes runs ont rapporté dans cette difficulté.")},
                         {"k": "droptable", "id": "dungeon_drops",
-                         "tables": [{"d": k, "t": label,
+                         "tables": [{"d": k, "t": tr(label),
                                      "rows": droptable_view(dg, got[k], k)}
                                     for k, label
                                     in DUNGEON_DIFFICULTIES.items()]}]
@@ -1969,7 +2011,7 @@ class App:
             # what we have done there: runs, victories, best time per
             # difficulty
             won = sum(1 for d in ds if d.get("result") == "victoire")
-            recs = [{"d": diff, "t": label, "v": _mmss(best)}
+            recs = [{"d": diff, "t": tr(label), "v": _mmss(best)}
                     for diff, label in DUNGEON_DIFFICULTIES.items()
                     for best in [self._dungeon_best(kind, diff)] if best]
             dg = catalogue.get(kind) or {}
@@ -1980,8 +2022,9 @@ class App:
             # or mount (any difficulty)
             rk = lambda e: (e.get("rarity") or "").lower()
             weapons = [{"img": item_icon(e["item"]), "rk": rk(e),
-                        "tip": f"{item_label(e['item'])} — {_pct(e['chance'])}"
-                               " (coffre de fin)"}
+                        "tip": tr("{item} — {pct} (coffre de fin)",
+                                  item=item_label(e['item']),
+                                  pct=_pct(e['chance']))}
                        for e in loot if e.get("src") == "coffre"
                        and e.get("type") != "UpgradeComponent"]
             rides = [{"img": item_icon(e["item"]), "rk": rk(e),
@@ -1989,23 +2032,27 @@ class App:
                      for e in loot if e.get("src") == "boss"
                      and e.get("type") in ("GearGlider", "Mount")]
 
-            def armour(src, what):
+            def armour(src, tip):
+                # tip: a translated template, its {n} the pieces
                 a = [e for e in loot if e.get("src") == src]
                 return [{"img": item_icon(a[0]["item"]), "n": len(a),
                          "rk": rk(a[0]),
-                         "tip": f"Armure de faction {what} : {len(a)} pièces, "
-                                "une garantie par joueur parmi celles de sa "
-                                "classe"}] if a else []
+                         "tip": tip.format(n=len(a))}] if a else []
             infusion = [{"img": item_icon(e["item"]), "rk": rk(e),
-                         "tip": f"{item_label(e['item'])} — garanti"}
+                         "tip": tr("{item} — garanti",
+                                   item=item_label(e['item']))}
                         for e in loot if e.get("type") == "InfusionPattern"]
+            rare = tr("Armure de faction rare : {n} pièces, une garantie par "
+                      "joueur parmi celles de sa classe")
+            epic = tr("Armure de faction épique : {n} pièces, une garantie "
+                      "par joueur parmi celles de sa classe")
             tiers = [
-                {"d": 0, "t": "Normal", "icons": weapons
-                 + armour("faction", "rare") + rides},
-                {"d": 1, "t": "Vétéran", "sub": "niveau max",
-                 "icons": weapons + armour("faction", "rare") + rides},
-                {"d": 2, "t": "Héroïque", "icons": weapons
-                 + armour("heroic", "épique") + infusion + rides}]
+                {"d": 0, "t": tr("Normal"), "icons": weapons
+                 + armour("faction", rare) + rides},
+                {"d": 1, "t": tr("Vétéran"), "sub": tr("niveau max"),
+                 "icons": weapons + armour("faction", rare) + rides},
+                {"d": 2, "t": tr("Héroïque"), "icons": weapons
+                 + armour("heroic", epic) + infusion + rides}]
             tiers = [t for t in tiers if t["icons"]]
             return {"kind": kind, "t": dungeon_name(kind),
                     "boss": _boss_label(boss) if boss else "",
@@ -2017,14 +2064,14 @@ class App:
 
         # Every dungeon of the game, by region, in the game's own order;
         # runs of a dungeon the list doesn't know (a newer game) at the end.
-        out = [{"k": "section", "t": "Donjons"},
-               {"k": "note", "t": "Chaque donjon est enregistré "
-                                  "automatiquement de l'entrée à la sortie : "
-                                  "difficulté, temps (celui du jeu), morts, "
-                                  "groupe, classement complet en deux "
-                                  "phases — exploration et boss — et butin. "
-                                  "Les échecs et abandons sont gardés "
-                                  "aussi."}]
+        out = [{"k": "section", "t": tr("Donjons")},
+               {"k": "note", "t": tr("Chaque donjon est enregistré "
+                                     "automatiquement de l'entrée à la "
+                                     "sortie : difficulté, temps (celui du "
+                                     "jeu), morts, groupe, classement complet "
+                                     "en deux phases — exploration et boss — "
+                                     "et butin. Les échecs et abandons sont "
+                                     "gardés aussi.")}]
         region_of = {dg["kind"]: dg.get("region") or ""
                      for dg in dungeon_catalogue()}
         regions, known = {}, set()
@@ -2037,7 +2084,7 @@ class App:
             regions.setdefault("", []).extend(others)
         for i, (region, dgs) in enumerate(regions.items()):
             title = (_fr_names("zone").get(region) if region else None) \
-                or ("Autres donjons" if regions.keys() - {""} else "")
+                or (tr("Autres donjons") if regions.keys() - {""} else "")
             if title:
                 out.append({"k": "sub", "t": title})
             out.append({"k": "dcards", "id": f"dungeons_{i}",
@@ -2046,7 +2093,8 @@ class App:
         if not regions:
             out.append({"k": "list", "id": "dungeons",
                         "rows": [],
-                        "empty": "Aucun donjon enregistré pour l'instant."})
+                        "empty": tr("Aucun donjon enregistré pour "
+                                    "l'instant.")})
         return out
 
     # ---- settings
@@ -2055,7 +2103,8 @@ class App:
         topic = (self._settings_topic if self._settings_topic
                  in SETTINGS_TOPICS else "meter")
         nav = {"k": "setnav", "id": "setnav", "on": topic,
-               "items": [{"id": k, "t": t} for k, t in SETTINGS_TOPICS.items()]}
+               "items": [{"id": k, "t": tr(t)}
+                         for k, t in SETTINGS_TOPICS.items()]}
         return [nav] + {"meter": self._settings_meter,
                         "overlay": self._settings_overlay,
                         "display": self._settings_display,
@@ -2063,59 +2112,73 @@ class App:
 
     def _settings_meter(self):
         return [
-            {"k": "section", "t": "Compteur"},
+            {"k": "section", "t": tr("Compteur")},
             {"k": "button", "id": "toggle_heal",
-             "t": self._tick(self._show_heal, "Colonnes de soins")},
+             "t": self._tick(self._show_heal, tr("Colonnes de soins"))},
             {"k": "button", "id": "toggle_auto_reset",
              "t": self._tick(self._auto_reset_boss,
-                             "Réinitialiser au pull d'un boss")},
+                             tr("Réinitialiser au pull d'un boss"))},
             {"k": "button", "id": "toggle_rift_auto_view",
              "t": self._tick(self._rift_auto_view,
-                             "Tous les joueurs automatiquement en faille")},
-            {"k": "note", "t": "Passe le compteur sur « Tous les joueurs » en "
-                               "entrant dans une faille, et revient au groupe "
-                               "en sortant. Chaque bascule réinitialise le "
-                               "combat."},
-            {"k": "section", "t": "Raccourci clavier"},
-            {"k": "field", "t": "Réinitialiser le combat",
+                             tr("Tous les joueurs automatiquement en "
+                                "faille"))},
+            {"k": "note", "t": tr("Passe le compteur sur « Tous les joueurs » "
+                                  "en entrant dans une faille, et revient au "
+                                  "groupe en sortant. Chaque bascule "
+                                  "réinitialise le combat.")},
+            {"k": "section", "t": tr("Raccourci clavier")},
+            {"k": "field", "t": tr("Réinitialiser le combat"),
              "c": {"k": "label", "t": self._bind_prompt()}},
-            {"k": "button", "id": "begin_bind", "t": "Changer cette touche"},
-            {"k": "note", "t": "Le raccourci ne fonctionne que lorsque Farever "
-                               "est au premier plan, et n'affiche rien dans le "
-                               "jeu. Il faut Ctrl, Maj ou Alt, sauf pour les "
-                               "touches F1 à F24 et les boutons de souris. "
-                               "Échap annule."},
+            {"k": "button", "id": "begin_bind",
+             "t": tr("Changer cette touche")},
+            {"k": "note", "t": tr("Le raccourci ne fonctionne que lorsque "
+                                  "Farever est au premier plan, et n'affiche "
+                                  "rien dans le jeu. Il faut Ctrl, Maj ou "
+                                  "Alt, sauf pour les touches F1 à F24 et "
+                                  "les boutons de souris. Échap annule.")},
         ]
 
     def _settings_overlay(self):
         return [
-            {"k": "section", "t": "Overlay en jeu"},
+            {"k": "section", "t": tr("Overlay en jeu")},
             {"k": "button", "id": "ov_toggle_meter",
-             "t": self._tick(self._ov_on["meter"], "Compteur du groupe")},
+             "t": self._tick(self._ov_on["meter"], tr("Compteur du groupe"))},
             {"k": "button", "id": "ov_toggle_goals",
-             "t": self._tick(self._ov_on["goals"], "Objectifs")},
+             "t": self._tick(self._ov_on["goals"], tr("Objectifs"))},
             {"k": "button", "id": "ov_reset",
-             "t": "Remettre les overlays à leur place par défaut"},
-            {"k": "note", "t": "Les overlays s'affichent par-dessus le jeu, "
-                               "seulement sur un personnage (pas dans les "
-                               "menus) et quand Farever est au premier plan. "
-                               "Déplace-les en tirant leur en-tête : chacun "
-                               "s'accroche au bord le plus proche de l'écran "
-                               f"(grille de {OVERLAY_GRID} px) et garde cette "
-                               "distance si la taille du jeu change."},
+             "t": tr("Remettre les overlays à leur place par défaut")},
+            {"k": "note", "t": tr("Les overlays s'affichent par-dessus le "
+                                  "jeu, seulement sur un personnage (pas "
+                                  "dans les menus) et quand Farever est au "
+                                  "premier plan. Déplace-les en tirant leur "
+                                  "en-tête : chacun s'accroche au bord le "
+                                  "plus proche de l'écran (grille de {n} px) "
+                                  "et garde cette distance si la taille du "
+                                  "jeu change.", n=OVERLAY_GRID)},
         ]
 
     def _settings_display(self):
         return [
-            {"k": "section", "t": "Fenêtre"},
-            {"k": "field", "t": "Taille de l'interface",
+            {"k": "section", "t": tr("Fenêtre")},
+            {"k": "field", "t": tr("Taille de l'interface"),
              "c": {"k": "slider", "id": "set_zoom", "v": int(self._zoom),
                    "min": 50, "max": 200, "step": 5, "unit": "%"}},
-            {"k": "section", "t": "Thème"},
+            {"k": "section", "t": tr("Thème")},
             {"k": "themes", "id": "themes", "on": self._theme,
-             "items": [{"id": tid, "t": name, "c": themes.preview(tid)}
+             "items": [{"id": tid, "t": tr(name), "c": themes.preview(tid)}
                        for tid, (name, *_r) in themes.THEMES.items()]},
+            {"k": "section", "t": tr("Langue")},
+            {"k": "langs", "id": "langs", "on": self._lang,
+             "items": [{"id": lid, "t": name}
+                       for lid, name in i18n.LANGS.items()]},
         ]
+
+    def _set_lang(self, lang):
+        if lang in i18n.LANGS and lang != self._lang:
+            self._lang = lang
+            i18n.set_lang(lang)
+            self._save_settings()
+            self.menubridge.invalidate()
 
     def _set_theme(self, theme):
         if theme in themes.THEMES and theme != self._theme:
@@ -2144,19 +2207,20 @@ class App:
 
     def _settings_config(self):
         return [
-            {"k": "section", "t": "Version"},
-            {"k": "note", "t": f"Farever Book {VERSION}. Les nouvelles "
-                               "versions sont proposées d'elles-mêmes au "
-                               "lancement, puis toutes les heures."},
+            {"k": "section", "t": tr("Version")},
+            {"k": "note", "t": tr("Farever Book {version}. Les nouvelles "
+                                  "versions sont proposées d'elles-mêmes au "
+                                  "lancement, puis toutes les heures.",
+                                  version=VERSION)},
             {"k": "button", "id": "update_check",
-             "t": "Rechercher une mise à jour"},
+             "t": tr("Rechercher une mise à jour")},
             *([{"k": "button", "id": "open_licences",
-                "t": "Licences des composants"}]
+                "t": tr("Licences des composants")}]
               if THIRD_PARTY_FILE and THIRD_PARTY_FILE.is_file() else []),
-            {"k": "section", "t": "Fichiers"},
+            {"k": "section", "t": tr("Fichiers")},
             {"k": "button", "id": "open_parses",
-             "t": "Dossier des rapports de faille"},
-            {"k": "button", "id": "open_log", "t": "Dossier du journal"},
+             "t": tr("Dossier des rapports de faille")},
+            {"k": "button", "id": "open_log", "t": tr("Dossier du journal")},
         ]
 
     # ---- boss records, rift reports ----
@@ -2185,7 +2249,8 @@ class App:
         copies never fire a second pull edge. The killed bar's kind isn't."""
         if not kinds:
             # no kind, no record: the time alone
-            self._show_kill_toast(f"Boss vaincu en {self._mmss(secs)}", best=False)
+            self._show_kill_toast(tr("Boss vaincu en {time}",
+                                     time=self._mmss(secs)), best=False)
             return
         # Keyed on the internal kind (stable across localization), shown by
         # the game's name: the two often differ (kind CLEODORA = Honeyzabeth).
@@ -2195,16 +2260,19 @@ class App:
         if prev is None:
             self._best_times[key] = secs
             self._save_best_times()
-            text = f"{name} vaincu en {self._mmss(secs)} — premier kill enregistré"
+            text = tr("{name} vaincu en {time} — premier kill enregistré",
+                      name=name, time=self._mmss(secs))
             best = True
         elif secs < prev:
             self._best_times[key] = secs
             self._save_best_times()
-            text = (f"{name} vaincu en {self._mmss(secs)} — nouveau record "
-                    f"(avant : {self._mmss(prev)})")
+            text = tr("{name} vaincu en {time} — nouveau record "
+                      "(avant : {prev})", name=name, time=self._mmss(secs),
+                      prev=self._mmss(prev))
             best = True
         else:
-            text = f"{name} vaincu en {self._mmss(secs)} — record : {self._mmss(prev)}"
+            text = tr("{name} vaincu en {time} — record : {prev}", name=name,
+                      time=self._mmss(secs), prev=self._mmss(prev))
             best = False
         print(f"[meter] boss kill timed: {key} {secs:.1f}s"
               + (f" (best {self._best_times[key]:.1f}s)"), file=sys.stderr)
@@ -2305,26 +2373,29 @@ class App:
 
     def _report_text(self, data):
         """The plaintext version — chat-pasteable lines, no box drawing."""
-        out = ["Farever Book — " + (data.get("title") or "Rapport de faille")
+        out = ["Farever Book — " + (data.get("title")
+                                    or tr("Rapport de faille"))
                + (f" ({data['sub']})" if data.get("sub") else "")]
         for ph in data["phases"]:
             dur = ph["duration"]
             # rate first, as on the card and the image
             dps = _rate_text(ph["total"], dur, "DPS")
             hps = _rate_text(ph["heal"], dur, "HPS")
-            out.append(f"== {ph['label']} — {self._mmss(dur)}, "
-                       f"{dps or '— DPS'}, {hps or '— HPS'} "
-                       f"({_n(ph['total'])} dégâts, {_n(ph['heal'])} soins"
-                       + _overheal_note(ph, ", {:.0f}% de soin en excès")
+            out.append(f"== {tr(ph['label'])} — {self._mmss(dur)}, "
+                       f"{dps or '— DPS'}, {hps or '— HPS'} ("
+                       + tr("{dmg} dégâts, {heal} soins",
+                            dmg=_n(ph['total']), heal=_n(ph['heal']))
+                       + _overheal_note(ph, tr(", {:.0f}% de soin en excès"))
                        + ") ==")
             players = ph["players"]
             if not players:
-                out.append("  (rien d'enregistré)")
+                out.append("  " + tr("(rien d'enregistré)"))
                 continue
             for i, p in enumerate(players, 1):
                 pct = p["total"] / ph["total"] * 100 if ph["total"] else 0.0
                 rate = _rate_text(p["total"], dur, "dps")
-                out.append(f"  dégâts {i}. {_report_name(p)} "
+                out.append("  " + tr("dégâts {i}. {name}", i=i,
+                                     name=_report_name(p)) + " "
                            + (f"{rate} " if rate else "")
                            + f"({_n(p['total'])}, {_pct1(pct)})")
             healers = sorted((p for p in players if p["heal"] > 0.5),
@@ -2332,12 +2403,14 @@ class App:
             for i, p in enumerate(healers, 1):
                 pct = p["heal"] / ph["heal"] * 100 if ph["heal"] else 0.0
                 rate = _rate_text(p["heal"], dur, "hps")
-                out.append(f"  soins {i}. {_report_name(p)} "
+                out.append("  " + tr("soins {i}. {name}", i=i,
+                                     name=_report_name(p)) + " "
                            + (f"{rate} " if rate else "")
                            + f"({_n(p['heal'])}, {_pct1(pct)}"
-                           + _overheal_note(p, ", {:.0f}% en excès") + ")")
+                           + _overheal_note(p, tr(", {:.0f}% en excès"))
+                           + ")")
             if ph["elements"]:
-                out.append("  types : " + " · ".join(
+                out.append("  " + tr("types :") + " " + " · ".join(
                     f"{element_label(el)} "
                     f"{_pct1(amt / ph['total'] * 100 if ph['total'] else 0.0)}"
                     for el, amt in ph["elements"][:8]))
@@ -2354,7 +2427,7 @@ class App:
         if self._parse_state is None:
             self._parse_state = "countdown"
             self._parse_until = time.time() + PARSE_PREROLL_SECS
-            self._set_parse_banner(f"PARSE DANS {PARSE_PREROLL_SECS}")
+            self._set_parse_banner(tr("PARSE DANS {n}", n=PARSE_PREROLL_SECS))
         else:
             self._stop_parse()
 
@@ -2367,13 +2440,14 @@ class App:
         self.focus_player = None
         self._parse_state = "parsing"
         self._parse_until = now + PARSE_LENGTH_SECS
-        self._set_parse_banner(f"PARSE  {PARSE_LENGTH_SECS} s")
+        self._set_parse_banner(tr("PARSE  {n} s", n=PARSE_LENGTH_SECS))
 
     def _finish_parse(self):
         """The session's capture window has already stopped data and clock;
         only the UI state changes. Nothing is saved."""
         self._parse_state = "done"
-        self._set_parse_banner(f"PARSE TERMINÉ  {PARSE_LENGTH_SECS} s")
+        self._set_parse_banner(tr("PARSE TERMINÉ  {n} s",
+                                  n=PARSE_LENGTH_SECS))
 
     def _open_parses(self):
         """Open the rift reports' folder in Explorer, created if needed."""
@@ -2403,12 +2477,12 @@ class App:
             if left <= 0:
                 self._begin_parse(now)
             else:
-                self._set_parse_banner(f"PARSE DANS {math.ceil(left)}")
+                self._set_parse_banner(tr("PARSE DANS {n}", n=math.ceil(left)))
         elif self._parse_state == "parsing":
             if left <= 0:
                 self._finish_parse()
             else:
-                self._set_parse_banner(f"PARSE  {math.ceil(left)} s")
+                self._set_parse_banner(tr("PARSE  {n} s", n=math.ceil(left)))
 
     def _begin_bind_capture(self):
         """Listen for the next keypress and make it the reset bind.
@@ -2462,9 +2536,9 @@ class App:
         if not self._binding_now:
             return bind_label()
         if getattr(self, "_bind_refused", None):
-            return (f"{self._bind_refused} seul ne marche pas, "
-                    "ajoute Ctrl, Maj ou Alt")
-        return "appuie sur une touche…"
+            return tr("{key} seul ne marche pas, ajoute Ctrl, Maj ou Alt",
+                      key=self._bind_refused)
+        return tr("appuie sur une touche…")
 
     def _end_bind_capture(self):
         self._binding_now = False
@@ -2568,14 +2642,17 @@ class App:
 
     @staticmethod
     def _help_articles():
-        """Every article on disk, parsed once and cached on the function
+        """Every article on disk in the interface's language (help/<lang>/,
+        French in help/), parsed once per language and cached on the function
         (read-only assets, otherwise re-read on every refresh tick)."""
-        cached = getattr(App._help_articles, "_cache", None)
-        if cached is not None:
-            return cached
+        lang = i18n.lang()
+        cache = App._help_articles.__dict__.setdefault("_cache", {})
+        if lang in cache:
+            return cache[lang]
         out = []
+        folder = HELP_DIR / lang if lang != i18n.SOURCE else HELP_DIR
         try:
-            files = sorted(HELP_DIR.glob("*.md"))
+            files = sorted(folder.glob("*.md")) or sorted(HELP_DIR.glob("*.md"))
         except OSError:
             files = []
         for f in files:
@@ -2586,22 +2663,23 @@ class App:
             title, blurb, blocks = _parse_help(text)
             out.append({"id": f.stem, "title": title or f.stem,
                         "blurb": blurb, "blocks": blocks})
-        App._help_articles._cache = out
+        cache[lang] = out
         return out
 
 
     def _page_help(self):
         arts = self._help_articles()
         if not arts:
-            return [{"k": "section", "t": "Aide"},
+            return [{"k": "section", "t": tr("Aide")},
                     {"k": "note", "warn": True,
-                     "t": "Les articles d'aide sont absents de cette version."}]
+                     "t": tr("Les articles d'aide sont absents de cette "
+                             "version.")}]
         # One article open: its text, and the way back.
         if self._help_open:
             art = next((a for a in arts if a["id"] == self._help_open), None)
             if art:
                 return ([{"k": "button", "id": "help_close",
-                          "t": "‹  Tous les sujets d'aide"},
+                          "t": tr("‹  Tous les sujets d'aide")},
                          {"k": "section", "t": art["title"]}]
                         + art["blocks"])
         # ...or the index: the repair, how it works, the links, the credits
@@ -2612,68 +2690,69 @@ class App:
             if not rows:
                 continue
             seen.update(a["id"] for a in rows)
-            out.append({"k": "section", "t": heading})
+            out.append({"k": "section", "t": tr(heading)})
             out.append({"k": "list", "id": f"help:{heading}", "rows": [
                 {"t": a["title"], "meta": a["blurb"],
-                 "btns": [{"id": "help_open", "t": "Lire",
+                 "btns": [{"id": "help_open", "t": tr("Lire"),
                            "p": {"id": a["id"]}}]}
                 for a in rows]})
         rest = [a for a in arts if a["id"] not in seen] if HELP_GROUPS \
             else []
         if rest:
-            out.append({"k": "section", "t": "Autres"})
+            out.append({"k": "section", "t": tr("Autres")})
             out.append({"k": "list", "id": "help:more", "rows": [
                 {"t": a["title"], "meta": a["blurb"],
-                 "btns": [{"id": "help_open", "t": "Lire",
+                 "btns": [{"id": "help_open", "t": tr("Lire"),
                            "p": {"id": a["id"]}}]}
                 for a in rest]})
         return out + self._credits_nodes()
 
     @staticmethod
     def _about_nodes():
-        return [{"k": "section", "t": "Fonctionnement"},
+        return [{"k": "section", "t": tr("Fonctionnement")},
                 {"k": "prose",
-                 "t": "Farever Book fonctionne uniquement en lecture : rien "
-                      "n'est jamais écrit ni modifié dans le jeu, et rien n'y "
-                      "est affiché."},
+                 "t": tr("Farever Book fonctionne uniquement en lecture : "
+                         "rien n'est jamais écrit ni modifié dans le jeu, et "
+                         "rien n'y est affiché.")},
                 {"k": "prose",
-                 "t": "L'application se contente de lire le contenu du jeu et "
-                      "ce que tu fais pendant tes sessions (combats, butin, "
-                      "progression), pour te le révéler et le mettre en forme "
-                      "ici."}]
+                 "t": tr("L'application se contente de lire le contenu du "
+                         "jeu et ce que tu fais pendant tes sessions "
+                         "(combats, butin, progression), pour te le révéler "
+                         "et le mettre en forme ici.")}]
 
     @staticmethod
     def _links_nodes():
-        return [{"k": "section", "t": "Liens utiles"},
+        return [{"k": "section", "t": tr("Liens utiles")},
                 {"k": "list", "id": "help:links", "rows": [
-                    {"t": ln["t"], "meta": ln["meta"],
-                     "btns": ([{"id": "open_link", "t": "Ouvrir",
+                    {"t": ln["t"], "meta": tr(ln["meta"]),
+                     "btns": ([{"id": "open_link", "t": tr("Ouvrir"),
                                 "p": {"id": ln["id"]}}] if ln["url"] else [])}
                     for ln in HELP_LINKS]}]
 
     @staticmethod
     def _credits_nodes():
-        return [{"k": "section", "t": "Crédits"},
+        return [{"k": "section", "t": tr("Crédits")},
                 {"k": "prose",
-                 "t": "Farever Book est un projet de fan, gratuit, autour "
-                      "du jeu Farever. Il n'est ni affilié à Shiro Games, ni "
-                      "approuvé par le studio. Farever et ses contenus "
-                      "appartiennent à Shiro Games."},
+                 "t": tr("Farever Book est un projet de fan, gratuit, autour "
+                         "du jeu Farever. Il n'est ni affilié à Shiro Games, "
+                         "ni approuvé par le studio. Farever et ses contenus "
+                         "appartiennent à Shiro Games.")},
                 {"k": "prose",
-                 "t": "Ce projet existe en partie grâce à Brudr, auteur du mod "
-                      "Farever+, qui a généreusement partagé son code. Merci "
-                      "à lui !"}]
+                 "t": tr("Ce projet existe en partie grâce à Brudr, auteur "
+                         "du mod Farever+, qui a généreusement partagé son "
+                         "code. Merci à lui !")}]
 
 
     def _repair_nodes(self):
-        return [{"k": "section", "t": "Un problème ?"},
+        return [{"k": "section", "t": tr("Un problème ?")},
                 {"k": "note",
-                 "t": "Farever Book relit les données du jeu tout seul quand "
-                      "Farever change. Si une page reste vide, que des images "
-                      "manquent ou que la connexion au jeu échoue, Réparer "
-                      "réanalyse le jeu depuis zéro puis se reconnecte, sans "
-                      "relancer l'application. Une trentaine de secondes."},
-                {"k": "button", "id": "repair_data", "t": "Réparer",
+                 "t": tr("Farever Book relit les données du jeu tout seul "
+                         "quand Farever change. Si une page reste vide, que "
+                         "des images manquent ou que la connexion au jeu "
+                         "échoue, Réparer réanalyse le jeu depuis zéro puis "
+                         "se reconnecte, sans relancer l'application. Une "
+                         "trentaine de secondes.")},
+                {"k": "button", "id": "repair_data", "t": tr("Réparer"),
                  "tone": "go"}]
 
     @staticmethod
@@ -2733,28 +2812,29 @@ class App:
         """The title band's game state: "play" (launch button), "launching",
         "connecting", "ingame" or "failed"."""
         if self.link is None:
-            return {"state": "ingame", "t": "En jeu"}
+            return {"state": "ingame", "t": tr("En jeu")}
         state, detail, _pid = self.link.status()
         if state == GameLink.CONNECTED:
             self._launching_until = 0
-            return {"state": "ingame", "t": "En jeu"}
+            return {"state": "ingame", "t": tr("En jeu")}
         if REGENERATING.is_set() and not self._setup:
-            return {"state": "connecting", "t": "Mise à jour…",
-                    "tip": "lecture des données du jeu (images, icônes, "
-                           "modèles), une trentaine de secondes"}
+            return {"state": "connecting", "t": tr("Mise à jour…"),
+                    "tip": tr("lecture des données du jeu (images, icônes, "
+                              "modèles), une trentaine de secondes")}
         if state == GameLink.CONNECTING:
             if REGENERATING.is_set():
-                return {"state": "connecting", "t": "Mise à jour…",
-                        "tip": "relecture des données du jeu"}
-            return {"state": "connecting", "t": "Connexion…",
-                    "tip": "au jeu en cours"}
+                return {"state": "connecting", "t": tr("Mise à jour…"),
+                        "tip": tr("relecture des données du jeu")}
+            return {"state": "connecting", "t": tr("Connexion…"),
+                    "tip": tr("au jeu en cours")}
         if state == GameLink.FAILED:
             return {"state": "failed",
-                    "tip": f"Connexion à Farever impossible : {detail}"}
+                    "tip": tr("Connexion à Farever impossible : {detail}",
+                              detail=detail)}
         if time.time() < self._launching_until:
-            return {"state": "launching", "t": "Lancement…",
-                    "tip": "Farever démarre"}
-        return {"state": "play", "tip": "Lancer Farever (via Steam)"}
+            return {"state": "launching", "t": tr("Lancement…"),
+                    "tip": tr("Farever démarre")}
+        return {"state": "play", "tip": tr("Lancer Farever (via Steam)")}
 
     def _launch_game(self):
         """Launch Farever through Steam (it handles the login and updates),
@@ -2762,7 +2842,7 @@ class App:
         try:
             os.startfile(f"steam://rungameid/{FAREVER_STEAM_APPID}")
         except OSError as e:
-            self._toast_msg(f"Impossible de lancer Farever : {e}")
+            self._toast_msg(tr("Impossible de lancer Farever : {e}", e=e))
             return
         self._launching_until = time.time() + 120
         if self.link is not None:

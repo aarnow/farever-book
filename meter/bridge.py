@@ -11,6 +11,7 @@ from pathlib import Path
 
 from common import (ANALYSIS, CREATE_NO_WINDOW, FROZEN, LOG_FILE, MENU_FLAG,
                     message_box)
+from i18n import tr
 
 
 # ---------------------------------------------------------------------------
@@ -37,13 +38,13 @@ class MenuBridge:
         self._failed = False            # give up after one failure to start
 
     # -- lifecycle --------------------------------------------------------
-    def start(self, geom=None, theme=None):
-        """Spawn the window process, hidden, at `geom` in `theme`. Called
-        once."""
+    def start(self, geom=None, theme=None, lang=None):
+        """Spawn the window process, hidden, at `geom` in `theme` and
+        `lang`. Called once."""
         if self.proc is not None or self._failed:
             return
         self.geom = dict(geom or {})
-        arg = json.dumps(dict(self.geom, theme=theme))
+        arg = json.dumps(dict(self.geom, theme=theme, lang=lang))
         cmd = ([sys.executable, MENU_FLAG, arg] if FROZEN
                else [sys.executable, str(Path(__file__).resolve().parent
                                          / "menu_host.py"), arg])
@@ -160,12 +161,12 @@ class MenuBridge:
             print(f"[meter] the window never opened (exit code {code})",
                   file=sys.stderr)
             message_box(
-                "La fenêtre de Farever Book n'a pas pu s'ouvrir.\n\n"
-                "Cause la plus courante : Microsoft Edge WebView2 n'est "
-                "pas installé "
-                "(https://developer.microsoft.com/microsoft-edge/webview2/).\n\n"
-                f"Le détail est dans :\n{LOG_FILE}",
-                "Farever Book — fenêtre impossible à ouvrir", 0x10)
+                tr("La fenêtre de Farever Book n'a pas pu s'ouvrir.\n\n"
+                   "Cause la plus courante : Microsoft Edge WebView2 n'est "
+                   "pas installé "
+                   "(https://developer.microsoft.com/microsoft-edge/webview2/)"
+                   ".\n\nLe détail est dans :\n{log}", log=LOG_FILE),
+                tr("Farever Book — fenêtre impossible à ouvrir"), 0x10)
         self.ready = False
         if self.proc is proc:
             self.proc = None

@@ -18,6 +18,7 @@ import urllib.error
 import urllib.request
 
 from common import DATA_HOME, FROZEN, VERSION
+from i18n import tr
 
 RELEASES_REPO = "aarnow/farever-book-releases"
 RELEASES_URL = f"https://github.com/{RELEASES_REPO}/releases"
@@ -87,15 +88,15 @@ class Updater:
             if manual:
                 self._set({"stage": "uptodate"} if e.code == 404 else
                           {"stage": "error",
-                           "t": "GitHub ne répond pas pour le moment. "
-                                "Réessayez plus tard."})
+                           "t": tr("GitHub ne répond pas pour le moment. "
+                                   "Réessayez plus tard.")})
             return
         except Exception as e:
             print(f"[update] check skipped: {e}", file=sys.stderr)
             if manual:
                 self._set({"stage": "error",
-                           "t": "Impossible de joindre GitHub pour le "
-                                "moment. Vérifiez votre connexion."})
+                           "t": tr("Impossible de joindre GitHub pour le "
+                                   "moment. Vérifiez votre connexion.")})
             return
         latest = version_tuple(rel.get("tag_name"))
         mine = version_tuple(VERSION)
@@ -176,9 +177,10 @@ class Updater:
             except Exception as e:
                 print(f"[update] download failed: {e}", file=sys.stderr)
                 self._set({"stage": "error", "v": r["v"],
-                           "t": "Le téléchargement n'a pas abouti. "
-                                "Réessayez plus tard, ou téléchargez "
-                                "l'installeur depuis la page des versions.",
+                           "t": tr("Le téléchargement n'a pas abouti. "
+                                   "Réessayez plus tard, ou téléchargez "
+                                   "l'installeur depuis la page des "
+                                   "versions."),
                            "page": r["page"]})
                 return
             self._set({"stage": "installing", "v": r["v"]})
@@ -188,8 +190,9 @@ class Updater:
                 print(f"[update] couldn't open the installer: {e}",
                       file=sys.stderr)
                 self._set({"stage": "error", "v": r["v"],
-                           "t": "L'installeur n'a pas pu être ouvert. Il est "
-                                f"dans {UPDATE_DIR}.", "page": r["page"]})
+                           "t": tr("L'installeur n'a pas pu être ouvert. "
+                                   "Il est dans {dir}.", dir=UPDATE_DIR),
+                           "page": r["page"]})
                 return
             # the installer replaces our files and starts the new version
             time.sleep(1.5)

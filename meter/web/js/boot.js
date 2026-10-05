@@ -8,6 +8,7 @@ function boot() {
     b.addEventListener('click', () => notify(b.dataset.act, {}));
   });
   initWindowFrame();
+  translateStatic();
   brandLogo();
   initToTop();
   notify('boot', {});

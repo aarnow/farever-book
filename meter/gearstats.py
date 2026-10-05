@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import sys
 
-from common import _n, _pretty_id
+from common import dec_sep, pct_sp, _n, _pretty_id
 from gamedata import (
     _fr_names, _fr_ref, _infusion_id, _item_flag, faction_label,
     gear_stats_data, infusion_data)
@@ -349,16 +349,16 @@ def _hero_sheet(prof, gear):
         v = vals[k]
         pct = bool((atbs.get(k) or {}).get("flags", 0) & ATB_PERCENT)
         if pct:
-            txt = f"{v:.1f}".rstrip("0").rstrip(".").replace(".", ",") + " %"
+            txt = f"{v:.1f}".rstrip("0").rstrip(".").replace(".", dec_sep()) + pct_sp()
         elif k == "HealthRegen":
-            txt = f"{v:.1f}".replace(".", ",")
+            txt = f"{v:.1f}".replace(".", dec_sep())
         else:
             txt = _n(round(v))
         out = {"k": k, "t": names.get(k) or _pretty_id(k), "v": txt}
         if k == "Armor" and lvl:
             a, b = d["consts"]["resist"][0], d["consts"]["resist"][1]
             red = v / (v + a + b * lvl) if v > 0 else 0
-            out["sub"] = f"\u2212{red * 100:.2f}".replace(".", ",") + " %"
+            out["sub"] = f"\u2212{red * 100:.2f}".replace(".", dec_sep()) + pct_sp()
         return out
     return {"primary": [row(k) for k in HERO_PRIMARY],
             "secondary": [row(k) for k in HERO_SECONDARY],
@@ -458,7 +458,7 @@ def infusion_tiers(sid, n=0):
         name = _fr_names("attribute").get(atb) or _pretty_id(atb)
         v = val * 100 if ref == "TAttribute_ARatio" else val
         four.append(f"{name} {'+' if v >= 0 else '−'}"
-                    f"{abs(v):g} %".replace(".", ","))
+                    f"{abs(v):g}{pct_sp()}".replace(".", dec_sep()))
     return [{"n": k, "on": n >= k, "txt": _fr_ref(t)}
             for k, t in ((2, e.get("t2")), (4, " · ".join(four)),
                          (6, e.get("t6"))) if t]

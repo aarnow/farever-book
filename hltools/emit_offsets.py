@@ -6,6 +6,7 @@ a Farever patch.
 """
 import json
 import os
+import struct
 import sys
 from pathlib import Path
 
@@ -327,6 +328,8 @@ TABLES = (
           lambda d: f"{len(d['spark'])} sparkling", PLAIN),
     Table("names_fr.json", lambda g, o, t: extract_fr_names(g),
           lambda d: ", ".join(f"{len(v)} {k}" for k, v in d.items()), TEXT),
+    Table("names_en.json", lambda g, o, t: extract_en_names(g),
+          lambda d: ", ".join(f"{len(v)} {k}" for k, v in d.items()), TEXT),
     Table("collection.json",
           lambda g, o, t: _module("collection_data").build(
               g, o / "collection_img"),
@@ -534,6 +537,86 @@ def extract_fr_names(game_dir):
                 mt = "".join(mn.itertext()).strip() if mn is not None else ""
                 if mt:
                     rows[m.tag] = mt
+    return out
+
+
+def extract_en_names(game_dir):
+    """names_fr.json's shape in English: the game's own texts, which data.cdb
+    holds in English (the translations are the lang/export_*.xml)."""
+    import pak_extract
+    cdb = json.loads(pak_extract.read_entry(Path(game_dir) / "res.light.pak",
+                                            "data.cdb"))
+    sheets = {s["name"]: s for s in cdb["sheets"]}
+
+    def at(row, path):
+        for k in path.split("."):
+            row = row.get(k) if isinstance(row, dict) else None
+        if isinstance(row, dict):           # itemType: {v, plural}
+            row = row.get("v")
+        return row.strip() if isinstance(row, str) else ""
+
+    out = {"_desc": {}}
+    for name in FR_SHEETS:
+        rows = out.setdefault(name, {})
+        descs = out["_desc"].setdefault(name, {}) if name in FR_DESC else None
+        for row in (sheets.get(name) or {}).get("lines") or ():
+            rid = row.get("id")
+            if not isinstance(rid, str):
+                continue
+            if descs is not None:
+                txt = next((at(row, tag) for tag in FR_DESC[name]
+                            if at(row, tag)), "")
+                if txt:
+                    descs[rid] = txt
+            txt = at(row, "texts.name") or at(row, "name")
+            if txt:
+                rows[rid] = txt
+            for m in row.get("mastery") or ():
+                if isinstance(m, dict) and isinstance(m.get("id"), str)                         and at(m, "text.name"):
+                    rows[m["id"]] = at(m, "text.name")
+    out["activity"] = _activity_names(game_dir)
+    return out
+
+
+def _activity_names(game_dir):
+    """The activities' English names: their rows are not in data.cdb but in
+    the prefabs that place them (activity objects, "$cdbtype": "activity"),
+    the dungeons' in their level's gameplayData."""
+    import hbson
+    import pak_extract
+    out = {}
+
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("$cdbtype") == "activity" and isinstance(o.get("id"), str):
+                name = (o.get("texts") or {}).get("name")
+                if isinstance(name, str) and name.strip():
+                    out[o["id"]] = name.strip()
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    for pak_name, wanted in (("res.pak", "Gameplay/Activities/"),
+                             ("res.levels.pak", "/gameplayData/")):
+        pak = Path(game_dir) / pak_name
+        with open(pak, "rb") as f:
+            head = f.read(12)
+            f.seek(0)
+            entries, data_off = pak_extract.read_tree(
+                f.read(struct.unpack_from("<i", head, 4)[0]), pak.name)
+            for e in entries:
+                if not e.path.endswith(".prefab") or wanted not in e.path:
+                    continue
+                f.seek(data_off + e.pos)
+                blob = f.read(e.size)
+                if b"activity" not in blob:
+                    continue
+                try:
+                    walk(hbson.loads(blob))
+                except Exception:
+                    continue
     return out
 
 

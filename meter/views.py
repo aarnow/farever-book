@@ -7,7 +7,7 @@ import math
 import re
 import time
 
-from common import ANALYSIS, _n, _pretty_id, class_key, date_fr
+from common import dec_sep, pct_sp, ANALYSIS, _n, _pretty_id, class_key, date_fr
 from gamedata import (
     RARITY_ORDER, _augments_data, _codex_thresholds, _element_done, build_data,
     _family_label, _fr_desc, _fr_names, _fr_ref, _item_flag, _skill_label,
@@ -21,6 +21,7 @@ from gearstats import (
     _gear_infusion, _hero_sheet, _infusion_sets, _scaled, gear_stats,
     infusion_bonus, slot_factor)
 from combat import DUNGEON_DIFFICULTIES
+from i18n import tr
 
 
 COLLECTION_CATS = (("mounts", "Montures", "monture"),
@@ -45,12 +46,12 @@ APTITUDE_CLASSES = {"Fighter": "warrior", "Assassin": "rogue",
 GEAR_CLASSES = ("warrior", "mage", "rogue", "priest")
 
 
-FACTION_ACTS = (("WorldElite", "élite", "élites"),
-                ("FightStone", "pierre de combat", "pierres de combat"),
-                ("ChestOrb", "orbe à coffre", "orbes à coffre"),
-                ("WorldCamp", "camp", "camps"),
-                ("TimerCollectRun", "course", "courses"),
-                ("Ascension", "ascension", "ascensions"))
+FACTION_ACTS = (("WorldElite", "{n} élite", "{n} élites"),
+                ("FightStone", "{n} pierre de combat", "{n} pierres de combat"),
+                ("ChestOrb", "{n} orbe à coffre", "{n} orbes à coffre"),
+                ("WorldCamp", "{n} camp", "{n} camps"),
+                ("TimerCollectRun", "{n} course", "{n} courses"),
+                ("Ascension", "{n} ascension", "{n} ascensions"))
 
 
 # the item codex's rank steps (codex_units.json "item": 1, 5, 25, 50)
@@ -76,27 +77,29 @@ CHEST_LABELS = {"VaultChest": "Coffre-fort", "WorldChest": "Coffre",
 def _source_text(s, bosses):
     """One way to obtain a collectible, in French."""
     k, ch = s.get("k"), s.get("chance")
-    pct = ("" if ch is None else " — garanti" if ch >= 1
+    pct = ("" if ch is None else " — " + tr("garanti") if ch >= 1
            else f" — {_pct(ch)}")
     if k == "family":
         name = _fr_names("unitType").get(s.get("id")) or _pretty_id(s["id"])
-        return f"Butin des ennemis : {name}{pct}"
+        return tr("Butin des ennemis : {name}", name=name) + pct
     if k == "unit":
         dg = bosses.get(s.get("id"))
         where = f" ({dungeon_name(dg)})" if dg else ""
-        return f"Butin de {_unit_label(s.get('id'))}{where}{pct}"
+        return tr("Butin de {unit}", unit=_unit_label(s.get("id"))) \
+            + where + pct
     if k == "chest":
-        kind = CHEST_LABELS.get(s.get("id"), "Coffre")
+        kind = tr(CHEST_LABELS.get(s.get("id"), "Coffre"))
         zone = f" — {_zone_label(s['zone'])}" if s.get("zone") else ""
         return f"{kind}{zone}{pct}"
     if k == "shop":
         npc = s.get("npc")
-        who = (_fr_names("unit").get(npc) if npc else None) or "un marchand"
+        who = (_fr_names("unit").get(npc) if npc else None) or tr("un marchand")
         zone = f" — {_zone_label(s['zone'])}" if s.get("zone") else ""
         cost = ", ".join(f"{c['n']} × {item_label(c['item'])}"
                          if c.get("n") else item_label(c["item"])
                          for c in s.get("cost") or () if c.get("item"))
-        return f"Vendu par {who}{zone}" + (f" (prix : {cost})" if cost else "")
+        return tr("Vendu par {who}", who=who) + zone + (
+            " " + tr("(prix : {cost})", cost=cost) if cost else "")
     if k == "ach":
         chain = s.get("chain") or [s.get("id")]
         name = next((_fr_names("ach").get(a) for a in chain
@@ -109,63 +112,72 @@ def _source_text(s, bosses):
         name = _fr_ref(name) if name else desc or _pretty_id(s.get("id"))
         if name and v and len(chain) > 1:
             name = f"{name} ({v})"
-        return f"Succès « {name} »" + (f" : {desc}" if desc and desc != name
-                                        else "")
+        return (tr("Succès « {name} » : {desc}", name=name, desc=desc)
+                if desc and desc != name else tr("Succès « {name} »", name=name))
     if k == "starter":
-        what = "Équipement" if s.get("gear") else "Planeur"
-        return f"{what} de départ du {CLASS_LABELS.get(s.get('cls'), '?')}"
+        cls = tr(CLASS_LABELS.get(s.get("cls"), "?"))
+        return (tr("Équipement de départ du {cls}", cls=cls) if s.get("gear")
+                else tr("Planeur de départ du {cls}", cls=cls))
     if k == "world":
         lvl = s.get("lvl") or 1
-        return (f"Butin aléatoire du monde (ennemis, coffres, activités) "
-                f"de niveau {max(1, lvl - 1)} à {lvl + 2}")
+        return tr("Butin aléatoire du monde (ennemis, coffres, activités) "
+                  "de niveau {lo} à {hi}", lo=max(1, lvl - 1), hi=lvl + 2)
     if k == "faction":
         f = s.get("f")
         info = (collection_catalogue().get("factions") or {}).get(f) or {}
         name = faction_label(f)
         dgs = [_fr_names("activity").get(a) or _pretty_id(a)
                for a in info.get("dungeons") or ()]
-        acts = [f"{n} {one if n == 1 else many}"
+        acts = [tr(one if n == 1 else many, n=n)
                 for key, one, many in FACTION_ACTS
                 for n in [(info.get("acts") or {}).get(key)] if n]
         n = info.get("chests") or 0
-        lines = [f"Butin de la faction {name} : 20 % par activité"
-                 + (", 5 % par coffre" if n else "")]
+        lines = [tr("Butin de la faction {name} : 20 % par activité, "
+                    "5 % par coffre", name=name) if n else
+                 tr("Butin de la faction {name} : 20 % par activité",
+                    name=name)]
         if dgs:
-            lines.append("Donjons : " + ", ".join(dgs))
+            lines.append(tr("Donjons : {list}", list=", ".join(dgs)))
         if acts:
-            lines.append("Activités du monde : " + ", ".join(acts))
+            lines.append(tr("Activités du monde : {list}",
+                            list=", ".join(acts)))
         if n:
-            lines.append(f"Coffres de la faction : {n}")
+            lines.append(tr("Coffres de la faction : {n}", n=n))
         return "\n".join(lines)
     if k == "gather":
         name = _fr_names("gatherable").get(s.get("id")) or _pretty_id(
             s.get("id"))
-        return f"Récolte : {name}{pct}"
+        return tr("Récolte : {name}", name=name) + pct
     if k == "craft":
         job = _fr_names("job").get(s.get("job")) or _pretty_id(s.get("job"))
         inputs = " + ".join(f"{n} × {item_label(i)}"
                             for i, n in s.get("input") or ())
         made = f" (×{s['n']})" if (s.get("n") or 1) > 1 else ""
-        return (f"Fabrication{made} : {job} niv. {s.get('lvl') or 1}"
+        return (tr("Fabrication{made} : {job} niv. {lvl}", made=made,
+                   job=job, lvl=s.get("lvl") or 1)
                 + (f" — {inputs}" if inputs else ""))
     if k == "scrap":
-        what = "objet rare" if s.get("id") == "Scrap_Rare" else "objet"
-        return f"Recyclage d'un {what} à la station d'Étincelle{pct}"
+        return (tr("Recyclage d'un objet rare à la station d'Étincelle")
+                if s.get("id") == "Scrap_Rare" else
+                tr("Recyclage d'un objet à la station d'Étincelle")) + pct
     if k == "combine":
-        return "Combinaison : " + " + ".join(
-            f"{n} × {item_label(i)}" for i, n in s.get("from") or ())
+        return tr("Combinaison : {items}", items=" + ".join(
+            f"{n} × {item_label(i)}" for i, n in s.get("from") or ()))
     if k == "salvage":
         lo, hi = (s.get("lvl") or [1, 25])[:2]
         rar = s.get("rarity")
-        what = (f"d'un équipement {rarity_label(rar).lower()}" if rar
-                else "d'un équipement")
-        return f"Démontage {what} de niveau {lo} à {hi}"
+        if rar:
+            return tr("Démontage d'un équipement {rarity} de niveau {lo} à "
+                      "{hi}", rarity=rarity_label(rar).lower(), lo=lo, hi=hi)
+        return tr("Démontage d'un équipement de niveau {lo} à {hi}",
+                  lo=lo, hi=hi)
     if k == "spawn":
         zones = ", ".join(_zone_label(z) for z in s.get("zones") or ())
-        where = "en faille" if s.get("rift") else (zones or "dans le monde")
+        where = tr("en faille") if s.get("rift") else (
+            zones or tr("dans le monde"))
         rate = ("" if ch is None or ch >= 1
-                else f" · {_pct(ch)} des apparitions")
-        return f"Se capture : {where}{rate}"
+                else " · " + tr("{pct} des apparitions", pct=_pct(ch)))
+        return tr("Se capture : {where}", where=where) + rate
     return k or "?"
 
 
@@ -185,7 +197,7 @@ def collection_view(owned, item_codex=None):
         mine = set(owned.get(key) or ())
         rows = cat.get(key) or []
         got = sum(1 for e in rows if e["id"] in mine)
-        cats.append({"v": key, "t": label, "one": one, "n": len(rows),
+        cats.append({"v": key, "t": tr(label), "one": tr(one), "n": len(rows),
                      "got": got})
         for e in rows:
             iid = e["id"]
@@ -214,25 +226,26 @@ def collection_view(owned, item_codex=None):
                 "uses": e.get("uses") if key == "items" else None,
                 "name": _unit_label(iid) if pet else item_label(iid),
                 "rk": "legendary" if spark else rar.lower(),
-                "rar": "Étincelle" if spark else
+                "rar": tr("Étincelle") if spark else
                        (rarity_label(rar) if rar else ""),
                 "desc": _fr_ref(_fr_desc("item").get(iid)) if not pet else "",
                 "sl": e.get("slot"),
                 "ic": e.get("cat") if key == "items" else None,
-                "slot": dict(GEAR_SLOTS).get(e.get("slot")),
+                "slot": tr(dict(GEAR_SLOTS).get(e.get("slot"))),
                 "cls": [APTITUDE_CLASSES[a] for a in e.get("apt") or ()
                         if a in APTITUDE_CLASSES],
-                "apt": (", ".join(CLASS_LABELS[APTITUDE_CLASSES[a]]
+                "apt": (", ".join(tr(CLASS_LABELS[APTITUDE_CLASSES[a]])
                                   for a in e.get("apt") or ()
                                   if a in APTITUDE_CLASSES)
-                        or "toutes") if key == "gears" else "",
+                        or tr("toutes")) if key == "gears" else "",
                 "lvl": e.get("lvl"),
                 "src": [line for s in srcs
                         for line in _source_text(s, bosses).split("\n")]})
     return {"cats": cats, "items": items,
-            "slots": [{"v": v, "t": t} for v, t in GEAR_SLOTS],
-            "classes": [{"v": c, "t": CLASS_LABELS[c]} for c in GEAR_CLASSES],
-            "itemCats": [{"v": v, "t": t} for v, t in ITEM_CATS
+            "slots": [{"v": v, "t": tr(t)} for v, t in GEAR_SLOTS],
+            "classes": [{"v": c, "t": tr(CLASS_LABELS[c])}
+                        for c in GEAR_CLASSES],
+            "itemCats": [{"v": v, "t": tr(t)} for v, t in ITEM_CATS
                          if any(e.get("cat") == v for e in cat["items"])]}
 
 
@@ -268,9 +281,9 @@ def bestiary_view(ranks, owned=None):
         n = sum(1 for e in rows if (e.get("regions") or [""])[0] == r)
         if n:
             regions.append({"v": r or "other",
-                            "t": "Failles et invasions" if r == "rift"
-                            else _fr_names("zone").get(r) or "Autres"
-                            if r else "Autres", "n": n})
+                            "t": tr("Failles et invasions") if r == "rift"
+                            else _fr_names("zone").get(r) or tr("Autres")
+                            if r else tr("Autres"), "n": n})
     items = []
     for e in rows:
         kills, rank = (ranks.get(e["id"]) or [0, 0])[:2]
@@ -284,7 +297,7 @@ def bestiary_view(ranks, owned=None):
             "reg": reg if reg in HUNT_REGIONS else "other",
             "zones": ", ".join(_zone_label(z) for z in e.get("zones") or ()
                                [:4]),
-            "tier": HUNT_TIERS.get(e.get("tier"), ""),
+            "tier": tr(HUNT_TIERS.get(e.get("tier"), "")),
             "kills": int(kills), "rank": int(rank),
             "max": len(steps) or 3,
             "next": nxt})
@@ -334,7 +347,7 @@ def hunt_detail_view(uid, ranks):
     insts = []
     for act in where.get("acts") or ():
         rift = act.startswith("POI_Rift_")
-        t = (f"Faille {int(act[-2:])}" if rift and act[-2:].isdigit()
+        t = (tr("Faille {n}", n=int(act[-2:])) if rift and act[-2:].isdigit()
              else dungeon_name(act))
         insts.append({"t": t, "kind": "Faille" if rift else "Donjon",
                       "doors": [{"x": x, "y": y}
@@ -346,10 +359,10 @@ def hunt_detail_view(uid, ranks):
             for i in where.get("items") or ()]
     note = ""
     if not zones and not spawns and not insts and not by:
-        note = ("Apparaît lors d’une invasion déclenchée par une pierre "
-                "d’âme." if "Soulstone" in uid else
-                "Source inconnue : il n’apparaît que lors d’événements ou "
-                "comme invocation.")
+        note = (tr("Apparaît lors d’une invasion déclenchée par une pierre "
+                   "d’âme.") if "Soulstone" in uid else
+                tr("Source inconnue : il n’apparaît que lors d’événements ou "
+                   "comme invocation."))
 
     rows = []
     src_label = {"family": "Famille", "unit": "Ce monstre", "boss": "Boss"}
@@ -364,21 +377,21 @@ def hunt_detail_view(uid, ranks):
         rows.append({"img": item_icon(i), "name": item_label(i), "rk": rk,
                      "type": item_type_label(item_type(i)) if item_type(i)
                      else "",
-                     "src": src_label.get(src, src)
-                     + (f" · {DUNGEON_DIFFICULTIES.get(need, '?')}"
+                     "src": tr(src_label.get(src, src))
+                     + (f" · {tr(DUNGEON_DIFFICULTIES.get(need, '?'))}"
                         if need else ""),
-                     "chance": "garanti" if p >= 1 else _pct(p), "cv": p})
+                     "chance": tr("garanti") if p >= 1 else _pct(p), "cv": p})
     # rarest first, then the least likely
     rows.sort(key=lambda r: (-RARITY_ORDER.get(r["rk"].capitalize(), 0),
                              r["cv"], r["name"]))
     wm = world_map()
     return {"uid": uid, "name": _unit_label(uid), "fam": _family_label(fam),
-            "tier": HUNT_TIERS.get(tier, ""),
+            "tier": tr(HUNT_TIERS.get(tier, "")),
             "lvl": (cat.get("lvl") or {}).get(uid),
             "kills": int(kills), "rank": int(rank), "max": len(steps) or 3,
             "next": next((t for t in steps if t > kills), None),
             "zones": [_zone_label(z) for z in zones],
-            "regions": [_zone_label(r) if r != "rift" else "Failles"
+            "regions": [_zone_label(r) if r != "rift" else tr("Failles")
                         for r in regions],
             "spawns": spawns, "insts": insts, "by": by, "keys": keys,
             "note": note,
@@ -416,8 +429,8 @@ def _farm_view(items, fams, owned):
                         "kind": "family", "fid": s["id"],
                         "img": fam.get("img") or "",
                         "name": _family_label(s["id"]),
-                        "sub": f"toute la famille · {fam.get('species', 0)} "
-                               "espèces",
+                        "sub": tr("toute la famille · {n} espèces",
+                                  n=fam.get("species", 0)),
                         "species": [{"name": it["name"], "k": it["kills"]}
                                     for it in species[:8]],
                         "kills": kills, "p": p})
@@ -429,8 +442,9 @@ def _farm_view(items, fams, owned):
                     sources.append({
                         "kind": "unit", "img": s["id"],
                         "name": _unit_label(s["id"]),
-                        "sub": (f"boss de {dungeon_name(dg)}" if dg else
-                                it.get("fam") or "monstre"),
+                        "sub": (tr("boss de {dungeon}",
+                                   dungeon=dungeon_name(dg)) if dg else
+                                it.get("fam") or tr("monstre")),
                         "kills": kills, "p": p})
                 miss *= (1 - p) ** kills
             if not sources:
@@ -439,9 +453,9 @@ def _farm_view(items, fams, owned):
             total = sum(s["kills"] for s in sources)
             ps = sorted({s["p"] for s in sources})
             pct = (_pct(ps[0]) if len(ps) == 1
-                   else f"{_pct(ps[0])} à {_pct(ps[-1])}")
-            odds = (f"1 chance sur {_n(round(1 / ps[0]))}" if len(ps) == 1
-                    else "selon le monstre")
+                   else tr("{lo} à {hi}", lo=_pct(ps[0]), hi=_pct(ps[-1])))
+            odds = (tr("1 chance sur {n}", n=_n(round(1 / ps[0])))
+                    if len(ps) == 1 else tr("selon le monstre"))
             mobs = []
             for s in sources:
                 if s["kind"] == "family":
@@ -532,7 +546,7 @@ def _talent_tree(cls, ranks, granted=()):
         pts = int(ranks.get(t["s"]) or 0)
         gift = not pts and t["s"] in granted
         return {"id": t["s"], "name": _skill_label(t["s"])
-                + (" (offert par l'équipement)" if gift else ""),
+                + (" " + tr("(offert par l'équipement)") if gift else ""),
                 "pts": t["max"] if gift else pts, "max": t["max"],
                 "gift": gift}
     root = next((t for t in tree["talents"] if t["tier"] == 0), None)
@@ -606,9 +620,9 @@ def _sheet(prof, entries):
                 "skills": _weapon_skills(prof, g["id"], g["t"]) if g else []}
     return {"left": [cell(*s) for s in SHEET_LEFT],
             "right": [cell(*s) for s in SHEET_RIGHT],
-            "weapons": [weapon("Weapon1", "Main principale"),
-                        weapon("OffhandWeapon", "Main secondaire")],
-            "arsenal": weapon("Weapon2", "Arme de rechange")}
+            "weapons": [weapon("Weapon1", tr("Main principale")),
+                        weapon("OffhandWeapon", tr("Main secondaire"))],
+            "arsenal": weapon("Weapon2", tr("Arme de rechange"))}
 
 
 def character_view(roster, profiles, sel, waiting, live):
@@ -619,12 +633,12 @@ def character_view(roster, profiles, sel, waiting, live):
                                            -(r.get("lvl") or 0),
                                            r.get("n") or "")):
         near.append({"n": r.get("n"), "lvl": r.get("lvl"),
-                     "cls": CLASS_FR.get(r.get("k"), r.get("k") or ""),
+                     "cls": tr(CLASS_FR.get(r.get("k"), r.get("k") or "")),
                      "ck": class_key(r.get("k")), "me": bool(r.get("me")),
                      "saved": r.get("n") in profiles,
                      "busy": r.get("n") == waiting})
     saved = [{"n": n, "lvl": p.get("lvl"),
-              "cls": CLASS_FR.get(p.get("k"), p.get("k") or ""),
+              "cls": tr(CLASS_FR.get(p.get("k"), p.get("k") or "")),
               "ck": class_key(p.get("k")),
               "when": date_fr(time.localtime(p.get("at") or 0))}
              for n, p in sorted(profiles.items(),
@@ -648,7 +662,7 @@ def character_view(roster, profiles, sel, waiting, live):
                       if g and not str(g).startswith("[")]
             for e in effects or ():
                 if e and not str(e).startswith("["):
-                    extras.append({"k": "enchant", "name": "Enchantement",
+                    extras.append({"k": "enchant", "name": tr("Enchantement"),
                                    "fx": _skill_label(e)})
             entry = {"id": kind, "name": item_label(kind),
                      "img": item_icon(kind), "rk": rar.lower(),
@@ -685,7 +699,7 @@ def character_view(roster, profiles, sel, waiting, live):
                 cells.append((idx, entry))
         view["open"] = {
             "n": prof.get("n"), "lvl": prof.get("lvl"),
-            "cls": CLASS_FR.get(prof.get("k"), prof.get("k") or ""),
+            "cls": tr(CLASS_FR.get(prof.get("k"), prof.get("k") or "")),
             "ck": class_key(prof.get("k")), "me": bool(prof.get("me")),
             "when": date_fr(time.localtime(prof.get("at") or 0)),
             "gear": gear, "other": other, "sheet": _sheet(prof, cells),
@@ -736,7 +750,7 @@ STAT_LABELS = (("Gold_TotalEarned", "Or gagné"),
 
 
 def _pct2(v):
-    return f"{v * 100:.1f}".rstrip("0").rstrip(".").replace(".", ",") + " %"
+    return f"{v * 100:.1f}".rstrip("0").rstrip(".").replace(".", dec_sep()) + pct_sp()
 
 
 def _profile_luck(prof):
@@ -767,7 +781,7 @@ def _profile_luck(prof):
         steps = (max(0, math.ceil(round((cap - base) / inc, 6)) - int(n))
                  if inc else 0)
         st = p.get("status")
-        out.append({"t": label, "n": int(n), "bonus": _pct2(bonus),
+        out.append({"t": tr(label), "n": int(n), "bonus": _pct2(bonus),
                     "cap": _pct2(cap), "full": bonus >= cap,
                     "grows": bool(inc), "inc": _pct2(inc),
                     "steps": steps,
@@ -782,7 +796,7 @@ def _profile_stats(prof):
     counters = prof.get("counters")
     if not isinstance(counters, dict):
         return None
-    return [{"t": label, "v": counters[k]} for k, label in STAT_LABELS
+    return [{"t": tr(label), "v": counters[k]} for k, label in STAT_LABELS
             if isinstance(counters.get(k), (int, float))]
 
 
@@ -986,9 +1000,9 @@ def rift_rewards_view(counters, luck_until):
     the chests' contents with their chances."""
     d = rift_rewards_data()
     if not d:
-        return [{"k": "note", "t": "Données des failles absentes : relance "
-                                   "Farever Book avec le jeu ouvert pour les "
-                                   "générer."}]
+        return [{"k": "note", "t": tr("Données des failles absentes : relance "
+                                      "Farever Book avec le jeu ouvert pour "
+                                      "les générer.")}]
     now = time.time()
     on = {k for k, t in (luck_until or {}).items() if t > now}
 
@@ -997,14 +1011,14 @@ def rift_rewards_view(counters, luck_until):
 
     # what each tier does, in the code's order (tier 3 adds Rift_Tier4,
     # tier 5 adds Rift_Tier6 — the data's own comment says Tier5)
-    tier_txt = {0: "Ouvre le coffre du boss : sans ça, aucune de ses "
-                   "récompenses (armes, montures…)",
-                3: f"Ajoute au coffre du boss : {names(d.get('tier4') or [])} "
-                   "(une des deux, garantie)",
-                5: f"Ajoute au coffre du boss : {names(d.get('tier6') or [])} "
-                   "(garanti)"}
-    rows = [{"t": f"{int(t['gates'])} portails fermés",
-             "meta": tier_txt.get(i, "Un coffre bonus de plus")}
+    tier_txt = {0: tr("Ouvre le coffre du boss : sans ça, aucune de ses "
+                      "récompenses (armes, montures…)"),
+                3: tr("Ajoute au coffre du boss : {items} (une des deux, "
+                      "garantie)", items=names(d.get("tier4") or [])),
+                5: tr("Ajoute au coffre du boss : {items} (garanti)",
+                      items=names(d.get("tier6") or []))}
+    rows = [{"t": tr("{n} portails fermés", n=int(t["gates"])),
+             "meta": tier_txt.get(i, tr("Un coffre bonus de plus"))}
             for i, t in enumerate(d.get("tiers") or ())]
 
     def luck_note(item):
@@ -1024,7 +1038,7 @@ def rift_rewards_view(counters, luck_until):
                 if item_type(item) else "",
                 "apt": [], "src": src,
                 "chance": (_pct(chance) if chance is not None and chance < 1
-                           else "garanti") + note,
+                           else tr("garanti")) + note,
                 "qty": qty, "got": 0}
 
     def chest_rows(ls, src):
@@ -1033,16 +1047,17 @@ def rift_rewards_view(counters, luck_until):
             qty = (f"{ln['itemMin']}" if ln.get("itemMin") else "")
             if ln.get("lootTable") == "Soulstone":
                 out.append({"img": item_icon("Soulstone_Z1_1"),
-                            "name": "Une pierre d'âme", "rk": "rare",
-                            "type": "Pierre d'âme", "apt": [], "src": src,
-                            "chance": "garanti",
-                            "qty": f"1 parmi {len(d.get('soulstone') or [])}",
+                            "name": tr("Une pierre d'âme"), "rk": "rare",
+                            "type": tr("Pierre d'âme"), "apt": [], "src": src,
+                            "chance": tr("garanti"),
+                            "qty": tr("1 parmi {n}",
+                                      n=len(d.get("soulstone") or [])),
                             "got": 0})
             elif ln.get("item"):
                 p = ln.get("proba") or 0
                 bonus = luck_note(ln["item"]) if p < 1 else 0
                 out.append(row(ln["item"], src, min(1.0, p + bonus), qty,
-                               " (offrande)" if bonus else ""))
+                               " " + tr("(offrande)") if bonus else ""))
         return out
 
     boss_rows = []
@@ -1050,32 +1065,34 @@ def rift_rewards_view(counters, luck_until):
         who = _unit_label(b["id"])
         ws = [w for w in b.get("weapons") or () if w.get("item")]
         for w in ws:
-            boss_rows.append(row(w["item"], f"Coffre du boss · {who}",
+            boss_rows.append(row(w["item"],
+                                 tr("Coffre du boss · {who}", who=who),
                                  1 / len(ws) if ws else None))
         boss_rows += chest_rows(b.get("extra") or [],
-                                f"Coffre du boss · {who}")
-    boss_rows += chest_rows(d.get("bossChest") or [], "Coffre du boss")
+                                tr("Coffre du boss · {who}", who=who))
+    boss_rows += chest_rows(d.get("bossChest") or [], tr("Coffre du boss"))
     t4 = [ln for ln in d.get("tier4") or () if ln.get("item")]
-    boss_rows += [row(ln["item"], "Coffre du boss · 10 portails",
+    boss_rows += [row(ln["item"], tr("Coffre du boss · 10 portails"),
                       1 / len(t4)) for ln in t4]
-    boss_rows += [row(ln["item"], "Coffre du boss · 15 portails")
+    boss_rows += [row(ln["item"], tr("Coffre du boss · 15 portails"))
                   for ln in d.get("tier6") or () if ln.get("item")]
     return [
-        {"k": "section", "t": "Butin"},
-        {"k": "note", "t": "D'après le code et les données du jeu. Chaque "
-                           "joueur reçoit sa propre part de chaque coffre. Le "
-                           "coffre du boss s'ouvre une fois 3 portails "
-                           "fermés ; chaque palier suivant ajoute un coffre "
-                           "bonus ou une récompense garantie."},
+        {"k": "section", "t": tr("Butin")},
+        {"k": "note", "t": tr("D'après le code et les données du jeu. Chaque "
+                              "joueur reçoit sa propre part de chaque coffre. "
+                              "Le coffre du boss s'ouvre une fois 3 portails "
+                              "fermés, chaque palier suivant ajoute un "
+                              "coffre bonus ou une récompense garantie.")},
         {"k": "list", "id": "rift_tiers", "rows": rows},
         # the two chests side by side
         {"k": "columns", "id": "rift_chests", "cols": [
-            [{"k": "sub", "t": "Coffre du boss"},
+            [{"k": "sub", "t": tr("Coffre du boss")},
              {"k": "droptable", "id": "rift_boss_chest", "rows": boss_rows,
               "lite": True}],
-            [{"k": "sub", "t": "Coffre bonus (5, 9 et 14 portails)"},
+            [{"k": "sub", "t": tr("Coffre bonus (5, 9 et 14 portails)")},
              {"k": "droptable", "id": "rift_bonus_chest", "lite": True,
-              "rows": chest_rows(d.get("bonusChest") or [], "Coffre bonus")}]]},
+              "rows": chest_rows(d.get("bonusChest") or [],
+                                 tr("Coffre bonus"))}]]},
     ]
 
 
@@ -1109,7 +1126,8 @@ def map_view(states=None):
                     "n": int(num.group(1)) if num else 0,
                     "z": _zone_label(p["zone"]) if p.get("zone") else "",
                     "r": p.get("region") or "other"})
-    cats = [{"v": k, "t": t, "g": g, "n": sum(1 for p in pts if p["c"] == k)}
+    cats = [{"v": k, "t": tr(t), "g": tr(g),
+             "n": sum(1 for p in pts if p["c"] == k)}
             for k, (t, g) in MAP_CATS.items()]
     regions = []
     seen = sorted({p["r"] for p in pts} - {"other"},
@@ -1119,7 +1137,7 @@ def map_view(states=None):
         if n:
             regions.append({"v": r, "n": n,
                             "t": _fr_names("zone").get(r) or _pretty_id(r)
-                            if r != "other" else "Autres"})
+                            if r != "other" else tr("Autres")})
     return {"meta": wm.get("meta") or {}, "points": pts, "cats": cats,
             "regions": regions, "known": states is not None}
 
@@ -1128,8 +1146,8 @@ def _pct(chance):
     if chance is None:
         return "?"
     v = chance * 100
-    return f"{v:.0f} %" if v >= 1 and abs(v - round(v)) < 0.05 \
-        else f"{v:.2g} %".replace(".", ",")
+    return f"{v:.0f}{pct_sp()}" if v >= 1 and abs(v - round(v)) < 0.05 \
+        else f"{v:.2g}{pct_sp()}".replace(".", dec_sep())
 
 
 def droptable_view(dg, got, diff=None):
@@ -1151,7 +1169,8 @@ def droptable_view(dg, got, diff=None):
         qty = ""
         if e.get("qty"):
             qty = " · ".join(
-                f"{lo}–{hi}" + (f" (niv. {a}–{b})" if a and b else "")
+                f"{lo}–{hi}" + (" " + tr("(niv. {a}–{b})", a=a, b=b)
+                                if a and b else "")
                 for lo, hi, a, b in e["qty"])
         chance = e.get("chance")
         per_class = None
@@ -1168,15 +1187,16 @@ def droptable_view(dg, got, diff=None):
             "rk": (e.get("rarity") or "").lower(),
             "type": item_type_label(e.get("type")) if e.get("type") else "",
             "apt": e.get("apt") or [],
-            "src": src_label.get(e.get("src"), e.get("src") or ""),
+            "src": tr(src_label.get(e.get("src"), e.get("src") or "")),
             # per run; a range when the piece fits classes with different
             # pools ("8,3–9,1 %")
-            "chance": ((_pct(per_class[0]).replace(" %", "") + "–"
+            "chance": ((_pct(per_class[0]).replace(pct_sp(), "") + "–"
                         + _pct(per_class[-1])
                         if per_class and len(per_class) > 1 else
                         _pct(chance) if chance is None or chance < 1
-                        else "garanti")
-                       + (f" en {DUNGEON_DIFFICULTIES.get(e['diff'], '?')}"
+                        else tr("garanti"))
+                       + (" " + tr("en {diff}", diff=tr(
+                           DUNGEON_DIFFICULTIES.get(e["diff"], "?")))
                           if e.get("diff") and not per_class
                           and diff is None else "")),
             # the chance as a number, for sorting (guaranteed 1, unknown -1)

@@ -11,13 +11,13 @@ function rankTable(rows, rateLabel) {
   const h = el('div', 'rk h');
   h.appendChild(el('span', 'rkic'));
   const hb = el('div', 'rkbar');
-  ['Joueur', rateLabel, 'Total', 'Part'].forEach((t, i) => hb.appendChild(el('span', i ? 'num' : '', t)));
+  [tr('Joueur'), rateLabel, tr('Total'), tr('Part')].forEach((t, i) => hb.appendChild(el('span', i ? 'num' : '', t)));
   h.appendChild(hb);
   box.appendChild(h);
   rows.forEach((r) => {
     const row = el('div', 'rk click rkfill' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : '')
       + (r.ck ? ' c-' + r.ck : ''));
-    row.title = 'Détail de ' + r.name;
+    row.title = tr('Détail de {name}', { name: r.name });
     row.addEventListener('click', () => { REPORT_SEL.name = r.name; renderPlayerCard(); });
     const ic = el('span', 'rkic');
     if (r.cls || r.ck) ic.appendChild(classEl(r.cls, r.ck, 'rkicon'));
@@ -100,7 +100,7 @@ function buildReport(n) {
     const top = el('div', 'phtop');
     top.appendChild(el('h4', null, ph.label));
     const facts = el('div', 'facts');
-    [['Durée', ph.dur], ['DPS', ph.dps.replace(' DPS', '')],
+    [[tr('Durée'), ph.dur], ['DPS', ph.dps.replace(' DPS', '')],
      ['HPS', ph.hps.replace(' HPS', '')]].forEach(([k, v]) => {
       const f = el('div', 'fact');
       f.appendChild(el('span', null, k));
@@ -109,16 +109,16 @@ function buildReport(n) {
     });
     top.appendChild(facts);
     c.appendChild(top);
-    if (ph.empty) c.appendChild(el('div', 'empty', "rien n'a été enregistré pour cette phase"));
+    if (ph.empty) c.appendChild(el('div', 'empty', tr("rien n'a été enregistré pour cette phase")));
     if (ph.dmg && ph.dmg.length) {
-      c.appendChild(el('div', 'sub rtab', 'Dégâts'));
+      c.appendChild(el('div', 'sub rtab', tr('Dégâts')));
       c.appendChild(rankTable(ph.dmg, 'DPS'));
     }
-    c.appendChild(el('div', 'sub rtab', 'Soins'));
+    c.appendChild(el('div', 'sub rtab', tr('Soins')));
     if (ph.heal && ph.heal.length) c.appendChild(rankTable(ph.heal, 'HPS'));
-    else c.appendChild(el('div', 'empty', 'aucun soin enregistré'));
+    else c.appendChild(el('div', 'empty', tr('aucun soin enregistré')));
     if (ph.types && ph.types.length) {
-      c.appendChild(el('div', 'sub rtab', 'Dégâts par type'));
+      c.appendChild(el('div', 'sub rtab', tr('Dégâts par type')));
       c.appendChild(typePie(ph.types));
     }
     cols.appendChild(c);
@@ -172,14 +172,14 @@ function renderPlayerCard() {
   // same bars as the report's rankings, one per skill
   const table = (title, rows, cols) => {
     card.appendChild(el('div', 'sub2 rtab', title));
-    if (!rows.length) { card.appendChild(el('p', 'none', 'rien d’enregistré')); return; }
+    if (!rows.length) { card.appendChild(el('p', 'none', tr('rien d’enregistré'))); return; }
     const t = el('div', 'tbl rktbl pctbl');
     const grid = 'minmax(110px, 1fr) repeat(' + cols.length + ', 62px)';
     const hd = el('div', 'rk h');
     hd.appendChild(el('span', 'rkic'));
     const hb = el('div', 'rkbar');
     hb.style.gridTemplateColumns = grid;
-    ['Compétence'].concat(cols.map((c) => c[0])).forEach((c, i) => hb.appendChild(el('span', i ? 'num' : '', c)));
+    [tr('Compétence')].concat(cols.map((c) => c[0])).forEach((c, i) => hb.appendChild(el('span', i ? 'num' : '', c)));
     hd.appendChild(hb);
     t.appendChild(hd);
     const top = Math.max(...rows.map((r) => r.f || 0)) || 1;
@@ -207,13 +207,13 @@ function renderPlayerCard() {
     });
     card.appendChild(t);
   };
-  table('Sources de dégâts', ph.skills || [],
-        [['Part', 'pct'], ['Dégâts', 't'], ['Coups', 'hits'], ['Crit.', 'crit'], ['Moy.', 'avg']]);
+  table(tr('Sources de dégâts'), ph.skills || [],
+        [[tr('Part'), 'pct'], [tr('Dégâts'), 't'], [tr('Coups'), 'hits'], [tr('Crit.'), 'crit'], [tr('Moy.'), 'avg']]);
   if ((ph.heals || []).length) {
-    table('Sources de soins', ph.heals, [['Part', 'pct'], ['Soins', 't'], ['Nombre', 'hits']]);
+    table(tr('Sources de soins'), ph.heals, [[tr('Part'), 'pct'], [tr('Soins'), 't'], [tr('Nombre'), 'hits']]);
   }
   if ((ph.elements || []).length) {
-    card.appendChild(el('div', 'sub2 rtab', 'Dégâts par type'));
+    card.appendChild(el('div', 'sub2 rtab', tr('Dégâts par type')));
     // here each type's f is already its share of the player's damage
     card.appendChild(typePie(ph.elements.map((x2) => Object.assign({}, x2, { s: x2.f }))));
   }
@@ -248,7 +248,7 @@ function buildRiftCards(n) {
       if (!c.open) {
         const tick = el('button', 'rtick' + (c.on ? ' on' : ''), c.on ? '✓' : '');
         tick.type = 'button';
-        tick.title = c.on ? 'Ne plus sélectionner' : 'Sélectionner (pour supprimer)';
+        tick.title = c.on ? tr('Ne plus sélectionner') : tr('Sélectionner (pour supprimer)');
         tick.addEventListener('click', (e) => {
           e.stopPropagation();
           notify('rift_tick', { file: c.file });
@@ -258,7 +258,7 @@ function buildRiftCards(n) {
       const tm = el('div', 'rtime', c.time);
       if (c.star) {
         const st = el('span', 'rstar', '★');
-        st.title = 'Record de cette difficulté';
+        st.title = tr('Record de cette difficulté');
         tm.appendChild(st);
       }
       card.appendChild(tm);
@@ -272,7 +272,7 @@ function buildRiftCards(n) {
           tag.appendChild(im);
         }
         tag.appendChild(el('span', 'dt', c.diff.t));
-        if (c.result) tag.appendChild(el('span', 'res', c.result));
+        if (c.result) tag.appendChild(el('span', 'res', tr(c.result)));
         card.appendChild(tag);
       }
       const facts = el('div', 'rfacts');
@@ -285,9 +285,9 @@ function buildRiftCards(n) {
       if (c.facts) {
         c.facts.forEach(([label, value]) => fact(label, value));
       } else {
-        fact('durée', c.dur);
-        fact(c.players > 1 ? 'joueurs' : 'joueur', String(c.players));
-        fact(c.gates === 1 ? 'portail' : 'portails', c.gates == null ? '—' : String(c.gates));
+        fact(tr('durée'), c.dur);
+        fact(c.players > 1 ? tr('joueurs') : tr('joueur'), String(c.players));
+        fact(c.gates === 1 ? tr('portail') : tr('portails'), c.gates == null ? '—' : String(c.gates));
       }
       card.appendChild(facts);
       if (c.group) {

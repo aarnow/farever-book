@@ -8,11 +8,12 @@ from __future__ import annotations
 import copy
 
 import builds as B
-from common import _n, _pretty_id, class_key, element_label
+from common import dec_sep, pct_sp, _n, _pretty_id, class_key, element_label
 from gamedata import (_fr_names, _skill_label, build_data, faction_label,
                       infusion_data, item_icon, item_label, item_type_label,
                       rarity_label)
 from gearstats import gear_stats, infusion_tiers
+from i18n import tr
 from simulate import simulate
 from views import _augment_view, _talent_tree, character_view
 
@@ -34,6 +35,15 @@ AUG_LABELS = {"AugmentDemon": "Cadeau corrompu",
               "AugmentEnchantHands": "Enchantement de gants"}
 HANDS_FR = {"1h": "une main", "2h": "deux mains", "dual": "deux armes",
             "long": "arme longue", "off": "main secondaire"}
+
+
+def _cls_fr(c):
+    """A class's name, in the interface's language."""
+    return tr(CLASS_FR[c]) if c in CLASS_FR else c
+
+
+def _hands(h):
+    return tr(HANDS_FR[h]) if h in HANDS_FR else ""
 
 
 class BuildTab:
@@ -97,14 +107,15 @@ class BuildTab:
     def import_profile(self, prof, name=None):
         """Inspecter's "Créer un build" from an analysed player (or the
         Build tab's, from one's own character: named after it)."""
-        b = B.from_profile(prof, name or f"Build de {prof.get('n') or '?'}")
+        b = B.from_profile(prof, name or tr("Build de {name}",
+                                          name=prof.get('n') or '?'))
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False
-        self._toast(f"Build créé à partir de {prof.get('n')}.")
+        self._toast(tr("Build créé à partir de {name}.", name=prof.get('n')))
 
     def _new(self):
         n = len(B.list_builds()) + 1
-        b = B.normalize(B.new_build(f"Build {n}"))
+        b = B.normalize(B.new_build(tr("Build {n}", n=n)))
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False
 
@@ -126,10 +137,10 @@ class BuildTab:
     def _duplicate(self):
         if not self.build:
             return
-        b = dict(self.build, name=f"{self.build['name']} (copie)")
+        b = dict(self.build, name=tr("{name} (copie)", name=self.build['name']))
         b = B.normalize(copy.deepcopy(b))
         self.file, self.build = B.save_build(b), b
-        self._toast("Build dupliqué.")
+        self._toast(tr("Build dupliqué."))
 
     def _share(self):
         """The open build's share code, onto the clipboard."""
@@ -138,10 +149,10 @@ class BuildTab:
         from winsys import copy_text_to_clipboard
         code = B.share_code(self.build)
         if copy_text_to_clipboard(code):
-            self._toast(f"Code du build copié ({len(code)} caractères) : "
-                        "colle-le à qui tu veux.")
+            self._toast(tr("Code du build copié ({n} caractères) : "
+                           "colle-le à qui tu veux.", n=len(code)))
         else:
-            self._toast("Copie impossible : le presse-papiers est occupé.")
+            self._toast(tr("Copie impossible : le presse-papiers est occupé."))
 
     def _image(self):
         """The open build as a picture (buildcard.py), in a thread (the 3D
@@ -173,12 +184,14 @@ class BuildTab:
                 except Exception as e:
                     print(f"[meter] build image copy failed: {e}",
                           file=sys.stderr)
-                self._toast(("Image du build copiée : colle-la où tu veux. "
-                             if copied else "Image du build créée. ")
-                            + f"Elle est aussi enregistrée dans {png}.")
+                self._toast(tr("Image du build copiée : colle-la où tu veux. "
+                               "Elle est aussi enregistrée dans {path}.",
+                               path=png) if copied else
+                            tr("Image du build créée. Elle est aussi "
+                               "enregistrée dans {path}.", path=png))
             except Exception as e:
                 print(f"[meter] build image failed: {e!r}", file=sys.stderr)
-                self._toast(f"L'image n'a pas pu être créée : {e}")
+                self._toast(tr("L'image n'a pas pu être créée : {e}", e=e))
             finally:
                 self.imaging = False
                 self._invalidate()
@@ -192,7 +205,7 @@ class BuildTab:
             return
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False
-        self._toast(f"Build « {b['name']} » importé.")
+        self._toast(tr("Build « {name} » importé.", name=b['name']))
 
     def _delete(self):
         if not self.build:
@@ -201,7 +214,7 @@ class BuildTab:
             self.confirm_delete = True
             return
         B.delete_build(self.file)
-        self._toast(f"Build « {self.build['name']} » supprimé.")
+        self._toast(tr("Build « {name} » supprimé.", name=self.build['name']))
         self._close()
 
     def _delete_many(self, files):
@@ -212,9 +225,11 @@ class BuildTab:
         if self.file and self.file in (files or ()):
             self._close()
         if gone:
-            self._toast(f"{len(gone)} build{'s' if len(gone) > 1 else ''} "
-                        f"supprimé{'s' if len(gone) > 1 else ''} : "
-                        + ", ".join(f"« {n} »" for n in gone) + ".")
+            names = ", ".join(tr("« {name} »", name=n) for n in gone)
+            self._toast(tr("{n} builds supprimés : {names}.", n=len(gone),
+                           names=names) if len(gone) > 1 else
+                        tr("{n} build supprimé : {names}.", n=len(gone),
+                           names=names))
 
     def _edit(self, change):
         if not self.build:
@@ -313,12 +328,12 @@ class BuildTab:
     def page(self):
         d = build_data()
         if not d:
-            return [{"k": "section", "t": "Build"},
+            return [{"k": "section", "t": tr("Build")},
                     {"k": "note", "warn": True,
-                     "t": "Les données de build manquent : utilise Réparer "
-                          "dans l'Aide."}]
+                     "t": tr("Les données de build manquent : utilise "
+                             "Réparer dans l'Aide.")}]
         saved = [{"file": f, "name": b.get("name"), "lvl": b.get("lvl"),
-                  "cls": CLASS_FR.get(b.get("cls"), b.get("cls")),
+                  "cls": _cls_fr(b.get("cls")),
                   "ck": class_key(b.get("cls")), "on": f == self.file}
                  for f, b in B.list_builds()]
         node = {"k": "build", "id": "build", "list": saved, "open": None}
@@ -341,7 +356,7 @@ class BuildTab:
             by_cls.setdefault(b.get("cls"), []).append(f)
         pairs = [fs for fs in by_cls.values() if len(fs) > 1]
         if not pairs:
-            self._toast("Il faut au moins deux builds de la même classe.")
+            self._toast(tr("Il faut au moins deux builds de la même classe."))
             return
         first = self.file if self.file and any(
             self.file in fs for fs in pairs) else pairs[0][0]
@@ -370,7 +385,7 @@ class BuildTab:
         weapons (with their pictures), the attributes and the stats."""
         d = build_data()
         names = _fr_names("attribute")
-        out = {"classes": [{"v": c, "t": CLASS_FR[c], "ck": class_key(c)}
+        out = {"classes": [{"v": c, "t": _cls_fr(c), "ck": class_key(c)}
                            for c in B.CLASSES],
                "maxLvl": d.get("maxLevel") or 25,
                "atbs": [{"v": a, "t": names.get(a) or _pretty_id(a)}
@@ -383,7 +398,7 @@ class BuildTab:
                 out[key][c] = sorted((
                     {"v": k, "t": item_label(k), "img": item_icon(k),
                      "type": item_type_label(e.get("type")),
-                     "hands": HANDS_FR.get(e.get("hands"), ""),
+                     "hands": _hands(e.get("hands")),
                      "shield": bool(e.get("shield")),
                      "rk": (e.get("rar") or "").lower()}
                     for k, e in (d.get("items") or {}).items()
@@ -576,20 +591,27 @@ class BuildTab:
     def _guided(self, p):
         b = B.guided_build(p or {})
         b, score, mode, plan = self._guide_optimise(b, p or {})
-        cls = CLASS_FR.get(b["cls"], b["cls"])
+        cls = _cls_fr(b["cls"])
         n = sum(1 for _ in B.list_builds() if True) + 1
         b["name"] = str((p or {}).get("name") or "").strip()[:60] or \
-            f"{cls} guidé {n}"
+            tr("{cls} guidé {n}", cls=cls, n=n)
         self.cmp = None
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False
-        what = {"magic": "dégâts magiques", "phys": "dégâts physiques"}.get(
-            mode, "dégâts")
+        what = tr({"magic": "dégâts magiques", "phys": "dégâts physiques"}.get(
+            mode, "dégâts"))
         worn = ", ".join(f"{x['name']} ×{x['n']}" for x in plan)
-        self._toast(f"Build « {b['name']} » composé pour le maximum de "
-                    f"{what} de ses compétences ({len(b['gear'])} pièces"
-                    + (f", imprégnations {worn}" if worn else "") +
-                    "). Les talents et les runes restent à choisir.")
+        if worn:
+            self._toast(tr("Build « {name} » composé pour le maximum de "
+                           "{what} de ses compétences ({n} pièces, "
+                           "imprégnations {worn}). Les talents et les runes "
+                           "restent à choisir.", name=b['name'], what=what,
+                           n=len(b['gear']), worn=worn))
+        else:
+            self._toast(tr("Build « {name} » composé pour le maximum de "
+                           "{what} de ses compétences ({n} pièces). Les "
+                           "talents et les runes restent à choisir.",
+                           name=b['name'], what=what, n=len(b['gear'])))
 
     def _cmp_armor(self, value):
         """The target's damage reduction for the spells, both builds."""
@@ -620,8 +642,8 @@ class BuildTab:
         mb = self._sim_view(dict(b, sim=target), sb.get("raw"))
         ra, rb = sa.get("raw") or {}, sb.get("raw") or {}
         groups = []
-        for key, title in (("primary", "Attributs"),
-                           ("secondary", "Plus de stats")):
+        for key, title in (("primary", tr("Attributs")),
+                           ("secondary", tr("Plus de stats"))):
             rows = []
             texts_b = {r["k"]: r for r in sb.get(key) or ()}
             for r in sa.get(key) or ():
@@ -637,7 +659,7 @@ class BuildTab:
                     amount = abs(d)
                     if pct or k == "HealthRegen":
                         txt = f"{amount:.1f}".rstrip("0").rstrip(".")
-                        txt = txt.replace(".", ",") + (" %" if pct else "")
+                        txt = txt.replace(".", dec_sep()) + (pct_sp() if pct else "")
                     else:
                         txt = _n(round(amount))
                     delta = "+" + txt
@@ -648,7 +670,7 @@ class BuildTab:
 
         def card(f, bd):
             return {"file": f, "name": bd.get("name"), "lvl": bd.get("lvl"),
-                    "cls": CLASS_FR.get(bd.get("cls"), bd.get("cls")),
+                    "cls": _cls_fr(bd.get("cls")),
                     "ck": class_key(bd.get("cls"))}
         cls_a = a.get("cls")
         return {
@@ -663,11 +685,11 @@ class BuildTab:
             "groups": groups,
             "spells": _cmp_spells(ma, mb),
             "armor": float((ma or {}).get("armor", 30)),
-            "target": (f"Cible de niveau "
-                       f"{(ma or {}).get('enemy') or a.get('lvl')}, la même "
-                       "pour les deux builds. Dégâts normaux et critiques "
-                       "comparés séparément : les chances de critique "
-                       "diffèrent d'un build à l'autre.")}
+            "target": tr("Cible de niveau {lvl}, la même pour les deux "
+                         "builds. Dégâts normaux et critiques comparés "
+                         "séparément : les chances de critique diffèrent "
+                         "d'un build à l'autre.",
+                         lvl=(ma or {}).get('enemy') or a.get('lvl'))}
 
     def _open_view(self):
         b = self.build
@@ -693,9 +715,10 @@ class BuildTab:
         passives = [{"id": s, "name": _skill_label(s)} for s in B.passives(b)]
         return {
             "file": self.file, "name": b["name"], "cls": b["cls"],
-            "clsFr": CLASS_FR.get(b["cls"]), "ck": class_key(b["cls"]),
+            "clsFr": _cls_fr(b["cls"]) if b["cls"] in CLASS_FR else None,
+            "ck": class_key(b["cls"]),
             "lvl": b["lvl"], "maxLvl": d.get("maxLevel") or 25,
-            "classes": [{"v": c, "t": CLASS_FR[c]} for c in B.CLASSES],
+            "classes": [{"v": c, "t": _cls_fr(c)} for c in B.CLASSES],
             "confirmDelete": self.confirm_delete,
             "imaging": self.imaging,
             "sheet": o.get("sheet"), "atbs": o.get("atbs"),
@@ -731,6 +754,7 @@ class BuildTab:
                           weapon("Weapon2"))
         runes = (b.get("runes") or {}).values()
         d = build_data()
+        base_ids = set()                # the basic attacks' skills
 
         def attacks(w):
             """A weapon's basic attacks and combo."""
@@ -738,10 +762,11 @@ class BuildTab:
             for s in (B.item(w[0]) or {}).get("skills") or ():
                 if s["type"] in ("Attack", "Attack2", "Attack3", "Attack4"):
                     n += 1
-                    out.append((s["id"], f"Attaque de base {n}", w))
+                    base_ids.add(s["id"])
+                    out.append((s["id"], tr("Attaque de base {n}", n=n), w))
                 elif s["type"] == "AttackCombo":
-                    out.append((s["id"], f"Combo : {_skill_label(s['id'])}",
-                                w))
+                    out.append((s["id"], tr("Combo : {name}",
+                                            name=_skill_label(s['id'])), w))
             return out
 
         def skills_of(w, types, scaled=True):
@@ -753,18 +778,19 @@ class BuildTab:
         # the arsenal's, and all the class's skills (runes as set)
         groups = []
         if main:
-            groups.append(("Arme principale", item_label(main[0]),
+            groups.append((tr("Arme principale"), item_label(main[0]),
                            attacks(main)
                            + skills_of(main, B.WEAPON_SKILL_TYPES)))
         if off:
-            groups.append(("Main secondaire", item_label(off[0]),
+            groups.append((tr("Main secondaire"), item_label(off[0]),
                            skills_of(off, B.WEAPON_SKILL_TYPES, False)))
         if ars:
-            groups.append(("Arsenal", item_label(ars[0]),
+            groups.append((tr("Arsenal"), item_label(ars[0]),
                            skills_of(ars, B.WEAPON_SKILL_TYPES
                                      + B.PASSIVE_TYPES)))
         cls = (d.get("classes") or {}).get(b["cls"]) or {}
-        groups.append(("Compétences de classe", CLASS_FR.get(b["cls"]) or "",
+        groups.append((tr("Compétences de classe"),
+                       _cls_fr(b["cls"]) if b["cls"] in CLASS_FR else "",
                        [(s["id"], None, None) for s in cls.get("skills") or ()]))
         rows = [r for _t, _s, rs in groups for r in rs]
         # the hero alone: critical chances and what an incoming hit leaves
@@ -772,8 +798,9 @@ class BuildTab:
         sims = [(t, sub, rs, simulate(raw, b["lvl"], rs, armor, enemy, hit,
                                       runes)) for t, sub, rs in groups if rs]
         fmt = lambda v: f"{v:.0f}"
-        pc = lambda v: f"{v * 100:.1f}".replace(".", ",") + " %"
-        kinds = {"Damage": "Dégâts", "Heal": "Soin", "Shield": "Bouclier"}
+        pc = lambda v: f"{v * 100:.1f}".replace(".", dec_sep()) + pct_sp()
+        kinds = {"Damage": tr("Dégâts"), "Heal": tr("Soin"),
+                 "Shield": tr("Bouclier")}
         view = {
             "armor": armor, "enemy": enemy, "hit": hit,
             "maxLvl": build_data().get("maxLevel") or 25,
@@ -783,7 +810,7 @@ class BuildTab:
                 "skills": _merge_base_attacks(
                     [self._card(r, fmt, pc, kinds) for r in g["rows"]],
                     [sid for sid, label, _w in rs
-                     if label and label.startswith("Attaque de base")])}
+                     if label and sid in base_ids])}
                 for t, sub, rs, g in sims],
             "runes": self._runes_view(b, raw, rows, armor, enemy, hit),
             "defense": {
@@ -794,7 +821,7 @@ class BuildTab:
                 "magicMit": pc(out["defense"]["magic"]["mit"]),
                 "taken": pc(out["defense"]["taken"]),
                 "hp": fmt(out["defense"]["hp"]),
-                "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", ",")
+                "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", dec_sep())
                              if out["defense"]["phys"]["after"] > 0 else "—")}}
         return view
 
@@ -803,8 +830,8 @@ class BuildTab:
         """One simulated skill, as its card shows it."""
         return {
             "id": r["id"], "name": r["name"],
-            "cd": f"{r['cd']:g} s".replace(".", ",") if r.get("cd") else "",
-            "range": f"{r['range']:g} m".replace(".", ",")
+            "cd": f"{r['cd']:g} s".replace(".", dec_sep()) if r.get("cd") else "",
+            "range": f"{r['range']:g} m".replace(".", dec_sep())
             if r.get("range") else "",
             "lines": [{"kind": kinds.get(x["kind"], x["kind"]), "k": x["kind"],
                        "aff": element_label(x["aff"]) if x["aff"] else "",
@@ -863,7 +890,7 @@ class BuildTab:
                  "id": sid, "name": _skill_label(sid) if sid else "",
                  "open": open_}
             if not open_ and i < len(levels):
-                c["lock"] = f"niv. {levels[i]}"
+                c["lock"] = tr("niv. {n}", n=levels[i])
             if choice and open_:
                 c["options"] = [{"id": s, "name": _skill_label(s)}
                                 for s in opts[group]]
@@ -896,7 +923,7 @@ class BuildTab:
                          "rk": (e.get("rar") or "").lower(),
                          "type": " · ".join(x for x in (
                              item_type_label(e["type"]),
-                             HANDS_FR.get(e.get("hands"), ""),
+                             _hands(e.get("hands")),
                              faction_label(e.get("fac")) if e.get("fac")
                              else "") if x)})
         opts.sort(key=lambda x: x["name"])
@@ -924,9 +951,10 @@ class BuildTab:
                 if kind == "AugmentDemonSigil":
                     items = [a for a in items if B.sigil_ok(b, a)]
                 augs.append({"kind": kind,
-                             "t": AUG_LABELS.get(kind, _pretty_id(kind)),
+                             "t": tr(AUG_LABELS[kind]) if kind in AUG_LABELS
+                             else _pretty_id(kind),
                              "v": (p.get("augs") or {}).get(kind) or "",
-                             "options": [{"v": "", "t": "Aucun"}] + sorted(
+                             "options": [{"v": "", "t": tr("Aucun")}] + sorted(
                                  (_aug_option(a) for a in items),
                                  key=lambda x: x["t"])})
             attr = _fr_names("attribute")
@@ -938,14 +966,16 @@ class BuildTab:
                 "prism": bool(p.get("prism")),
                 "augs": augs, "infusable": B.infusable(p),
                 "inf": p.get("inf") or "", "istat": p.get("istat") or "",
-                "infOptions": [{"v": "", "t": "Aucune"}] + _infusion_options(),
+                "infOptions": [{"v": "", "t": tr("Aucune")}]
+                + _infusion_options(),
                 # only what the piece can roll: not a stat it already has
-                "statOptions": [{"v": "", "t": "Aucun"}] + [
+                "statOptions": [{"v": "", "t": tr("Aucun")}] + [
                     {"v": s, "t": attr.get(s) or _pretty_id(s)}
                     for s in B.istat_options(p)],
                 "g": entry}
         order = {k: i for i, k in enumerate(FILTER_STAT_ORDER)}
-        return {"slot": slot, "label": SLOT_LABELS.get(slot, slot),
+        return {"slot": slot, "label": tr(SLOT_LABELS[slot])
+                if slot in SLOT_LABELS else slot,
                 "options": opts, "piece": piece,
                 "stats": sorted(({"k": k, "t": t} for k, t in
                                  stat_names.items()),
@@ -974,9 +1004,11 @@ def _infusion_options():
     out = []
     for sid in build_data().get("infusions") or ():
         e = infs.get(sid) or {}
+        role = e.get("role")
         out.append({"v": sid, "t": e.get("name") or _skill_label(sid),
                     "sub": f"{faction_label(e.get('f'))} · "
-                           f"{ROLE_FR.get(e.get('role'), e.get('role') or '?')}",
+                           + (tr(ROLE_FR[role]) if role in ROLE_FR
+                              else role or "?"),
                     "img": item_icon(e.get("pattern")) if e.get("pattern")
                     else "",
                     "tiers": [t["txt"] for t in infusion_tiers(sid)],
@@ -994,14 +1026,16 @@ def _cmp_spells(ma, mb):
     gb = {g["t"]: g for g in (mb or {}).get("groups") or ()}
     order = list(ga) + [t for t in gb if t not in ga]
     out = []
+    base_name = tr("Attaques de base")
+    combo = tr("Combo : {name}", name="")         # the combos' name prefix
     for t in order:
         a, b = ga.get(t) or {}, gb.get(t) or {}
         # a weapon's basic attacks and its combo face the other weapon's,
         # whatever their ids; every other spell is itself
         def slot(s):
             n = s.get("name") or ""
-            return ("base" if n.startswith("Attaques de base")
-                    else "combo" if n.startswith("Combo") else s["id"])
+            return ("base" if n.startswith(base_name)
+                    else "combo" if n.startswith(combo) else s["id"])
         sa = {slot(s): s for s in a.get("skills") or ()}
         sb = {slot(s): s for s in b.get("skills") or ()}
         ids = list(sa) + [i for i in sb if i not in sa]
@@ -1032,8 +1066,9 @@ def _cmp_spells(ma, mb):
             names = [s["name"] for s in (x, y) if s]
             if len(set(names)) == 1:
                 name = names[0]
-            elif all(n.startswith("Combo : ") for n in names):
-                name = "Combo : " + " / ".join(n[8:] for n in names)
+            elif all(n.startswith(combo) for n in names):
+                name = tr("Combo : {name}", name=" / ".join(
+                    n[len(combo):] for n in names))
             else:
                 name = " / ".join(names)
             rows.append({"id": (x or y)["id"], "name": name,
@@ -1051,8 +1086,8 @@ def _merge_base_attacks(skills, base_ids):
     lines = []
     for n, s in enumerate(base, 1):
         for x in s["lines"]:
-            lines.append(dict(x, kind=f"Coup {n}"))
-    merged = {"id": base[0]["id"], "name": "Attaques de base", "cd": "",
+            lines.append(dict(x, kind=tr("Coup {n}", n=n)))
+    merged = {"id": base[0]["id"], "name": tr("Attaques de base"), "cd": "",
               "range": base[0]["range"], "lines": lines}
     out, done = [], False
     for s in skills:
@@ -1075,11 +1110,11 @@ def _rune_text(rune, skill_name, vals):
         if key == "name":
             return skill_name
         if key == "cooldown" and rune.get("cd") is not None:
-            return f"{rune['cd']:g} s".replace(".", ",")
+            return f"{rune['cd']:g} s".replace(".", dec_sep())
         if key in ("dmg", "damage") and vals.get("dmg"):
-            return f"{vals['dmg']['normal']:.0f} dégâts"
+            return tr("{n} dégâts", n=f"{vals['dmg']['normal']:.0f}")
         if key in ("heal", "shield") and vals.get("heal"):
-            return f"{vals['heal']['normal']:.0f} PV"
+            return tr("{n} PV", n=f"{vals['heal']['normal']:.0f}")
         return "X"
     return re.sub(r"::([^:]+)::", sub, txt)
 

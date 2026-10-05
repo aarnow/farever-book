@@ -34,6 +34,7 @@ from common import (
     HAS_CONSOLE, LOG_FILE, MENU_FLAG, STOP, TOOL_FLAG, _APP,
     message_box, request_stop, run_bundled_tool,
     seed_analysis, setup_logging)
+from i18n import tr
 from winsys import (
     TrayIcon, claim_single_instance, declare_dpi_awareness, display_scale,
     release_instance_lock, watch_for_quit_request)
@@ -117,17 +118,17 @@ def _cli():
         # startup failures: without a console, show them in a dialog
         if not HAS_CONSOLE and e.code not in (0, None):
             print(f"[meter] {e.code}", file=sys.stderr)
-            message_box(e.code, "Farever Book — démarrage impossible", 0x10)
+            message_box(e.code, tr("Farever Book — démarrage impossible"),
+                        0x10)
         raise
     except Exception:
         import traceback
         traceback.print_exc()
         if not HAS_CONSOLE:
             message_box(
-                "Le compteur a rencontré une erreur inattendue et s'est "
-                "arrêté.\n\n"
-                f"Le détail est dans :\n{LOG_FILE}",
-                "Farever Book — erreur", 0x10)
+                tr("Le compteur a rencontré une erreur inattendue et s'est "
+                   "arrêté.\n\nLe détail est dans :\n{log}", log=LOG_FILE),
+                tr("Farever Book — erreur"), 0x10)
         raise
 
 

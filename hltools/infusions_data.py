@@ -1,5 +1,6 @@
 """The gear infusions: what each does, for the Character tab, from data.cdb
-and the game's French text (res.pak lang/export_fr.xml).
+(its English texts) and the game's French text (res.pak lang/export_fr.xml):
+each entry in French, its "en" in English.
 
 An infusion is a passive skill (type InfusionPassive) set on a gear piece by
 an infusion pattern (item type InfusionPattern, which names the faction).
@@ -26,7 +27,11 @@ from pathlib import Path
 
 import pak_extract
 
-ROLES = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
+ROLES = {"fr": {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"},
+         "en": {"Tank": "Tank", "Support": "Support", "DPS": "Damage"}}
+# "35 % de [MaxHealth]", "votre attribut principal", by language
+_OF = {"fr": "{pct} % de {atb}", "en": "{pct}% of {atb}"}
+_MAIN_ATB = {"fr": "votre attribut principal", "en": "your main attribute"}
 
 
 # ::heal:: / ::dmg:: / ::shield:: -> the effect kind (skill@steps@effects
@@ -34,15 +39,15 @@ ROLES = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 EFFECT_KEYS = {"heal": 1, "dmg": 0, "damage": 0, "shield": 2}
 
 
-def _scaling(skill, effect):
+def _scaling(skill, effect, lang):
     """'35 % de [MaxHealth]': the first step effect of that kind, as the
     share of a stat it scales on (the game shows the computed number)."""
     for st in skill.get("steps") or ():
         for e in st.get("effects") or ():
             if e.get("effect") == effect and e.get("scaling"):
-                parts = [f"{_num(sc['ratio'] * 100)} % de "
-                         + ("votre attribut principal"
-                            if sc["atb"] == "AllAttributes"
+                parts = [_OF[lang].format(
+                            pct=_num(sc["ratio"] * 100, lang),
+                            atb=_MAIN_ATB[lang] if sc["atb"] == "AllAttributes"
                             else f"[{sc['atb']}]")
                          for sc in e["scaling"]
                          if sc.get("ratio") and sc.get("atb")]
@@ -51,8 +56,8 @@ def _scaling(skill, effect):
     return None
 
 
-def _num(v):
-    return f"{v:g}".replace(".", ",")
+def _num(v, lang):
+    return f"{v:g}".replace(".", ",") if lang == "fr" else f"{v:g}"
 
 
 def build(game_dir):
@@ -64,7 +69,7 @@ def build(game_dir):
               if isinstance(ln.get("id"), str)}
     root = ET.fromstring(pak_extract.read_entry(game_dir / "res.pak",
                                                 "lang/export_fr.xml"))
-    fr = {}
+    texts = {"fr": {}, "en": {}}
     for sheet in root.findall("sheet"):
         if sheet.get("name") != "skill":
             continue
@@ -73,14 +78,20 @@ def build(game_dir):
             desc = row.find("texts.desc")
             ranks = [("".join(d.itertext()).strip())
                      for d in row.findall("texts.rankDescs/*/desc")]
-            fr[row.tag] = {
+            texts["fr"][row.tag] = {
                 "name": "".join(name.itertext()).strip()
                 if name is not None else "",
                 "desc": "".join(desc.itertext()).strip()
                 if desc is not None else "",
                 "ranks": ranks}
+    for sid, sk in skills.items():
+        tx = sk.get("texts") or {}
+        texts["en"][sid] = {
+            "name": tx.get("name") or "", "desc": tx.get("desc") or "",
+            "ranks": [(r.get("desc") or "").strip()
+                      for r in tx.get("rankDescs") or () if isinstance(r, dict)]}
 
-    def fill(text, sid):
+    def fill(text, sid, lang):
         sk = skills.get(sid) or {}
         refs = ((sk.get("texts") or {}).get("refs")) or {}
 
@@ -93,7 +104,7 @@ def build(game_dir):
                                else "ref" + mref.group(1))
                 src, key = skills.get(rid) or {}, mref.group(2)
                 if key == "name":
-                    return (fr.get(rid) or {}).get("name") or rid or "X"
+                    return (texts[lang].get(rid) or {}).get("name") or rid or "X"
             v = (src.get("vars") or {}).get(key)
             if not isinstance(v, (int, float)) and key == "stacks":
                 v = (((src.get("props") or {}).get("status") or {})
@@ -101,9 +112,12 @@ def build(game_dir):
             if not isinstance(v, (int, float)):
                 eff = None if pct else EFFECT_KEYS.get(
                     re.sub(r"\d+$", "", key))
-                sc = _scaling(src, eff) if eff is not None else None
+                sc = _scaling(src, eff, lang) if eff is not None else None
                 return sc or "X"
-            return f"{_num(v * 100)} %" if pct else _num(v)
+            if pct:
+                return (f"{_num(v * 100, lang)} %" if lang == "fr"
+                        else f"{_num(v * 100, lang)}%")
+            return _num(v, lang)
         return re.sub(r"::([A-Za-z0-9_]+?)(%?)::", one, text or "")
 
     out = {}
@@ -113,19 +127,22 @@ def build(game_dir):
         sid = ((ln.get("props") or {}).get("ref") or {}).get("skill")
         if sid not in skills:
             continue
-        sk, t = skills[sid], fr.get(sid) or {}
+        sk = skills[sid]
         role = sid.rsplit("_", 1)[-1]
         bonus = [[(a.get("target") or {}).get("attribute"), a.get("val"),
                   a.get("ref")]
                  for a in sk.get("affixes") or ()
                  if ((a.get("conds") or {}).get("minRank") or 0) == 2]
-        six = next((r for r in t.get("ranks") or () if r), "")
-        out[sid] = {"f": ln.get("faction"), "role": ROLES.get(role, role),
+
+        def words(lang):
+            t = texts[lang].get(sid) or {}
+            six = next((r for r in t.get("ranks") or () if r), "")
+            return {"role": ROLES[lang].get(role, role),
                     "name": t.get("name") or sid,
-                    "pattern": ln["id"],
-                    "t2": fill(t.get("desc"), sid),
-                    "t4": bonus,
-                    "t6": fill(six, sid)}
+                    "t2": fill(t.get("desc"), sid, lang),
+                    "t6": fill(six, sid, lang)}
+        out[sid] = dict(words("fr"), f=ln.get("faction"), pattern=ln["id"],
+                        t4=bonus, en=words("en"))
     factions = {ln["id"]: ln["faction"] for ln in sheets["item"]["lines"]
                 if isinstance(ln.get("id"), str) and ln.get("faction")
                 and ln.get("type") != "InfusionPattern"}

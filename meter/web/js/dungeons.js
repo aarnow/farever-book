@@ -3,9 +3,9 @@
 /* A dungeon run's loot: one block per phase, the reward chest first. */
 function buildLoot(groups) {
   const box = el('div', 'loot');
-  box.appendChild(el('h4', null, 'Butin'));
+  box.appendChild(el('h4', null, tr('Butin')));
   if (!groups.length) {
-    box.appendChild(el('div', 'empty', "aucun objet ramassé pendant ce run"));
+    box.appendChild(el('div', 'empty', tr("aucun objet ramassé pendant ce run")));
     return box;
   }
   groups.forEach((g) => {
@@ -75,11 +75,11 @@ function dropTable(rows, redraw, lite) {
   const head = el('div', 'drow dhead');
   (lite ? ['', 'Objet', 'Type', 'Chance', 'Quantité']
     : ['', 'Objet', 'Type', 'Classes', 'Source', 'Chance', 'Quantité', 'Obtenu']).forEach((h) => {
-    if (h !== 'Chance') { head.appendChild(el('span', null, h)); return; }
+    if (h !== 'Chance') { head.appendChild(el('span', null, h ? tr(h) : '')); return; }
     const b = el('button', 'dsort' + (DROP_SORT ? ' on' : ''),
-      'Chance' + (DROP_SORT === 1 ? ' ▲' : DROP_SORT === -1 ? ' ▼' : ' ↕'));
+      tr('Chance') + (DROP_SORT === 1 ? ' ▲' : DROP_SORT === -1 ? ' ▼' : ' ↕'));
     b.type = 'button';
-    b.title = 'Trier par chance (croissant, décroissant, d’origine)';
+    b.title = tr('Trier par chance (croissant, décroissant, d’origine)');
     b.addEventListener('click', () => { DROP_SORT = DROP_SORT === 0 ? 1 : DROP_SORT === 1 ? -1 : 0; redraw(); });
     head.appendChild(b);
   });
@@ -109,7 +109,7 @@ function dropTable(rows, redraw, lite) {
     if (!lite) row.appendChild(el('span', 'num', r.got ? '×' + r.got : '—'));
     box.appendChild(row);
   });
-  if (!list.length) box.appendChild(el('div', 'empty', 'Rien de connu pour cette difficulté.'));
+  if (!list.length) box.appendChild(el('div', 'empty', tr('Rien de connu pour cette difficulté.')));
   return box;
 }
 
@@ -152,7 +152,7 @@ function bsSkill(s, small) {
   const t = el('div', 'bst');
   const nm = el('div', 'bsn', s.name);
   if (s.aff) nm.appendChild(el('span', 'bsaff ' + (s.magic ? 'magic' : 'phys'),
-    s.aff + (s.magic && s.aff !== 'Magie' ? ' · magique' : '')));
+    s.magic && s.aff !== tr('Magie') ? tr('{aff} · magique', { aff: s.aff }) : s.aff));
   t.appendChild(nm);
   if (s.fx) t.appendChild(el('div', 'bsfx', s.fx));
   if ((s.tags || []).length) {
@@ -182,35 +182,39 @@ function buildBossSheet(n) {
   const kick = el('div', 'bskick');
   const skull = (window.__SHEET__ || {})['dungeon_diff_' + (n.heroic ? 2 : 0)];
   if (skull) { const im = el('img'); im.src = skull; im.alt = ''; kick.appendChild(im); }
-  kick.appendChild(document.createTextNode((n.heroic ? 'Héroïque' : 'Normal') + ' · niveau ' + n.level));
+  kick.appendChild(document.createTextNode(tr(n.heroic ? 'Héroïque · niveau {n}' : 'Normal · niveau {n}',
+    { n: n.level })));
   ht.appendChild(kick);
   ht.appendChild(el('div', 'bsname', n.name));
   head.appendChild(ht);
   box.appendChild(head);
 
   const stats = el('div', 'bsstats');
-  const hp = bsTile('Points de vie');
+  const hp = bsTile(tr('Points de vie'));
   (n.hp || []).forEach((r) => {
     const line = el('div', 'bshp');
-    line.appendChild(el('span', null, r.n + ' joueur' + (r.n > 1 ? 's' : '')));
+    line.appendChild(el('span', null, tr(r.n > 1 ? '{n} joueurs' : '{n} joueur', { n: r.n })));
     line.appendChild(el('b', null, r.v));
     hp.appendChild(line);
   });
   stats.appendChild(hp);
-  stats.appendChild(bsTile('Armure', n.armor, '−' + n.armorPct + ' % de dégâts physiques\nà niveau égal'));
-  stats.appendChild(bsTile('Résistance magique', n.magicPct + ' %', '−' + n.magicPct + ' % de dégâts magiques\n(eau, feu, lumière…)'));
-  stats.appendChild(bsTile('Puissance', n.power, 'Base de tous ses dégâts'));
+  stats.appendChild(bsTile(tr('Armure'), n.armor,
+    tr('−{pct} % de dégâts physiques\nà niveau égal', { pct: n.armorPct })));
+  stats.appendChild(bsTile(tr('Résistance magique'), pctTxt(n.magicPct),
+    tr('−{pct} % de dégâts magiques\n(eau, feu, lumière…)', { pct: n.magicPct })));
+  stats.appendChild(bsTile(tr('Puissance'), n.power, tr('Base de tous ses dégâts')));
   if (n.crit) {
-    stats.appendChild(bsTile('Critiques', n.crit.chance + ' %', 'dégâts ×' + n.crit.mult
-      + ' à niveau égal\n+' + n.crit.step + ' % de chances et de dégâts par niveau d’avance sur sa cible'));
+    stats.appendChild(bsTile(tr('Critiques'), pctTxt(n.crit.chance),
+      tr('dégâts ×{mult} à niveau égal\n+{step} % de chances et de dégâts par niveau d’avance sur sa cible',
+        { mult: n.crit.mult, step: n.crit.step })));
   }
   box.appendChild(stats);
 
-  box.appendChild(el('div', 'bssec', 'Compétences'));
+  box.appendChild(el('div', 'bssec', tr('Compétences')));
   (n.skills || []).forEach((s) => box.appendChild(bsSkill(s)));
 
   (n.summons || []).forEach((u) => {
-    box.appendChild(el('div', 'bssec', 'Invocation'));
+    box.appendChild(el('div', 'bssec', tr('Invocation')));
     const c = el('div', 'bssummon');
     const who = el('div', 'bsw');
     who.appendChild(bsIcon(null, 'unit'));
@@ -220,8 +224,8 @@ function buildBossSheet(n) {
     who.appendChild(wt);
     c.appendChild(who);
     const st = el('div', 'bsmini');
-    [['PV', u.hp], ['Armure', u.armor + '  (−' + u.armorPct + ' %)'], ['Rés. magique', u.magic + ' %'],
-      ['Puissance', u.power]].forEach(([k, v]) => {
+    [[tr('PV'), u.hp], [tr('Armure'), u.armor + '  (−' + pctTxt(u.armorPct) + ')'], [tr('Rés. magique'), pctTxt(u.magic)],
+      [tr('Puissance'), u.power]].forEach(([k, v]) => {
       const d = el('div');
       d.appendChild(el('span', null, k));
       d.appendChild(el('b', null, v));
@@ -237,7 +241,7 @@ function buildBossSheet(n) {
   const row = el('div', 'bsrow');
   if ((n.statuses || []).length) {
     const col = el('div');
-    col.appendChild(el('div', 'bssec', 'Affaiblissement'));
+    col.appendChild(el('div', 'bssec', tr('Affaiblissement')));
     n.statuses.forEach((s) => {
       const c = el('div', 'bsstatus');
       c.appendChild(bsIcon(s.id, 'magic'));
@@ -251,15 +255,15 @@ function buildBossSheet(n) {
   }
   if ((n.phases || []).length) {
     const col = el('div');
-    col.appendChild(el('div', 'bssec', 'Phases (PV du boss)'));
+    col.appendChild(el('div', 'bssec', tr('Phases (PV du boss)')));
     const tl = el('div', 'bsphases');
     const track = el('div', 'bstrack');
     tl.appendChild(track);
-    [{ at: 100, t: 'Début' }].concat(n.phases).forEach((p, i) => {
+    [{ at: 100, t: tr('Départ') }].concat(n.phases).forEach((p, i) => {
       const m = el('div', 'bsmark' + (i === 0 ? ' first' : ''));
       m.style.left = (100 - p.at) + '%';
       m.appendChild(el('i'));
-      m.appendChild(el('b', null, p.at + ' %'));
+      m.appendChild(el('b', null, pctTxt(p.at)));
       // the skill's first word: the marks can stand close together
       const lab = el('span', null, (p.t || '').split(' ')[0]);
       lab.title = p.t || '';
@@ -272,6 +276,6 @@ function buildBossSheet(n) {
     row.appendChild(col);
   }
   box.appendChild(row);
-  box.appendChild(el('div', 'bsfoot', 'Valeurs calculées depuis les données du jeu, dégâts avant l’armure et les résistances du joueur touché.'));
+  box.appendChild(el('div', 'bsfoot', tr('Valeurs calculées depuis les données du jeu, dégâts avant l’armure et les résistances du joueur touché.')));
   return box;
 }

@@ -32,6 +32,9 @@ datas = [
       for f in sorted((ROOT / "meter" / "web").glob("*.*"))],
     *[(str(f), "res/web/js")
       for f in sorted((ROOT / "meter" / "web" / "js").glob("*.js"))],
+    # the interface's translations (i18n.py)
+    *[(str(f), "res/web/i18n")
+      for f in sorted((ROOT / "meter" / "web" / "i18n").glob("*.json"))],
 ]
 
 # the bundled packages' licences (packaging/third_party.py)
@@ -48,6 +51,9 @@ if not _help:
                      "would ship empty")
 for f in _help:
     datas.append((str(f), "res/web/help"))
+# ...and in English (help/en)
+for f in sorted((ROOT / "meter" / "web" / "help" / "en").glob("*.md")):
+    datas.append((str(f), "res/web/help/en"))
 
 # The generators ship so the installed app can rebuild its data after a game
 # patch. All of them: emit_offsets skips a table whose generator is missing.
