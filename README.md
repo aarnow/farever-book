@@ -64,7 +64,8 @@ licence.
 
 ## Remerciements
 
-Farever Book existe aussi grâce à **Brudr**, auteur de **Farever+**, qui a
+Farever Book existe aussi grâce à **Brudr**, auteur de
+[**Farever+**](https://github.com/brudrbear/FareverMeter), qui a
 généreusement partagé son code et nous a autorisés à le reprendre. Sa base,
 notamment la lecture du bytecode HashLink et la lecture du jeu avec Frida, a
 servi de point de départ à ce projet. Merci à lui !
