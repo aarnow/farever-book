@@ -12,6 +12,7 @@ import re
 THEMES = {
     "default": ("Indigo", None, 1.0, False),
     "emerald": ("Émeraude", 168, 0.9, False),
+    "ocean": ("Océan", 205, 1.0, False),
     "contrast": ("Contraste élevé", 230, 0.45, True),
 }
 DEFAULT = "default"

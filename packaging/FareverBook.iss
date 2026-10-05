@@ -18,8 +18,13 @@
 AppId={{8B4B1F2E-9C6A-4E7D-93A5-2F1D6C0B7A34}
 AppName={#AppName}
 AppVersion={#AppVersion}
-DefaultDirName={autopf}\FareverBook
+; {code:InstallDir}: the former name's folder (FareverFrance) moves to
+; FareverBook beside it, any other previous folder is kept
+DefaultDirName={code:InstallDir}
+UsePreviousAppDir=no
 DefaultGroupName={#AppName}
+; the Start menu's "Farever France" folder of the former name is not reused
+UsePreviousGroup=no
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 ; under `lowest`, {autopf} is %LOCALAPPDATA%\Programs
@@ -74,6 +79,8 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchNow}"; Flags: nowait postinstall skipifsilent
+; the app's own update (/SILENT): started again by itself
+Filename: "{app}\{#AppExe}"; Flags: nowait skipifnotsilent
 
 [InstallDelete]
 ; what the app's former name (Farever France) left behind: its executable and
@@ -106,20 +113,19 @@ var
   i: Integer;
 begin
   Result := True;
-  if not MeterRunning() then
-    Exit;
-  { Silent: a suppressed MsgBox returns Retry and would loop forever. }
-  if Silent then
-  begin
-    Result := False;
-    Exit;
-  end;
-  { The app's own update closes it right after: wait up to 10 s first. }
+  { The app's own update (silent) closes it right after: wait up to 10 s
+    first. }
   for i := 1 to 40 do
   begin
     if not MeterRunning() then
       Exit;
     Sleep(250);
+  end;
+  { Silent: a suppressed MsgBox returns Retry and would loop forever. }
+  if Silent then
+  begin
+    Result := False;
+    Exit;
   end;
   while MeterRunning() do
   begin
@@ -130,6 +136,51 @@ begin
       Exit;
     end;
   end;
+end;
+
+const
+  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8B4B1F2E-9C6A-4E7D-93A5-2F1D6C0B7A34}_is1';
+  OldDirName = 'FareverFrance';
+
+{ Where the previous version is installed, or ''. }
+function PreviousDir(): String;
+begin
+  if not RegQueryStringValue(HKCU, UninstallKey, 'Inno Setup: App Path', Result) then
+    Result := '';
+  Result := RemoveBackslashUnlessRoot(Result);
+end;
+
+function IsOldDir(const Dir: String): Boolean;
+begin
+  Result := (Dir <> '') and (CompareText(ExtractFileName(Dir), OldDirName) = 0);
+end;
+
+function InstallDir(Param: String): String;
+var
+  Prev: String;
+begin
+  Prev := PreviousDir();
+  if Prev = '' then
+    Result := ExpandConstant('{autopf}\FareverBook')
+  else if IsOldDir(Prev) then
+    Result := AddBackslash(ExtractFileDir(Prev)) + 'FareverBook'
+  else
+    Result := Prev;
+end;
+
+var
+  MovedFrom: String;
+
+{ The former name's folder, once the new one is installed: only the app's
+  files were there (the player's data lives in %LOCALAPPDATA%). }
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+    MovedFrom := PreviousDir();
+  if (CurStep = ssPostInstall) and IsOldDir(MovedFrom)
+     and (CompareText(MovedFrom, RemoveBackslashUnlessRoot(ExpandConstant('{app}'))) <> 0)
+     and (FileExists(MovedFrom + '\FareverBook.exe') or FileExists(MovedFrom + '\FareverFrance.exe')) then
+    DelTree(MovedFrom, True, True, True);
 end;
 
 function InitializeSetup(): Boolean;

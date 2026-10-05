@@ -6,9 +6,11 @@ A release is a GitHub Release of RELEASES_REPO tagged with the version
 runs in the background (at launch, then hourly) and never fails loudly
 (offline, rate-limited at 60 requests/hour, no release yet).
 
-The installer is opened visibly (ShellExecute) and the app quits; no hidden
-script or silent install: an updater doing that was quarantined by Windows
-Defender as defense evasion."""
+The installer is opened visibly (ShellExecute) with /SILENT: no pages to
+click through, its progress window shown, the app started again at the end;
+then the app quits. Never hidden (/VERYSILENT, a script): an updater doing
+that was quarantined by Windows Defender as defense evasion."""
+import ctypes
 import json
 import os
 import re
@@ -220,7 +222,7 @@ class Updater:
                 return
             self._set({"stage": "installing", "v": r["v"]})
             try:
-                os.startfile(str(dest))  # noqa: S606 - the update agreed to
+                _run_installer(dest)
             except OSError as e:
                 print(f"[update] couldn't open the installer: {e}",
                       file=sys.stderr)
@@ -240,6 +242,16 @@ class Updater:
             self._changed()
         except Exception:
             pass
+
+
+def _run_installer(path):
+    """The installer, shown (SW_SHOWNORMAL), its pages skipped: the player
+    agreed to the update. ShellExecute returns more than 32 on success."""
+    rc = ctypes.windll.shell32.ShellExecuteW(
+        None, "open", str(path), "/SILENT /SUPPRESSMSGBOXES /NORESTART",
+        None, 1)
+    if rc <= 32:
+        raise OSError(f"ShellExecute failed ({rc})")
 
 
 def clean_downloads():
