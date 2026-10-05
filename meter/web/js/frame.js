@@ -420,6 +420,22 @@ function buildWelcome(n) {
   }
 
   if (!repair) {
+    // the languages first: the welcome is read in the one picked
+    if ((n.langs || []).length) {
+      const lr = el('div', 'wlangs');
+      n.langs.forEach((it) => {
+        const b = el('button', 'wlang' + (it.id === n.lang ? ' on' : ''));
+        b.type = 'button';
+        b.title = it.t;
+        const f = el('span', 'lflag');
+        f.innerHTML = LANG_FLAGS[it.id] || '';
+        b.appendChild(f);
+        b.appendChild(el('span', null, it.t));
+        b.addEventListener('click', () => { if (it.id !== n.lang) notify('set_lang', { id: it.id }); });
+        lr.appendChild(b);
+      });
+      card.appendChild(lr);
+    }
     card.appendChild(el('h1', null, tr('Bienvenue sur Farever Book')));
     card.appendChild(el('p', 'wlead', tr('L’outil qui vous accompagne dans vos aventures sur Farever !')));
   }
@@ -510,6 +526,7 @@ function buildSetNav(n) {
     ic.innerHTML = SETNAV_ICONS[it.id] || '';
     b.appendChild(ic);
     b.appendChild(el('span', null, it.t));
+    if (it.tag) b.appendChild(el('span', 'settag', it.tag));
     b.addEventListener('click', () => {
       if (it.id !== n.on) notify('settings_topic', { id: it.id });
     });

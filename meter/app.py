@@ -139,7 +139,7 @@ class App:
         self._me_auto_next = 0.0
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
-        self._ov_on = {"meter": True, "goals": True}   # shown, per overlay
+        self._ov_on = {"meter": False, "goals": False}  # shown, per overlay (alpha: off at first)
         self._hero_at = 0.0                 # last time the hook saw our hero
         self._action_q = []
         self._q_lock = threading.Lock()
@@ -599,8 +599,11 @@ class App:
                        tr("les icônes des sorts et des objets"),
                        tr("les modèles 3D des personnages et des montures"),
                        tr("les données des builds, des donjons et des boss"),
-                       tr("les textes du jeu en français")]
-        return {"k": "welcome", "id": "welcome", **st}
+                       tr("les textes du jeu en anglais et en français")]
+        # the languages, to pick one before anything else
+        return {"k": "welcome", "id": "welcome", "lang": self._lang,
+                "langs": [{"id": k, "t": t} for k, t in i18n.LANGS.items()],
+                **st}
 
     def _repair(self):
         """Réparer (Aide): what a game patch needs, by hand — the game's data
@@ -2109,7 +2112,8 @@ class App:
         topic = (self._settings_topic if self._settings_topic
                  in SETTINGS_TOPICS else "meter")
         nav = {"k": "setnav", "id": "setnav", "on": topic,
-               "items": [{"id": k, "t": tr(t)}
+               "items": [{"id": k, "t": tr(t),
+                          "tag": "alpha" if k == "overlay" else None}
                          for k, t in SETTINGS_TOPICS.items()]}
         return [nav] + {"meter": self._settings_meter,
                         "overlay": self._settings_overlay,
