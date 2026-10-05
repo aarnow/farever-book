@@ -112,10 +112,13 @@ function charOpen(o, main, box) {
   mk.title = tr('Reprendre ce personnage dans un nouveau build modifiable');
   mk.addEventListener('click', () => notify('char_to_build', { name: o.n }));
   head.appendChild(mk);
-  const x = el('button', 'rowbtn', tr('Retirer de la liste'));
-  x.type = 'button';
-  x.addEventListener('click', () => notify('char_forget', { name: o.n }));
-  head.appendChild(x);
+  // one's own character stays: it is kept on disk, not in the session's list
+  if (!o.me) {
+    const x = el('button', 'rowbtn', tr('Retirer de la liste'));
+    x.type = 'button';
+    x.addEventListener('click', () => notify('char_forget', { name: o.n }));
+    head.appendChild(x);
+  }
   main.appendChild(head);
 
   const tabs = el('div', 'btabs');

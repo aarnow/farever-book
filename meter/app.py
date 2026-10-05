@@ -1696,20 +1696,23 @@ class App:
     def _profile_to_build(self, name):
         """Inspecter's "Créer un build": the analysed player as a build,
         opened in the Build tab."""
-        prof = self._profiles_data().get(name)
+        prof = self._shown_profiles().get(name)
         if prof:
             self._set_tab("Build")
             self.buildtab.import_profile(prof)
 
+    def _shown_profiles(self):
+        """The profiles Inspecter lists: one's own characters as last read,
+        under the players analysed this session."""
+        return {**self.me.profiles(), **self._profiles_data()}
+
     def _page_character(self):
-        profs = self._profiles_data()
         live = self.game_connected() and time.time() - self._roster_at < 30
         roster = self._roster if live else []
         wait = self._char_wait
         if wait and time.time() - wait[1] > 15:
             self._char_wait = wait = None
-        # one's own characters as last read, under any analysed this session
-        profs = {**self.me.profiles(), **profs}
+        profs = self._shown_profiles()
         # uid: the open profile — opening one starts the page at the top
         return [{"k": "character", "id": "character",
                  "uid": self._char_sel or "",
