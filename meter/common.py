@@ -468,7 +468,7 @@ def _pretty_id(sid: str) -> str:
 # ---------------------------------------------------------------------------
 # Bump on every release and tag the repo with the same string: the update
 # check compares it with the latest release.
-VERSION = "1.14.0"
+VERSION = "1.15.0"
 
 
 # ---------------------------------------------------------------------------

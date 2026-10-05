@@ -609,7 +609,7 @@ window.applyState = function (json) {
   renderLinkSteps();
   renderBuildEditor();
   if (JSON.stringify(s.update) !== JSON.stringify(prev.update)) renderUpdate(s.update);
-  if (s.updateAvail !== prev.updateAvail) renderUpdateButton(s.updateAvail);
+  if (s.updateAvail !== prev.updateAvail) renderUpdateBar(s.updateAvail);
 };
 
 /* Entry animation, on a tab change only: live redraws must not animate. */

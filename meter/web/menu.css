@@ -52,8 +52,8 @@ body {
   height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
-  grid-template-areas: "top" "nav" "page";
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-areas: "top" "upd" "nav" "page";
 }
 
 #top {
@@ -1451,8 +1451,8 @@ select:focus, input[type=text]:focus { outline: none; border-color: var(--accent
 
 /* ---- the window's own frame (no native title bar) -------------------------- */
 #app { border: 1px solid #5A5694;
-       grid-template-rows: auto auto auto minmax(0, 1fr);
-       grid-template-areas: "titlebar" "top" "nav" "page"; }
+       grid-template-rows: auto auto auto auto minmax(0, 1fr);
+       grid-template-areas: "titlebar" "top" "upd" "nav" "page"; }
 #titlebar {
   grid-area: titlebar;
   display: flex; align-items: center; gap: 8px;
@@ -3124,9 +3124,17 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .lcard.l-discord .lic { color: #5865F2; }
 .lcard.l-github .lic { color: #FFFFFF; }
 
-/* the header's update button (frame.js renderUpdateButton): the Play
-   button's look, in green */
-#updslot:empty { display: none; }
+/* the update band under the header (frame.js renderUpdateBar), its button
+   the Play button's look, in green */
+#updbar { grid-area: upd; display: flex; align-items: center; justify-content: center; gap: 14px;
+          padding: 8px 16px; border-bottom: 1px solid rgba(166, 227, 122, .35);
+          background: linear-gradient(90deg, rgba(78, 154, 50, .10), rgba(111, 191, 74, .26), rgba(78, 154, 50, .10)); }
+#updbar:empty { display: none; }
+#updbar .ub-ic { width: 22px; height: 22px; flex: none; fill: none; stroke: #A6E37A; stroke-width: 2.2;
+                 stroke-linecap: round; stroke-linejoin: round; }
+#updbar .ub-t { color: #fff; font-weight: 700; }
+#updbar .ub-s { color: var(--dim); font-size: 13px; }
+#updbar .playbtn { padding-top: 6px; padding-bottom: 6px; }
 .playbtn.upbtn { background: linear-gradient(180deg, #A6E37A, #6FBF4A 45%, #4E9A32);
                  border-color: #C4F09E; color: #13300A; }
 .playbtn.upbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4;

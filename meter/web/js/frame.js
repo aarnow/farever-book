@@ -625,20 +625,25 @@ function buildLangs(n) {
   return box;
 }
 
-/* A newer version found: "Mettre à jour" in the header, which opens the
-   offer again (put off or not), until the new version is installed. */
-function renderUpdateButton(v) {
-  const slot = $('#updslot');
-  if (!slot) return;
-  slot.textContent = '';
+/* A newer version found: a band under the header, whose "Mettre à jour"
+   opens the offer again (put off or not), until it is installed. */
+function renderUpdateBar(v) {
+  const bar = $('#updbar');
+  if (!bar) return;
+  bar.textContent = '';
   if (!v) return;
+  const ic = svgIcon('M21 12a9 9 0 1 1-3-6.7M21 4v5h-5');
+  ic.classList.add('ub-ic');
+  bar.appendChild(ic);
+  bar.appendChild(el('span', 'ub-t', tr('Farever Book {v} est disponible', { v: v })));
+  bar.appendChild(el('span', 'ub-s', tr('Vos builds et votre historique sont conservés.')));
   const b = el('button', 'playbtn upbtn');
   b.type = 'button';
   b.title = tr('Farever Book {v} est disponible', { v: v });
   b.appendChild(svgIcon('M12 4v11M7 10l5 5 5-5M5 20h14'));
   b.appendChild(el('span', null, tr('Mettre à jour')));
   b.addEventListener('click', () => notify('update_offer', {}));
-  slot.appendChild(b);
+  bar.appendChild(b);
 }
 
 /* The update dialog (updater.py): offer, download progress, install; also

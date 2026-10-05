@@ -11,6 +11,7 @@ script or silent install: an updater doing that was quarantined by Windows
 Defender as defense evasion."""
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -18,6 +19,7 @@ import urllib.error
 import urllib.request
 
 from common import DATA_HOME, FROZEN, VERSION
+import i18n
 from i18n import tr
 
 RELEASES_REPO = "aarnow/farever-book"     # the code and its releases
@@ -35,6 +37,28 @@ def version_tuple(s):
     if not parts or not all(p.isdigit() for p in parts):
         return None
     return tuple(int(p) for p in parts)
+
+
+_DETAILS = re.compile(r"<details[^>]*>\s*<summary>(.*?)</summary>(.*?)</details>",
+                      re.S | re.I)
+
+
+def release_text(body, lang):
+    """A release's notes for the offer, as plain text in the player's
+    language: the <details> block titled with the language's name (the
+    release page carries both), else the whole text; pictures, markup and
+    the alert's tag left out."""
+    name = i18n.LANGS.get(lang, "")
+    text = next((b for s, b in _DETAILS.findall(body)
+                 if name and name in re.sub(r"<[^>]+>", "", s)), body)
+    for pat, rep in ((r"!\[[^\]]*\]\([^)]*\)", ""),        # pictures
+                     (r"<[^>]+>", ""),                       # html
+                     (r"\[([^\]]+)\]\([^)]*\)", r"\1"),      # links
+                     (r"(?m)^>\s?\[![A-Z]+\]\s*$", ""),     # alert tag
+                     (r"(?m)^>\s?", ""), (r"(?m)^#+\s*", ""),
+                     (r"\*\*|`", ""), (r"\n{3,}", "\n\n")):
+        text = re.sub(pat, rep, text)
+    return text.strip()
 
 
 def _request(url):
@@ -140,7 +164,7 @@ class Updater:
     def _offer(self):
         r = self._release
         self._set({"stage": "offer", "v": r["v"], "mine": VERSION,
-                   "notes": r["notes"][:2000],
+                   "notes": release_text(r["notes"], i18n.lang())[:2000],
                    "mb": round(r["size"] / 1048576, 1) if r["size"] else None})
 
     # ---- the player's answers ---------------------------------------------
