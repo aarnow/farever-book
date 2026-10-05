@@ -944,7 +944,7 @@ function buildHead(o) {
   const pic = el('button', 'rowbtn', o.imaging ? 'Création de l’image…' : 'Image à partager');
   pic.type = 'button';
   pic.title = 'Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
-    + 'presse-papiers et enregistrée dans Images › Farever France.';
+    + 'presse-papiers et enregistrée dans Images › Farever Book.';
   pic.disabled = !!o.imaging;
   pic.addEventListener('click', () => notify('build_image', {}));
   btns.appendChild(pic);

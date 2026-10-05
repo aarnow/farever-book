@@ -2,7 +2,7 @@
 window, downloaded, then installed by the installer itself.
 
 A release is a GitHub Release of RELEASES_REPO tagged with the version
-(1.15.0 or v1.15.0) carrying FareverFrance-<version>-Setup.exe. The check
+(1.15.0 or v1.15.0) carrying FareverBook-<version>-Setup.exe. The check
 runs in the background (at launch, then hourly) and never fails loudly
 (offline, rate-limited at 60 requests/hour, no release yet).
 
@@ -19,7 +19,7 @@ import urllib.request
 
 from common import DATA_HOME, FROZEN, VERSION
 
-RELEASES_REPO = "aarnow/farever-france-releases"
+RELEASES_REPO = "aarnow/farever-book-releases"
 RELEASES_URL = f"https://github.com/{RELEASES_REPO}/releases"
 API_LATEST = f"https://api.github.com/repos/{RELEASES_REPO}/releases/latest"
 TIMEOUT = 8.0
@@ -37,7 +37,7 @@ def version_tuple(s):
 
 def _request(url):
     return urllib.request.Request(url, headers={
-        "User-Agent": f"FareverFrance/{VERSION}",
+        "User-Agent": f"FareverBook/{VERSION}",
         "Accept": "application/vnd.github+json"})
 
 
@@ -100,12 +100,12 @@ class Updater:
         latest = version_tuple(rel.get("tag_name"))
         mine = version_tuple(VERSION)
         asset = next((a for a in rel.get("assets") or ()
-                      if str(a.get("name", "")).startswith("FareverFrance-")
+                      if str(a.get("name", "")).startswith("FareverBook-")
                       and str(a.get("name", "")).endswith("-Setup.exe")
                       and a.get("browser_download_url")), None)
         if latest and mine and latest > mine and not asset:
             print(f"[update] {rel.get('tag_name')} has no "
-                  "FareverFrance-<version>-Setup.exe: not offered.",
+                  "FareverBook-<version>-Setup.exe: not offered.",
                   file=sys.stderr)
         if not latest or not mine or latest <= mine or not asset:
             if latest and mine and latest <= mine:
@@ -207,7 +207,7 @@ class Updater:
 def clean_downloads():
     """Installers of past updates: removed at launch, once used."""
     try:
-        for p in UPDATE_DIR.glob("FareverFrance-*-Setup.*"):
+        for p in UPDATE_DIR.glob("FareverBook-*-Setup.*"):
             p.unlink(missing_ok=True)
     except OSError:
         pass

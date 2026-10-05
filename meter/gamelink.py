@@ -294,7 +294,7 @@ class GameSession:
         if not self.zone_seen:
             link.step("zone", "run", "en attente")
         link.set_state(GameLink.CONNECTED, pid=self.pid)
-        print("[*] connected — everything shows in the Farever France "
+        print("[*] connected — everything shows in the Farever Book "
               "window; the reset hotkey is set in Réglages.", file=sys.stderr)
         try:
             while (not STOP.is_set() and not self.detached.wait(0.5)
@@ -686,7 +686,7 @@ class GameLink:
                   f"frida=={FRIDA_GOOD_VERSION}", file=sys.stderr)
             self.set_state(self.FAILED,
                            f"Frida {bad} ferait planter le jeu à la fermeture "
-                           f"de Farever France. Installe la {FRIDA_GOOD_VERSION} : "
+                           f"de Farever Book. Installe la {FRIDA_GOOD_VERSION} : "
                            f"py -m pip install frida=={FRIDA_GOOD_VERSION}")
             return
         try:

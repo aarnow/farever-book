@@ -371,9 +371,6 @@ TABLES = (
           lambda g, o, t: extract_boss_portraits(
               g, [d["boss"] for d in t["dungeons.json"]], o / "boss_portraits"),
           lambda n: f"{n} portraits", label="boss portraits"),
-    Table("ui_logo.png",
-          lambda g, o, t: extract_title_logo(g, o / "ui_logo.png"),
-          label="title logo"),
     Table("augments.json", lambda g, o, t: extract_augments(g),
           lambda d: f"{len(d)} augments", PLAIN),
     Table("rift_rewards.json", lambda g, o, t: extract_rift_rewards(g),
@@ -785,24 +782,6 @@ def dungeon_loot(boss, item_rows, tables, itypes=None):
 
 
 BOSS_PORTRAIT_PX = 192
-
-
-def extract_title_logo(game_dir, out, height=96):
-    """The game's "FAREVER" wordmark (res.pak UI/Window/TitleScreen/
-    title.png), cropped and scaled to `height` pixels, for the window's
-    header."""
-    import io
-    import pak_extract
-    from PIL import Image
-    raw = pak_extract.read_entry(Path(game_dir) / "res.pak",
-                                 "UI/Window/TitleScreen/title.png")
-    if not raw:
-        raise FileNotFoundError("UI/Window/TitleScreen/title.png")
-    img = Image.open(io.BytesIO(raw)).convert("RGBA")
-    img = img.crop(img.getchannel("A").getbbox())
-    w = round(img.width * height / img.height)
-    Path(out).parent.mkdir(parents=True, exist_ok=True)
-    img.resize((w, height), Image.LANCZOS).save(out, optimize=True)
 
 
 def extract_boss_portraits(game_dir, bosses, out_dir):

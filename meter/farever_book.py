@@ -1,11 +1,11 @@
-"""Farever France — a second-screen companion for Farever.
+"""Farever Book — a second-screen companion for Farever.
 
 Reads the game through Frida (frida/meter_hook.js: read-only memory reads and
 a few function hooks) and shows it in one window meant for another screen:
 the damage/heal meter, rifts, dungeons, collection, hunting log, map,
 achievements and the character sheet. Nothing is ever drawn in the game.
 
-Run:  python meter/farever_france.py
+Run:  python meter/farever_book.py
 
 The modules, by responsibility:
   common     paths, constants and small helpers
@@ -21,7 +21,7 @@ The modules, by responsibility:
   this file  startup and shutdown
 
 Shipped as a windowed program, it has no console: it logs to
-%LOCALAPPDATA%\\FareverFrance\\meter.log and puts a tray icon in the notification
+%LOCALAPPDATA%\\FareverBook\\meter.log and puts a tray icon in the notification
 area. Quitting through the window or the tray unloads the hook and detaches
 cleanly; force-killing the process skips that.
 """
@@ -117,7 +117,7 @@ def _cli():
         # startup failures: without a console, show them in a dialog
         if not HAS_CONSOLE and e.code not in (0, None):
             print(f"[meter] {e.code}", file=sys.stderr)
-            message_box(e.code, "Farever France — démarrage impossible", 0x10)
+            message_box(e.code, "Farever Book — démarrage impossible", 0x10)
         raise
     except Exception:
         import traceback
@@ -127,7 +127,7 @@ def _cli():
                 "Le compteur a rencontré une erreur inattendue et s'est "
                 "arrêté.\n\n"
                 f"Le détail est dans :\n{LOG_FILE}",
-                "Farever France — erreur", 0x10)
+                "Farever Book — erreur", 0x10)
         raise
 
 

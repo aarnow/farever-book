@@ -421,7 +421,7 @@ def start_hotkeys(callbacks: dict, target_pid):
 # Keeps a clean exit reachable while the window is hidden or not yet open
 # (a force-kill leaves a half-attached agent in the game). Plain ctypes, no
 # pystray dependency.
-ICON_FILE = ROOT / "assets" / "fareverfrance.ico"
+ICON_FILE = ROOT / "assets" / "fareverbook.ico"
 
 
 WM_TRAY = 0x0400 + 1                      # WM_APP + 1
@@ -498,7 +498,7 @@ class TrayIcon:
     Owns a hidden window on its own thread with its own pump: tray callbacks
     are messages delivered to the window's creating thread."""
 
-    def __init__(self, on_quit, tip="Farever France"):
+    def __init__(self, on_quit, tip="Farever Book"):
         self.on_quit = on_quit
         self.tip = tip
         self.hwnd = None
@@ -558,7 +558,7 @@ class TrayIcon:
     def _menu(self):
         u = ctypes.windll.user32
         m = u.CreatePopupMenu()
-        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Afficher Farever France")
+        u.AppendMenuW(m, MF_STRING, TRAY_SETTINGS, "Afficher Farever Book")
         u.AppendMenuW(m, MF_STRING, TRAY_PARSES, "Ouvrir le dossier des failles")
         u.AppendMenuW(m, MF_STRING, TRAY_LOG, "Ouvrir le dossier du journal")
         u.AppendMenuW(m, MF_SEPARATOR, 0, None)
@@ -667,13 +667,13 @@ class TrayIcon:
         self._wndproc = WNDPROC(wndproc)      # kept alive: Windows holds a raw
         cls = WNDCLASSW()                     # pointer to it for the window's life
         cls.lpfnWndProc = self._wndproc
-        cls.lpszClassName = "FareverFranceTray"
+        cls.lpszClassName = "FareverBookTray"
         cls.hInstance = ctypes.windll.kernel32.GetModuleHandleW(None)
         try:
             if not u.RegisterClassW(ctypes.byref(cls)):
                 raise OSError(ctypes.get_last_error())
             u.CreateWindowExW.restype = wintypes.HWND
-            self.hwnd = u.CreateWindowExW(0, "FareverFranceTray", "Farever France tray",
+            self.hwnd = u.CreateWindowExW(0, "FareverBookTray", "Farever Book tray",
                                           0, 0, 0, 0, 0, None, None,
                                           cls.hInstance, None)
             if not self.hwnd:

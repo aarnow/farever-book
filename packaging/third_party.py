@@ -1,5 +1,5 @@
-"""THIRD_PARTY_LICENSES.txt: the third-party components Farever France ships
-and their licences, written at build time by FareverFrance.spec. Each text
+"""THIRD_PARTY_LICENSES.txt: the third-party components Farever Book ships
+and their licences, written at build time by FareverBook.spec. Each text
 is read from the package's dist-info; Python's LICENSE.txt also covers what
 Python bundles (OpenSSL, libffi, bzip2, xz, SQLite, the C runtime).
 
@@ -44,15 +44,15 @@ def _licence_texts(dist):
 
 def text():
     parts = [
-        "Farever France : licences des composants tiers",
+        "Farever Book : licences des composants tiers",
         "",
-        "Farever France est gratuit. Son propre code n'est pas distribué et",
+        "Farever Book est gratuit. Son propre code n'est pas distribué et",
         "reste la propriété de son auteur, tous droits réservés. Il s'appuie",
         "sur les composants ci-dessous, chacun sous sa propre licence, dont le",
         "texte suit.",
         "",
-        "Farever est un jeu d'Ankama. Farever France n'est ni affilié à Ankama",
-        "ni approuvé par Ankama.",
+        "Farever est un jeu de Shiro Games. Farever Book n'est ni affilié à",
+        "Shiro Games, ni approuvé par le studio.",
         "",
     ]
     py = Path(sys.base_prefix) / "LICENSE.txt"

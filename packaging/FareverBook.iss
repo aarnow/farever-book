@@ -1,8 +1,8 @@
-﻿; Inno Setup script for Farever France.
+﻿; Inno Setup script for Farever Book.
 ;
 ; Compiled by packaging/build.ps1, which passes AppVersion from meter/common.py:
 ;
-;   ISCC.exe /DAppVersion=2.1 packaging\FareverFrance.iss
+;   ISCC.exe /DAppVersion=2.1 packaging\FareverBook.iss
 ;
 ; Installs per-user under %LOCALAPPDATA%\Programs: no UAC prompt.
 
@@ -10,15 +10,15 @@
   #define AppVersion "0.0"
 #endif
 
-#define AppName "Farever France"
-#define AppExe "FareverFrance.exe"
+#define AppName "Farever Book"
+#define AppExe "FareverBook.exe"
 
 [Setup]
 ; Never regenerate: it's how Windows recognises an upgrade.
 AppId={{8B4B1F2E-9C6A-4E7D-93A5-2F1D6C0B7A34}
 AppName={#AppName}
 AppVersion={#AppVersion}
-DefaultDirName={autopf}\FareverFrance
+DefaultDirName={autopf}\FareverBook
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
@@ -27,8 +27,8 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
-OutputBaseFilename=FareverFrance-{#AppVersion}-Setup
-SetupIconFile=..\assets\fareverfrance.ico
+OutputBaseFilename=FareverBook-{#AppVersion}-Setup
+SetupIconFile=..\assets\fareverbook.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} {#AppVersion}
 Compression=lzma2/max
@@ -46,19 +46,26 @@ Name: "desktopicon"; Description: "Créer un raccourci sur le &Bureau"; GroupDes
 
 [Files]
 ; the whole PyInstaller onedir output (exe + _internal)
-Source: "..\dist\FareverFrance\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\FareverBook\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
-Name: "{group}\Dossier du journal de Farever France"; Filename: "{localappdata}\FareverFrance"
+Name: "{group}\Dossier du journal de Farever Book"; Filename: "{localappdata}\FareverBook"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName} maintenant"; Flags: nowait postinstall skipifsilent
 
+[InstallDelete]
+; what the app's former name (Farever France) left behind: its executable and
+; shortcuts (an upgrade keeps the folder it was installed in)
+Type: files; Name: "{app}\FareverFrance.exe"
+Type: filesandordirs; Name: "{autoprograms}\Farever France"
+Type: files; Name: "{autodesktop}\Farever France.lnk"
+
 [UninstallDelete]
-; The bundle only: %LOCALAPPDATA%\FareverFrance (the user's data) is kept,
+; The bundle only: %LOCALAPPDATA%\FareverBook (the user's data) is kept,
 ; an upgrade uninstalls too.
 Type: filesandordirs; Name: "{app}\_internal"
 
@@ -66,14 +73,22 @@ Type: filesandordirs; Name: "{app}\_internal"
 { The tray icon's hidden window class (TrayIcon._run in meter/winsys.py):
   more reliable than the executable name. }
 const
-  TrayClass = 'FareverFranceTray';
+  TrayClass = 'FareverBookTray';
+  { the former name's, while an old version may still be the one running }
+  OldTrayClass = 'FareverFranceTray';
+
+function MeterRunning(): Boolean;
+begin
+  Result := (FindWindowByClassName(TrayClass) <> 0)
+            or (FindWindowByClassName(OldTrayClass) <> 0);
+end;
 
 function AskToStopMeter(const Verb: String; Silent: Boolean): Boolean;
 var
   i: Integer;
 begin
   Result := True;
-  if FindWindowByClassName(TrayClass) = 0 then
+  if not MeterRunning() then
     Exit;
   { Silent: a suppressed MsgBox returns Retry and would loop forever. }
   if Silent then
@@ -84,13 +99,13 @@ begin
   { The app's own update closes it right after: wait up to 10 s first. }
   for i := 1 to 40 do
   begin
-    if FindWindowByClassName(TrayClass) = 0 then
+    if not MeterRunning() then
       Exit;
     Sleep(250);
   end;
-  while FindWindowByClassName(TrayClass) <> 0 do
+  while MeterRunning() do
   begin
-    if MsgBox('Farever France est encore ouvert.' + #13#10#13#10 +
+    if MsgBox('Farever Book est encore ouvert.' + #13#10#13#10 +
               'Fais un clic droit sur son icône dans la zone de notification ' +
               '(près de l''horloge, clique sur la flèche ^ si tu ne la vois ' +
               'pas) et choisis « Arrêter le compteur ».' + #13#10#13#10 +

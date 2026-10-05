@@ -37,15 +37,16 @@ class MenuBridge:
         self._failed = False            # give up after one failure to start
 
     # -- lifecycle --------------------------------------------------------
-    def start(self, geom=None):
-        """Spawn the window process, hidden. Called once."""
+    def start(self, geom=None, theme=None):
+        """Spawn the window process, hidden, at `geom` in `theme`. Called
+        once."""
         if self.proc is not None or self._failed:
             return
         self.geom = dict(geom or {})
-        cmd = ([sys.executable, MENU_FLAG, json.dumps(self.geom)] if FROZEN
+        arg = json.dumps(dict(self.geom, theme=theme))
+        cmd = ([sys.executable, MENU_FLAG, arg] if FROZEN
                else [sys.executable, str(Path(__file__).resolve().parent
-                                         / "menu_host.py"),
-                     json.dumps(self.geom)])
+                                         / "menu_host.py"), arg])
         # Its log goes to our stderr; frozen there may be none, and inheriting
         # the absent handle fails its first write with Errno 22.
         try:
@@ -159,12 +160,12 @@ class MenuBridge:
             print(f"[meter] the window never opened (exit code {code})",
                   file=sys.stderr)
             message_box(
-                "La fenêtre de Farever France n'a pas pu s'ouvrir.\n\n"
+                "La fenêtre de Farever Book n'a pas pu s'ouvrir.\n\n"
                 "Cause la plus courante : Microsoft Edge WebView2 n'est "
                 "pas installé "
                 "(https://developer.microsoft.com/microsoft-edge/webview2/).\n\n"
                 f"Le détail est dans :\n{LOG_FILE}",
-                "Farever France — fenêtre impossible à ouvrir", 0x10)
+                "Farever Book — fenêtre impossible à ouvrir", 0x10)
         self.ready = False
         if self.proc is proc:
             self.proc = None

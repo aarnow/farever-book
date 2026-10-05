@@ -1,4 +1,4 @@
-"""The Farever France window: a WebView2 application window in its own process.
+"""The Farever Book window: a WebView2 application window in its own process.
 
 pywebview must own the main thread, and a crashed or hung window must not take
 the frida hook down with it (unloading a wedged hook crashes the game). Pipes,
@@ -51,6 +51,8 @@ os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                       "--force-device-scale-factor=1")
 
 import webview  # noqa: E402  (must follow the environment set-up above)
+
+import themes  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 if getattr(sys, "frozen", False):
@@ -182,9 +184,11 @@ class AppWindow:
         self._closing = False
         self._want = geom
         self._last_geom = None
+        # the colour theme, from the launch (no flash of the default one)
+        self._theme = geom.get("theme") or themes.DEFAULT
         self.window = webview.create_window(
-            "Farever France",
-            html=_document(),
+            "Farever Book",
+            html=_document(self._theme),
             width=int(geom.get("w") or DEFAULT_W),
             height=int(geom.get("h") or DEFAULT_H),
             x=geom.get("x"), y=geom.get("y"),
@@ -192,7 +196,7 @@ class AppWindow:
             resizable=True,
             frameless=True,
             easy_drag=False,
-            background_color="#211F3A",
+            background_color=themes.color("#211F3A", self._theme),
             js_api=self.api,
         )
         self.window.events.moved += self._on_geom
@@ -202,7 +206,7 @@ class AppWindow:
         self.overlays = []
         for oid in OVERLAY_IDS:
             try:
-                self.overlays.append(Overlay(oid, pipe))
+                self.overlays.append(Overlay(oid, pipe, self._theme))
             except Exception as e:
                 _log(f"overlay {oid} unavailable: {e!r}")
 
@@ -243,7 +247,7 @@ class AppWindow:
         self.pipe.send({"t": "geom", "x": x, "y": y, "w": w, "h": h})
 
     def _on_closing(self):
-        """Closing the window quits Farever France."""
+        """Closing the window quits Farever Book."""
         if not self._closing:
             self._closing = True
             self._on_geom()
@@ -336,8 +340,8 @@ class AppWindow:
         try:
             self.window.evaluate_js(
                 "window.addPortraits && window.addPortraits("
-                + json.dumps(json.dumps({"portraits": _boss_portraits(),
-                                         "logo": _title_logo()})) + ")")
+                + json.dumps(json.dumps({"portraits": _boss_portraits()}))
+                + ")")
         except Exception as e:
             _log(f"portraits push failed: {e!r}")
         for ns, folder in (("coll", "collection_img"),
@@ -363,6 +367,18 @@ class AppWindow:
                     _log(f"{ns} images push failed: {e!r}")
                     break
 
+    def _set_theme(self, theme):
+        """Recolour the window and the overlays, in place."""
+        self._theme = theme
+        try:
+            self.window.evaluate_js(
+                "window.applyTheme && window.applyTheme("
+                + json.dumps(themes.themed(_web("menu.css"), theme)) + ")")
+        except Exception as e:
+            _log(f"theme push failed: {e!r}")
+        for o in self.overlays:
+            o.set_theme(theme)
+
     def _push(self, data):
         """Hand one state object to the page as a JSON string argument, never
         interpolated: it carries player names off the wire."""
@@ -373,6 +389,9 @@ class AppWindow:
         self._images_gen = gen
         if not getattr(self, "_images_sent", False):
             self._send_collection_images()
+        theme = data.get("theme")
+        if theme and theme != self._theme:
+            self._set_theme(theme)
         try:
             self.window.evaluate_js(
                 f"window.applyState({json.dumps(json.dumps(data))})")
@@ -417,7 +436,7 @@ class OverlayApi:
 
 
 class Overlay:
-    def __init__(self, oid, pipe):
+    def __init__(self, oid, pipe, theme):
         self.id = oid
         self.pipe = pipe
         self.api = OverlayApi(pipe)
@@ -431,11 +450,12 @@ class Overlay:
         self.game = None
         self.pos = None
         self.window = webview.create_window(
-            f"Farever France — {oid}", html=_overlay_document(oid),
+            f"Farever Book — {oid}", html=_overlay_document(oid, theme),
             width=self.size[0], height=self.size[1], x=-4000, y=-4000,
             frameless=True, easy_drag=False, resizable=False, shadow=False,
             hidden=True, on_top=True, focus=False,
-            background_color=OVERLAY_BG, js_api=self.api)
+            background_color=themes.color(OVERLAY_BG, theme),
+            js_api=self.api)
 
     def attach(self):
         for _ in range(400):
@@ -452,6 +472,14 @@ class Overlay:
         u.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
                          (ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)
                          & ~WS_EX_APPWINDOW)
+
+    def set_theme(self, theme):
+        try:
+            self.window.evaluate_js(
+                "window.applyTheme && window.applyTheme("
+                + json.dumps(themes.themed(_web("overlay.css"), theme)) + ")")
+        except Exception as e:
+            _log(f"overlay {self.id} theme failed: {e!r}")
 
     # -- the meter's state -------------------------------------------------
     def update(self, d):
@@ -562,19 +590,23 @@ class Overlay:
                 u.SetForegroundWindow(back)
 
 
-def _overlay_document(oid):
-    def read(name):
-        try:
-            return (WEB_DIR / name).read_text(encoding="utf-8")
-        except OSError as e:
-            _log(f"missing web asset {name}: {e}")
-            return ""
+def _web(name):
+    """A file of web/, or "" (logged) when it is missing."""
+    try:
+        return (WEB_DIR / name).read_text(encoding="utf-8")
+    except OSError as e:
+        _log(f"missing web asset {name}: {e}")
+        return ""
+
+
+def _overlay_document(oid, theme):
     return ('<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-            "<style>" + read("overlay.css") + "</style></head><body>"
+            '<style id="css">' + themes.themed(_web("overlay.css"), theme)
+            + "</style></head><body>"
             '<div id="ov"></div><script>window.__OVERLAY__ = '
             + json.dumps(oid) + ";window.__ICONS__ = "
             + json.dumps(_class_icons()) + ";</script><script>"
-            + read("js/overlay.js") + "</script></body></html>")
+            + _web("js/overlay.js") + "</script></body></html>")
 
 
 def _own_hwnd(window):
@@ -602,24 +634,19 @@ JS_FILES = ("core", "frame", "live", "report", "dungeons", "model3d",
             "collection", "achievements", "hunt", "map", "character", "build", "boot")
 
 
-def _document():
-    """One self-contained HTML document: menu.html, menu.css and the JS."""
-    def read(name):
-        try:
-            return (WEB_DIR / name).read_text(encoding="utf-8")
-        except OSError as e:
-            _log(f"missing web asset {name}: {e}")
-            return ""
-
-    html = (read("menu.html")
-            .replace("/*CSS*/", read("menu.css"))
-            .replace("/*JS*/", "\n".join(read(f"js/{f}.js")
+def _document(theme):
+    """One self-contained HTML document: menu.html, menu.css (in the colour
+    theme) and the JS."""
+    html = (_web("menu.html")
+            .replace("/*CSS*/", themes.themed(_web("menu.css"), theme))
+            .replace("/*JS*/", "\n".join(_web(f"js/{f}.js")
                                          for f in JS_FILES))
             .replace("/*ICONS*/",
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
                      "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
                      + ";window.__SHEET__ = " + json.dumps(_sheet_art())
-                     + ";window.__LOGO__ = " + json.dumps(_title_logo())
+                     + ";window.__LOGO__ = " + json.dumps(_asset_uri("wordmark.png"))
+                     + ";window.__CREST__ = " + json.dumps(_asset_uri("grimoire.png"))
                      + ";"))
     # WebView2 shows nothing at all for an HTML string over 2 MB.
     if len(html.encode("utf-8")) > 1_800_000:
@@ -648,19 +675,14 @@ def _analysis_images(name):
     return out
 
 
-def _title_logo():
-    """The game's wordmark as a data URI: the extracted one, else the shipped
-    copy (the first launch precedes any extraction), else ""."""
+def _asset_uri(name):
+    """A picture of assets/ (the header's) as a data URI, or ""."""
     import base64
-    for path in (Path(os.environ.get("FAREVER_ANALYSIS")
-                      or HERE.parent / "analysis_out") / "ui_logo.png",
-                 ICON_DIR.parent / "ui_logo.png"):
-        try:
-            return "data:image/png;base64," + base64.b64encode(
-                path.read_bytes()).decode()
-        except OSError:
-            continue
-    return ""
+    try:
+        return "data:image/png;base64," + base64.b64encode(
+            (ICON_DIR.parent / name).read_bytes()).decode()
+    except OSError:
+        return ""
 
 
 def _boss_portraits():

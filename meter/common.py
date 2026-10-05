@@ -25,8 +25,38 @@ FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = (Path(sys._MEIPASS) / "res") if FROZEN else Path(__file__).resolve().parent.parent
 
 
-# %LOCALAPPDATA%\FareverFrance
-DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()) / "FareverFrance"
+# %LOCALAPPDATA%\FareverBook
+DATA_HOME = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()) / "FareverBook"
+
+
+def _move_old_data_home():
+    """The folder of the app's former name (Farever France), moved here:
+    whole when this one doesn't exist yet, else what it has that this one
+    hasn't (a source run may have made this one first). What can't move
+    (a file in use) is tried again at the next launch."""
+    global DATA_HOME
+    old = DATA_HOME.with_name("FareverFrance")
+    if not old.is_dir():
+        return
+    if not DATA_HOME.exists():
+        try:
+            os.replace(old, DATA_HOME)
+        except OSError:
+            DATA_HOME = old
+        return
+    for item in old.iterdir():
+        try:
+            if not (DATA_HOME / item.name).exists():
+                os.replace(item, DATA_HOME / item.name)
+        except OSError:
+            pass
+    try:
+        old.rmdir()                 # only once it is empty
+    except OSError:
+        pass
+
+
+_move_old_data_home()
 
 
 _WRITABLE = DATA_HOME if FROZEN else ROOT
@@ -107,7 +137,7 @@ LOCK_FILE = LOCK_DIR / "instance.json"
 
 # Images that count as "another meter". A literal, not sys.executable, so
 # source and installed runs recognise each other.
-EXE_NAME = "FareverFrance.exe"
+EXE_NAME = "FareverBook.exe"
 
 
 METER_IMAGE_NAMES = frozenset({EXE_NAME.lower(), "python.exe", "pythonw.exe"})
@@ -123,7 +153,7 @@ QUIT_WAIT_SECS = 12.0
 
 
 # "Local\": one meter per logon session.
-CLAIM_MUTEX = "Local\\FareverFranceClaim"
+CLAIM_MUTEX = "Local\\FareverBookClaim"
 
 
 CLAIM_WAIT_MS = 30000       # comfortably longer than a full QUIT_WAIT_SECS wait
@@ -289,7 +319,7 @@ CREATE_NO_WINDOW = 0x08000000   # no console flashing up for child processes
 
 
 def run_bundled_tool(name, argv_rest):
-    """Entry point for `FareverFrance.exe --run-hltool build_targets.py ...`.
+    """Entry point for `FareverBook.exe --run-hltool build_targets.py ...`.
 
     The tools do their work at top level and exit via SystemExit, so they are
     run as scripts, not imported."""
@@ -384,7 +414,7 @@ def request_stop():
         app.request_quit()
 
 
-def message_box(text, title="Farever France", flags=0x40):
+def message_box(text, title="Farever Book", flags=0x40):
     """For failures that stop the meter starting; anything softer goes to the
     log."""
     try:

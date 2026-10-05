@@ -53,10 +53,10 @@ def from_code(text):
     game no longer has is dropped). ValueError with a message to show."""
     m = re.search(r"FFB(\d+):([A-Za-z0-9_-]+)", str(text or ""))
     if not m:
-        raise ValueError("Ce n'est pas un code de build Farever France.")
+        raise ValueError("Ce n'est pas un code de build Farever Book.")
     if m.group(1) != "1":
         raise ValueError("Ce code vient d'une version plus récente de "
-                         "Farever France.")
+                         "Farever Book.")
     body = m.group(2)
     try:
         raw = zlib.decompress(base64.urlsafe_b64decode(

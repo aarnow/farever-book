@@ -1,15 +1,15 @@
-# PyInstaller spec for Farever France.
+# PyInstaller spec for Farever Book.
 #
-#   py -m PyInstaller --clean --noconfirm packaging/FareverFrance.spec
+#   py -m PyInstaller --clean --noconfirm packaging/FareverBook.spec
 #
-# Produces dist/FareverFrance/, a windowed build carrying its own Python, frida
+# Produces dist/FareverBook/, a windowed build carrying its own Python, frida
 # and Pillow. Run from the project root.
 import sys
 from pathlib import Path
 
 ROOT = Path(SPECPATH).resolve().parent
 
-# What the app reads at runtime, under res/ (see ROOT in farever_france.py) so
+# What the app reads at runtime, under res/ (see ROOT in farever_book.py) so
 # the "frida" folder of agent JS can't be confused with the frida package.
 datas = [
     (str(ROOT / "frida" / "meter_hook.js"), "res/frida"),
@@ -18,9 +18,10 @@ datas = [
     (str(ROOT / "analysis_out" / "unit_names.json"), "res/analysis_out"),
     # sizes heals that restored nothing (overheal)
     (str(ROOT / "analysis_out" / "heal_specs.json"), "res/analysis_out"),
-    (str(ROOT / "assets" / "fareverfrance.ico"), "res/assets"),
-    # the header's wordmark before the game's data is read (welcome screen)
-    (str(ROOT / "assets" / "ui_logo.png"), "res/assets"),
+    (str(ROOT / "assets" / "fareverbook.ico"), "res/assets"),
+    # the header's grimoire and wordmark
+    (str(ROOT / "assets" / "wordmark.png"), "res/assets"),
+    (str(ROOT / "assets" / "grimoire.png"), "res/assets"),
     # the class icons, cut from the game's art
     *[(str(f), "res/assets/classes")
       for f in sorted((ROOT / "assets" / "classes").glob("*.png"))],
@@ -67,7 +68,7 @@ hiddenimports = ["PIL.Image", "PIL.ImageDraw", "PIL.ImageFont",
                  *[t.stem for t in _tools]]
 
 a = Analysis(
-    [str(ROOT / "meter" / "farever_france.py")],
+    [str(ROOT / "meter" / "farever_book.py")],
     # meter/ so the "menu_host" hidden import resolves
     pathex=[str(ROOT), str(ROOT / "meter"), str(ROOT / "hltools")],
     binaries=[],
@@ -87,12 +88,12 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="FareverFrance",
+    name="FareverBook",
     debug=False,
     strip=False,
     upx=False,          # UPX-packed binaries are a reliable antivirus trigger,
     console=False,      # and this one already injects into a game process
-    icon=str(ROOT / "assets" / "fareverfrance.ico"),
+    icon=str(ROOT / "assets" / "fareverbook.ico"),
 )
 
 coll = COLLECT(
@@ -101,5 +102,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="FareverFrance",
+    name="FareverBook",
 )

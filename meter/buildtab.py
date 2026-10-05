@@ -145,7 +145,7 @@ class BuildTab:
 
     def _image(self):
         """The open build as a picture (buildcard.py), in a thread (the 3D
-        render takes seconds): saved in Images\\Farever France and copied."""
+        render takes seconds): saved in Images\\Farever Book and copied."""
         if not self.build or self.imaging:
             return
         import re

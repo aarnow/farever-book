@@ -466,6 +466,7 @@ function buildNode(n) {
     case 'bosssheet': return buildBossSheet(n);
     case 'welcome': return buildWelcome(n);
     case 'setnav': return buildSetNav(n);
+    case 'themes': return buildThemes(n);
     case 'collection': return buildCollection(n);
     case 'hunt': return buildHunt(n);
     case 'huntmon': return buildHuntMon(n);
@@ -516,6 +517,12 @@ function pageView(nodes) {
   const first = nodes[0] ? nodes[0].k + ':' + (nodes[0].id || 0) : '';
   return first + '|' + nodes.filter((n) => n.uid).map((n) => n.uid).join(',');
 }
+
+/* The colour theme: the whole stylesheet, recoloured by menu_host.py. */
+window.applyTheme = function (css) {
+  const st = document.getElementById('css');
+  if (st) st.textContent = css;
+};
 
 /* Takes a JSON string, not a script literal: player names may hold quotes. */
 window.applyState = function (json) {

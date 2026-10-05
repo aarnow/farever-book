@@ -407,14 +407,14 @@ h1 {{ margin:10px 0 6px; font-family:var(--fh); font-size:58px; line-height:1.02
    <div class="box"><h4>Talents<em>{pts.get("used", 0)} / {pts.get("total", 0)}</em></h4><div class="tgs">{tal_txt}</div></div>
    <div class="box"><h4>Runes</h4><div class="tgs">{rune_txt}</div></div></div>
  </div>
- <div class="foot"><span>Fiche de build générée par Farever France</span></div>
+ <div class="foot"><span>Fiche de build générée par Farever Book</span></div>
 </div><script>document.body.dataset.h=Math.ceil(document.body.getBoundingClientRect().height)</script>
 </body></html>'''
 
 
 def pictures_dir():
     """Windows' Pictures folder (wherever the user moved it), then ours in
-    it: Images\\Farever France."""
+    it: Images\\Farever Book."""
     base = None
     try:
         import winreg
@@ -427,7 +427,7 @@ def pictures_dir():
         pass
     if not base or not base.is_dir():
         base = Path.home() / "Pictures"
-    return base / "Farever France"
+    return base / "Farever Book"
 
 
 def render(o, out_png):

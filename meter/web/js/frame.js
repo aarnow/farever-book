@@ -383,9 +383,6 @@ function buildWelcome(n) {
   }
   const box = el('div', 'welcome');
   const card = el('div', 'wcard');
-  const crest = el('span', 'emblem wcrest');
-  crest.appendChild(el('i'));
-  card.appendChild(crest);
   const btn = (text, cls, fn) => {
     const b = el('button', cls, text);
     b.type = 'button';
@@ -405,14 +402,14 @@ function buildWelcome(n) {
       return box;
     }
     card.appendChild(el('h1', null, n.stage === 'error' ? 'La réparation n’a pas abouti'
-      : 'Réparation de Farever France'));
+      : 'Réparation de Farever Book'));
     card.appendChild(el('p', 'wlead', n.stage === 'error'
       ? 'La nouvelle analyse du jeu s’est arrêtée avant la fin.'
       : 'Nouvelle analyse du jeu pour résoudre les problèmes rencontrés.'));
   }
   if (n.stage === 'done') {
     card.appendChild(el('h1', null, 'Tout est prêt !'));
-    card.appendChild(el('p', 'wlead', 'Merci d’utiliser Farever France. Les images, les icônes et les '
+    card.appendChild(el('p', 'wlead', 'Merci d’utiliser Farever Book. Les images, les icônes et les '
       + 'données du jeu sont en place, tous les modules sont accessibles.'));
     card.appendChild(el('p', 'wgame', 'Bon jeu sur Farever !'));
     card.appendChild(btn('Commencer', 'wgo', () => notify('setup_finish', {})));
@@ -421,7 +418,7 @@ function buildWelcome(n) {
   }
 
   if (!repair) {
-    card.appendChild(el('h1', null, 'Bienvenue sur Farever France'));
+    card.appendChild(el('h1', null, 'Bienvenue sur Farever Book'));
     card.appendChild(el('p', 'wlead', 'L’outil qui vous accompagne dans vos aventures sur Farever !'));
   }
 
@@ -520,6 +517,41 @@ function buildSetNav(n) {
 }
 
 
+/* Réglages › Affichage: each colour theme as a small window in its colours
+   (the header band, the tabs), its name under it. */
+function buildThemes(n) {
+  const grid = el('div', 'themes');
+  (n.items || []).forEach((it) => {
+    const c = it.c || {};
+    const b = el('button', 'theme' + (it.id === n.on ? ' on' : ''));
+    b.type = 'button';
+    const win = el('div', 'thwin');
+    win.style.background = c.bg;
+    win.style.borderColor = c.line;
+    const band = el('div', 'thband', 'Farever Book');
+    band.style.background = 'linear-gradient(180deg, ' + c.band1 + ', ' + c.band2 + ')';
+    band.style.borderColor = c.line;
+    win.appendChild(band);
+    const tabs = el('div', 'thtabs');
+    tabs.style.background = c.panel;
+    const on = el('span', 'on', 'En jeu');
+    on.style.color = c.accent;
+    on.style.borderColor = c.accent;
+    const off = el('span', null, 'Failles');
+    off.style.color = c.dim;
+    tabs.appendChild(on);
+    tabs.appendChild(off);
+    win.appendChild(tabs);
+    b.appendChild(win);
+    b.appendChild(el('span', 'thname', it.t + (it.id === n.on ? '  ·  actif' : '')));
+    b.addEventListener('click', () => {
+      if (it.id !== n.on) notify('set_theme', { id: it.id });
+    });
+    grid.appendChild(b);
+  });
+  return grid;
+}
+
 /* The update dialog (updater.py): offer, download progress, install; also
    the manual check's answer. */
 function renderUpdate(u) {
@@ -541,13 +573,13 @@ function renderUpdate(u) {
   const row = el('div', 'bbtns');
   if (u.stage === 'offer') {
     box.appendChild(el('div', 'sptitle', 'Nouvelle version disponible'));
-    box.appendChild(el('p', 'uplead', 'Farever France ' + u.v + ' est disponible (vous avez la ' + u.mine + ').'));
+    box.appendChild(el('p', 'uplead', 'Farever Book ' + u.v + ' est disponible (vous avez la ' + u.mine + ').'));
     if (u.notes) {
       box.appendChild(el('div', 'upsub', 'Nouveautés'));
       box.appendChild(el('div', 'upnotes', u.notes));
     }
     box.appendChild(el('p', 'note', 'La mise à jour télécharge l’installeur' + (u.mb ? ' (' + u.mb + ' Mo)' : '')
-      + ', l’ouvre et ferme Farever France. Suivez l’installeur : il relance l’application à la fin. '
+      + ', l’ouvre et ferme Farever Book. Suivez l’installeur : il relance l’application à la fin. '
       + 'Vos builds et votre historique sont conservés.'));
     row.appendChild(btn('Plus tard', 'rowbtn', 'update_later'));
     row.appendChild(btn('Mettre à jour', 'btn go', 'update_install'));
@@ -560,12 +592,12 @@ function renderUpdate(u) {
     bar.appendChild(fill);
     box.appendChild(bar);
     box.appendChild(el('p', 'note', u.stage === 'installing'
-      ? 'Ouverture de l’installeur, Farever France va se fermer…'
+      ? 'Ouverture de l’installeur, Farever Book va se fermer…'
       : 'Téléchargement de l’installeur : ' + pct + ' %'));
   } else if (u.stage === 'checking') {
     box.appendChild(el('div', 'sptitle', 'Recherche d’une mise à jour…'));
   } else if (u.stage === 'uptodate') {
-    box.appendChild(el('div', 'sptitle', 'Farever France est à jour'));
+    box.appendChild(el('div', 'sptitle', 'Farever Book est à jour'));
     box.appendChild(el('p', 'note', 'Vous avez déjà la dernière version.'));
     row.appendChild(btn('Fermer', 'btn go', 'update_close'));
   } else {

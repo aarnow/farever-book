@@ -19,7 +19,7 @@ __pycache__/
 
 # Release build output from packaging/build.ps1 — a few hundred megabytes of
 # regenerated bundle. The installer it produces belongs on a GitHub release,
-# not in the repo. (assets/fareverfrance.ico IS tracked: a from-source run wants
+# not in the repo. (assets/fareverbook.ico IS tracked: a from-source run wants
 # the tray icon without needing Pillow to draw it first.)
 /build/
 /dist/
@@ -36,7 +36,6 @@ donjons/
 builds/
 analysis_out/item_icons/
 analysis_out/boss_portraits/
-analysis_out/ui_logo.png
 analysis_out/collection_img/
 .meter_collection.json
 analysis_out/bestiary_img/

@@ -11,6 +11,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from pathlib import Path
+import themes
 from buildtab import BuildTab
 
 from common import (
@@ -55,6 +56,14 @@ from updater import RELEASES_URL, Updater, clean_downloads
 from bridge import MenuBridge, _Scheduler, _parse_help
 from gamelink import GameLink
 
+
+# The Help tab's links. A link without its url shows without a button.
+HELP_LINKS = (
+    {"id": "discord", "t": "Discord", "url": None,
+     "meta": "Une question, un bug : contacte @Aarnow sur Discord."},
+    {"id": "github", "t": "GitHub", "url": RELEASES_URL,
+     "meta": "Les versions de Farever Book et leurs nouveautés."},
+)
 
 
 # Runs kept per dungeon: the 11th removes the oldest (records stay).
@@ -148,6 +157,7 @@ class App:
         self._rift_confirm = False          # "delete" pressed once
         self._rift_auto_view = False
         self._zoom = 130                    # the window's own size, percent
+        self._theme = themes.DEFAULT        # the colour theme
 
         # ---- what the window is showing (not saved) ----
         self._menu_tab = APP_TAB_DEFAULT
@@ -228,6 +238,8 @@ class App:
                 RESET_BIND.update(
                     {"vk": vk} | {m: bool(bind.get(m))
                                   for m in ("shift", "ctrl", "alt")})
+        if data.get("theme") in themes.THEMES:
+            self._theme = data["theme"]
         z = data.get("zoom")
         if isinstance(z, int) and 50 <= z <= 200:
             self._zoom = z
@@ -259,6 +271,7 @@ class App:
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
+                "theme": self._theme,
                 "overlay_pos": self._ov_pos,
                 "overlay_on": self._ov_on,
                 "overlay_tab": self._ov_tab,
@@ -368,7 +381,7 @@ class App:
             "Combat abandonné — compteur vidé.", ""))()
 
     def open_settings_from_tray(self):
-        """The tray's "Afficher Farever France": bring the window to the front."""
+        """The tray's "Afficher Farever Book": bring the window to the front."""
         self.menubridge.send({"t": "show"})
 
     def _tick_rift(self):
@@ -658,6 +671,7 @@ class App:
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
+            "set_theme": lambda p: self._set_theme(p.get("id")),
             "open_log": self._open_log_folder,
             # updates
             "update_check": lambda: self.updater.check(manual=True),
@@ -666,6 +680,7 @@ class App:
             "update_close": self.updater.close,
             "update_page": self._open_releases,
             "open_licences": self._open_licences,
+            "open_link": lambda p: self._open_link(p.get("id")),
             "settings_topic": lambda p: setattr(
                 self, "_settings_topic",
                 p.get("id") if p.get("id") in SETTINGS_TOPICS
@@ -698,11 +713,11 @@ class App:
     def run(self):
         """The main loop: the window's actions, the timers, and the refresh
         that turns the session into what the window shows."""
-        self.menubridge.start(self._win_geom)
+        self.menubridge.start(self._win_geom, self._theme)
         if self.menubridge.proc is None:
-            message_box("La fenêtre de Farever France n'a pas pu s'ouvrir "
+            message_box("La fenêtre de Farever Book n'a pas pu s'ouvrir "
                         "(WebView2 ou pywebview manquant ?).\n\nLe détail est "
-                        f"dans :\n{LOG_FILE}", "Farever France — erreur", 0x10)
+                        f"dans :\n{LOG_FILE}", "Farever Book — erreur", 0x10)
             return
         last = 0.0
         while not self._stopping:
@@ -773,6 +788,7 @@ class App:
             # a new version's offer (not over the welcome screen)
             "update": None if self._setup else self.updater.state,
             "zoom": int(self._zoom),
+            "theme": self._theme,
             "shard": self.ui_state.server() or "",
             "link": self._link_spec(),
             "linksteps": (self.link.steps_view() if self.link is not None
@@ -1392,7 +1408,7 @@ class App:
         states = ((els.get("heroes") or {}).get(hero) or {}).get("states")
         sync = (f"Succès du compte et progression de {hero}, lus en jeu le "
                 f"{date_fr(time.localtime(at))}." if at else
-                "Pas encore lus : lance le jeu avec Farever France ouvert.")
+                "Pas encore lus : lance le jeu avec Farever Book ouvert.")
         return [{"k": "achievements", "id": "achievements", "sync": sync,
                  **achievements_view(data.get("account") or {},
                                      entry.get("counters") or {},
@@ -1510,9 +1526,9 @@ class App:
         sync = (f"Kills de {hero}, lus en jeu le "
                 f"{date_fr(time.localtime(at))}. Le compte est celui du jeu "
                 "(son Codex) : il inclut tout ce que tu as tué avant "
-                "Farever France, et se met à jour tout seul quand le jeu est "
+                "Farever Book, et se met à jour tout seul quand le jeu est "
                 "ouvert." if at else
-                "Pas encore lu : lance le jeu avec Farever France ouvert, tes "
+                "Pas encore lu : lance le jeu avec Farever Book ouvert, tes "
                 "kills se rempliront tout seuls.")
         if self._hunt_sel:
             return [{"k": "toolbar", "id": "hunt_tools", "btns": [
@@ -1619,7 +1635,7 @@ class App:
             prof = self.me.profiles().get(self.me.last)
             if prof is None:
                 self._toast_msg("Ton personnage n'a pas encore été lu : lance "
-                                "le jeu une fois avec Farever France ouvert.")
+                                "le jeu une fois avec Farever Book ouvert.")
                 return
             self._set_tab("Build")
             self.buildtab.import_profile(prof, self.me.last)
@@ -1674,7 +1690,7 @@ class App:
         at = entry.get("at")
         sync = (f"Progression de {hero}, lue en jeu le "
                 f"{date_fr(time.localtime(at))}." if at else
-                "Progression pas encore lue : lance le jeu avec Farever France "
+                "Progression pas encore lue : lance le jeu avec Farever Book "
                 "ouvert.")
         return [{"k": "map", "id": "map", "sync": sync,
                  **map_view(entry.get("states") if at else None)}]
@@ -1701,7 +1717,7 @@ class App:
         at = owned.get("at")
         sync = (f"Lue en jeu le {date_fr(time.localtime(at))}. Elle se met "
                 "à jour toute seule quand le jeu est ouvert."
-                if at else "Pas encore lue : lance le jeu avec Farever France "
+                if at else "Pas encore lue : lance le jeu avec Farever Book "
                            "ouvert, ta collection se remplira toute seule.")
         codex = self._item_codex()
         entry = (codex.get("heroes") or {}).get(codex.get("last")) or {}
@@ -2095,7 +2111,17 @@ class App:
             {"k": "field", "t": "Taille de l'interface",
              "c": {"k": "slider", "id": "set_zoom", "v": int(self._zoom),
                    "min": 50, "max": 200, "step": 5, "unit": "%"}},
+            {"k": "section", "t": "Thème"},
+            {"k": "themes", "id": "themes", "on": self._theme,
+             "items": [{"id": tid, "t": name, "c": themes.preview(tid)}
+                       for tid, (name, *_r) in themes.THEMES.items()]},
         ]
+
+    def _set_theme(self, theme):
+        if theme in themes.THEMES and theme != self._theme:
+            self._theme = theme
+            self._save_settings()
+            self.menubridge.invalidate()
 
     def _open_licences(self):
         try:
@@ -2107,10 +2133,19 @@ class App:
         import webbrowser
         webbrowser.open(RELEASES_URL)
 
+    @staticmethod
+    def _open_link(link_id):
+        """One of the Help tab's links, by its id: never a URL from the page."""
+        url = next((ln["url"] for ln in HELP_LINKS
+                    if ln["id"] == link_id and ln["url"]), None)
+        if url:
+            import webbrowser
+            webbrowser.open(url)
+
     def _settings_config(self):
         return [
             {"k": "section", "t": "Version"},
-            {"k": "note", "t": f"Farever France {VERSION}. Les nouvelles "
+            {"k": "note", "t": f"Farever Book {VERSION}. Les nouvelles "
                                "versions sont proposées d'elles-mêmes au "
                                "lancement, puis toutes les heures."},
             {"k": "button", "id": "update_check",
@@ -2270,7 +2305,7 @@ class App:
 
     def _report_text(self, data):
         """The plaintext version — chat-pasteable lines, no box drawing."""
-        out = ["Farever France — " + (data.get("title") or "Rapport de faille")
+        out = ["Farever Book — " + (data.get("title") or "Rapport de faille")
                + (f" ({data['sub']})" if data.get("sub") else "")]
         for ph in data["phases"]:
             dur = ph["duration"]
@@ -2569,9 +2604,9 @@ class App:
                           "t": "‹  Tous les sujets d'aide"},
                          {"k": "section", "t": art["title"]}]
                         + art["blocks"])
-        # ...or the index: the repair (the articles' list will come back
-        # in another form)
-        seen, out = set(), self._repair_nodes()
+        # ...or the index: the repair, how it works, the links, the credits
+        seen, out = set(), (self._repair_nodes() + self._about_nodes()
+                            + self._links_nodes())
         for heading, ids in HELP_GROUPS:
             rows = [a for a in arts if a["id"] in ids]
             if not rows:
@@ -2592,13 +2627,48 @@ class App:
                  "btns": [{"id": "help_open", "t": "Lire",
                            "p": {"id": a["id"]}}]}
                 for a in rest]})
-        return out
+        return out + self._credits_nodes()
+
+    @staticmethod
+    def _about_nodes():
+        return [{"k": "section", "t": "Fonctionnement"},
+                {"k": "prose",
+                 "t": "Farever Book fonctionne uniquement en lecture : rien "
+                      "n'est jamais écrit ni modifié dans le jeu, et rien n'y "
+                      "est affiché."},
+                {"k": "prose",
+                 "t": "L'application se contente de lire le contenu du jeu et "
+                      "ce que tu fais pendant tes sessions (combats, butin, "
+                      "progression), pour te le révéler et le mettre en forme "
+                      "ici."}]
+
+    @staticmethod
+    def _links_nodes():
+        return [{"k": "section", "t": "Liens utiles"},
+                {"k": "list", "id": "help:links", "rows": [
+                    {"t": ln["t"], "meta": ln["meta"],
+                     "btns": ([{"id": "open_link", "t": "Ouvrir",
+                                "p": {"id": ln["id"]}}] if ln["url"] else [])}
+                    for ln in HELP_LINKS]}]
+
+    @staticmethod
+    def _credits_nodes():
+        return [{"k": "section", "t": "Crédits"},
+                {"k": "prose",
+                 "t": "Farever Book est un projet de fan, gratuit, autour "
+                      "du jeu Farever. Il n'est ni affilié à Shiro Games, ni "
+                      "approuvé par le studio. Farever et ses contenus "
+                      "appartiennent à Shiro Games."},
+                {"k": "prose",
+                 "t": "Ce projet existe en partie grâce à Brudr, auteur du mod "
+                      "Farever+, qui a généreusement partagé son code. Merci "
+                      "à lui !"}]
 
 
     def _repair_nodes(self):
         return [{"k": "section", "t": "Un problème ?"},
                 {"k": "note",
-                 "t": "Farever France relit les données du jeu tout seul quand "
+                 "t": "Farever Book relit les données du jeu tout seul quand "
                       "Farever change. Si une page reste vide, que des images "
                       "manquent ou que la connexion au jeu échoue, Réparer "
                       "réanalyse le jeu depuis zéro puis se reconnecte, sans "

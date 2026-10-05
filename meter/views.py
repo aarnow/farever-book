@@ -987,7 +987,7 @@ def rift_rewards_view(counters, luck_until):
     d = rift_rewards_data()
     if not d:
         return [{"k": "note", "t": "Données des failles absentes : relance "
-                                   "Farever France avec le jeu ouvert pour les "
+                                   "Farever Book avec le jeu ouvert pour les "
                                    "générer."}]
     now = time.time()
     on = {k for k, t in (luck_until or {}).items() if t > now}

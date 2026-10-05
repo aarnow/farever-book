@@ -512,7 +512,7 @@ GENERATED_GROUPS = (
      ("dungeons.json", "boss_sheets.json", "boss_portraits"),
      ("boss_portraits",), 2),
     ("Icônes des objets",
-     ("ui_logo.png", "augments.json", "rift_rewards.json", "luck.json",
+     ("augments.json", "rift_rewards.json", "luck.json",
       "item_types.json", "item_rarity.json", "item_icons"),
      ("item_icons",), 10),
 )

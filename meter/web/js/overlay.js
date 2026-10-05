@@ -23,6 +23,11 @@ function btn(cls, text, title, onClick) {
   return b;
 }
 
+window.applyTheme = function (css) {
+  const st = document.getElementById('css');
+  if (st) st.textContent = css;
+};
+
 window.applyOverlay = function (json) {
   try { OV = JSON.parse(json); } catch (e) { return; }
   // the add form keeps its own state: a push must not wipe what is typed

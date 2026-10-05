@@ -1,4 +1,4 @@
-# Farever France
+# Farever Book
 
 Compagnon de second écran pour **Farever**, en français. Une seule fenêtre
 Windows, à côté du jeu, qui lit ce qui se passe en jeu et le garde consultable
@@ -24,11 +24,11 @@ Autrement dit : pendant l'accès anticipé, le studio ne met pas en avant les
 add-ons, mais tolère leur usage personnel. C'est le cadre de ce projet : usage
 personnel, sans diffusion. Cette tolérance peut évoluer, à surveiller.
 
-Pour être exact sur ce que fait Farever France dans le jeu : il ne modifie
+Pour être exact sur ce que fait Farever Book dans le jeu : il ne modifie
 aucune donnée et n'envoie rien sur le réseau, mais Frida s'injecte dans le
 processus du jeu et dévie quelques fonctions en mémoire pour être prévenu des
 coups et des soins. En cas de plantage à signaler aux développeurs, reproduis-le
-sans Farever France avant de l'envoyer.
+sans Farever Book avant de l'envoyer.
 
 ## Les onglets
 
@@ -64,35 +64,35 @@ premier plan, n'affiche rien dans le jeu, et se change dans les **Réglages**.
 
 ## Installation et lancement
 
-Farever France s'installe avec `FareverFrance-<version>-Setup.exe`, publié
+Farever Book s'installe avec `FareverBook-<version>-Setup.exe`, publié
 dans les releases de
-[aarnow/farever-france-releases](https://github.com/aarnow/farever-france-releases).
+[aarnow/farever-book-releases](https://github.com/aarnow/farever-book-releases).
 L'application vérifie elle-même les nouvelles versions et propose de les
-installer. Son journal est dans `%LOCALAPPDATA%\FareverFrance\meter.log`
+installer. Son journal est dans `%LOCALAPPDATA%\FareverBook\meter.log`
 (bouton dans les Réglages).
 
 Depuis les sources, avec la console (pratique pour lire le journal en direct) :
 
 ```
 pip install frida==17.18.0 pillow pywebview
-python meter/farever_france.py
+python meter/farever_book.py
 ```
 
 La fenêtre utilise **WebView2**, déjà présent sur Windows 10 et 11 à jour.
 
 **Frida doit être en 17.18.0.** La 17.19.0 fait planter tout processus dont
-elle se détache, donc Farever à la fermeture de Farever France (mesuré le
-28/09/2026 sur Windows 11 build 26200). Farever France refuse de s'attacher
+elle se détache, donc Farever à la fermeture de Farever Book (mesuré le
+28/09/2026 sur Windows 11 build 26200). Farever Book refuse de s'attacher
 avec la 17.19.0 et l'indique dans sa fenêtre.
 
 Pour arrêter : ferme la fenêtre, ou clic droit sur l'icône près de l'horloge.
-Farever France se détache alors proprement du jeu. **Ne l'arrête pas depuis le
+Farever Book se détache alors proprement du jeu. **Ne l'arrête pas depuis le
 Gestionnaire des tâches** : le processus serait tué avant de s'être détaché, ce
 qui peut déstabiliser Farever.
 
 ## Où sont les fichiers
 
-Installé, tout est écrit dans `%LOCALAPPDATA%\FareverFrance` ; depuis les
+Installé, tout est écrit dans `%LOCALAPPDATA%\FareverBook` ; depuis les
 sources, dans le dossier du projet :
 
 | Quoi | Où |
@@ -107,7 +107,7 @@ sources, dans le dossier du projet :
 ## Après une mise à jour de Farever
 
 Les index de fonctions et les positions des champs changent d'une version du
-jeu à l'autre. À chaque connexion, Farever France compare le `hlboot.dat` du
+jeu à l'autre. À chaque connexion, Farever Book compare le `hlboot.dat` du
 jeu en cours avec celui qui a servi à générer `analysis_out/`, et **régénère
 les données tout seul** si besoin (une dizaine de secondes ; l'indicateur
 affiche « Mise à jour… »). Le bouton **Réparer** de l'Aide refait cette lecture
@@ -133,7 +133,7 @@ bytecode qui garde les noms de toutes les classes, champs et méthodes du jeu.
 
    | Module | Rôle |
    |---|---|
-   | `farever_france.py` | démarrage et arrêt |
+   | `farever_book.py` | démarrage et arrêt |
    | `app.py` | l'application : état, actions, pages |
    | `gamelink.py` | la connexion au jeu (attache, hook, reconnexion, étapes) |
    | `combat.py` | comptage dégâts/soins, enregistrement des failles et donjons |
@@ -171,9 +171,20 @@ packaging/     construction de l'exécutable et de l'installateur (build.ps1)
 ## Limites connues
 
 * L'appartenance au groupe se fait par nom de joueur.
-* Si deux copies de Farever tournent en même temps, Farever France se connecte
+* Si deux copies de Farever tournent en même temps, Farever Book se connecte
   à la première.
 * Les attributs de la fiche ne comptent ni le blocage du bouclier ni la
   puissance des armes ; les effets actifs sont ceux du moment de l'analyse.
 * Le suivi des morts en phase de boss attend une mise à jour du jeu (état « à
   terre »).
+
+## Remerciements
+
+Farever Book est un projet de fan, gratuit, autour du jeu Farever. Il
+n'est ni affilié à Shiro Games, ni approuvé par le studio. Farever et ses
+contenus appartiennent à Shiro Games.
+
+Farever Book existe aussi grâce à **Brudr**, auteur de **Farever+**, qui a
+généreusement partagé son code et nous a autorisés à le reprendre. Sa base,
+notamment la lecture du bytecode HashLink et la lecture du jeu avec Frida, a
+servi de point de départ à ce projet. Merci à lui !

@@ -1,12 +1,12 @@
-/* The Farever France window.
+/* The Farever Book window.
  *
  * One px is one device pixel: the host pins Chromium's device scale factor to
  * 1, and the user's own size preference is a CSS zoom on :root (setZoom in
  * menu.js) — so nothing below uses vh/vw or rem for sizing.
  */
 :root {
-  /* Farever France — the look of Ankama's Dofus windows: deep indigo,
-     mauve borders, gold for what is active, lime for the main action. */
+  /* Farever Book — the look of Ankama's Dofus windows: deep indigo,
+     mauve borders, gold for what is active and for the main action. */
   --bg:        #211F3A;   /* the window's body */
   --bg-2:      #1A1930;   /* sunken: pills, wells, number boxes */
   --panel:     #2B2949;   /* cards, lists */
@@ -18,8 +18,7 @@
   --dim:       #ADA9D6;
   --faint:     #7F7BAA;
   --accent:    #F2C94C;   /* gold: active tab, titles' accents */
-  --lime:      #A6D23B;   /* the main action button */
-  --lime-2:    #7FA82A;
+  --accent-2:  #D9A92E;   /* the gold's darker end (gradients) */
   --ok:        #8BD86A;
   --warn:      #F2665E;
   --rift:      #D86BE0;
@@ -68,38 +67,16 @@ body {
   border-bottom: 1px solid #5A5694;
   box-shadow: 0 1px 0 rgba(0, 0, 0, .35);
 }
-/* the emblem: a dark-blue-rimmed shield, like the guild crest */
-.emblem {
-  width: 34px; height: 38px; flex: none; position: relative;
-  background: linear-gradient(180deg, #2A3F8F, #0E1A4A);
-  clip-path: polygon(50% 0, 100% 14%, 100% 62%, 50% 100%, 0 62%, 0 14%);
-}
-/* its field in the French colours, a little darker towards the tip
-   (packaging/make_icon.py draws the same shield for the app's icon) */
-.emblem i {
-  position: absolute; inset: 3px 3px 4px;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .22)),
-    linear-gradient(90deg, #0055A4 0 33.34%, #FFFFFF 33.34% 66.67%, #EF4135 66.67%);
-  clip-path: polygon(50% 0, 100% 14%, 100% 62%, 50% 100%, 0 62%, 0 14%);
-}
 .brand {
   font-family: var(--font-head);
   font-size: 19px; font-weight: 700; letter-spacing: .3px;
   text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
 }
 .brand b { color: var(--accent); }
-/* the game's wordmark, FRANCE under it in blue, white and red */
-.brand.logo { display: flex; flex-direction: column; align-items: center;
-              text-shadow: none; line-height: 1; }
-.brand.logo img { height: 34px; width: auto; display: block;
-                  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); }
-.brand.logo .fr { margin-top: 1px; font-size: 17px; font-weight: 900;
-                  letter-spacing: .35em; padding-left: .35em; text-transform: uppercase;
-                  background: linear-gradient(90deg, #3D8BFF 0 33.34%, #FFFFFF 33.34% 66.67%,
-                                              #FF5A4D 66.67%);
-                  -webkit-background-clip: text; background-clip: text; color: transparent;
-                  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .55)); }
+/* the grimoire, then the Farever Book wordmark (both drawn at 3x) */
+.brand.logo { display: flex; align-items: center; gap: 10px; text-shadow: none; line-height: 1; }
+.brand.logo img { height: 56px; width: auto; display: block; }
+.brand.logo img.crest { height: 50px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .45)); }
 #version {
   color: var(--dim); font-size: 11px; font-weight: 600;
   background: var(--bg-2); border: 1px solid var(--line);
@@ -1084,10 +1061,10 @@ html.lt-760 .ltier .lootstrip { flex-wrap: wrap; }
 .mmarks .mk:hover, .mmarks .mk.sel { outline: none; transform: scale(1.35); }
 
 /* ============================================================================
-   Farever France — the Dofus-style theme over the shared components.
+   Farever Book — the Dofus-style theme over the shared components.
    Titles bold and white with a gold mark, panels with a raised title band,
    numbers in dark wells, secondary buttons violet in spaced capitals, the
-   main action lime.
+   main action gold.
    ========================================================================== */
 .section {
   display: flex; align-items: center; gap: 10px;
@@ -1154,7 +1131,7 @@ html.lt-760 .ltier .lootstrip { flex-wrap: wrap; }
 .row:hover { background: rgba(255, 255, 255, .025); }
 .row .name { color: #fff; }
 
-/* buttons: violet in spaced capitals; .primary lime */
+/* buttons: violet in spaced capitals; .primary gold */
 .rowbtn, .btn, .toolbar .btn, .seg button {
   font-family: var(--font-head);
 }
@@ -1191,9 +1168,9 @@ html.lt-760 .ltier .lootstrip { flex-wrap: wrap; }
 }
 .toolbar .btn:hover { border-color: var(--accent); }
 .btn.primary, .rowbtn.primary {
-  background: linear-gradient(180deg, #BCE34E, var(--lime-2));
-  border-color: #CBEB6A;
-  color: #23300A;
+  background: linear-gradient(180deg, #F8D96E, var(--accent-2));
+  border-color: #FBE08A;
+  color: #3A2A06;
   text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
 }
 
@@ -1406,17 +1383,17 @@ select:focus, input[type=text]:focus { outline: none; border-color: var(--accent
 .playbtn {
   display: inline-flex; align-items: center; gap: 9px;
   padding: 8px 20px 8px 16px; border-radius: 8px; cursor: pointer;
-  /* green, like Réparer: the main action */
-  background: linear-gradient(180deg, #C4E66A, var(--lime) 45%, var(--lime-2));
-  border: 1px solid #D6F08E; color: #1F2A06;
+  /* gold: the main action */
+  background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, var(--accent-2));
+  border: 1px solid #FBE08A; color: #3A2A06;
   font-family: var(--font-head); font-size: 14px; font-weight: 700;
   letter-spacing: 1.6px; text-transform: uppercase;
   text-shadow: 0 1px 0 rgba(255, 255, 255, .3);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 6px rgba(0, 0, 0, .4);
 }
-.playbtn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(166, 210, 59, .5); }
+.playbtn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(242, 201, 76, .5); }
 .playbtn .tri { width: 0; height: 0; border-style: solid; border-width: 7px 0 7px 11px;
-                border-color: transparent transparent transparent #1F2A06; }
+                border-color: transparent transparent transparent #3A2A06; }
 .playbtn.retry { background: linear-gradient(180deg, #F08A6E, #C0503A); border-color: #F5A08A;
                  color: #2E0E06; }
 .gamestate {
@@ -1606,7 +1583,7 @@ html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
 .step .st b { color: var(--dim); font-size: 13px; font-weight: 600; }
 .step .st span { color: var(--dim); font-size: 12px; }
 .step .secs { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
-.step.s-ok .stmk { background: var(--lime-2); border-color: #CBEB6A; color: #23300A; }
+.step.s-ok .stmk { background: var(--ok); border-color: var(--ok); color: #1B2408; }
 .step.s-ok .st b { color: #fff; }
 .step.s-run { border-color: var(--accent); }
 .step.s-run .stmk { border-color: var(--accent); border-top-color: transparent; animation: spin .9s linear infinite; }
@@ -1698,15 +1675,7 @@ html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
 /* the open build sits on the page itself: its blocks (attributes, gear,
    talents…) are the panels, not a panel around them of the same colour */
 .buildpage > .charmain { width: 100%; background: none; border: 0; padding: 0; }
-.bhead .bname { flex: 1 1 260px; }
-.bhead .bcls { flex: none; }
-.bhead { flex-wrap: nowrap; }
-.bhead > .bname { width: auto; flex: 1 1 auto; min-width: 140px; }
-.bhead > .bcls { width: auto; flex: 0 0 auto; }
-.bhead > .blvl { flex: 0 0 210px; }
-.bhead > .bbtns { flex: 0 0 auto; }
 .bband .bnew { width: auto; max-width: none; flex: 0 0 auto; margin-left: auto; }
-html.lt-1000 .bhead { flex-wrap: wrap; }
 .bcheck { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 13px; cursor: pointer; }
 .bcheck input { width: 17px; height: 17px; accent-color: #7FE8FF; cursor: pointer; }
 .bcheck small { color: var(--dim); font-size: 11px; }
@@ -1853,7 +1822,15 @@ html.lt-1250 .bedpanel .blist { max-height: 240px; }
 .bedpanel .bedhead .hclose { position: static; }
 .bpick { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; }
 .bpick .gi { width: 44px; height: 44px; flex: none; border-radius: 8px; overflow: hidden; background: var(--panel-2);
+.bhead .bname { flex: 1 1 260px; }
+.bhead .bcls { flex: none; }
+.bhead { flex-wrap: nowrap; }
+.bhead > .bname { width: auto; flex: 1 1 auto; min-width: 140px; }
+.bhead > .bcls { width: auto; flex: 0 0 auto; }
+.bhead > .blvl { flex: 0 0 210px; }
+.bhead > .bbtns { flex: 0 0 auto; }
              border: 2px solid #5A5694; }
+html.lt-1000 .bhead { flex-wrap: wrap; }
 .bpick .gi img { width: 100%; height: 100%; }
 .bcombo { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;
           height: 44px; padding: 0 12px; border-radius: 8px; cursor: pointer; text-align: left;
@@ -2935,9 +2912,10 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
                               border-color: #BCD1FC; color: #0E1E44; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
 .blisthead .bheadbtns .bdelbtn { background: linear-gradient(180deg, #F8A49D, var(--warn) 45%, #CC4A43);
                                  border-color: #FABAB4; color: #3A0E0B; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+/* Comparer: the wordmark's gradient (lilac, white, light blue) */
 .blisthead .bheadbtns .bcmpbtn { margin-left: auto;
-                                 background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, #D9A92E);
-                                 border-color: #FBE08A; color: #3A2A06; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+                                 background: linear-gradient(180deg, #C9BEEA, #FFFFFF 40%, #E2E4F2 62%, #8FD3EC);
+                                 border-color: #FFFFFF; color: #2B2550; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
 .blisthead .bdelbtn.armed { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 0 0 2px rgba(242, 102, 94, .45),
                                         0 0 12px rgba(242, 102, 94, .5); }
 .blisthead .bdelbtn:disabled { opacity: .55; cursor: default; }
@@ -2963,8 +2941,6 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .wcard { width: min(640px, 100%); text-align: center; padding: 34px 38px 30px; border-radius: 18px;
          background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line-2);
          box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
-.wcrest { display: block; margin: 0 auto 14px; width: 54px; height: 60px; }
-.wcrest i { inset: 4px 4px 6px; }
 .wcard h1 { margin: 0 0 6px; font-family: var(--font-head); font-size: 30px; color: #fff; }
 .wlead { margin: 0 0 18px; color: var(--accent); font-size: 15px; }
 .wtext { margin: 0 0 8px; color: var(--text); font-size: 14px; line-height: 1.5; }
@@ -2972,7 +2948,7 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
           gap: 6px; text-align: left; }
 .wneeds li { position: relative; padding-left: 20px; color: var(--dim); font-size: 13.5px; }
 .wneeds li::before { content: ""; position: absolute; left: 3px; top: 7px; width: 7px; height: 7px;
-                     transform: rotate(45deg); background: var(--lime); border-radius: 1px; }
+                     transform: rotate(45deg); background: var(--accent); border-radius: 1px; }
 .wsafe { margin: 4px 0 18px; color: var(--faint); font-size: 12.5px; }
 .wpath { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0 auto 18px;
          padding: 10px 14px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
@@ -2980,19 +2956,19 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .wpath b { color: var(--text); font-size: 13px; word-break: break-all; }
 .wlink { margin-top: 2px; background: none; border: 0; color: var(--accent); font-size: 12px; cursor: pointer;
          text-decoration: underline; text-underline-offset: 2px; }
-.wgo { min-width: 240px; padding: 12px 26px; border-radius: 10px; border: 1px solid var(--lime);
-       background: linear-gradient(180deg, var(--lime), var(--lime-2)); color: #1B2408; cursor: pointer;
-       font-family: var(--font-head); font-size: 16px; font-weight: 700; box-shadow: 0 6px 18px rgba(166, 210, 59, .25); }
+.wgo { min-width: 240px; padding: 12px 26px; border-radius: 10px; border: 1px solid var(--accent);
+       background: linear-gradient(180deg, var(--accent), var(--accent-2)); color: #3A2A06; cursor: pointer;
+       font-family: var(--font-head); font-size: 16px; font-weight: 700; box-shadow: 0 6px 18px rgba(242, 201, 76, .25); }
 .wgo:hover { filter: brightness(1.08); }
 .wwarn { margin: 0 0 14px; color: var(--hot); font-size: 13.5px; }
 .werr { margin: 0 0 14px; color: var(--warn); font-size: 13px; }
 .wbar { height: 12px; margin: 18px 0 10px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line);
         overflow: hidden; }
 .wbar i { display: block; height: 100%; border-radius: 8px; transition: width .45s linear;
-          background: linear-gradient(90deg, var(--lime-2), var(--lime)); }
+          background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
 .wring { position: relative; width: 72px; height: 72px; margin: 0 auto 10px; display: grid; place-items: center; }
-.wring i { position: absolute; inset: 0; border-radius: 50%; border: 5px solid rgba(166, 210, 59, .15);
-           border-top-color: var(--lime); border-right-color: var(--lime-2); animation: wspin 1s linear infinite; }
+.wring i { position: absolute; inset: 0; border-radius: 50%; border: 5px solid rgba(242, 201, 76, .15);
+           border-top-color: var(--accent); border-right-color: var(--accent-2); animation: wspin 1s linear infinite; }
 .wring b { font-family: var(--font-head); font-size: 17px; color: #fff; }
 @keyframes wspin { to { transform: rotate(360deg); } }
 .wrows { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
@@ -3006,23 +2982,23 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .wrows li.wdone .wmark { background: var(--ok); border-color: var(--ok); color: #1B2408; }
 .wrows li.wrun { color: #fff; border-color: rgba(242, 201, 76, .45); background: rgba(242, 201, 76, .06); }
 .wrows li.wrun b { color: var(--accent); }
-.wrows li.wrun .wmark { border-color: rgba(166, 210, 59, .25); border-top-color: var(--lime);
+.wrows li.wrun .wmark { border-color: rgba(242, 201, 76, .25); border-top-color: var(--accent);
                         animation: wspin .8s linear infinite; }
 .wgame { margin: 0 0 20px; color: var(--text); font-family: var(--font-head); font-size: 18px; }
 .wback { display: block; margin: 14px auto 0; }
 
-/* Réparer (Aide): the Jouer button's look, in green */
+/* Réparer (Aide): the Jouer button's look */
 .btn.go { display: inline-flex; align-items: center; justify-content: center; width: auto; max-width: none;
           padding: 9px 26px; border-radius: 8px; cursor: pointer;
-          background: linear-gradient(180deg, #C4E66A, var(--lime) 45%, var(--lime-2));
-          border: 1px solid #D6F08E; color: #1F2A06;
+          background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, var(--accent-2));
+          border: 1px solid #FBE08A; color: #3A2A06;
           font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 1.6px;
           text-transform: uppercase; text-shadow: 0 1px 0 rgba(255, 255, 255, .3);
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 6px rgba(0, 0, 0, .4); }
 /* in the Help tab's centred column, at its left edge like the text */
 #page.page-Help > .btn.go { display: flex; width: fit-content; margin-left: calc(50% - min(400px, 50%)); }
 .btn.go:hover { filter: brightness(1.08); border-color: #E2F7A6;
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(166, 210, 59, .5); }
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(242, 201, 76, .5); }
 
 /* "En jeu" with the game off (live.js buildLiveIntro) */
 .lintro { max-width: 900px; margin: 6px auto 0; }
@@ -3049,28 +3025,26 @@ html.lt-760 .ligrid { grid-template-columns: minmax(0, 1fr); }
 .lifoot { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
           margin-top: 22px; color: var(--dim); font-size: 13.5px; }
 
-/* ---- green: what is active and what progresses ----------------------------
-   The Jouer / Réparer green, for coherence: the diamonds before the titles,
-   the navigation's active tab, progress (bars, rings, pips, spinners). The
-   gold stays for borders, highlighted text, badges and the pips (codex,
-   succès). */
+/* ---- gold: what is active and what progresses ------------------------------
+   The diamonds before the titles, the navigation's active tab, progress
+   (bars, rings, spinners). */
 .section::before, .bssec::before {
-  background: linear-gradient(135deg, #D6F08E, var(--lime-2));
-  box-shadow: 0 0 6px rgba(166, 210, 59, .5);
+  background: linear-gradient(135deg, #FBE08A, var(--accent-2));
+  box-shadow: 0 0 6px rgba(242, 201, 76, .5);
 }
 /* the line after a title: light enough to read on a dungeon's or a rift's
    picture, fading out to the right */
 .section::after { height: 1px;
-  background: linear-gradient(90deg, rgba(214, 240, 142, .55), rgba(225, 220, 255, .28) 35%, transparent); }
-#nav button.active { color: var(--lime); }
-#nav button.active::after, #navink { background: var(--lime); box-shadow: 0 0 10px rgba(166, 210, 59, .45); }
-#appbtns .navicon.active { color: #1F2A06; border-color: #D6F08E;
-                           background: linear-gradient(180deg, #C4E66A, var(--lime-2));
-                           box-shadow: 0 0 10px rgba(166, 210, 59, .45); }
-.btab.on { color: var(--lime); border-bottom-color: var(--lime); }
-.collbar i, .achcard .abar i { background: linear-gradient(90deg, var(--lime-2), var(--lime)); }
-.ring .fill { stroke: var(--lime); }
-.step.s-run .stmk { border-color: var(--lime); border-top-color: transparent; }
+  background: linear-gradient(90deg, rgba(248, 217, 110, .55), rgba(225, 220, 255, .28) 35%, transparent); }
+#nav button.active { color: var(--accent); }
+#nav button.active::after, #navink { background: var(--accent); box-shadow: 0 0 10px rgba(242, 201, 76, .45); }
+#appbtns .navicon.active { color: #3A2A06; border-color: #FBE08A;
+                           background: linear-gradient(180deg, #F8D96E, var(--accent-2));
+                           box-shadow: 0 0 10px rgba(242, 201, 76, .45); }
+.btab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.collbar i, .achcard .abar i { background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.ring .fill { stroke: var(--accent); }
+.step.s-run .stmk { border-color: var(--accent); border-top-color: transparent; }
 
 /* The collection's list: its pieces fade out at its top and bottom edges
    as it scrolls, rather than being cut clean (room left so that, at rest,
@@ -3100,8 +3074,26 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .setic { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px;
          background: var(--bg-2); border: 1px solid var(--line); }
 .setic svg { width: 17px; height: 17px; fill: currentColor; }
-.setitem.on { color: #fff; background: rgba(166, 210, 59, .1); border-color: rgba(166, 210, 59, .45); }
-.setitem.on .setic { color: #1F2A06; border-color: #D6F08E; background: linear-gradient(180deg, #C4E66A, var(--lime-2)); }
+.setitem.on { color: #fff; background: rgba(242, 201, 76, .1); border-color: rgba(242, 201, 76, .45); }
+.setitem.on .setic { color: #3A2A06; border-color: #FBE08A; background: linear-gradient(180deg, #F8D96E, var(--accent-2)); }
+
+/* Réglages › Affichage: the colour themes, each a small window in its colours
+   (frame.js buildThemes) */
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-top: 4px; }
+.theme { display: flex; flex-direction: column; gap: 8px; padding: 0; border: 0; background: none;
+         cursor: pointer; text-align: left; font: inherit; color: var(--dim); }
+.thwin { border-radius: 10px; border: 1px solid; overflow: hidden; height: 84px;
+         box-shadow: 0 4px 12px rgba(0, 0, 0, .35); outline: 2px solid transparent; outline-offset: 2px;
+         transition: outline-color .16s ease, transform .16s ease; }
+.theme:hover .thwin { transform: translateY(-2px); }
+.theme.on .thwin { outline-color: var(--accent); }
+.thband { padding: 9px 12px; border-bottom: 1px solid; font-family: var(--font-head); font-weight: 700;
+          font-size: 13px; letter-spacing: .5px; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .4); }
+.thtabs { display: flex; gap: 18px; padding: 8px 12px 0; font-family: var(--font-head); font-size: 11px;
+          font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.thtabs span { padding-bottom: 6px; border-bottom: 2px solid transparent; }
+.thname { font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: .4px; }
+.theme.on .thname { color: var(--accent); }
 
 /* A new version's offer (frame.js renderUpdate) */
 .upbox { width: min(580px, 92vw); }
