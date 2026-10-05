@@ -247,9 +247,14 @@ function attachTip(anchor, tip, id) {
   anchor.removeAttribute('title');
   anchor.querySelectorAll('[title]').forEach((x) => x.removeAttribute('title'));
   let shown = null;
-  const hide = () => { if (shown) { shown.remove(); shown = null; } };
+  const hide = () => {
+    if (shown) { shown.remove(); shown = null; }
+    if (TIP_HIDE === hide) TIP_HIDE = null;
+  };
   anchor.addEventListener('mouseenter', () => {
-    hide();
+    if (TIP_HIDE) TIP_HIDE();
+    TIP_HIDE = hide;
+    TIP_ANCHOR = anchor;
     shown = skillTipEl(Object.assign({ id: id }, tip));
     document.body.appendChild(shown);
     const z = parseFloat(document.documentElement.style.zoom) || 1;
@@ -262,9 +267,17 @@ function attachTip(anchor, tip, id) {
     shown.style.top = (top / z) + 'px';
   });
   anchor.addEventListener('mouseleave', hide);
-  // the page redrawn under the pointer: no tooltip left behind
-  anchor.addEventListener('DOMNodeRemovedFromDocument', hide);
+  // a click picks the skill and redraws the page: the tooltip goes
+  anchor.addEventListener('click', hide);
 }
+
+/* The tooltip shown, and its anchor: a redraw removes the anchor without a
+   mouseleave, so the pointer moving off it (or a scroll) hides it. */
+let TIP_HIDE = null, TIP_ANCHOR = null;
+['mouseover', 'scroll', 'wheel'].forEach((ev) => document.addEventListener(ev, (e) => {
+  if (!TIP_HIDE) return;
+  if (ev !== 'mouseover' || !TIP_ANCHOR.isConnected || !TIP_ANCHOR.contains(e.target)) TIP_HIDE();
+}, true));
 
 /* One cell of the spell bar: the skill, its key in the corner. */
 function barCell(c) {

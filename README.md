@@ -8,6 +8,21 @@ explorer un sujet ou composer un build.
 Disponible en anglais et en français, **pour Windows uniquement** (Windows 10
 ou 11).
 
+## Aperçu
+
+![La collection : montures, planeurs, compagnons, équipements et objets, avec leur modèle 3D](docs/screenshots/collection.webp)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/build.webp" alt="Un build : le héros en 3D, l'équipement, la barre de sorts et les statistiques"></td>
+    <td width="50%"><img src="docs/screenshots/codex.webp" alt="Le Codex : un monstre en 3D et où le trouver sur la carte"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dungeons.webp" alt="Les donjons : records, victoires et butin par difficulté"></td>
+    <td><img src="docs/screenshots/boss.webp" alt="La fiche d'un boss : PV selon le groupe, défenses et compétences"></td>
+  </tr>
+</table>
+
 ## Ce qu'elle propose
 
 * **En jeu** : le compteur de dégâts et de soins, ton groupe, tes chances de
