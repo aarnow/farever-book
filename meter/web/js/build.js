@@ -1090,8 +1090,7 @@ function editorPanel(ed) {
   const statChip = (st) => {
     const c = el('button', 'bchip' + (BUILD_F.stats.has(st.k) ? ' on' : ''));
     c.type = 'button';
-    const art = 'stat_' + (st.k === 'Intellect' ? 'Intelligence' : st.k);
-    if (SHEET_ART[art]) c.appendChild(artImg(art, 'bcic'));
+    if (SHEET_ART['stat_' + (st.k === 'Intellect' ? 'Intelligence' : st.k)]) c.appendChild(atbIcon(st.k, 'bcic'));
     c.appendChild(document.createTextNode(st.t));
     c.addEventListener('click', () => {
       if (BUILD_F.stats.has(st.k)) BUILD_F.stats.delete(st.k); else BUILD_F.stats.add(st.k);

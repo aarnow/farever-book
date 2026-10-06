@@ -358,6 +358,24 @@ const SHEET_ART = window.__SHEET__ || {};
 const ATTRS = [['Vitality', 'Vitalité'], ['Strength', 'Force'], ['Dexterity', 'Dextérité'],
                ['Faith', 'Foi'], ['Intelligence', 'Intelligence']];  // stat_ art keys
 
+/* The attributes' colours, the shared build picture's (buildcard.py
+   ATB_COLOR), keyed like the sheet's art. */
+const ATB_COLOR = { Vitality: '#F26D85', Strength: '#F29A4A', Dexterity: '#7BD88F',
+                    Faith: '#F2C94C', Intelligence: '#9D8CF7' };
+
+/* An attribute's icon in its colour: the sheet's art as a mask. */
+function atbIcon(k, cls) {
+  const key = k === 'Intellect' ? 'Intelligence' : k;
+  const i = el('i', 'atbi' + (cls ? ' ' + cls : ''));
+  if (SHEET_ART['stat_' + key]) {
+    const u = 'url(' + SHEET_ART['stat_' + key] + ')';
+    i.style.webkitMaskImage = u;
+    i.style.maskImage = u;
+  }
+  i.style.background = ATB_COLOR[key] || '#fff';
+  return i;
+}
+
 function artImg(key, cls) {
   const im = el('img', cls || null);
   im.src = SHEET_ART[key];
@@ -410,7 +428,7 @@ function charSheet(o, onSlot, extra) {
   ATTRS.forEach(([k, label]) => {
     const r = el('div', 'attr');
     const ic = el('span', 'aic');
-    if (SHEET_ART['stat_' + k]) ic.appendChild(artImg('stat_' + k));
+    if (SHEET_ART['stat_' + k]) ic.appendChild(atbIcon(k));
     r.appendChild(ic);
     r.appendChild(el('span', 'an', tr(label)));
     r.appendChild(el('b', 'av', pv[k === 'Intelligence' ? 'Intellect' : k] || '—'));

@@ -1742,6 +1742,9 @@ html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
 .bfl { flex: none; width: 78px; color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
 .bfrow .bchips { flex: 1; }
 .bchip .bcic { width: 15px; height: 15px; margin-right: 5px; vertical-align: -3px; }
+/* an attribute's icon in its colour (character.js atbIcon) */
+.atbi { display: inline-block; width: 100%; height: 100%; -webkit-mask-size: contain; mask-size: contain;
+        -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
 .bchip.r-uncommon { color: #7ED07B; } .bchip.r-rare { color: #5B8DEF; }
 .bchip.r-epic { color: #B57BEF; } .bchip.r-legendary { color: #F29A4A; }
 .bfac { background: var(--bg-2); color: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
