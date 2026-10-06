@@ -385,14 +385,14 @@ function huntMiniMap(n) {
       d.style.top = (v.y + d.dataset.py * v.s) + 'px';
     });
   };
-  // frame the map on one zone's spawns (null: all of them), dimming the rest
-  const fit = (zone) => {
+  // frame the map on one zone's spawns (null: all of them), dimming the rest;
+  // `span`: the room around a lone spawn
+  const fit = (zone, span = 420) => {
     const sel = pins.filter((d) => !zone || d.title === zone);
     pins.forEach((d) => d.classList.toggle('dim', !!zone && d.title !== zone));
     if (!sel.length) return;
     const xs = sel.map((d) => +d.dataset.px);
     const ys = sel.map((d) => +d.dataset.py);
-    const span = 420;                       // room around a lone spawn
     const x0 = Math.min(...xs), x1 = Math.max(...xs);
     const y0 = Math.min(...ys), y1 = Math.max(...ys);
     const w = Math.max(x1 - x0, span) * 1.25, h = Math.max(y1 - y0, span) * 1.25;

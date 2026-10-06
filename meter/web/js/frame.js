@@ -252,6 +252,15 @@ function renderLink(l, shard) {
     if (l.tip) b.title = l.tip;
     b.addEventListener('click', () => notify(l.state === 'play' ? 'launch_game' : 'link_retry', {}));
     box.appendChild(b);
+    if (l.state === 'failed') {
+      // the error, to paste in a message
+      const c = el('button', 'copyerr');
+      c.type = 'button';
+      c.title = tr('Copier l’erreur');
+      c.appendChild(svgIcon('M9 9h10v12H9zM5 15V3h10'));
+      c.addEventListener('click', () => notify('copy_error', {}));
+      box.appendChild(c);
+    }
     return;
   }
   const st = el('div', 'gamestate');
@@ -646,6 +655,48 @@ function renderUpdateBar(v) {
   bar.appendChild(b);
 }
 
+/* The rift clock's window: where the next rift opens, on the world map
+   (the Codex's mini map), and the hours after. */
+function renderRiftMap(r) {
+  let back = $('#riftmapmodal');
+  if (!r) { if (back) back.remove(); return; }
+  const fresh = !back;
+  if (fresh) {
+    back = el('div', 'modalback');
+    back.id = 'riftmapmodal';
+    back.addEventListener('mousedown', (e) => { if (e.target === back) notify('rift_map_close', {}); });
+    document.body.appendChild(back);
+  }
+  back.textContent = '';
+  const box = el('div', 'modal riftmodal');
+  const x = el('button', 'hclose', '×');
+  x.type = 'button';
+  x.title = tr('Fermer');
+  x.addEventListener('click', () => notify('rift_map_close', {}));
+  box.appendChild(x);
+  const head = el('div', 'phead');
+  head.appendChild(el('h3', null, r.title));
+  head.appendChild(el('div', 'rmwhere', r.where));
+  box.appendChild(head);
+  // both spots, each its own entrance: framing on the next dims the other
+  const map = huntMiniMap({ meta: r.meta,
+    insts: (r.spots || []).map((p) => ({ t: p.t, kind: 'Faille', doors: [p] })) });
+  box.appendChild(map);
+  const list = el('div', 'rmnext');
+  list.appendChild(el('div', 'rmlabel', tr('Les suivantes')));
+  (r.next || []).forEach((n) => {
+    const row = el('div', 'rmrow');
+    row.appendChild(el('b', null, n.h));
+    row.appendChild(el('span', null, n.t));
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+  back.appendChild(box);
+  mapIcons();
+  // framed once laid out: on the spot, with room around it
+  requestAnimationFrame(() => map.focusZone(r.where, 1100));
+}
+
 /* The update dialog (updater.py): offer, download progress, install; also
    the manual check's answer. */
 function renderUpdate(u) {
@@ -673,11 +724,11 @@ function renderUpdate(u) {
       box.appendChild(el('div', 'upnotes', u.notes));
     }
     box.appendChild(el('p', 'note', u.mb
-      ? tr('La mise à jour télécharge l’installeur ({mb} Mo), l’ouvre et ferme Farever Book. '
-        + 'Suivez l’installeur : il relance l’application à la fin. '
+      ? tr('La mise à jour télécharge l’installeur ({mb} Mo) et ferme Farever Book. '
+        + 'Seule une fenêtre de progression s’affiche, puis l’application redémarre d’elle-même. '
         + 'Vos builds et votre historique sont conservés.', { mb: u.mb })
-      : tr('La mise à jour télécharge l’installeur, l’ouvre et ferme Farever Book. '
-        + 'Suivez l’installeur : il relance l’application à la fin. '
+      : tr('La mise à jour télécharge l’installeur et ferme Farever Book. '
+        + 'Seule une fenêtre de progression s’affiche, puis l’application redémarre d’elle-même. '
         + 'Vos builds et votre historique sont conservés.')));
     row.appendChild(btn(tr('Plus tard'), 'rowbtn', 'update_later'));
     row.appendChild(btn(tr('Mettre à jour'), 'btn go', 'update_install'));

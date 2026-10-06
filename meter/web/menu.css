@@ -103,6 +103,16 @@ body {
 #top #riftclock .t { grid-column: 1; font-size: 10px; letter-spacing: .6px; }
 #top #riftclock .v { grid-column: 2; grid-row: 1 / span 2; font-size: 18px; }
 #top #riftclock .s { grid-column: 1; font-size: 10px; }
+/* where it opens (riftspot.py), under the countdown */
+#top #riftclock .w { grid-column: 1 / span 2; margin-top: 2px; padding-top: 3px; border-top: 1px solid var(--line);
+                     font-size: 11px; font-weight: 500; color: var(--accent); white-space: nowrap; }
+/* clickable (it opens the spots' map): a gold frame on hover */
+#top #riftclock.go { cursor: pointer; transition: border-color .15s ease; }
+#top #riftclock.go:hover { border-color: var(--accent); }
+#top #riftclock .w::before { content: ""; display: inline-block; width: 8px; height: 11px; margin-right: 5px;
+                             vertical-align: -1px; background: var(--dim);
+                             -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 22'%3E%3Cpath d='M8 0a8 8 0 0 0-8 8c0 6 8 14 8 14s8-8 8-14a8 8 0 0 0-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'/%3E%3C/svg%3E") center / contain no-repeat; }
+#top #riftclock .w:empty { display: none; }
 #top #riftclock .t:empty ~ .v:empty { display: none; }
 
 /* the tabs: a band of capitals, the active one gold and underlined */
@@ -1583,6 +1593,18 @@ html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
 .modal .panel.events .phead { padding-right: 48px; }
 .modal .evlist { max-height: none; flex: 1; overflow-y: auto; }
 
+/* ---- the rift spots' window (frame.js renderRiftMap) ----------------------- */
+.riftmodal { width: min(820px, 100%); }
+.riftmodal .phead { padding: 12px 52px 12px 16px; border-bottom: 1px solid var(--line);
+                    background: linear-gradient(180deg, #4A4686, var(--panel-2)); }
+.riftmodal .phead h3 { margin: 0; color: #fff; font-family: var(--font-head); font-size: 15px; }
+.riftmodal .rmwhere { margin-top: 2px; color: var(--accent); font-size: 13px; }
+.riftmodal .hmap { height: 380px; margin: 14px 16px 0; }
+.rmnext { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 12px 16px 16px; }
+.rmlabel { width: 100%; color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+.rmrow { display: flex; gap: 8px; font-size: 13px; color: var(--text); }
+.rmrow b { color: #fff; font-variant-numeric: tabular-nums; }
+
 /* ---- the connection window --------------------------------------------------- */
 .gamestate { cursor: pointer; }
 .gamestate:hover { border-color: var(--accent); }
@@ -3014,6 +3036,11 @@ html.lt-760 .bnewpicks { grid-template-columns: minmax(0, 1fr); }
 .btn.go:hover { filter: brightness(1.08); border-color: #E2F7A6;
                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(242, 201, 76, .5); }
 
+/* Créer un rapport (Aide): the same, quieter */
+.btn.go.soft { background: var(--bg-2); border-color: var(--line-2); color: #fff; text-shadow: none;
+               box-shadow: 0 2px 6px rgba(0, 0, 0, .3); }
+.btn.go.soft:hover { border-color: var(--accent); box-shadow: 0 0 10px rgba(242, 201, 76, .3); }
+
 /* "En jeu" with the game off (live.js buildLiveIntro) */
 .lintro { max-width: 900px; margin: 6px auto 0; }
 .lihead { text-align: center; margin-bottom: 20px; }
@@ -3123,6 +3150,14 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .lcard .lmeta { color: var(--dim); font-size: 13px; line-height: 1.45; }
 .lcard.l-discord .lic { color: #5865F2; }
 .lcard.l-github .lic { color: #FFFFFF; }
+
+/* the header's "copy the error", next to Réessayer (frame.js renderLink) */
+#link .copyerr { width: 38px; height: 38px; margin-left: 6px; border-radius: 50%; cursor: pointer;
+                 display: inline-grid; place-items: center; vertical-align: middle;
+                 background: var(--bg-2); border: 1px solid var(--line); color: var(--dim); }
+#link .copyerr:hover { color: #fff; border-color: var(--line-2); }
+#link .copyerr svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2;
+                     stroke-linecap: round; stroke-linejoin: round; }
 
 /* the update band under the header (frame.js renderUpdateBar), its button
    the Play button's look, in green */

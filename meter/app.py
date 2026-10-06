@@ -12,6 +12,9 @@ import time
 from collections import defaultdict, deque
 from pathlib import Path
 import i18n
+import gamedata
+import report
+from riftspot import RIFT_ACT, rift_zone
 import themes
 from i18n import tr
 from buildtab import BuildTab
@@ -192,6 +195,7 @@ class App:
         self._dungeon_cache = {}            # file name -> (mtime, data)
         self._binding_now = False
         self._toast = {"t": "", "n": 0}
+        self._rift_map = False              # the rift spots' map window
         self._events = deque(maxlen=EVENTS_MAX)
 
         # ---- live state ----
@@ -465,6 +469,43 @@ class App:
             if copy_text_to_clipboard(self._report_text(data)):
                 self._toast_msg(tr("Copié en texte."))
 
+    # ---- problem report (Aide › Un problème ?) ----------------------------
+    def _report_ctx(self):
+        """What the app knows that helps understand an issue."""
+        ctx = {"lang": self._lang, "theme": self._theme,
+               "game_dir": gamedata._game_dir(), "state": "—"}
+        if self.link is not None:
+            state, detail, _pid = self.link.status()
+            ctx.update(state=state, detail=detail,
+                       error=self.link.last_error,
+                       steps=self.link.steps_view())
+        return ctx
+
+    def _make_report(self):
+        """The report on the Desktop, then the Explorer on it. Built off the
+        loop: the antivirus query takes a second."""
+        ctx, names = self._report_ctx(), list(self._shown_profiles())
+        self._toast_msg(tr("Création du rapport…"))
+
+        def work():
+            try:
+                path = report.write(ctx, names)
+                report.show_in_folder(path)
+                msg = tr("Rapport créé sur le Bureau : {name}", name=path.name)
+            except Exception as e:
+                print(f"[meter] report failed: {e!r}", file=sys.stderr)
+                msg = tr("Le rapport n'a pas pu être créé : {e}", e=e)
+            self._enqueue(lambda: self._toast_msg(msg))()
+        threading.Thread(target=work, daemon=True, name="report").start()
+
+    def _copy_error(self):
+        """The connection error, to paste in a message."""
+        ctx = self._report_ctx()
+        text = (f"Farever Book {VERSION}, {report.windows_version()}\n"
+                f"{ctx.get('detail') or ''}\n{ctx.get('error') or ''}").strip()
+        if copy_text_to_clipboard(report.mask(text, list(self._shown_profiles()))):
+            self._toast_msg(tr("Erreur copiée dans le presse-papiers."))
+
     def _open_log_folder(self):
         try:
             DATA_HOME.mkdir(parents=True, exist_ok=True)
@@ -696,6 +737,8 @@ class App:
             "update_later": self.updater.later,
             "update_close": self.updater.close,
             "update_offer": self.updater.offer,
+            "rift_map": lambda: setattr(self, "_rift_map", True),
+            "rift_map_close": lambda: setattr(self, "_rift_map", False),
             "update_page": self._open_releases,
             "open_licences": self._open_licences,
             "open_link": lambda p: self._open_link(p.get("id")),
@@ -707,6 +750,8 @@ class App:
             "help_open": lambda p: setattr(self, "_help_open", p.get("id")),
             "help_close": lambda: setattr(self, "_help_open", None),
             "repair_data": self._repair,
+            "make_report": self._make_report,
+            "copy_error": self._copy_error,
             # the first launch's welcome screen
             "setup_folder": lambda p: self._setup_folder(p.get("path")),
             "setup_start": self._setup_start,
@@ -816,6 +861,7 @@ class App:
             "linksteps": (self.link.steps_view() if self.link is not None
                           else []),
             "rift": self._rift_clock(),
+            "riftmap": self._rift_map_spec() if self._rift_map else None,
             "toast": self._toast,
             # the first launch: the welcome screen alone, no tabs
             "tab": "Welcome" if self._setup else self._menu_tab,
@@ -996,17 +1042,43 @@ class App:
         if self.ui_state.in_rift():
             return {"title": tr("Faille"), "value": tr("En cours"), "sub": "",
                     "tone": "rift"}
+        # where it opens (the open one, or the next): the same for everyone
+        hour = int(time.time()) // 3600 * 3600
+        zone = rift_zone(hour if into < RIFT_PORTAL_SECS else hour + 3600)
+        where = _fr_names("zone").get(zone, zone)
         if into < RIFT_PORTAL_SECS:
             left = RIFT_PORTAL_SECS - into
             return {"title": tr("Portail ouvert"),
                     "value": f"{left // 60}:{left % 60:02d}",
-                    "sub": tr("avant sa fermeture"), "tone": "open"}
+                    "sub": tr("avant sa fermeture"), "tone": "open",
+                    "where": where}
         left = 3600 - into
         return {"title": tr("Prochaine faille"),
                 "value": f"{left // 60:02d}:{left % 60:02d}",
                 "sub": tr("à {hour}", hour=time.strftime(
                     "%H:00", time.localtime(time.time() + left))),
-                "tone": "rift" if left <= RIFT_STYLE_SECS else ""}
+                "tone": "rift" if left <= RIFT_STYLE_SECS else "",
+                "where": where}
+
+    def _rift_map_spec(self):
+        """The rift clock's window: the world map with the rift's spots,
+        the next one (or the open one) picked out, and the hours after."""
+        into = time.localtime().tm_min * 60 + time.localtime().tm_sec
+        hour = int(time.time()) // 3600 * 3600
+        first = hour if into < RIFT_PORTAL_SECS else hour + 3600
+        names = _fr_names("zone")
+        nxt = rift_zone(first)
+        doors = (bestiary_catalogue().get("entrances") or {}).get(RIFT_ACT) or ()
+        return {"meta": world_map().get("meta") or {},
+                "title": (tr("Faille ouverte") if first == hour
+                          else tr("Faille de {hour}", hour=time.strftime(
+                              "%H:00", time.localtime(first)))),
+                "where": names.get(nxt, nxt),
+                "spots": [{"x": x, "y": y, "t": names.get(z, z), "on": z == nxt}
+                          for x, y, z in doors],
+                "next": [{"h": time.strftime("%H:00", time.localtime(t)),
+                          "t": names.get(rift_zone(t), rift_zone(t))}
+                         for t in (first + i * 3600 for i in range(1, 7))]}
 
     # ---- rifts
     def _rift_files(self):
@@ -2761,7 +2833,25 @@ class App:
                          "se reconnecte, sans relancer l'application. Une "
                          "trentaine de secondes.")},
                 {"k": "button", "id": "repair_data", "t": tr("Réparer"),
-                 "tone": "go"}]
+                 "tone": "go"},
+                {"k": "note",
+                 "t": tr("La connexion au jeu échoue toujours ? C'est "
+                         "souvent l'antivirus : dans Sécurité Windows › "
+                         "Protection contre les virus et menaces › Historique "
+                         "de protection, autorise Farever Book s'il y "
+                         "apparaît. Smart App Control (Sécurité Windows › "
+                         "Contrôle des applications) bloque aussi la "
+                         "lecture du jeu quand il est activé. Si Farever est "
+                         "lancé en administrateur, lance Farever Book en "
+                         "administrateur lui aussi.")},
+                {"k": "note",
+                 "t": tr("Rien n'y fait ? Crée un rapport et envoie-le sur "
+                         "le Discord : il rassemble ce qui aide à trouver la "
+                         "cause (version de Windows, antivirus, erreur, "
+                         "journal), sans ton nom Windows ni les pseudos des "
+                         "joueurs.")},
+                {"k": "button", "id": "make_report",
+                 "t": tr("Créer un rapport"), "tone": "go soft"}]
 
     @staticmethod
     def _tick(on, label):

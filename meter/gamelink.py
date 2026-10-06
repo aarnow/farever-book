@@ -183,7 +183,8 @@ class GameSession:
             print(f"[meter] {TARGET_PROCESS} (pid {pid}) closed before "
                   "attach.", file=sys.stderr)
             return False
-        except frida.PermissionDeniedError:
+        except frida.PermissionDeniedError as e:
+            link.last_error = str(e)
             link.set_state(GameLink.FAILED,
                            tr("connexion refusée — si Farever tourne en "
                               "administrateur, lance aussi le compteur en "
@@ -201,7 +202,8 @@ class GameSession:
                     return False
                 if STOP.wait(0.5):
                     return False
-            link.set_state(GameLink.FAILED, tr("connexion impossible : {e}", e=e))
+            link.last_error = str(e)
+            link.set_state(GameLink.FAILED, _attach_error(e))
             return False
 
         def on_detached(*args):
@@ -570,6 +572,17 @@ class GameSession:
         self.ready_evt.set()
 
 
+def _attach_error(e):
+    """What a failed attach means, for the player. Frida's own text stays in
+    the log and the problem report."""
+    s = str(e)
+    if "refused to load frida-agent" in s or "during injection" in s:
+        return tr("Farever a refusé le module de lecture de Farever Book. "
+                  "C'est presque toujours l'antivirus ou Smart App Control "
+                  "de Windows. Aide › Un problème ? explique quoi vérifier.")
+    return tr("connexion impossible : {e}", e=e)
+
+
 class GameLink:
     """The meter's connection to Farever, kept alive in the background: this
     thread waits for the game, connects, and goes back to waiting once it
@@ -591,6 +604,7 @@ class GameLink:
         self._args = (session, ui_state, world, rift_rec, heal_sizer)
         self._lock = threading.Lock()
         self._state, self._detail, self._pid = self.CLOSED, "", None
+        self.last_error = ""         # Frida's text, for the problem report
         self._retry = threading.Event()
         self._reconnect = threading.Event()
         self._steps = {}

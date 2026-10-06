@@ -584,6 +584,11 @@ window.applyState = function (json) {
     r.querySelector('.t').textContent = s.rift.title;
     r.querySelector('.v').textContent = s.rift.value;
     r.querySelector('.s').textContent = s.rift.sub || '';
+    r.querySelector('.w').textContent = s.rift.where || '';
+    // the whole clock opens the spots' map
+    r.title = s.rift.where ? tr('Voir sur la carte') : '';
+    r.onclick = s.rift.where ? () => notify('rift_map', {}) : null;
+    r.classList.toggle('go', !!s.rift.where);
   }
   if (s.toast && (!prev.toast || s.toast.n !== prev.toast.n) && s.toast.t) {
     showToast(s.toast.t);
@@ -609,6 +614,7 @@ window.applyState = function (json) {
   renderLinkSteps();
   renderBuildEditor();
   if (JSON.stringify(s.update) !== JSON.stringify(prev.update)) renderUpdate(s.update);
+  if (JSON.stringify(s.riftmap) !== JSON.stringify(prev.riftmap)) renderRiftMap(s.riftmap);
   if (s.updateAvail !== prev.updateAvail) renderUpdateBar(s.updateAvail);
 };
 
