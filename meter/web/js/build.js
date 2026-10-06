@@ -10,7 +10,7 @@ let BUILD_VIEW = 'stuff';        // the open build's tab
 let BUILD_FADE = false;         // the next draw follows a tab change
 let BUILD_Q = '';               // the piece editor's search
 // the piece editor's filters: stats the piece must all give, its family
-const BUILD_F = { slot: null, stats: new Set(), fac: '' };
+const BUILD_F = { slot: null, stats: new Set(), fac: '', rar: '' };
 
 function buildBuild(n) {
   BUILD_NODE = n;
@@ -1063,18 +1063,51 @@ function editorPanel(ed) {
   q.value = BUILD_Q;
   drop.appendChild(q);
   const filters = el('div', 'bfilters');
-  const statRow = el('div', 'bchips small');
-  (ed.stats || []).forEach((st) => {
-    const c = el('button', 'bchip' + (BUILD_F.stats.has(st.k) ? ' on' : ''), st.t);
+  const frow = (label, chips) => {
+    const r = el('div', 'bfrow');
+    r.appendChild(el('span', 'bfl', label));
+    const cs = el('div', 'bchips small');
+    chips.forEach((c) => cs.appendChild(c));
+    r.appendChild(cs);
+    filters.appendChild(r);
+  };
+  // 1. the rarity, one of them (the pieces' own rarities only)
+  const rars = (ed.rarities || []).filter((r) => (ed.options || []).some((it) => it.rk === r.v.toLowerCase()));
+  if (BUILD_F.rar && !rars.some((r) => r.v === BUILD_F.rar)) BUILD_F.rar = '';
+  const rarChips = [{ v: '', t: tr('Toutes') }].concat(rars).map((r) => {
+    const c = el('button', 'bchip' + (r.v ? ' r-' + r.v.toLowerCase() : '') + (BUILD_F.rar === r.v ? ' on' : ''), r.t);
     c.type = 'button';
+    c.addEventListener('click', () => {
+      BUILD_F.rar = r.v;
+      rarChips.forEach((x) => x.classList.toggle('on', x === c));
+      fill();
+    });
+    return c;
+  });
+  frow(tr('Rareté'), rarChips);
+  // 2. the main attributes, with the sheet's coloured icons; 3. the
+  // secondary stats: the piece must give every one ticked
+  const statChip = (st) => {
+    const c = el('button', 'bchip' + (BUILD_F.stats.has(st.k) ? ' on' : ''));
+    c.type = 'button';
+    const art = 'stat_' + (st.k === 'Intellect' ? 'Intelligence' : st.k);
+    if (SHEET_ART[art]) c.appendChild(artImg(art, 'bcic'));
+    c.appendChild(document.createTextNode(st.t));
     c.addEventListener('click', () => {
       if (BUILD_F.stats.has(st.k)) BUILD_F.stats.delete(st.k); else BUILD_F.stats.add(st.k);
       c.classList.toggle('on', BUILD_F.stats.has(st.k));
       fill();
     });
-    statRow.appendChild(c);
-  });
-  filters.appendChild(statRow);
+    return c;
+  };
+  const MAIN = ['Strength', 'Intellect', 'Faith', 'Dexterity'];
+  const SECOND = ['CritChanceRating', 'FervorRating', 'ArmorPenetrationRating', 'SpellPenetrationRating'];
+  const stats = ed.stats || [];
+  const pick2 = (keys) => keys.map((k) => stats.find((s) => s.k === k)).filter(Boolean);
+  // a stat no filter row shows any more is not filtered on
+  [...BUILD_F.stats].forEach((k) => { if (!MAIN.includes(k) && !SECOND.includes(k)) BUILD_F.stats.delete(k); });
+  if (pick2(MAIN).length) frow(tr('Attributs'), pick2(MAIN).map(statChip));
+  if (pick2(SECOND).length) frow(tr('Statistiques'), pick2(SECOND).map(statChip));
   if ((ed.factions || []).length) {
     const fs = select([{ v: '', t: tr('Toutes les familles') }]
       .concat(ed.factions.map((f) => ({ v: f, t: f }))), BUILD_F.fac,
@@ -1092,12 +1125,13 @@ function editorPanel(ed) {
     const shown = (ed.options || []).filter((it) => (!needle
       || it.name.toLowerCase().includes(needle) || it.type.toLowerCase().includes(needle))
       && (!BUILD_F.fac || it.fac === BUILD_F.fac)
+      && (!BUILD_F.rar || it.rk === BUILD_F.rar.toLowerCase())
       && [...BUILD_F.stats].every((k) => (it.stats || []).includes(k)));
     count.textContent = tr('{n} / {all} pièces', { n: shown.length, all: (ed.options || []).length });
     if (!shown.length) list.appendChild(el('div', 'empty', ed.options.length
       ? tr('Aucune pièce ne correspond.') : tr('Aucune pièce possible ici pour l’instant.')));
     shown.forEach((it) => {
-      const row = el('div', 'bitem r-' + (it.rk || 'common') + (p && p.id === it.id ? ' on' : ''));
+      const row = el('div', 'bitem r-' + (it.rk || 'common') + (p && p.id === it.id && p.rar === it.rar ? ' on' : ''));
       const ii = el('span', 'gi');
       if (it.img) { const im = el('img'); im.src = it.img; im.alt = ''; ii.appendChild(im); }
       row.appendChild(ii);
@@ -1108,8 +1142,9 @@ function editorPanel(ed) {
       row.addEventListener('click', () => {
         BUILD_DROP = false;
         BUILD_JUMP = true;
-        notify('build_pick', { id: it.id });
+        notify('build_pick', { id: it.id, rar: it.rar });
       });
+      attachCard(row, it.tip);
       list.appendChild(row);
     });
   };
@@ -1145,7 +1180,8 @@ function editorPanel(ed) {
     if (p.g) {
       const pv = el('div', 'gearlist one');
       pv.appendChild(gearRow(p.g, {
-        rars: ed.rarities, rar: p.rar, onRar: (v) => notify('build_piece', { field: 'rar', value: v }),
+        // the rarity is the line picked in the list: shown, not changed here
+        rars: ed.rarities, rar: p.rar,
         lvl: p.lvl, maxLvl: ed.maxLvl, onLvl: (v) => notify('build_piece', { field: 'lvl', value: v }),
         up: p.up, maxUp: p.maxUp, onUp: (v) => notify('build_piece', { field: 'up', value: v }),
         prism: p.infusable ? !!p.prism : null,

@@ -17,7 +17,7 @@ from gearstats import HERO_SLOTS, gear_stats, infusion_tiers
 from i18n import tr
 from simulate import simulate
 from views import (_augment_view, _talent_tree, character_view, class_keys,
-                   item_where)
+                   item_rarities, item_where)
 
 CLASS_FR = {"Warrior": "Guerrier", "Mage": "Mage", "Priest": "Prêtre",
             "Rogue": "Voleur"}
@@ -91,7 +91,7 @@ class BuildTab:
                                             if p.get("slot") in B.SLOT_KIND
                                             else None),
             "build_slot_close": lambda: setattr(self, "slot", None),
-            "build_pick": lambda p: self._pick(p.get("id")),
+            "build_pick": lambda p: self._pick(p.get("id"), p.get("rar")),
             "build_unequip": self._unequip,
             "build_piece": lambda p: self._piece(p.get("field"),
                                                  p.get("value")),
@@ -241,15 +241,21 @@ class BuildTab:
         self.confirm_delete = False
         B.save_build(self.build, self.file)
 
-    def _pick(self, kind):
+    def _pick(self, kind, rar=None):
+        """A piece at one of the rarities it exists at (the list shows each
+        on its own line)."""
         if not self.build or not self.slot:
             return
         e = B.item(kind)
         if not e or kind not in B.options(self.build, self.slot):
             return
+        rars = item_rarities(kind)
+        if rar not in rars:
+            rar = e.get("rar") if e.get("rar") in rars else (
+                rars[0] if rars else e.get("rar") or "Rare")
         old = self.build["gear"].get(self.slot) or {}
         self._edit(lambda b: b["gear"].__setitem__(self.slot, {
-            "id": kind, "rar": old.get("rar") or e.get("rar") or "Rare",
+            "id": kind, "rar": rar,
             "lvl": old.get("lvl") or b["lvl"], "up": old.get("up") or 0,
             "augs": {}, "inf": old.get("inf"), "istat": old.get("istat")}))
 
@@ -916,21 +922,32 @@ class BuildTab:
         stat_names = {}
         for k in B.options(b, slot):
             e = B.item(k)
-            st = gear_stats(k, e.get("rar") or "Epic", b["lvl"], 0, [], 0)
-            keys = [s[0] for s in (st[1] if st else ()) if s[0] != "Armor"]
-            for s in keys:
-                stat_names.setdefault(s, names.get(s) or _pretty_id(s))
-            opts.append({"id": k, "name": item_label(k), "img": item_icon(k),
-                         "stats": keys,
-                         "fac": faction_label(e.get("fac")) if e.get("fac")
-                         else "",
-                         "rk": (e.get("rar") or "").lower(),
-                         "type": " · ".join(x for x in (
-                             item_type_label(e["type"]),
-                             _hands(e.get("hands")),
-                             faction_label(e.get("fac")) if e.get("fac")
-                             else "") if x)})
-        opts.sort(key=lambda x: x["name"])
+            fac = e.get("fac") if e.get("fac") != "World" else None
+            typ = " · ".join(x for x in (
+                item_type_label(e["type"]), _hands(e.get("hands")),
+                faction_label(fac) if fac else "") if x)
+            for rar in item_rarities(k):
+                st = gear_stats(k, rar, b["lvl"], 0, [], 0)
+                keys = [s[0] for s in (st[1] if st else ()) if s[0] != "Armor"]
+                for s in keys:
+                    stat_names.setdefault(s, names.get(s) or _pretty_id(s))
+                opts.append({
+                    "id": k, "rar": rar, "name": item_label(k),
+                    "img": item_icon(k), "stats": keys,
+                    "fac": faction_label(fac) if fac else "",
+                    "rk": rar.lower(),
+                    "type": " · ".join(x for x in (typ, rarity_label(rar)) if x),
+                    # its card, shown while hovered in the list: at this
+                    # rarity and the build's level
+                    "tip": {"name": item_label(k), "img": item_icon(k),
+                            "rk": rar.lower(), "type": typ,
+                            "rar": rarity_label(rar), "lvl": b["lvl"],
+                            "il": st[0] if st else None,
+                            "stats": [{"t": t, "v": v}
+                                      for _k, t, v in (st[1] if st else ())]}})
+        rank = {"Common": 0, "Uncommon": 1, "Rare": 2, "Epic": 3,
+                "Legendary": 4}
+        opts.sort(key=lambda x: (x["name"], rank.get(x["rar"], 9)))
         piece = None
         if p:
             # the piece's computed entry, from the sheet

@@ -237,12 +237,12 @@ function skillTipEl(tip) {
   return box;
 }
 
-/* Show `tip` while the pointer is over `anchor`: over the whole page (no
-   panel clips it), under the anchor, or above it when the window ends
-   below; kept inside the window's width. Positions are divided by the
-   page's zoom (core.js setZoom): the box is placed in unzoomed pixels. */
-function attachTip(anchor, tip, id) {
-  if (!tip) return;
+/* A tooltip while the pointer is over `anchor`: `make()` builds it, shown
+   over the whole page (no panel clips it) under the pointer and following
+   it, flipped left or above when the window ends. Positions are divided by
+   the page's zoom (core.js setZoom): the box is placed in unzoomed pixels.
+   A click (it picks and redraws) or the pointer leaving hides it. */
+function attachFloat(anchor, make) {
   anchor.classList.add('hastip');
   anchor.removeAttribute('title');
   anchor.querySelectorAll('[title]').forEach((x) => x.removeAttribute('title'));
@@ -251,24 +251,32 @@ function attachTip(anchor, tip, id) {
     if (shown) { shown.remove(); shown = null; }
     if (TIP_HIDE === hide) TIP_HIDE = null;
   };
-  anchor.addEventListener('mouseenter', () => {
+  const place = (e) => {
+    if (!shown) return;
+    const z = parseFloat(document.documentElement.style.zoom) || 1;
+    const w = shown.offsetWidth * z, h = shown.offsetHeight * z;
+    let x = e.clientX + 16, y = e.clientY + 20;
+    if (x + w > window.innerWidth - 8) x = Math.max(8, e.clientX - 16 - w);
+    if (y + h > window.innerHeight - 8) y = Math.max(8, e.clientY - 12 - h);
+    shown.style.left = (x / z) + 'px';
+    shown.style.top = (y / z) + 'px';
+  };
+  anchor.addEventListener('mouseenter', (e) => {
     if (TIP_HIDE) TIP_HIDE();
     TIP_HIDE = hide;
     TIP_ANCHOR = anchor;
-    shown = skillTipEl(Object.assign({ id: id }, tip));
+    shown = make();
     document.body.appendChild(shown);
-    const z = parseFloat(document.documentElement.style.zoom) || 1;
-    const r = anchor.getBoundingClientRect();
-    const w = shown.offsetWidth * z, h = shown.offsetHeight * z;
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
-    const below = r.bottom + 8 + h <= window.innerHeight;
-    const top = below ? r.bottom + 8 : Math.max(8, r.top - 8 - h);
-    shown.style.left = (left / z) + 'px';
-    shown.style.top = (top / z) + 'px';
+    place(e);
   });
+  anchor.addEventListener('mousemove', place);
   anchor.addEventListener('mouseleave', hide);
-  // a click picks the skill and redraws the page: the tooltip goes
   anchor.addEventListener('click', hide);
+}
+
+/* A skill's tooltip (skillTipEl) on its icon. */
+function attachTip(anchor, tip, id) {
+  if (tip) attachFloat(anchor, () => skillTipEl(Object.assign({ id: id }, tip)));
 }
 
 /* The tooltip shown, and its anchor: a redraw removes the anchor without a
@@ -278,6 +286,46 @@ let TIP_HIDE = null, TIP_ANCHOR = null;
   if (!TIP_HIDE) return;
   if (ev !== 'mouseover' || !TIP_ANCHOR.isConnected || !TIP_ANCHOR.contains(e.target)) TIP_HIDE();
 }, true));
+
+/* A piece's tooltip, the skill tooltip's look: its icon and name (in its
+   rarity's colour), what it is, then its item level and stats, its
+   augments and infusion. */
+function pieceTipEl(g) {
+  const box = el('div', 'sktip ptip r-' + (g.rk || 'common'));
+  const head = el('div', 'skth');
+  const ic = el('span', 'ptic');
+  if (g.img) { const im = el('img'); im.src = g.img; im.alt = ''; ic.appendChild(im); }
+  head.appendChild(ic);
+  const ht = el('div', 'sktt');
+  ht.appendChild(el('b', 'nm', g.name));
+  ht.appendChild(el('span', null, [g.type, g.rar, g.lvl ? tr('niv. {n}', { n: g.lvl }) : '',
+    g.prism ? tr('Prismatique') : ''].filter(Boolean).join(' · ')));
+  head.appendChild(ht);
+  box.appendChild(head);
+  if (g.il) box.appendChild(el('div', 'ptil', tr('Niveau d’objet {n}', { n: g.il })));
+  (g.stats || []).forEach((x) => {
+    const r = el('div', 'ptst');
+    r.appendChild(el('span', null, x.t));
+    r.appendChild(el('b', null, '+' + fmtN(x.v)));
+    box.appendChild(r);
+  });
+  (g.extras || []).forEach((x) => {
+    const r = el('div', 'ptx');
+    r.appendChild(el('b', null, x.name));
+    if (x.fx) r.appendChild(el('span', null, x.fx));
+    box.appendChild(r);
+  });
+  if (g.inf && g.inf.name) {
+    box.appendChild(el('div', 'ptx inf' + (g.inf.on ? '' : ' off'), tr(g.inf.on
+      ? 'Imprégnation : {name}' : 'Imprégnation : {name} (bonus inactif)', { name: g.inf.name })));
+  }
+  return box;
+}
+
+/* A piece's tooltip (pieceTipEl) on its icon or its line. */
+function attachCard(anchor, g) {
+  if (g) attachFloat(anchor, () => pieceTipEl(g));
+}
 
 /* One cell of the spell bar: the skill, its key in the corner. */
 function barCell(c) {
@@ -423,6 +471,8 @@ function charSheet(o, onSlot, extra) {
       b.appendChild(ic);
     }
     b.addEventListener('click', () => onSlot(WEAPON_KEYS[key] || key));
+    // what it is, while hovered
+    if (g) attachCard(b, g);
     return b;
   };
 
@@ -606,7 +656,9 @@ function gearEditLine(g, ed) {
     return b;
   };
   const rar = (ed.rars || []).find((x) => x.v === ed.rar);
-  btn((rar ? rar.t : ed.rar) + ' ▾', 'r-' + String(ed.rar || '').toLowerCase(), (b) => gearPop(b, (box, close) => {
+  if (!ed.onRar) {
+    line.appendChild(el('span', 'gedrar r-' + String(ed.rar || '').toLowerCase(), rar ? rar.t : ed.rar));
+  } else btn((rar ? rar.t : ed.rar) + ' ▾', 'r-' + String(ed.rar || '').toLowerCase(), (b) => gearPop(b, (box, close) => {
     (ed.rars || []).forEach((x) => {
       const o = el('button', 'gpopi r-' + x.v.toLowerCase() + (x.v === ed.rar ? ' on' : ''), x.t);
       o.type = 'button';

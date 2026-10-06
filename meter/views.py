@@ -189,6 +189,13 @@ WHERE_TAGS = {"dungeon": "Donjon", "rift": "Faille", "unit": "Butin",
               "starter": "Départ", "cache": "Coffret"}
 
 
+# a dungeon weapon's rarity by difficulty, as the drops recorded show it
+# (end chest, 44 weapons: Normal rare, Veteran rare or epic, Heroic epic or
+# legendary)
+DUNGEON_WEAPON_RARS = {0: ("Rare",), 1: ("Rare", "Epic"),
+                       2: ("Epic", "Legendary")}
+
+
 def _seller(s):
     """A merchant's name: the one over its head (the element's), else its
     unit's."""
@@ -198,7 +205,7 @@ def _seller(s):
         or (_fr_names("unit").get(npc) if npc else None) or tr("un marchand")
 
 
-def item_where(iid, rar=None):
+def item_where(iid, rar=None, rows_only=False):
     """How to get a piece of gear AT a rarity, for the Build tab: every
     source gives the item's own rarity, except a cache that forces one
     (Hero Weapon Cache: Epic), a dungeon's heroic table (Epic) and a
@@ -238,14 +245,26 @@ def item_where(iid, rar=None):
             when = (diffs.get(diff) if diff is not None
                     else tr("toutes difficultés"))
             rars = dropped(base)
-            if src == "coffre":
-                add("dungeon", tr("{dungeon} : coffre de fin, {when}",
-                                  dungeon=name, when=when), rars,
+            if src in ("coffre", "boss"):
+                what = (tr("{dungeon} : coffre de fin, {when}") if src == "coffre"
+                        else tr("{dungeon} : mort du boss, {when}"))
+                by = {}
+                if weapon:
+                    # a weapon's rarity follows the difficulty (the drops
+                    # recorded): the difficulties that give each one
+                    ok = [d for d in sorted(DUNGEON_WEAPON_RARS)
+                          if diff is None or d >= diff]
+                    rars = [r for r in ("Rare", "Epic", "Legendary")
+                            if any(r in DUNGEON_WEAPON_RARS[d] for d in ok)]
+                    for r in rars:
+                        at_d = [diffs[d] for d in ok
+                                if r in DUNGEON_WEAPON_RARS[d]]
+                        by[r] = what.format(dungeon=name, when=tr(
+                            "en {list}", list=tr(" ou ").join(at_d)))
+                add("dungeon", what.format(dungeon=name, when=when), rars,
                     boss=boss)
-            elif src == "boss":
-                add("dungeon", tr("{dungeon} : mort du boss, {when}",
-                                  dungeon=name, when=when), rars,
-                    boss=boss)
+                if by:
+                    rows[-1]["byRar"] = by
             elif src == "faction":
                 add("dungeon", tr("{dungeon} : pièce de la faction, en "
                                   "{a} et {b}", dungeon=name, a=diffs[0],
@@ -346,8 +365,9 @@ def item_where(iid, rar=None):
                 .get(RIFT_ACT) or ()]
             continue
         if k == "faction":
-            # faction loot is armour: no weapon from it
-            if weapon:
+            # faction loot is the faction's rare armour: no weapon, no epic
+            # piece (heroic only) from it
+            if weapon or base != "Rare":
                 continue
             add(k, tr("Butin de la faction {name} : activités et coffres de "
                       "la faction", name=faction_label(s.get("f"))), ["Rare"])
@@ -357,7 +377,13 @@ def item_where(iid, rar=None):
         add(k, _source_text(dict(s, chance=None), bosses).split("\n")[0],
             [base] if k in ("shop", "craft", "ach", "starter")
             else dropped(base))
+    if rows_only:
+        return rows, base
     at = [r for r in rows if rar in r["rars"]]
+    # a dungeon weapon: the difficulties that give it at this rarity
+    for r in at:
+        if r.get("byRar", {}).get(rar):
+            r["t"] = r["byRar"][rar]
     # a cache at this rarity already says who sells it: the piece's
     # merchants would repeat it
     if any(r["k"] == tr(WHERE_TAGS["cache"]) for r in at):
@@ -372,6 +398,22 @@ def item_where(iid, rar=None):
             # the world map, once, when a merchant is to be shown on it
             "meta": world_map().get("meta") if any(
                 r.get("pins") for r in shown) else None}
+
+
+_RARITIES = {}
+
+
+def item_rarities(iid):
+    """The rarities a piece exists at in the game: those its sources give
+    (a cloak is never legendary). The item's own when it has no source.
+    Cached for the data in memory (a regeneration reloads it)."""
+    key = (iid, id(collection_catalogue()), id(dungeon_catalogue()))
+    if key not in _RARITIES:
+        rows, base = item_where(iid, rows_only=True)
+        got = {r for row in rows for r in row["rars"] if r}
+        _RARITIES[key] = sorted(got or ({base} if base else set()),
+                                key=lambda r: RARITY_ORDER.get(r, 9))
+    return _RARITIES[key]
 
 
 def collection_view(owned, item_codex=None):

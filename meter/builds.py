@@ -576,10 +576,12 @@ def guided_build(p):
                 "inf": "", "istat": ""}
 
     def top(kind):
-        """A weapon at its best: legendary, fully upgraded."""
+        """A weapon at its best: the highest rarity it exists at (legendary
+        for a dropped one), fully upgraded."""
+        from views import item_rarities     # views needs builds' tables
         pc = piece(kind)
-        pc["rar"] = "Legendary"
-        pc["up"] = max_upgrades("Legendary", kind)
+        pc["rar"] = (item_rarities(kind) or [pc["rar"]])[-1]
+        pc["up"] = max_upgrades(pc["rar"], kind)
         return pc
 
     for slot, key in (("Weapon1", "main"), ("Weapon2", "ars")):

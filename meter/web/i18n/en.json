@@ -1,5 +1,6 @@
 {
  " : {text}": ": {text}",
+ " ou ": " or ",
  " puis ": " then ",
  "(inactif, pièce non prismatique d’une autre faction)": "(inactive, non-prismatic piece from another faction)",
  "(niv. {a}–{b})": "(lvl {a}–{b})",
@@ -617,6 +618,7 @@
  "Raccourci clavier": "Keyboard shortcut",
  "Rapport créé sur le Bureau : {name}": "Report created on the Desktop: {name}",
  "Rapport de faille": "Rift report",
+ "Rareté": "Rarity",
  "Recharge {cd}": "Cooldown {cd}",
  "Recharge {n} s": "Cooldown {n} s",
  "Recherche des fonctions du jeu": "Finding the game's functions",
@@ -825,6 +827,7 @@
  "en cours": "in progress",
  "en faille": "in rifts",
  "en {diff}": "in {diff}",
+ "en {list}": "in {list}",
  "entrée": "entrance",
  "erreur inattendue : {e}": "unexpected error: {e}",
  "fonctions trouvées": "functions found",
