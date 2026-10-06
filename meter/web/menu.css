@@ -687,6 +687,7 @@ html.lt-760 .ltier .lootstrip { flex-wrap: wrap; }
 .hitem .nm { font-weight: 600; white-space: nowrap; overflow: hidden;
              text-overflow: ellipsis; }
 .hitem .fam { color: var(--faint); font-size: 11px; }
+.hitem .fam.dg { color: var(--accent); }
 .hitem .kills { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
 .hitem .kills b { font-size: 17px; font-variant-numeric: tabular-nums; }
 .hitem:not(.seen) .kills b { color: var(--faint); }
@@ -2377,6 +2378,8 @@ html.lt-1100 .colllist .collgrid { grid-template-columns: repeat(auto-fill, minm
                      background: linear-gradient(180deg, #4A4482, #36325F); }
 .huntnav.views button { font-family: var(--font-head); letter-spacing: .6px; font-size: 13px;
                         text-transform: uppercase; }
+/* a view's name in full (Montures et planeurs), on two lines if need be */
+.huntnav.views button span { white-space: normal; text-align: left; line-height: 1.25; }
 .huntmain { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .huntmain > .colltools { margin-top: 0; }
 .huntmain > .huntgrid, .huntmain > .famgrid, .huntmain > .farmlist {

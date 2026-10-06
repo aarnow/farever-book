@@ -519,6 +519,11 @@ def bestiary_view(ranks, owned=None):
                             "t": tr("Failles et invasions") if r == "rift"
                             else _fr_names("zone").get(r) or tr("Autres")
                             if r else tr("Autres"), "n": n})
+    # the bosses: their dungeon (its kills are its completions), or the rift
+    dg_of = {d.get("boss"): dungeon_name(d.get("kind"))
+             for d in dungeon_catalogue() if d.get("boss")}
+    for b in rift_rewards_data().get("bosses") or ():
+        dg_of.setdefault(b.get("id"), tr("Faille"))
     items = []
     for e in rows:
         kills, rank = (ranks.get(e["id"]) or [0, 0])[:2]
@@ -535,7 +540,7 @@ def bestiary_view(ranks, owned=None):
             "tier": tr(HUNT_TIERS.get(e.get("tier"), "")),
             "kills": int(kills), "rank": int(rank),
             "max": len(steps) or 3,
-            "next": nxt})
+            "next": nxt, "dg": dg_of.get(e["id"], "")})
     fams = {}
     for it in items:
         f = it["famId"]

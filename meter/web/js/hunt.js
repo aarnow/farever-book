@@ -67,7 +67,10 @@ function renderHunt(box, n) {
     return box_;
   };
   side.appendChild(nav('views', [{ v: 'units', t: tr('Monstres') }, { v: 'families', t: tr('Familles') },
-    { v: 'farm', t: tr('Montures') }], HUNT.view, (v) => { HUNT.view = v; }));
+    { v: 'farm', t: tr('Montures et planeurs') }, { v: 'boss', t: tr('Boss') }],
+  HUNT.view, (v) => { HUNT.view = v; }));
+  // the bosses: the monsters' list, only them, each with its dungeon
+  const bossView = HUNT.view === 'boss';
 
   // the list keeps its place across rebuilds, not across a change of list
   const listKey = [HUNT.view, HUNT.reg, HUNT.filter, HUNT.sort, HUNT.q, HUNT.farm].join('|');
@@ -130,13 +133,16 @@ function renderHunt(box, n) {
         || (HUNT.filter === 'none' && it.kills === 0)
         || (HUNT.filter === 'doing' && it.kills > 0 && it.rank < it.max)
         || (HUNT.filter === 'done' && it.rank >= it.max))
+    // its kills are the runs won
+    && (!bossView || it.dg)
     && (!needle || it.name.toLowerCase().includes(needle)
         || (it.fam || '').toLowerCase().includes(needle)));
   shown.sort(HUNT.sort === 'name'
     ? (a, b) => a.name.localeCompare(b.name, 'fr')
     : (a, b) => b.kills - a.kills || a.name.localeCompare(b.name, 'fr'));
   box.appendChild(el('div', 'collcount',
-    tr(shown.length > 1 ? '{n} monstres' : '{n} monstre', { n: shown.length })));
+    bossView ? tr('{n} boss', { n: shown.length })
+      : tr(shown.length > 1 ? '{n} monstres' : '{n} monstre', { n: shown.length })));
 
   const grid = el('div', 'huntgrid');
   shown.forEach((it) => {
@@ -149,7 +155,8 @@ function renderHunt(box, n) {
     card.appendChild(pic);
     const body = el('div', 'hb');
     body.appendChild(el('span', 'nm', it.name));
-    body.appendChild(el('span', 'fam', it.fam || '—'));
+    // a boss: where it waits, rather than its family
+    body.appendChild(el('span', 'fam' + (it.dg ? ' dg' : ''), it.dg || it.fam || '—'));
     const k = el('div', 'kills');
     k.appendChild(el('b', null, fmtN(it.kills)));
     k.appendChild(el('span', null, it.kills > 1 ? tr('kills') : tr('kill')));
