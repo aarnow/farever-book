@@ -616,6 +616,7 @@ window.applyState = function (json) {
   if (JSON.stringify(s.update) !== JSON.stringify(prev.update)) renderUpdate(s.update);
   if (JSON.stringify(s.riftmap) !== JSON.stringify(prev.riftmap)) renderRiftMap(s.riftmap);
   if (s.updateAvail !== prev.updateAvail) renderUpdateBar(s.updateAvail);
+  if (s.support !== prev.support) renderSupport(s.support);
 };
 
 /* Entry animation, on a tab change only: live redraws must not animate. */

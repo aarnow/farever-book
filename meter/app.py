@@ -14,6 +14,7 @@ from pathlib import Path
 import i18n
 import gamedata
 import report
+from contributors import CONTRIBUTORS
 from riftspot import RIFT_ACT, rift_zone
 import themes
 from i18n import tr
@@ -63,11 +64,16 @@ from gamelink import GameLink
 
 
 # The Help tab's links. A link without its url shows without a button.
+# the page where players can support the project (the header's button)
+TIPEEE_URL = "https://fr.tipeee.com/farever-book"
+
 HELP_LINKS = (
     {"id": "discord", "t": "Discord", "url": None,
      "meta": "Une question, un bug : contacte @Aarnow sur Discord."},
     {"id": "github", "t": "GitHub", "url": REPO_URL,
      "meta": "Le code de Farever Book, ses versions et leurs nouveautés."},
+    {"id": "tipeee", "t": "Tipeee", "url": TIPEEE_URL,
+     "meta": "Soutenir le développement de Farever Book, si tu le souhaites."},
 )
 
 
@@ -853,6 +859,8 @@ class App:
             "update": None if self._setup else self.updater.state,
             # a newer version: the header's button, until it is installed
             "updateAvail": None if self._setup else self.updater.available(),
+            # the header's "Soutenir" button, under Réglages and Aide
+            "support": bool(TIPEEE_URL) and not self._setup,
             "zoom": int(self._zoom),
             "theme": self._theme,
             "lang": self._lang,
@@ -2820,7 +2828,18 @@ class App:
                 {"k": "prose",
                  "t": tr("Ce projet existe en partie grâce à Brudr, auteur "
                          "du mod Farever+, qui a généreusement partagé son "
-                         "code. Merci à lui !")}]
+                         "code. Merci à lui !")}] + App._contributor_nodes()
+
+    @staticmethod
+    def _contributor_nodes():
+        """Who supports the project on Tipeee (contributors.py): hidden
+        while nobody does."""
+        if not CONTRIBUTORS:
+            return []
+        return [{"k": "section", "t": tr("Contributeurs")},
+                {"k": "prose",
+                 "t": tr("Merci à celles et ceux qui soutiennent Farever Book "
+                         "sur Tipeee :") + " " + ", ".join(CONTRIBUTORS)}]
 
 
     def _repair_nodes(self):
