@@ -32,7 +32,7 @@ CATEGORIES = {"WorldChest.prefab": "chest", "VaultChest.prefab": "vault",
 MARKER_ICONS = {"chest": "ChestCompletion", "vault": "VaultChestMarker",
                 "recipe": "RecipeChestMarker", "orb": "RedOrbCompletion",
                 "obelisk": "ObeliskMarker", "respawn": "RespawnPointMarker",
-                "dungeon": "Dungeon"}
+                "dungeon": "Dungeon", "merchant": "DialogTrade"}
 # the rifts have no icon row: the activities sheet's chaos eye
 RAW_ICONS = {"rift": {"file": "UI/icons/activities.png", "size": 128,
                       "x": 2, "y": 2}}

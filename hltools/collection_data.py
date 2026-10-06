@@ -9,6 +9,7 @@ A loot table flagged Weights gives ONE line, by weight; otherwise each line
 rolls on its own. Nested tables multiply."""
 import io
 import json
+import math
 import struct
 from collections import defaultdict
 from pathlib import Path
@@ -16,6 +17,7 @@ from pathlib import Path
 import hbson
 import imgcache
 import pak_extract
+from build_data import JEWEL
 
 CATEGORIES = (("mounts", "Mount"), ("gliders", "GearGlider"))
 # Flags are read by name: a patch that edits the enum moves their bits.
@@ -110,6 +112,16 @@ def build(game_dir, img_dir=None):
                        if appearance(r.get("type"))]
     collectible = {iid for ids in wanted.values() for iid in ids}
     gear_set = set(wanted["gears"])
+    # what a build can wear (weapons, jewels...): its sources too, for the
+    # Build tab's "where to find it"
+    equip = {iid for iid, r in items.items()
+             if r.get("aptitudes") or r.get("type") in JEWEL}
+    # the caches (opened from the bag): what they give, at which rarity;
+    # tracked too, for who sells them
+    caches = {iid: r for iid, r in items.items()
+              if r.get("type") == "LootableContainer"
+              and ((r.get("props") or {}).get("gainItem") or {}).get("lootTable")}
+    tracked = collectible | equip | set(caches)
     # unnamed Critter units are scenery
     critters = [uid for uid, r in units.items() if r.get("type") == "Critter"
                 and (r.get("texts") or {}).get("name")]
@@ -147,7 +159,7 @@ def build(game_dir, img_dir=None):
         v = next(((o.get("value") or {}).get("v")
                   for o in r.get("objectives") or () if o.get("value")), None)
         for it in ((r.get("reward") or {}).get("items") or ()):
-            if it.get("item") in collectible:
+            if it.get("item") in tracked:
                 add(it["item"], {"k": "ach", "id": aid, "chain": chain,
                                  "v": v})
 
@@ -156,10 +168,21 @@ def build(game_dir, img_dir=None):
     fac_acts = defaultdict(dict)        # faction -> {activity id: kind}
     fac_chests = defaultdict(set)       # faction -> {chest id}
 
-    def walk(o, zone):
+    # world coordinates, as the Map tab places its points (map_data.py): a
+    # child is placed through its parent (offset, rotation in degrees); only
+    # the world level's are on the map
+    in_world = [False]
+
+    def walk(o, zone, px=0.0, py=0.0, rot=0.0):
         if isinstance(o, dict):
             props = o.get("props") if isinstance(o.get("props"), dict) else {}
             zone = props.get("zoneBaked") or o.get("zoneBaked") or zone
+            x, y = o.get("x"), o.get("y")
+            wx, wy, wr = px, py, rot
+            if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+                c, s_ = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+                wx, wy = px + x * c - y * s_, py + x * s_ + y * c
+                wr = rot + float(o.get("rotationZ") or 0)
             fac = props.get("faction") or o.get("faction")
             oid = o.get("id")
             if fac in FACTIONS and isinstance(oid, str):
@@ -167,7 +190,14 @@ def build(game_dir, img_dir=None):
                     fac_acts[fac][oid] = o.get("inherit") or "?"
                 elif o.get("$cdbtype") == "element" and "Chest" in oid:
                     fac_chests[fac].add(oid)
-            if isinstance(props.get("shop"), list):
+            # the name the game shows over a merchant is the element's
+            # ("Mira, Demon Huntress"), not its unit's
+            el_name = (o.get("texts") or {}).get("name") \
+                if isinstance(o.get("texts"), dict) else None
+            # the developers' preview merchants ("Major Update Preview
+            # Merchant (debug)") sell what no player can buy
+            if isinstance(props.get("shop"), list) \
+                    and "(debug)" not in str(el_name or ""):
                 npc = ((props.get("npc") or {}).get("unit")
                        if isinstance(props.get("npc"), dict) else None)
                 for s in props["shop"]:
@@ -184,7 +214,11 @@ def build(game_dir, img_dir=None):
                                      and (c.get("amount") or 1) <= 1)]
                     entry = {"k": "shop", "npc": npc or o.get("name"),
                              "zone": zone, "cost": cost}
-                    if iid in collectible:
+                    if el_name and isinstance(o.get("id"), str):
+                        entry["el"], entry["eln"] = o["id"], el_name
+                    if in_world[0]:
+                        entry["at"] = [round(wx, 1), round(wy, 1)]
+                    if iid in tracked:
                         add(iid, entry)
                     elif pet in critter_set:
                         add(pet, entry)
@@ -193,7 +227,7 @@ def build(game_dir, img_dir=None):
                     {"k": "chest", "id": o.get("name") or "Chest",
                      "zone": zone})
             for li in props.get("lootItems") or ():
-                if isinstance(li, dict) and li.get("item") in collectible:
+                if isinstance(li, dict) and li.get("item") in tracked:
                     rate = li.get("dropRate")
                     add(li["item"], {"k": "chest",
                                      "id": o.get("name") or "Chest",
@@ -205,26 +239,42 @@ def build(game_dir, img_dir=None):
                     and zone:
                 add(o["unit"], {"k": "spawn", "zones": [zone],
                                 "chance": 1.0})
-            for v in o.values():
-                walk(v, zone)
+            for k, v in o.items():
+                # its children, and the elements in its props (a merchant),
+                # are where it is
+                if k in ("children", "props"):
+                    walk(v, zone, wx, wy, wr)
+                else:
+                    walk(v, zone, px, py, rot)
         elif isinstance(o, list):
             for v in o:
-                walk(v, zone)
+                walk(v, zone, px, py, rot)
 
-    for _path, level in _levels(game_dir):
+    for path, level in _levels(game_dir):
+        in_world[0] = path.startswith("Level/World/W1_Siagarta.dat/gameplayData/")
         walk(level, None)
 
     # -- loot tables -> the collectibles they can give
     for tid, users in table_users.items():
         for iid, p in _table_items(tables, tid).items():
-            if iid not in collectible or p <= 0:
+            if iid not in tracked or p <= 0:
                 continue
             for u in users:
                 add(iid, dict(u, chance=round(p, 6)))
 
+    # -- caches: each piece they can give, at their forced rarity
+    for cid, r in caches.items():
+        gi = r["props"]["gainItem"]
+        lv = gi.get("levelRange") or {}
+        for iid, p in _table_items(tables, gi["lootTable"]).items():
+            if iid in equip and p > 0:
+                add(iid, {"k": "cache", "id": cid,
+                          "rar": (gi.get("rarity") or {}).get("min"),
+                          "lvl": [lv["min"], lv["max"]] if lv else None})
+
     # -- recipes that make a collectible (crafted armour)
     for r in sheets["craft"].get("lines") or ():
-        if r.get("item") in collectible:
+        if r.get("item") in tracked:
             add(r["item"], {"k": "craft", "job": r.get("job"),
                             "lvl": r.get("level"), "n": r.get("count") or 1,
                             "input": [[i.get("item"), i.get("count") or 1]
@@ -245,7 +295,7 @@ def build(game_dir, img_dir=None):
                                               / total, 4)})
 
     # -- armour generated rather than listed: faction pieces and WorldLoot
-    for iid in wanted["gears"]:
+    for iid in sorted(gear_set | equip):
         row = items[iid]
         if row.get("faction") in FACTIONS:
             add(iid, {"k": "faction", "f": row["faction"]})
@@ -265,6 +315,9 @@ def build(game_dir, img_dir=None):
     out = {cat: [entry(i, items[i]) for i in ids]
            for cat, ids in wanted.items()}
     out["pets"] = [entry(u, units[u]) for u in critters]
+    out["equip"] = {i: src[i] for i in sorted(equip - gear_set) if src.get(i)}
+    out["caches"] = {c: {"rar": r.get("rarity"), "src": src.get(c, [])}
+                     for c, r in caches.items()}
     out["factions"] = {
         f: {"dungeons": sorted(a for a, k in fac_acts[f].items()
                                if k == "Dungeon"),
@@ -308,8 +361,14 @@ def _images(game_dir, out_dir, gfx):
                 continue
             n = int(g.get("size") or img.width)
             x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
-            if x + n > img.width or y + n > img.height:
+            # a tile may span several cells (width, height); size 1: pixels
+            w, h = int(g.get("width") or 1) * n, int(g.get("height") or 1) * n
+            if x + w > img.width or y + h > img.height:
                 continue
-            tile = img.crop((x, y, x + n, y + n)).resize((IMG_PX, IMG_PX),
-                                                         Image.LANCZOS)
+            tile = img.crop((x, y, x + w, y + h))
+            if w != h:                  # centred on a square, not stretched
+                sq = Image.new("RGBA", (max(w, h),) * 2, (0, 0, 0, 0))
+                sq.paste(tile, ((max(w, h) - w) // 2, (max(w, h) - h) // 2))
+                tile = sq
+            tile = tile.resize((IMG_PX, IMG_PX), Image.LANCZOS)
             imgcache.save(tile, out_dir / f"{iid}.webp", quality=82, method=4)

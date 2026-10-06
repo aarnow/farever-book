@@ -21,6 +21,7 @@ from gearstats import (
     _gear_infusion, _hero_sheet, _infusion_sets, _scaled, gear_stats,
     infusion_bonus, slot_factor)
 from combat import DUNGEON_DIFFICULTIES
+from riftspot import RIFT_ACT, SPOTS
 from i18n import tr
 
 
@@ -92,8 +93,7 @@ def _source_text(s, bosses):
         zone = f" — {_zone_label(s['zone'])}" if s.get("zone") else ""
         return f"{kind}{zone}{pct}"
     if k == "shop":
-        npc = s.get("npc")
-        who = (_fr_names("unit").get(npc) if npc else None) or tr("un marchand")
+        who = _seller(s)
         zone = f" — {_zone_label(s['zone'])}" if s.get("zone") else ""
         cost = ", ".join(f"{c['n']} × {item_label(c['item'])}"
                          if c.get("n") else item_label(c["item"])
@@ -179,6 +179,199 @@ def _source_text(s, bosses):
                 else " · " + tr("{pct} des apparitions", pct=_pct(ch)))
         return tr("Se capture : {where}", where=where) + rate
     return k or "?"
+
+
+# a source's kind, for its tag in "how to get it"
+WHERE_TAGS = {"dungeon": "Donjon", "rift": "Faille", "unit": "Butin",
+              "family": "Butin",
+              "chest": "Coffre", "shop": "Marchand", "craft": "Fabrication",
+              "faction": "Faction", "world": "Monde", "ach": "Succès",
+              "starter": "Départ", "cache": "Coffret"}
+
+
+def _seller(s):
+    """A merchant's name: the one over its head (the element's), else its
+    unit's."""
+    npc = s.get("npc")
+    return ((_fr_names("element").get(s["el"]) or s.get("eln"))
+            if s.get("el") else None) \
+        or (_fr_names("unit").get(npc) if npc else None) or tr("un marchand")
+
+
+def item_where(iid, rar=None):
+    """How to get a piece of gear AT a rarity, for the Build tab: every
+    source gives the item's own rarity, except a cache that forces one
+    (Hero Weapon Cache: Epic), a dungeon's heroic table (Epic) and a
+    weapon's legendary luck (dungeon end chest and boss). {"rar": the asked
+    rarity, "base": the item's, "rows": the sources at it, "other": the
+    others when none gives it}; a row: {k, t, sub, img, r}."""
+    base = (build_data().get("items") or {}).get(iid, {}).get("rar") or ""
+    weapon = bool((build_data().get("items") or {}).get(iid, {}).get("hands"))
+    rar = rar or base
+    rows, seen = [], set()
+
+    def add(k, text, rars, sub="", img="", boss=""):
+        if text and text not in seen:
+            seen.add(text)
+            # boss: the dungeon's boss, whose portrait the window shows
+            rows.append({"k": tr(WHERE_TAGS.get(k, "Butin")), "t": text,
+                         "sub": sub, "img": img, "boss": boss, "rars": rars,
+                         "r": " · ".join(rarity_label(x) for x in rars)})
+
+    def dropped(r):
+        """The rarities a weapon dropped at `r` may have: also legendary,
+        by the legendary weapon luck (loot, caches, rift and dungeon
+        bosses)."""
+        return [r] + (["Legendary"] if weapon and r != "Legendary" else [])
+
+    diffs = {d: tr(t) for d, t in DUNGEON_DIFFICULTIES.items()}
+    bosses, listed = {}, set()
+    rift_bosses = {b.get("id") for b in rift_rewards_data().get("bosses") or ()}
+    for dg in dungeon_catalogue():
+        bosses[dg.get("boss")] = dg.get("kind")
+        name, boss = dungeon_name(dg.get("kind")), dg.get("boss") or ""
+        for e in dg.get("loot") or ():
+            if e.get("item") != iid:
+                continue
+            listed.add(name)
+            src, diff = e.get("src"), e.get("diff")
+            when = (diffs.get(diff) if diff is not None
+                    else tr("toutes difficultés"))
+            rars = dropped(base)
+            if src == "coffre":
+                add("dungeon", tr("{dungeon} : coffre de fin, {when}",
+                                  dungeon=name, when=when), rars,
+                    boss=boss)
+            elif src == "boss":
+                add("dungeon", tr("{dungeon} : mort du boss, {when}",
+                                  dungeon=name, when=when), rars,
+                    boss=boss)
+            elif src == "faction":
+                add("dungeon", tr("{dungeon} : pièce de la faction, en "
+                                  "{a} et {b}", dungeon=name, a=diffs[0],
+                                  b=diffs[1]), ["Rare"], boss=boss)
+            elif src == "heroic":
+                add("dungeon", tr("{dungeon} : pièce épique, en {diff}",
+                                  dungeon=name, diff=diffs[2]), ["Epic"],
+                    boss=boss)
+    cat = collection_catalogue()
+    srcs = (cat.get("equip") or {}).get(iid)
+    if srcs is None:
+        srcs = next((e.get("src") or [] for e in cat.get("gears") or ()
+                     if e.get("id") == iid), [])
+    def shop_pins(lst):
+        """Where the merchants of a source list stand on the world map."""
+        return [{"x": s["at"][0], "y": s["at"][1],
+                 "t": _zone_label(s.get("zone")) if s.get("zone") else ""}
+                for s in lst if s.get("k") == "shop" and s.get("at")]
+
+    def shop_texts(lst):
+        """The merchants of a source list, one line each: a merchant in
+        several towns names them together."""
+        towns = {}
+        for s in lst:
+            if s.get("k") == "shop" and s.get("zone"):
+                towns.setdefault((s.get("npc"), str(s.get("cost"))),
+                                 []).append(_zone_label(s["zone"]))
+        out = []
+        for s in lst:
+            if s.get("k") != "shop":
+                continue
+            text = _source_text(s, bosses).split("\n")[0]
+            if s.get("zone"):
+                text = text.replace(_zone_label(s["zone"]), ", ".join(
+                    towns[(s.get("npc"), str(s.get("cost")))]), 1)
+            if text not in out:
+                out.append(text)
+        return out
+
+    for s in srcs:
+        k = s.get("k")
+        # a dungeon boss's drop or a chest inside a dungeon: said above
+        if (k == "unit" and s.get("id") in bosses and listed) or (
+                k == "chest" and s.get("zone")
+                and _zone_label(s["zone"]) in listed):
+            continue
+        if k == "cache":
+            cid = s.get("id")
+            lvl = s.get("lvl")
+            text = item_label(cid) + (
+                " " + tr("(niv. {n})", n=lvl[0]) if lvl and lvl[0] == lvl[1]
+                else "")
+            sellers = [x for x in ((cat.get("caches") or {}).get(cid)
+                                   or {}).get("src") or ()
+                       if x.get("k") == "shop"]
+            # who sells it, its towns on the map below
+            got = list(dict.fromkeys(
+                tr("Vendu par {who}", who=_seller(x)) for x in sellers))
+            add("cache", text, dropped(s.get("rar") or base),"\n".join(got),
+                item_icon(cid))
+            rows[-1]["pins"] = shop_pins(((cat.get("caches") or {}).get(cid)
+                                          or {}).get("src") or ())
+            continue
+        if k == "shop":
+            same = [x for x in srcs if x.get("npc") == s.get("npc")
+                    and x.get("cost") == s.get("cost")]
+            for text in shop_texts(same):
+                if text not in seen:
+                    add(k, text, [base])
+                    rows[-1]["pins"] = shop_pins(same)
+            continue
+        if k == "craft":
+            # the job with its tool, then the recipe, each ingredient with
+            # its icon
+            job = _fr_names("job").get(s.get("job")) or _pretty_id(s.get("job"))
+            made = f" (×{s['n']})" if (s.get("n") or 1) > 1 else ""
+            add(k, tr("{job} niv. {lvl}", job=job, lvl=s.get("lvl") or 1)
+                + made, [base], img=item_icon("job_" + str(s.get("job"))))
+            rows[-1]["parts"] = [{"n": n, "t": item_label(i),
+                                  "img": item_icon(i)}
+                                 for i, n in s.get("input") or ()]
+            continue
+        # faction loot in the world (activities, chests) gives its rare
+        # pieces: an epic one is heroic only
+        if k == "unit" and s.get("id") in rift_bosses:
+            names = _fr_names("zone")
+            # the boss's name as the Codex shows it (the game's French)
+            add("rift", tr("Butin du boss de faille {name}",
+                           name=_unit_label(s["id"])), dropped(base),
+                tr("La faille s'ouvre chaque heure, au choix du jeu : {a} ou {b}.",
+                   a=names.get(SPOTS[1], SPOTS[1]),
+                   b=names.get(SPOTS[0], SPOTS[0])))
+            rows[-1]["unit"] = s["id"]
+            rows[-1]["pinCls"] = "rift"
+            rows[-1]["pins"] = [
+                {"x": x, "y": y, "t": names.get(z, z)}
+                for x, y, z in (bestiary_catalogue().get("entrances") or {})
+                .get(RIFT_ACT) or ()]
+            continue
+        if k == "faction":
+            # faction loot is armour: no weapon from it
+            if weapon:
+                continue
+            add(k, tr("Butin de la faction {name} : activités et coffres de "
+                      "la faction", name=faction_label(s.get("f"))), ["Rare"])
+            continue
+        # no drop rate here: where, not how often
+        # merchants and crafts sell it as it is, any loot may be legendary
+        add(k, _source_text(dict(s, chance=None), bosses).split("\n")[0],
+            [base] if k in ("shop", "craft", "ach", "starter")
+            else dropped(base))
+    at = [r for r in rows if rar in r["rars"]]
+    # a cache at this rarity already says who sells it: the piece's
+    # merchants would repeat it
+    if any(r["k"] == tr(WHERE_TAGS["cache"]) for r in at):
+        at = [r for r in at if r["k"] != tr(WHERE_TAGS["shop"])]
+    # none at the asked rarity: the sources at the item's own one, if it is
+    # another (none at all: not in the game yet, it seems)
+    other = ([r for r in rows if base in r["rars"]]
+             if not at and rar != base else [])
+    shown = at or other
+    return {"rar": rarity_label(rar), "base": rarity_label(base),
+            "rows": at, "other": other,
+            # the world map, once, when a merchant is to be shown on it
+            "meta": world_map().get("meta") if any(
+                r.get("pins") for r in shown) else None}
 
 
 def collection_view(owned, item_codex=None):

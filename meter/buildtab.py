@@ -16,7 +16,8 @@ from gamedata import (_fr_names, _skill_label, build_data, faction_label,
 from gearstats import HERO_SLOTS, gear_stats, infusion_tiers
 from i18n import tr
 from simulate import simulate
-from views import _augment_view, _talent_tree, character_view, class_keys
+from views import (_augment_view, _talent_tree, character_view, class_keys,
+                   item_where)
 
 CLASS_FR = {"Warrior": "Guerrier", "Mage": "Mage", "Priest": "Prêtre",
             "Rogue": "Voleur"}
@@ -975,6 +976,8 @@ class BuildTab:
                 "statOptions": [{"v": "", "t": tr("Aucun")}] + [
                     {"v": s, "t": attr.get(s) or _pretty_id(s)}
                     for s in B.istat_options(p)],
+                # where the player finds it, once the build is decided
+                "where": item_where(p["id"], p.get("rar")),
                 "g": entry}
         order = {k: i for i, k in enumerate(FILTER_STAT_ORDER)}
         return {"slot": slot, "label": tr(SLOT_LABELS[slot])

@@ -99,7 +99,12 @@ def _zone_label(z):
 
 
 def _unit_label(u):
-    return (_fr_names("unit").get(u) or _unit_names().get(u)
+    names = _fr_names("unit")
+    # a boss the translation skips, whose fight clones carry its name
+    # (DemonSuperElite_Fairy: "Nocte-reine Shaarlize Te'reur")
+    clone = next((names[u + s] for s in ("_TrueClone", "_FalseClone")
+                  if u and names.get(u + s)), None)
+    return (names.get(u) or clone or _unit_names().get(u)
             or _pretty_id(u or ""))
 
 
@@ -412,7 +417,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 2
+DATA_FORMAT = 3
 
 
 def _hook_needs():

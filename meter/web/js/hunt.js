@@ -369,7 +369,7 @@ function huntMiniMap(n) {
     return d;
   });
   (n.insts || []).forEach((i) => (i.doors || []).forEach((p) => {
-    const d = el('div', 'hpin hdoor hd-' + (i.kind === 'Faille' ? 'rift' : 'dungeon'));
+    const d = el('div', 'hpin hdoor hd-' + (i.cls || (i.kind === 'Faille' ? 'rift' : 'dungeon')));
     d.title = i.t;
     const [px, py] = mapPx(n, p.x, p.y);
     d.dataset.px = px;

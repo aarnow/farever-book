@@ -514,7 +514,18 @@ function gearRow(g, ed) {
   }
   r.appendChild(gi);
   const gt = el('div', 'gt');
-  gt.appendChild(el('b', 'nm', g.name));
+  if (ed && ed.onWhere) {
+    // the name, and how to get the piece
+    const nr = el('div', 'nmrow');
+    nr.appendChild(el('b', 'nm', g.name));
+    const wb = el('button', 'whbtn', tr('Comment l’obtenir'));
+    wb.type = 'button';
+    wb.addEventListener('click', ed.onWhere);
+    nr.appendChild(wb);
+    gt.appendChild(nr);
+  } else {
+    gt.appendChild(el('b', 'nm', g.name));
+  }
   if (ed) gt.appendChild(gearEditLine(g, ed));
   else gt.appendChild(el('span', null, [g.type, g.rar, g.lvl ? tr('niv. {n}', { n: g.lvl }) : '', g.prism ? tr('Prismatique') : ''].filter(Boolean).join(' · ')));
   if (ed && ed.maxUp) {

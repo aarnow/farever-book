@@ -492,9 +492,9 @@ def extract_display_names(game_dir):
 
 
 # the sheets whose French names the app shows
-FR_SHEETS = ("ach", "activity", "attribute", "faction", "gatherable",
-             "item", "itemType", "job", "rarity", "skill", "unit",
-             "unitType", "zone")
+FR_SHEETS = ("ach", "activity", "attribute", "element", "faction",
+             "gatherable", "item", "itemType", "job", "rarity", "skill",
+             "unit", "unitType", "zone")
 # the sheets whose French descriptions the app shows
 FR_DESC = {"ach": ("desc",), "item": ("texts.flavorDesc", "texts.desc"),
            "unit": ("texts.desc",), "skill": ("texts.desc",)}
@@ -936,6 +936,12 @@ def extract_item_icons(game_dir, out_dir):
         if isinstance(ln.get("id"), str) and isinstance(g, dict) \
                 and g.get("file") and g.get("size"):
             wanted[ln["id"]] = g
+    # the crafting jobs' tools too, as job_<id> (the gathering ones are
+    # placeholders)
+    for ln in next(s for s in cdb["sheets"] if s["name"] == "job")["lines"]:
+        g = ln.get("gfx")
+        if isinstance(g, dict) and g.get("file") and g.get("size")                 and "Placeholder" not in g["file"]:
+            wanted["job_" + ln["id"]] = g
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

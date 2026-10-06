@@ -1150,6 +1150,7 @@ function editorPanel(ed) {
         up: p.up, maxUp: p.maxUp, onUp: (v) => notify('build_piece', { field: 'up', value: v }),
         prism: p.infusable ? !!p.prism : null,
         onPrism: (v) => notify('build_piece', { field: 'prism', value: v }),
+        onWhere: () => { BUILD_WHERE = true; renderWhere(p); },
         lines,
       }));
       body.appendChild(pv);
@@ -1162,6 +1163,7 @@ function editorPanel(ed) {
     }
   }
   box.appendChild(body);
+  if (BUILD_WHERE) renderWhere(p);
   // keep where the list and the settings were scrolled, across re-renders
   list.addEventListener('scroll', () => { BUILD_SCROLL.list = list.scrollTop; });
   body.addEventListener('scroll', () => { BUILD_SCROLL.right = body.scrollTop; });
@@ -1176,6 +1178,104 @@ function editorPanel(ed) {
     }
   });
   return box;
+}
+
+/* "Comment l'obtenir": the piece's sources at its rarity, in a window. It
+   follows the piece while open (a new rarity, another piece). */
+let BUILD_WHERE = false;
+const WHERE_MAPS = new Set();   // the rows whose map is unfolded
+function renderWhere(p) {
+  let back = $('#wheremodal');
+  if (!BUILD_WHERE || !p || !p.where) {
+    if (back) back.remove();
+    BUILD_WHERE = false;
+    WHERE_MAPS.clear();
+    return;
+  }
+  // the page redraws often (the clock): only a new content redraws this
+  const sig = JSON.stringify([p.name, p.where]);
+  if (back && back.dataset.sig === sig) return;
+  if (back && back.dataset.name !== p.name) WHERE_MAPS.clear();
+  if (!back) {
+    back = el('div', 'modalback');
+    back.id = 'wheremodal';
+    back.addEventListener('mousedown', (e) => { if (e.target === back) { BUILD_WHERE = false; renderWhere(null); } });
+    document.body.appendChild(back);
+  }
+  back.textContent = '';
+  back.dataset.sig = sig;
+  back.dataset.name = p.name;
+  const w = p.where;
+  const box = el('div', 'modal wheremodal');
+  const x = el('button', 'hclose', '×');
+  x.type = 'button';
+  x.title = tr('Fermer');
+  x.addEventListener('click', () => { BUILD_WHERE = false; renderWhere(null); });
+  box.appendChild(x);
+  const head = el('div', 'phead');
+  head.appendChild(el('h3', null, p.name));
+  head.appendChild(el('div', 'whrar', tr('Comment l’obtenir en {rar}', { rar: w.rar.toLowerCase() })));
+  box.appendChild(head);
+  const body = el('div', 'whbody');
+  let n = 0;
+  const row = (r) => {
+    const key = n++;
+    const d = el('div', 'whrow');
+    d.appendChild(el('span', 'bwtag', r.k));
+    const t = el('div', 'wht');
+    const top = el('div', 'whtop');
+    // the cache's picture, or the dungeon boss's portrait
+    // the cache's picture, the dungeon boss's portrait, or the monster's
+    const pic = r.img || (r.boss && (window.__PORTRAITS__ || {})[r.boss])
+      || (r.unit && (window.__BEST__ || {})[r.unit]);
+    if (pic) { const im = el('img'); im.src = pic; im.alt = ''; top.appendChild(im); }
+    top.appendChild(el('span', null, r.t));
+    t.appendChild(top);
+    if (r.sub) r.sub.split('\n').forEach((s) => t.appendChild(el('span', 'whsub', s)));
+    // a recipe: each ingredient, its icon and how many
+    if ((r.parts || []).length) {
+      const ps = el('div', 'whparts');
+      r.parts.forEach((x) => {
+        const c = el('span', 'whpart');
+        if (x.img) { const im = el('img'); im.src = x.img; im.alt = ''; c.appendChild(im); }
+        c.appendChild(el('span', null, x.n + ' × ' + x.t));
+        ps.appendChild(c);
+      });
+      t.appendChild(ps);
+    }
+    // a merchant: where it stands, on a map unfolded on demand
+    if ((r.pins || []).length && w.meta) {
+      const mb = el('button', 'whmapbtn', WHERE_MAPS.has(key) ? tr('Masquer la carte') : tr('Voir sur la carte'));
+      mb.type = 'button';
+      mb.addEventListener('click', () => {
+        if (WHERE_MAPS.has(key)) WHERE_MAPS.delete(key); else WHERE_MAPS.add(key);
+        back.dataset.sig = '';
+        renderWhere(p);
+      });
+      t.appendChild(mb);
+      if (WHERE_MAPS.has(key)) {
+        const map = huntMiniMap({ meta: w.meta,
+          insts: r.pins.map((q) => ({ t: q.t, cls: r.pinCls || 'merchant', doors: [q] })) });
+        map.classList.add('whmap');
+        t.appendChild(map);
+        requestAnimationFrame(() => { mapIcons(); map.focusZone(null, 700); });
+      }
+    }
+    d.appendChild(t);
+    d.appendChild(el('span', 'whr', r.r));
+    return d;
+  };
+  if (w.rows.length) {
+    w.rows.forEach((r) => body.appendChild(row(r)));
+  } else if (w.other.length) {
+    body.appendChild(el('p', 'note warn', tr('Aucune source connue ne donne cette pièce en {rar}. Elle s’obtient en {base} :',
+      { rar: w.rar.toLowerCase(), base: w.base.toLowerCase() })));
+    w.other.forEach((r) => body.appendChild(row(r)));
+  } else {
+    body.appendChild(el('p', 'note', tr('Il semble que cet élément ne soit pas encore disponible en jeu.')));
+  }
+  box.appendChild(body);
+  back.appendChild(box);
 }
 
 /* One choice row: its icon, then its name and what it does. */
