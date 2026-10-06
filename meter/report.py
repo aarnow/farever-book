@@ -1,5 +1,5 @@
 """The problem report (Aide › Un problème ?): what helps understand a
-player's issue, in one text file put on the Desktop for them to send.
+player's issue, in one text file (REPORTS_DIR) for them to send.
 
 Private details are masked: the Windows user name in paths, and the players'
 names the log mentions (the player's own and others'). Nothing is sent: the
@@ -27,19 +27,8 @@ _NAMED = re.compile(r"(profile |item codex: |achievements: |map progress: )"
 _HOLDER = re.compile(r"(off )(\S+)( to the status holder)")
 
 
-def desktop_dir():
-    """The Desktop, wherever the user moved it (OneDrive...)."""
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion"
-                            r"\Explorer\User Shell Folders") as k:
-            d = Path(os.path.expandvars(winreg.QueryValueEx(k, "Desktop")[0]))
-        if d.is_dir():
-            return d
-    except OSError:
-        pass
-    d = Path.home() / "Desktop"
-    return d if d.is_dir() else DATA_HOME
+# where the reports are written (Aide: its folder button opens it)
+REPORTS_DIR = DATA_HOME / "rapports"
 
 
 def windows_version():
@@ -163,8 +152,9 @@ def build(ctx, names=()):
 
 
 def write(ctx, names=()):
-    """The report on the Desktop; its path."""
-    path = desktop_dir() / f"FareverBook-rapport-{time.strftime('%Y%m%d-%H%M')}.txt"
+    """The report in REPORTS_DIR; its path."""
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    path = REPORTS_DIR / f"FareverBook-rapport-{time.strftime('%Y%m%d-%H%M')}.txt"
     path.write_text(build(ctx, names), encoding="utf-8")
     return path
 

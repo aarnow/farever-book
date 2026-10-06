@@ -491,7 +491,7 @@ class App:
             try:
                 path = report.write(ctx, names)
                 report.show_in_folder(path)
-                msg = tr("Rapport créé sur le Bureau : {name}", name=path.name)
+                msg = tr("Rapport créé : {name}", name=path.name)
             except Exception as e:
                 print(f"[meter] report failed: {e!r}", file=sys.stderr)
                 msg = tr("Le rapport n'a pas pu être créé : {e}", e=e)
