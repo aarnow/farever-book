@@ -149,6 +149,10 @@ class App:
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
         self._ov_on = {"meter": False, "goals": False}  # shown, per overlay (alpha: off at first)
+        # locked (the mouse goes through): in the game's focus mode, or always
+        self._ov_lock_always = False
+        # hidden while the game's cursor is free (one of its windows open)
+        self._ov_hide_free = False
         self._hero_at = 0.0                 # last time the hook saw our hero
         self._action_q = []
         self._q_lock = threading.Lock()
@@ -271,6 +275,10 @@ class App:
                     self._ov_on[k] = on[k]
         if data.get("overlay_tab") in ("dmg", "heal"):
             self._ov_tab = data["overlay_tab"]
+        if isinstance(data.get("overlay_lock_always"), bool):
+            self._ov_lock_always = data["overlay_lock_always"]
+        if isinstance(data.get("overlay_hide_free"), bool):
+            self._ov_hide_free = data["overlay_hide_free"]
 
     def _save_settings(self):
         try:
@@ -289,6 +297,8 @@ class App:
                 "overlay_pos": self._ov_pos,
                 "overlay_on": self._ov_on,
                 "overlay_tab": self._ov_tab,
+                "overlay_lock_always": bool(self._ov_lock_always),
+                "overlay_hide_free": bool(self._ov_hide_free),
             }, indent=2))
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
@@ -725,6 +735,8 @@ class App:
             "ov_toggle_meter": lambda: self._ov_toggle("meter"),
             "ov_toggle_goals": lambda: self._ov_toggle("goals"),
             "ov_reset": self._ov_reset,
+            "ov_lock": self._ov_lock_toggle,
+            "ov_hide_free": self._ov_hide_toggle,
             "goal_search": lambda p: G.search(p.get("q")),
             "goal_add": self._goal_add,
             "goal_del": lambda p: self.goals.remove(p.get("id")),
@@ -1420,6 +1432,14 @@ class App:
             self._ov_on[oid] = not self._ov_on[oid]
             self._save_settings()
 
+    def _ov_hide_toggle(self):
+        self._ov_hide_free = not self._ov_hide_free
+        self._save_settings()
+
+    def _ov_lock_toggle(self):
+        self._ov_lock_always = not self._ov_lock_always
+        self._save_settings()
+
     def _ov_reset(self):
         self._ov_pos = {}
         self._save_settings()
@@ -1442,7 +1462,9 @@ class App:
         show = bool(win and not win[2] and fg and fg in ours and in_world
                     and any(self._ov_on.values()))
         spec = {"show": show, "game": list(win[1]) if win else None,
-                "pos": self._ov_pos, "on": dict(self._ov_on)}
+                "pos": self._ov_pos, "on": dict(self._ov_on),
+                "lock": "always" if self._ov_lock_always else "auto",
+                "hideFree": bool(self._ov_hide_free)}
         if not show:
             return spec
         rows, duration, _holding, in_combat = self._live
@@ -2235,6 +2257,14 @@ class App:
              "t": self._tick(self._ov_on["meter"], tr("Compteur du groupe"))},
             {"k": "button", "id": "ov_toggle_goals",
              "t": self._tick(self._ov_on["goals"], tr("Objectifs"))},
+            {"k": "button", "id": "ov_lock",
+             "t": self._tick(self._ov_lock_always,
+                             tr("Toujours verrouillés (la souris les "
+                                "traverse)"))},
+            {"k": "button", "id": "ov_hide_free",
+             "t": self._tick(self._ov_hide_free,
+                             tr("Masquer quand une interface du jeu est "
+                                "ouverte"))},
             {"k": "button", "id": "ov_reset",
              "t": tr("Remettre les overlays à leur place par défaut")},
             {"k": "note", "t": tr("Les overlays s'affichent par-dessus le "
@@ -2245,6 +2275,23 @@ class App:
                                   "plus proche de l'écran (grille de {n} px) "
                                   "et garde cette distance si la taille du "
                                   "jeu change.", n=OVERLAY_GRID)},
+            {"k": "note", "t": tr("Quand tu joues souris capturée (la "
+                                  "caméra suit la souris, curseur caché), "
+                                  "les overlays se verrouillent tout seuls : "
+                                  "la souris les traverse, et un clic ne "
+                                  "peut plus interrompre ton personnage. "
+                                  "Curseur libre, ils se déplacent à "
+                                  "nouveau. Toujours verrouillés : ils ne se "
+                                  "déplacent plus, décoche pour les "
+                                  "replacer.")},
+            {"k": "note", "t": tr("Masquer quand une interface du jeu est "
+                                  "ouverte : les overlays disparaissent quand "
+                                  "une fenêtre du jeu libère le curseur "
+                                  "(inventaire, carte, fiche du "
+                                  "personnage…) et reviennent en combat. "
+                                  "Afficher la souris avec Alt les garde "
+                                  "visibles, pour les utiliser ou les "
+                                  "déplacer.")},
         ]
 
     def _settings_display(self):

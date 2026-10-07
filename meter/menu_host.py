@@ -238,7 +238,39 @@ class AppWindow:
                 o.attach()
             except Exception as e:
                 _log(f"overlay {o.id} attach failed: {e!r}")
+        if self.overlays:
+            threading.Thread(target=self._lock_loop, daemon=True,
+                             name="overlay-lock").start()
         self.pipe.send({"t": "ready"})
+
+    def _lock_loop(self):
+        """Lock the shown overlays while the game holds the mouse (or
+        always): looked at every LOCK_POLL_SECS, faster than a click."""
+        was = None
+        by_alt = False          # the cursor freed with Alt: the player's own
+        u = ctypes.windll.user32
+        while True:
+            try:
+                held = cursor_captured()
+                # Alt (the game's FreeCursor) shows the mouse to use what is
+                # on screen, the overlays too: only a game window (inventory,
+                # map...) frees it without
+                alt = bool(u.GetAsyncKeyState(0x12) & 0x8000)   # VK_MENU
+                if held != was:
+                    by_alt = not held and alt
+                    _log(f"overlay: game cursor {'held' if held else 'free'}"
+                         + (" (Alt)" if by_alt else ""))
+                    was = held
+                elif not held and alt:
+                    by_alt = True
+                window_open = not held and not by_alt
+                for o in self.overlays:
+                    o.set_free_hidden(o.hide_free and window_open)
+                    if o.shown or o.locked:
+                        o.set_locked(o.lock_mode == "always" or held)
+            except Exception as e:
+                _log(f"overlay lock failed: {e!r}")
+            time.sleep(LOCK_POLL_SECS)
 
     def _on_geom(self, *_a):
         if not self.hwnd:
@@ -430,6 +462,36 @@ class AppWindow:
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = 0x80, 0x40000
 WS_EX_NOACTIVATE = 0x08000000
+# locked: the mouse goes through (a layered window, transparent to clicks),
+# so a click while aiming never lands on an overlay instead of the game
+WS_EX_LAYERED, WS_EX_TRANSPARENT = 0x80000, 0x20
+LWA_ALPHA = 0x2
+LOCK_POLL_SECS = 0.05               # how often the game's cursor is looked at
+
+
+class _CURSORINFO(ctypes.Structure):
+    _fields_ = [("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD),
+                ("hCursor", ctypes.c_void_p), ("pt", wintypes.POINT)]
+
+
+def cursor_captured():
+    """The game holds the mouse (its "focus" mode: aiming, the camera on
+    the mouse): the cursor hidden, or held inside a smaller rectangle than
+    the screens."""
+    u = ctypes.windll.user32
+    ci = _CURSORINFO()
+    ci.cbSize = ctypes.sizeof(_CURSORINFO)
+    if u.GetCursorInfo(ctypes.byref(ci)) and (
+            not (ci.flags & 1) or not ci.hCursor):       # CURSOR_SHOWING
+        return True
+    clip = wintypes.RECT()
+    if u.GetClipCursor(ctypes.byref(clip)):
+        vx, vy = u.GetSystemMetrics(76), u.GetSystemMetrics(77)
+        vw, vh = u.GetSystemMetrics(78), u.GetSystemMetrics(79)
+        if (clip.left > vx or clip.top > vy
+                or clip.right < vx + vw or clip.bottom < vy + vh):
+            return True
+    return False
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
 OVERLAY_IDS = ("meter", "goals")
@@ -469,6 +531,11 @@ class Overlay:
         self._last = None
         self.game = None
         self.pos = None
+        self.lock_mode = "auto"             # "auto" (in focus mode) or "always"
+        self.locked = False
+        self.hide_free = False              # hidden while the cursor is free
+        self.free_hidden = False            # ...and it is: a game window is open
+        self.wanted = False                 # the meter wants it shown
         self.window = webview.create_window(
             f"Farever Book — {oid}", html=_overlay_document(oid, theme, lang),
             width=self.size[0], height=self.size[1], x=-4000, y=-4000,
@@ -490,8 +557,40 @@ class Overlay:
         u.ShowWindow(self.hwnd, SW_HIDE)
         ex = u.GetWindowLongW(self.hwnd, GWL_EXSTYLE)
         u.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
-                         (ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)
-                         & ~WS_EX_APPWINDOW)
+                         (ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
+                          | WS_EX_LAYERED) & ~WS_EX_APPWINDOW)
+        # layered, fully opaque: only WS_EX_TRANSPARENT changes (set_locked)
+        u.SetLayeredWindowAttributes(self.hwnd, 0, 255, LWA_ALPHA)
+
+    def set_free_hidden(self, on):
+        """Out of the way while the game's cursor is free (a game window
+        open: inventory, map...), back in its focus mode. Never while a goal
+        is typed or the overlay dragged."""
+        on = bool(on) and self.typing is None and not self.dragging
+        if not self.hwnd or on == self.free_hidden:
+            return
+        self.free_hidden = on
+        u = ctypes.windll.user32
+        if on and self.shown:
+            u.ShowWindow(self.hwnd, SW_HIDE)
+            self.shown = False
+        elif not on and self.wanted and not self.shown:
+            self._place()
+            u.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+            self.shown = True
+
+    def set_locked(self, on):
+        """Locked: clicks go through to the game. Never while a goal is typed
+        or the overlay dragged."""
+        on = bool(on) and self.typing is None and not self.dragging
+        if not self.hwnd or on == self.locked:
+            return
+        self.locked = on
+        u = ctypes.windll.user32
+        ex = u.GetWindowLongW(self.hwnd, GWL_EXSTYLE)
+        u.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
+                         ex | WS_EX_TRANSPARENT if on
+                         else ex & ~WS_EX_TRANSPARENT)
 
     def set_theme(self, theme):
         try:
@@ -516,9 +615,12 @@ class Overlay:
                 _log(f"overlay {self.id} push failed: {e!r}")
         self.game = d.get("game")
         self.pos = (d.get("pos") or {}).get(self.id)
+        self.lock_mode = d.get("lock") or "auto"
+        self.hide_free = bool(d.get("hideFree"))
         u = ctypes.windll.user32
         on = (d.get("on") or {}).get(self.id, True)
-        if d.get("show") and on and self.game:
+        self.wanted = bool(d.get("show") and on and self.game)
+        if self.wanted and not self.free_hidden:
             if not self.dragging:
                 self._place()
             if not self.shown:
