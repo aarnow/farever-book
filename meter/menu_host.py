@@ -220,6 +220,8 @@ class AppWindow:
         self.tip = None
         # the goals' chooser, in the middle of the game
         self.picker = None
+        # a button over the game's menu (Échap): the app, its overlays
+        self.esc = None
         if self.overlays:
             try:
                 self.tip = Tip(pipe, self._lang)
@@ -231,6 +233,10 @@ class AppWindow:
                 PICKER[0] = self.picker
             except Exception as e:
                 _log(f"goal chooser unavailable: {e!r}")
+            try:
+                self.esc = EscButton(pipe, self._lang)
+            except Exception as e:
+                _log(f"menu button unavailable: {e!r}")
 
     def attach(self):
         """Once the native window exists: restore the saved geometry, tell the
@@ -252,7 +258,8 @@ class AppWindow:
                 max(int(self._want["w"]), MIN_W),
                 max(int(self._want["h"]), MIN_H), flags)
         for o in (self.overlays + ([self.tip] if self.tip else [])
-                  + ([self.picker] if self.picker else [])):
+                  + ([self.picker] if self.picker else [])
+                  + ([self.esc] if self.esc else [])):
             try:
                 o.attach()
             except Exception as e:
@@ -300,6 +307,13 @@ class AppWindow:
                     o.set_free_hidden((o.hide_free and window_open) or loading)
                     if o.shown or o.locked:
                         o.set_locked(o.lock_mode == "always" or held)
+                # the game's menu open: its button above it
+                if self.esc is not None:
+                    own = next((o for o in self.overlays if o.game), None)
+                    # only over the game in front: not over another window
+                    menu = (gc[4] if fresh and not loading and own is not None
+                            and own.front else None)
+                    self.esc.follow(own and (own.client or own.game[:2]), menu)
                 tip = self.tip
                 if tip is not None and tip.shown:
                     # the mouse taken back by the game, or its overlay gone:
@@ -401,7 +415,8 @@ class AppWindow:
                 self.picker.hide()
         elif t == "cursor":
             self._game_cursor = (bool(msg.get("win")), bool(msg.get("alt")),
-                                 time.monotonic(), bool(msg.get("load")))
+                                 time.monotonic(), bool(msg.get("load")),
+                                 msg.get("menu"))
         elif t == "model":
             try:
                 self.window.evaluate_js(
@@ -471,7 +486,8 @@ class AppWindow:
               + json.dumps(_i18n_json(lang)) + ")")
         for w in ([self.window] + [o.window for o in self.overlays]
                   + ([self.tip.window] if self.tip else [])
-                  + ([self.picker.window] if self.picker else [])):
+                  + ([self.picker.window] if self.picker else [])
+                  + ([self.esc.window] if self.esc else [])):
             try:
                 w.evaluate_js(js)
             except Exception as e:
@@ -586,6 +602,8 @@ class Overlay:
         self.typing = None                  # the window to give the keys back to
         self._last = None
         self.game = None
+        self.client = None                  # the game's drawing area's corner
+        self.front = False                  # the game in front
         self.pos = None
         self.lock_mode = "auto"             # "auto" (in focus mode) or "always"
         self.locked = False
@@ -673,6 +691,8 @@ class Overlay:
             except Exception as e:
                 _log(f"overlay {self.id} push failed: {e!r}")
         self.game = d.get("game")
+        self.client = d.get("client")
+        self.front = bool(d.get("gameFront"))
         self.pos = (d.get("pos") or {}).get(self.id)
         self.lock_mode = d.get("lock") or "auto"
         self.hide_free = bool(d.get("hideFree"))
@@ -1006,6 +1026,71 @@ class Picker(Overlay):
         pass
 
 
+class EscButton(Overlay):
+    """A button over the game's own menu (ui.win.EscapeMenu, Échap): the
+    app brought forward on its overlays' settings. Placed from the menu's
+    place the hook reads, centred over it."""
+
+    def __init__(self, pipe, lang):
+        super().__init__("esc", pipe, "default", lang)
+        self.at = None
+
+    def follow(self, origin, menu):
+        """Over the menu (the game's pixels from its drawing area's corner,
+        `origin` on the screen), hidden without one."""
+        if not self.hwnd:
+            return
+        u = ctypes.windll.user32
+        if not origin or not menu or len(menu) != 4 or menu[2] <= 0:
+            if self.shown:
+                u.ShowWindow(self.hwnd, SW_HIDE)
+                self.shown = False
+            return
+        gx, gy = origin[0], origin[1]
+        mx, my, mw, _mh = menu
+        w, h = self.size
+        x = int(gx + mx + (mw - w) / 2)
+        y = int(gy + my - h - ESC_GAP)
+        if (x, y, w, h) != self.at:
+            self.at = (x, y, w, h)
+            u.SetWindowPos(self.hwnd, HWND_TOPMOST, x, y, int(w), int(h),
+                           SWP_NOACTIVATE)
+            self._shape()
+        if not self.shown:
+            _log(f"menu button: game menu at {menu}, origin {origin}, "
+                 f"button at {self.at}")
+            u.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+            self.shown = True
+            try:
+                self.window.evaluate_js("window.openEsc && window.openEsc()")
+            except Exception:
+                pass
+
+    def _place(self):
+        pass
+
+    def _shape(self):
+        w, h = self.size
+        if (w, h) == getattr(self, "_shaped", None):
+            return
+        self._shaped = (w, h)
+        d = 12
+        rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)
+        ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+
+    def act(self, action, arg=None):
+        if action == "size" and arg and self.hwnd:
+            self.size = (max(int(arg[0]), 40), max(int(arg[1]), 20))
+            self.at = None
+        return None
+
+    def update(self, d):
+        pass
+
+
+ESC_GAP = 10            # between the button and the game's menu
+
+
 _FRAME = []
 
 
@@ -1120,7 +1205,7 @@ def _ui_cursor(name):
 
 
 def _overlay_document(oid, theme, lang):
-    frame = _ui_frame() if oid != "tip" else ""
+    frame = _ui_frame() if oid not in ("tip", "esc") else ""
     # the game's own cursors over the overlays, its hotspot the top-left
     arrow, hand = _ui_cursor("default"), _ui_cursor("button")
     cls = (["framed"] if frame else []) + (["gcur"] if arrow and hand else [])

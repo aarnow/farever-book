@@ -192,7 +192,8 @@ function render() {
   const st = OV.style || {};
   box.style.zoom = (st.scale || 100) / 100;
   sizeSoon();
-  if (OV_ID === 'tip') renderTip(box);
+  if (OV_ID === 'esc') renderEsc(box);
+  else if (OV_ID === 'tip') renderTip(box);
   else if (OV_ID === 'picker') renderPicker(box);
   else if (OV_ID === 'meter') renderMeter(box);
   else if (OV_ID === 'luck') renderLuck(box);
@@ -563,6 +564,15 @@ function renderList(into) {
     list.appendChild(el('div', 'note', tr('Banque pas encore lue : ouvre-la une fois en jeu.')));
   }
 }
+
+/* ---- the button over the game's menu (menu_host.EscButton) ------------ */
+window.openEsc = function () { OV = OV || {}; render(); };
+function renderEsc(box) {
+  box.className = 'escbox';
+  box.appendChild(btn('escbtn', tr('Farever Book - Overlay'), null,
+    () => api() && api().notify('esc_open')));
+}
+if (OV_ID === 'esc') { OV = {}; setTimeout(render, 0); }
 
 /* ---- the goals' chooser (menu_host.Picker) ------------------------------
    A kind of thing, then (gear, weapons, resources) a narrower one as the

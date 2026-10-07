@@ -33,7 +33,7 @@ from common import (
     element_color, element_label, message_box)
 from winsys import (
     HK_RESET, REBIND_TO, RESET_BIND, VK_CONTROL, VK_MENU, VK_MOUSE, VK_SHIFT,
-    VK_UNBINDABLE, WM_REBIND, _monitor_containing, bind_label,
+    VK_UNBINDABLE, WM_REBIND, _monitor_containing, bind_label, client_origin,
     copy_image_to_clipboard, copy_text_to_clipboard, foreground_pid,
     game_window, quit_requested, start_hotkeys)
 import goals as G
@@ -744,6 +744,7 @@ class App:
             "ov_lock": self._ov_lock_toggle,
             "ov_hide_free": self._ov_hide_toggle,
             "ov_style": self._ov_set_style,
+            "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
                                                 self._learnt()),
             "goal_add": self._goal_add,
@@ -1497,6 +1498,13 @@ class App:
         self._ov_hide_free = not self._ov_hide_free
         self._save_settings()
 
+    def _esc_open(self):
+        """The button over the game's menu: the app in front, on its
+        overlays' settings."""
+        self._set_tab("Settings")
+        self._settings_topic = "overlay"
+        self.menubridge.send({"t": "show"})
+
     def _ov_set_style(self, p):
         """An overlay's opacity and size, from its settings (the gear): shown
         at once while a slider moves, saved once it is let go."""
@@ -1533,6 +1541,10 @@ class App:
         show = bool(win and not win[2] and fg and fg in ours and in_world
                     and any(self._ov_on.values()))
         spec = {"show": show, "game": list(win[1]) if win else None,
+                # the game's drawing area's corner: its own coordinates' 0, 0
+                "client": client_origin(win[0]) if win else None,
+                # the game itself in front (not one of our windows)
+                "gameFront": bool(win and fg == self.target_pid),
                 "pos": {k: dict(v) for k, v in self._ov_pos.items()},
                 "on": dict(self._ov_on),
                 "lock": "always" if self._ov_lock_always else "auto",
@@ -1771,7 +1783,8 @@ class App:
         which hide for a window but stay for the key. Hook thread."""
         self.menubridge.send({"t": "cursor", "win": bool(p.get("win")),
                               "alt": bool(p.get("alt")),
-                              "load": bool(p.get("load"))})
+                              "load": bool(p.get("load")),
+                              "menu": p.get("menu") or None})
 
     def on_character(self, p):
         """The players around (roster) or one player's profile, from the

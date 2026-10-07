@@ -370,3 +370,12 @@ html:not([style*="--cross"]) .pkx::after { content: "×"; color: #886B56; font-s
         border: 1px solid rgba(74, 50, 41, .45); background: rgba(255, 246, 230, .2); color: #4A3229; cursor: pointer; }
 .mfit:hover { background: rgba(255, 246, 230, .4); color: var(--ov-text); }
 .mline.sized .mfit { display: grid; }
+
+/* the button over the game's menu: the game's own button */
+#ov.escbox { min-width: 0; max-width: none; border: 0; border-radius: 6px; background: none; overflow: hidden; }
+html:has(#ov.escbox), html:has(#ov.escbox) body { background: #B1978D; }
+.escbtn { display: block; padding: 9px 28px; border: 0; border-radius: 6px; background: #B1978D; color: #fff;
+          font: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer;
+          transition: background .12s; }
+.escbtn:hover { background: #8A5F46; }
+html:has(#ov.escbox:hover), html:has(#ov.escbox:hover) body { background: #8A5F46; }

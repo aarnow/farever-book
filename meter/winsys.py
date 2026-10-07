@@ -994,6 +994,17 @@ def release_instance_lock():
 # ---------------------------------------------------------------------------
 # The game's window
 # ---------------------------------------------------------------------------
+def client_origin(hwnd):
+    """Where a window's drawing area starts on the screen (past its frame
+    and title bar), physical pixels; None when unknown."""
+    if not hwnd or sys.platform != "win32":
+        return None
+    pt = wintypes.POINT(0, 0)
+    if not ctypes.windll.user32.ClientToScreen(hwnd, ctypes.byref(pt)):
+        return None
+    return [pt.x, pt.y]
+
+
 def game_window(pid):
     """(hwnd, (x, y, w, h), minimised) of the largest visible top-level window
     of process `pid` — the game's — or None. Physical pixels."""

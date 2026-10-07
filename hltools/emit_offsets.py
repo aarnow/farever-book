@@ -112,6 +112,13 @@ def hook_layout(code):
     dact = offs("st.activity.Dungeon")
     lobby = offs("st.player.InstanceLobby")
     gameapp = offs("GameApp")
+    baseui = offs("ui.BaseUI")
+    # the game's menu (Échap): an h2d.Flow, its place absolute, its scale
+    escmenu = offs("ui.win.EscapeMenu")
+    # the 2D scene, drawn at its own size and scaled to the window: on the
+    # window, x * viewportScaleX + offsetX (h2d.Scene)
+    hxdapp = offs("hxd.App")
+    scene = offs("h2d.Scene")
     # a currency held: {amount, kind} (st.Loadout.addCurrency reads them)
     cproxy = offs("hxbit.ObjProxy_Oamount_Int_kind_Data_ItemKind")
 
@@ -245,7 +252,16 @@ def hook_layout(code):
         "GameApp": {"playerRequestedFreeCursor":
                     gameapp["playerRequestedFreeCursor"][0],
                     # loading while it is not 10 (GameApp.get_isLoading)
-                    "loadingState": gameapp["loadingState"][0]},
+                    "loadingState": gameapp["loadingState"][0],
+                    "baseUI": gameapp["baseUI"][0]},
+        "App": {"s2d": hxdapp["s2d"][0]},
+        "Scene": {k: scene[k][0] for k in
+                  ("viewportScaleX", "viewportScaleY", "offsetX", "offsetY")},
+        # its open windows (ui.BaseUI.anyWindow walks them)
+        "BaseUI": {"windows": baseui["windows"][0]},
+        "UIFlow": {k: escmenu[k][0] for k in
+                   ("absX", "absY", "matA", "matD",
+                    "calculatedWidth", "calculatedHeight")},
         # The codex (measured 2026-08-05): Progress.unitsProgress -> MapData.map
         # (a virtual, the StringMap at +8) -> StringMap.h -> hbget(unitKind)
         # -> {killCount, rank}. Every unit set has three tiers: rank 3 = done.

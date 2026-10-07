@@ -427,11 +427,42 @@ function cursorTick() {
         if (OFF.GameApp.loadingState != null) {
             try { load = app.add(OFF.GameApp.loadingState).readS32() !== 10 ? 1 : 0; } catch (e) {}
         }
-        const s = win + ":" + alt + ":" + load;
+        // the game's menu (Échap) open: where it is, in the game's pixels
+        let menu = 0;
+        if (OFF.GameApp.baseUI != null && OFF.BaseUI && OFF.UIFlow) {
+            try {
+                const ui = app.add(OFF.GameApp.baseUI).readPointer();
+                const wins = (ui && !ui.isNull())
+                    ? arrayObjItems(ui.add(OFF.BaseUI.windows).readPointer(), 32) : [];
+                for (let i = 0; i < wins.length; i++) {
+                    if (typeName(wins[i]) !== "ui.win.EscapeMenu") continue;
+                    const F = OFF.UIFlow, w = wins[i];
+                    // the scene's pixels to the window's (h2d.Scene: scaled
+                    // to the window, offset when its ratio differs)
+                    let sx = 1, sy = 1, ox = 0, oy = 0;
+                    if (OFF.App && OFF.Scene) {
+                        const s2d = app.add(OFF.App.s2d).readPointer();
+                        if (s2d && !s2d.isNull()) {
+                            sx = s2d.add(OFF.Scene.viewportScaleX).readDouble() || 1;
+                            sy = s2d.add(OFF.Scene.viewportScaleY).readDouble() || 1;
+                            ox = s2d.add(OFF.Scene.offsetX).readDouble() || 0;
+                            oy = s2d.add(OFF.Scene.offsetY).readDouble() || 0;
+                        }
+                    }
+                    menu = [w.add(F.absX).readDouble() * sx + ox,
+                            w.add(F.absY).readDouble() * sy + oy,
+                            w.add(F.calculatedWidth).readDouble() * w.add(F.matA).readDouble() * sx,
+                            w.add(F.calculatedHeight).readDouble() * w.add(F.matD).readDouble() * sy]
+                        .map(Math.round);
+                    break;
+                }
+            } catch (e) {}
+        }
+        const s = win + ":" + alt + ":" + load + ":" + menu;
         if (s !== cursorLast || now - cursorSent > 1000) {
             cursorLast = s;
             cursorSent = now;
-            send({ kind: "cursor", win: win, alt: alt, load: load });
+            send({ kind: "cursor", win: win, alt: alt, load: load, menu: menu });
         }
     } catch (e) {}
 }
