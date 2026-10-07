@@ -920,6 +920,24 @@ class App:
                              "Le détail est dans le journal.", e=e)}]
 
     # ---- live
+    def _ranking(self, rows, duration, heal, focus=None,
+                 limit=MAX_PLAYER_ROWS * 3):
+        """One ranking as the rift reports draw it (report.js rankTable):
+        damage or heals, best first, a bar against the best."""
+        val = (lambda p: p.heal_total) if heal else (lambda p: p.total)
+        got = sorted((p for p in rows if val(p) > 0), key=lambda p: -val(p))
+        total = sum(val(p) for p in got) or 1.0
+        top = val(got[0]) if got else 1.0
+        return [{"rank": i, "name": p.name, "me": bool(p.is_me),
+                 "cls": _class_tag(self.world.class_of(p.name)),
+                 "ck": class_key(self.world.class_of(p.name)),
+                 "rate": _n(val(p) / duration) if duration > 0 else "—",
+                 "total": _n(val(p)),
+                 "pct": f"{val(p) / total * 100:.0f}%",
+                 "f": round(val(p) / top, 4),
+                 "on": p.name == focus}
+                for i, p in enumerate(got[:limit], 1)]
+
     def _page_live(self):
         rows, duration, holding, in_combat = self._live
         online = self.game_connected()
@@ -968,30 +986,15 @@ class App:
         out = [{"k": "toolbar", "id": "live_tools", "btns": tools},
                {"k": "cards", "id": "live_cards", "items": cards}]
         focus = self._resolve_focus(rows)
-        top_dmg = max((p.total for p in rows), default=0.0) or 1.0
-        top_heal = max((p.heal_total for p in rows), default=0.0) or 1.0
-        meter_rows = []
-        for i, p in enumerate(rows[:MAX_PLAYER_ROWS * 3], 1):
-            meter_rows.append({
-                "rank": i, "name": p.name, "me": bool(p.is_me),
-                "cls": _class_tag(self.world.class_of(p.name)),
-                "ck": class_key(self.world.class_of(p.name)),
-                "dmg": _n(p.total),
-                "dps": _n(p.total / duration) if duration > 0 else "—",
-                "pct": f"{(p.total / party_total * 100) if party_total else 0:.0f}%",
-                "heal": _n(p.heal_total),
-                "over": (f"{p.overheal_pct:.0f}%" if p.heal_total > 0.5
-                         else ""),
-                "df": round(p.total / top_dmg, 4),
-                "hf": round(p.heal_total / top_heal, 4),
-                "hsf": round(p.heal_self / top_heal, 4),
-                "focus": p.name == focus})
         title = (tr("GROUPE") if self.mode == "party"
                  else tr("TOUS LES JOUEURS"))
         if holding:
             title = tr("{title} · DERNIER COMBAT", title=title)
+        # the rift reports' rankings: damage, then heals when shown
         out.append({"k": "meter", "id": "meter", "title": title,
-                    "heal": bool(self._show_heal), "rows": meter_rows,
+                    "dmg": self._ranking(rows, duration, False, focus),
+                    "heal": (self._ranking(rows, duration, True, focus)
+                             if self._show_heal else None),
                     "empty": (tr("En attente d'un combat…") if online else
                               tr("Lance Farever : le compteur se remplit dès "
                                  "le premier combat."))})
@@ -1467,29 +1470,19 @@ class App:
                 "hideFree": bool(self._ov_hide_free)}
         if not show:
             return spec
-        rows, duration, _holding, in_combat = self._live
-        group = [p for p in rows if p.in_party] or [p for p in rows
-                                                    if p.is_me]
+        # the live tab's very rows (its mode, its resets, its last fight):
+        # only a view of them
+        rows, duration, holding, in_combat = self._live
         # the heal tab only while the heal columns are on
         heal = self._show_heal and self._ov_tab == "heal"
-        group.sort(key=lambda p: -(p.heal_total if heal else p.total))
-        top = max(((p.heal_total if heal else p.total) for p in group),
-                  default=0.0) or 1.0
-        total = sum((p.heal_total if heal else p.total) for p in group)
+        title = tr("Groupe") if self.mode == "party" else tr("Tous les joueurs")
         spec["meter"] = {
             "tab": "heal" if heal else "dmg",
             "heals": bool(self._show_heal),
+            "title": title + (" · " + tr("dernier combat") if holding else ""),
             "time": _mmss(duration) if duration > 0 else "",
             "fight": bool(in_combat),
-            "total": _n(total) if total else "",
-            "rows": [{"n": p.name, "me": bool(p.is_me),
-                      "ck": class_key(self.world.class_of(p.name)),
-                      "v": _n(p.heal_total if heal else p.total),
-                      "ps": (_n((p.heal_total if heal else p.total) / duration)
-                             if duration > 0 else ""),
-                      "f": round((p.heal_total if heal else p.total) / top, 4)}
-                     for p in group[:8]
-                     if (p.heal_total if heal else p.total) > 0]}
+            "rows": self._ranking(rows, duration, heal, limit=8)}
         spec["goals"] = self.goals.view()
         return spec
 

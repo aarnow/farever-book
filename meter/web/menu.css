@@ -2572,6 +2572,11 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .rk.rkfill .nm { color: #fff; }
 .rk.rkfill.zero .nm { color: var(--faint); }
 .rk.rkfill + .rk.rkfill { border-top: 1px solid rgba(0, 0, 0, .35); }
+/* the live tab: the player shown below framed; the heals' title clear of
+   the damage table */
+.rk.rkfill.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.panel.meter .rktbl { margin-top: 6px; }
+.panel.meter .sub2.rtab { margin-top: 16px; }
 
 /* ---- reports: no frame of their own, the phases are the blocks ------------- */
 .panel.report { background: transparent; border: 0; box-shadow: none; padding: 0; }

@@ -51,6 +51,74 @@ def windows_version():
         return platform.platform()
 
 
+# what can keep Frida's module out of the game, read in one PowerShell run:
+# the exploit protection rules switched on (system wide, and for the game),
+# and Defender's recent detections naming the app, the game or Frida
+_SECURITY_PS = r"""
+function On($o, $tag) {
+  foreach ($pol in $o.PSObject.Properties) {
+    $v = $pol.Value
+    if ($v -and $v.PSObject) {
+      foreach ($f in $v.PSObject.Properties) {
+        if ("$($f.Value)" -eq 'ON') { "$tag $($pol.Name).$($f.Name)" }
+      }
+    }
+  }
+}
+try { On (Get-ProcessMitigation -System -ErrorAction Stop) 'SYS' } catch { 'SYS ?' }
+try { On (Get-ProcessMitigation -Name Farever.exe -ErrorAction Stop) 'GAME' } catch {}
+try {
+  Get-MpThreatDetection -ErrorAction Stop |
+    Where-Object { ($_.Resources -join ' ') -match 'frida|FareverBook|Farever' } |
+    Sort-Object InitialDetectionTime -Descending | Select-Object -First 5 |
+    ForEach-Object { "DET $($_.InitialDetectionTime.ToString('yyyy-MM-dd HH:mm')) $($_.ThreatID) $(($_.Resources -join ' ; '))" }
+} catch { 'DET ?' }
+"""
+
+# programs known to hook into games themselves (overlays, capture, tuning):
+# two tools injecting into the same game can get in each other's way
+INJECTORS = {"rtss.exe": "RivaTuner (RTSS)",
+             "msiafterburner.exe": "MSI Afterburner",
+             "overwolf.exe": "Overwolf", "razercortex.exe": "Razer Cortex",
+             "obs64.exe": "OBS Studio", "medal.exe": "Medal",
+             "xsplit.core.exe": "XSplit", "bdcam.exe": "Bandicam",
+             "fraps.exe": "Fraps", "steelseriesgg.exe": "SteelSeries GG",
+             "discord.exe": "Discord (overlay possible)",
+             "nvidia overlay.exe": "NVIDIA overlay",
+             "reshade.exe": "ReShade"}
+
+
+def security():
+    """(exploit protection rules on: system, game ; Defender detections),
+    each a list of lines, or "?" when Windows did not answer."""
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", _SECURITY_PS],
+            capture_output=True, text=True, timeout=20,
+            creationflags=CREATE_NO_WINDOW).stdout
+    except (OSError, subprocess.SubprocessError):
+        return "?", "?", "?"
+    sys_, game, det = [], [], []
+    for line in out.splitlines():
+        tag, _, rest = line.strip().partition(" ")
+        {"SYS": sys_, "GAME": game, "DET": det}.get(tag, []).append(rest)
+    unknown = (lambda lst: "?" if lst == ["?"] else lst)
+    return unknown(sys_), unknown(game), unknown(det)
+
+
+def injectors():
+    """The running programs that hook into games, by their names."""
+    try:
+        out = subprocess.run(["tasklist", "/fo", "csv", "/nh"],
+                             capture_output=True, text=True, timeout=10,
+                             creationflags=CREATE_NO_WINDOW).stdout
+    except (OSError, subprocess.SubprocessError):
+        return "?"
+    running = {ln.split('","')[0].strip('"').lower()
+               for ln in out.splitlines() if ln.startswith('"')}
+    return [name for exe, name in INJECTORS.items() if exe in running]
+
+
 def antivirus():
     """The antivirus programs Windows knows of, and whether each is on."""
     try:
@@ -117,6 +185,22 @@ def _tail(path, n):
             for ln in lines[-n:]]
 
 
+def _security_lines():
+    """The report's lines on what can block the game's reading module."""
+    rules_sys, rules_game, det = security()
+    show = (lambda v: "?" if v == "?" else ", ".join(v) if v
+            else "aucune")
+    inj = injectors()
+    out = [f"Protection contre les exploits (système) : {show(rules_sys)}",
+           f"Protection contre les exploits (Farever.exe) : {show(rules_game)}",
+           f"Logiciels qui s'injectent dans les jeux : {show(inj)}",
+           f"Alertes Defender (Farever, frida) : "
+           f"{'?' if det == '?' else len(det) or 'aucune'}"]
+    if det != "?":
+        out += [f"  {d}" for d in det]
+    return out
+
+
 def build(ctx, names=()):
     """The report's text. `ctx`: what the app knows (lang, theme, game dir,
     the link's state, its steps, the last connection error)."""
@@ -130,6 +214,7 @@ def build(ctx, names=()):
            f"Lancée en administrateur : {'oui' if is_admin() else 'non'}",
            f"Antivirus : {antivirus()}",
            f"Smart App Control : {smart_app_control()}",
+           *_security_lines(),
            f"Dossier temporaire en caractères simples : "
            f"{'oui' if tmp.isascii() else 'NON (accents ou caractères spéciaux)'}",
            f"Langue : {ctx.get('lang')}, thème : {ctx.get('theme')}",

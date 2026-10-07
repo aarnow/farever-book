@@ -2,40 +2,20 @@
 
 /* ---- live nodes --------------------------------------------------------- */
 function buildMeter(n) {
-  const p = el('div', 'panel meter' + (n.heal ? ' heal' : ''));
+  const p = el('div', 'panel meter');
   p.appendChild(el('h3', null, n.title));
-  if (!n.rows || !n.rows.length) {
+  if (!(n.dmg || []).length) {
     p.appendChild(el('div', 'empty', n.empty));
     return p;
   }
-  const head = el('div', 'mline mhead');
-  ['#', tr('Joueur'), tr('Cl.'), tr('Dégâts'), 'DPS', '%']
-    .concat(n.heal ? [tr('Soins'), tr('Excès')] : [])
-    .forEach((h, i) => head.appendChild(el('span', i > 2 ? 'num' : '', h)));
-  p.appendChild(head);
-  n.rows.forEach((r) => {
-    const row = el('div', 'mrow' + (r.me ? ' me' : '') + (r.focus ? ' focus' : ''));
-    const line = el('div', 'mline');
-    line.appendChild(el('span', 'rank', r.rank));
-    line.appendChild(el('span', 'who', r.name));
-    const c = el('span', 'cls');
-    c.appendChild(classEl(r.cls, r.ck));
-    line.appendChild(c);
-    line.appendChild(el('span', 'num', r.dmg));
-    line.appendChild(el('span', 'num', r.dps));
-    line.appendChild(el('span', 'num', r.pct));
-    if (n.heal) {
-      line.appendChild(el('span', 'num', r.heal));
-      line.appendChild(el('span', 'num', r.over));
-    }
-    row.appendChild(line);
-    const bars = el('div', 'bars');
-    bars.appendChild(bar('d', r.df));
-    if (n.heal) bars.appendChild(bar('h', r.hf, r.hsf));
-    row.appendChild(bars);
-    row.addEventListener('click', () => notify('focus_player', { name: r.name }));
-    p.appendChild(row);
-  });
+  // the rift reports' rankings (report.js rankTable); a click shows the
+  // player's detail below
+  const pick = (r) => notify('focus_player', { name: r.name });
+  p.appendChild(rankTable(n.dmg, 'DPS', pick));
+  if ((n.heal || []).length) {
+    p.appendChild(el('div', 'sub2 rtab', tr('Soins')));
+    p.appendChild(rankTable(n.heal, 'HPS', pick));
+  }
   return p;
 }
 

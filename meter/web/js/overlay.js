@@ -125,7 +125,7 @@ function renderMeter(box) {
         () => api() && api().notify('ov_tab', { tab: k })));
     });
   }
-  const h = head(tr('Groupe'), m.heals ? [tabs] : []);
+  const h = head(m.title || tr('Groupe'), m.heals ? [tabs] : []);
   if (m.time) h.appendChild(el('span', 'clock' + (m.fight ? ' hot' : ''), m.time));
   h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
     () => { OV_SMALL = !OV_SMALL; render(); }));
@@ -134,26 +134,29 @@ function renderMeter(box) {
   const body = el('div', 'body');
   if (!(m.rows || []).length) {
     body.appendChild(el('div', 'empty', tr('En attente d’un combat…')));
-  } else {
-    if (m.total) {
-      const t = el('div', 'total');
-      t.appendChild(el('span', null, heal ? tr('Soins du groupe') : tr('Dégâts du groupe')));
-      t.appendChild(el('b', null, m.total));
-      body.appendChild(t);
-    }
-    m.rows.forEach((r) => {
-      const row = el('div', 'mrow' + (r.me ? ' me' : ''));
-      const bar = el('i', 'bar');
-      bar.style.width = (r.f * 100).toFixed(1) + '%';
-      row.appendChild(bar);
-      const icon = (window.__ICONS__ || {})[r.ck];
-      if (icon) { const im = el('img'); im.src = icon; im.alt = ''; row.appendChild(im); }
-      row.appendChild(el('span', 'nm', r.n));
-      row.appendChild(el('span', 'v', r.v));
-      row.appendChild(el('span', 'ps', r.ps ? r.ps + '/s' : ''));
-      body.appendChild(row);
-    });
+    box.appendChild(body);
+    return;
   }
+  // the rift reports' ranking (report.js rankTable): the class colour
+  // filling the row as far as the player's share against the best
+  const th = el('div', 'rkr h');
+  th.appendChild(el('span', 'ic'));
+  [tr('Joueur'), heal ? 'HPS' : 'DPS', tr('Total'), tr('Part')]
+    .forEach((t, i) => th.appendChild(el('span', i ? 'num' : 'nm', t)));
+  body.appendChild(th);
+  m.rows.forEach((r) => {
+    const row = el('div', 'rkr' + (r.ck ? ' c-' + r.ck : '') + (r.rank <= 3 ? ' top' : ''));
+    row.style.setProperty('--fill', (Math.max(0, Math.min(1, r.f || 0)) * 100) + '%');
+    const ic = el('span', 'ic');
+    const icon = (window.__ICONS__ || {})[r.ck];
+    if (icon) { const im = el('img'); im.src = icon; im.alt = ''; ic.appendChild(im); }
+    row.appendChild(ic);
+    row.appendChild(el('span', 'nm', r.rank + '. ' + r.name));
+    row.appendChild(el('span', 'num', r.rate));
+    row.appendChild(el('span', 'num', r.total));
+    row.appendChild(el('span', 'num', r.pct));
+    body.appendChild(row);
+  });
   box.appendChild(body);
 }
 

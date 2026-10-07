@@ -6,7 +6,7 @@ const REPORT_SEL = { name: null, phase: 0, detail: null };
 
 /* A ranking, a bar per player as in the game's meters, filled in the
    class colour relative to the best. */
-function rankTable(rows, rateLabel) {
+function rankTable(rows, rateLabel, onPick) {
   const box = el('div', 'tbl rktbl');
   const h = el('div', 'rk h');
   h.appendChild(el('span', 'rkic'));
@@ -16,9 +16,11 @@ function rankTable(rows, rateLabel) {
   box.appendChild(h);
   rows.forEach((r) => {
     const row = el('div', 'rk click rkfill' + (r.zero ? ' zero' : r.rank <= 3 ? ' top' : '')
-      + (r.ck ? ' c-' + r.ck : ''));
+      + (r.ck ? ' c-' + r.ck : '') + (r.on ? ' on' : ''));
     row.title = tr('Détail de {name}', { name: r.name });
-    row.addEventListener('click', () => { REPORT_SEL.name = r.name; renderPlayerCard(); });
+    // a report opens the player's card, the live tab its detail
+    row.addEventListener('click', () => (onPick ? onPick(r)
+      : (REPORT_SEL.name = r.name, renderPlayerCard())));
     const ic = el('span', 'rkic');
     if (r.cls || r.ck) ic.appendChild(classEl(r.cls, r.ck, 'rkicon'));
     row.appendChild(ic);
