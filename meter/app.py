@@ -162,7 +162,6 @@ class App:
         # ---- what the player chose (saved) ----
         self.mode = "party"                 # "party" (group only) or "all"
         self._show_heal = True
-        self._sort_heal = False
         self._auto_reset_boss = False
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
@@ -237,12 +236,11 @@ class App:
             return
         if data.get("mode") in ("party", "all"):
             self.mode = data["mode"]
-        for key, attr in (("show_heal", "_show_heal"), ("sort_heal", "_sort_heal"),
+        for key, attr in (("show_heal", "_show_heal"),
                           ("auto_reset_boss", "_auto_reset_boss"),
                           ("rift_auto_view", "_rift_auto_view")):
             if isinstance(data.get(key), bool):
                 setattr(self, attr, data[key])
-        self._sort_heal = self._sort_heal and self._show_heal
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
             self._rift_keep = data["rift_keep"]
         bind = data.get("reset_bind")
@@ -286,7 +284,6 @@ class App:
             SETTINGS_CACHE.write_text(json.dumps({
                 "mode": self.mode,
                 "show_heal": bool(self._show_heal),
-                "sort_heal": bool(self._sort_heal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "rift_auto_view": bool(self._rift_auto_view),
                 "rift_keep": int(self._rift_keep),
@@ -441,14 +438,7 @@ class App:
     # ------------------------------------------------------------------ actions
     def _toggle_heal(self):
         self._show_heal = not self._show_heal
-        if not self._show_heal:
-            self._sort_heal = False
         self._save_settings()
-
-    def _toggle_sort(self):
-        if self._show_heal:
-            self._sort_heal = not self._sort_heal
-            self._save_settings()
 
     def _focus(self, name):
         self.focus_player = name or None
@@ -695,7 +685,6 @@ class App:
             "boot": self.menubridge.invalidate,
             # live
             "toggle_mode": self._toggle_mode,
-            "toggle_sort": self._toggle_sort,
             "reset_data": self._manual_reset,
             "toggle_parse": self._toggle_parse,
             "focus_player": lambda p: self._focus(p.get("name")),
@@ -854,8 +843,6 @@ class App:
                 self._hide_parse_banner()
         _, _, rows = self.session.snapshot()
         rows = self._apply_mode(rows)
-        if self._sort_heal:
-            rows.sort(key=lambda p: -p.heal_total)
         active = any(self.session.combat_of(p.name) for p in rows)
         self.session.set_active(active, time.time())
         duration, in_combat = self.session.current()
@@ -957,10 +944,6 @@ class App:
              "t": (tr("Arrêter le parse") if parsing
                    else tr("Parse {n} s", n=PARSE_LENGTH_SECS))},
         ]
-        if self._show_heal:
-            tools.insert(1, {"id": "toggle_sort", "on": self._sort_heal,
-                             "t": tr("Tri : soins") if self._sort_heal
-                             else tr("Tri : dégâts")})
         party_total = sum(p.total for p in rows)
         heal_total = sum(p.heal_total for p in rows)
         cards = [
