@@ -422,11 +422,16 @@ function cursorTick() {
         if (!app || app.isNull()) return;
         const win = cursorShould(app) ? 1 : 0;
         const alt = app.add(OFF.GameApp.playerRequestedFreeCursor).readU8() ? 1 : 0;
-        const s = win + ":" + alt;
+        // a loading screen: GameApp.get_isLoading (its state not 10)
+        let load = 0;
+        if (OFF.GameApp.loadingState != null) {
+            try { load = app.add(OFF.GameApp.loadingState).readS32() !== 10 ? 1 : 0; } catch (e) {}
+        }
+        const s = win + ":" + alt + ":" + load;
         if (s !== cursorLast || now - cursorSent > 1000) {
             cursorLast = s;
             cursorSent = now;
-            send({ kind: "cursor", win: win, alt: alt });
+            send({ kind: "cursor", win: win, alt: alt, load: load });
         }
     } catch (e) {}
 }
@@ -692,7 +697,11 @@ let invReady = false;           // first sweep only baselines, never fires
 
 // False if unreadable: mistaking a failed read for an empty bag would report
 // the whole bag as loot on the next good sweep.
-function readContainerKinds(invPtr, into, byKey) {
+// `detail`, when given, also counts the gear piece by piece:
+// "kind|rarity|infusion bonus stat" (a weapon's own rarity, an armour's its
+// sheet's: ""; the bonus an infusable piece rolled as it dropped,
+// ent.Hero.makeLootItem), for the goals.
+function readContainerKinds(invPtr, into, byKey, detail) {
     if (!invPtr || invPtr.isNull()) return false;
     let arr;
     try { arr = invPtr.add(OFF.Inventory.content).readPointer(); }
@@ -716,19 +725,30 @@ function readContainerKinds(invPtr, into, byKey) {
         const key = invKey(inf);
         into[key] = (into[key] || 0) + slot.count;
         if (!(key in byKey)) byKey[key] = inf;
+        if (detail && (inf.cls === "st.item.Armor" || inf.cls === "st.item.Weapon")) {
+            let bonus = "";
+            if (OFF.Gear && OFF.Gear.infusionBonusStat != null) {
+                try { bonus = hlStr(slot.item.add(OFF.Gear.infusionBonusStat).readPointer()) || ""; }
+                catch (e) {}
+            }
+            const dk = inf.kind + "|" + (inf.rarity || "") + "|" + bonus;
+            detail[dk] = (detail[dk] || 0) + slot.count;
+        }
     }
     return true;
 }
 
 // ---- the stock: what the hero owns, by item kind ----
-// Bag + equipment + every bank tab, for the goals. Sent on change; `banks` is
+// Bag + equipment + every bank tab + the currencies, for the goals. Sent on
+// change; `banks` is
 // the number of tabs read (-1: no offset); the bank may only be known once
 // opened.
 let stockSig = null;
 
-function sendStock(loadout, now, info) {
+function sendStock(loadout, now, info, gear) {
     try {
         const all = {}, binfo = {};
+        gear = gear || {};
         for (const key in now) {
             const k = info[key] && info[key].kind;
             if (k) all[k] = (all[k] || 0) + now[key];
@@ -741,7 +761,7 @@ function sendStock(loadout, now, info) {
                 const nm = typeName(tabs[i]);
                 if (!nm || nm.indexOf("st.Inventory") !== 0) continue;
                 const got = {};
-                if (!readContainerKinds(tabs[i], got, binfo)) continue;
+                if (!readContainerKinds(tabs[i], got, binfo, gear)) continue;
                 banks++;
                 for (const key in got) {
                     const k = binfo[key] && binfo[key].kind;
@@ -749,11 +769,25 @@ function sendStock(loadout, now, info) {
                 }
             }
         }
+        // the currencies: held apart from the bag, an amount for each kind
+        // (st.Loadout.currencies, read by st.Loadout.addCurrency)
+        if (OFF.Loadout.currencies != null && OFF.CurrencyProxy) {
+            const cur = proxyItems(loadout.add(OFF.Loadout.currencies).readPointer(), 64);
+            for (let i = 0; i < cur.length; i++) {
+                try {
+                    const k = hlStr(cur[i].add(OFF.CurrencyProxy.kind).readPointer());
+                    const n = cur[i].add(OFF.CurrencyProxy.amount).readS32();
+                    if (k && n > 0) all[k] = (all[k] || 0) + n;
+                } catch (e) {}
+            }
+        }
         const sig = banks + "|" + Object.keys(all).sort()
-            .map(function (k) { return k + ":" + all[k]; }).join(",");
+            .map(function (k) { return k + ":" + all[k]; }).join(",")
+            + "|" + Object.keys(gear).sort()
+            .map(function (k) { return k + ":" + gear[k]; }).join(",");
         if (sig === stockSig) return;
         stockSig = sig;
-        send({ kind: "stock", items: all, banks: banks });
+        send({ kind: "stock", items: all, banks: banks, gear: gear });
     } catch (e) {}
 }
 
@@ -765,13 +799,13 @@ function sweepInventory() {
             return;
         const loadout = localHero.add(OFF.Hero.loadout).readPointer();
         if (!loadout || loadout.isNull()) return;
-        const now = {}, info = {};
+        const now = {}, info = {}, gear = {};
         const okInv = readContainerKinds(
-            loadout.add(OFF.Loadout.inventory).readPointer(), now, info);
+            loadout.add(OFF.Loadout.inventory).readPointer(), now, info, gear);
         const okEq = readContainerKinds(
-            loadout.add(OFF.Loadout.equipment).readPointer(), now, info);
+            loadout.add(OFF.Loadout.equipment).readPointer(), now, info, gear);
         if (!okInv || !okEq) return;
-        sendStock(loadout, now, info);
+        sendStock(loadout, now, info, gear);
         if (!invReady) {
             invSeen = now; invReady = true; return;
         }

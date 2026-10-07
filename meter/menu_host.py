@@ -218,12 +218,19 @@ class AppWindow:
         self._game_cursor = None
         # the meter's player details, under the mouse
         self.tip = None
+        # the goals' chooser, in the middle of the game
+        self.picker = None
         if self.overlays:
             try:
                 self.tip = Tip(pipe, self._lang)
                 TIP[0] = self.tip
             except Exception as e:
                 _log(f"overlay tip unavailable: {e!r}")
+            try:
+                self.picker = Picker(pipe, self._lang)
+                PICKER[0] = self.picker
+            except Exception as e:
+                _log(f"goal chooser unavailable: {e!r}")
 
     def attach(self):
         """Once the native window exists: restore the saved geometry, tell the
@@ -244,7 +251,8 @@ class AppWindow:
                 self.hwnd, 0, int(x), int(y),
                 max(int(self._want["w"]), MIN_W),
                 max(int(self._want["h"]), MIN_H), flags)
-        for o in self.overlays + ([self.tip] if self.tip else []):
+        for o in (self.overlays + ([self.tip] if self.tip else [])
+                  + ([self.picker] if self.picker else [])):
             try:
                 o.attach()
             except Exception as e:
@@ -277,12 +285,19 @@ class AppWindow:
                     by_alt = True
                 window_open = not held and not by_alt
                 gc = self._game_cursor
-                if gc is not None and time.monotonic() - gc[2] < GAME_CURSOR_SECS:
+                fresh = gc is not None and time.monotonic() - gc[2] < GAME_CURSOR_SECS
+                # a loading screen: no overlay over it
+                loading = bool(fresh and gc[3])
+                if fresh:
                     # the game says it: a window of its own frees the mouse,
                     # whatever Alt did before
                     window_open = not held and gc[0]
+                # the goals' chooser open: it has the keyboard, the game
+                # its mouse freed for it; the overlays stay
+                if self.picker is not None and self.picker.shown:
+                    window_open = False
                 for o in self.overlays:
-                    o.set_free_hidden(o.hide_free and window_open)
+                    o.set_free_hidden((o.hide_free and window_open) or loading)
                     if o.shown or o.locked:
                         o.set_locked(o.lock_mode == "always" or held)
                 tip = self.tip
@@ -290,7 +305,7 @@ class AppWindow:
                     # the mouse taken back by the game, or its overlay gone:
                     # no tip; else it follows the mouse
                     owner = tip.owner
-                    if held or owner is None or not owner.shown:
+                    if held or loading or owner is None or not owner.shown:
                         tip.hide()
                     else:
                         tip.follow()
@@ -381,9 +396,12 @@ class AppWindow:
         elif t == "ov":
             for o in self.overlays:
                 o.update(msg.get("d") or {})
+            # the game gone: no chooser over nothing
+            if self.picker is not None and not (msg.get("d") or {}).get("game"):
+                self.picker.hide()
         elif t == "cursor":
             self._game_cursor = (bool(msg.get("win")), bool(msg.get("alt")),
-                                 time.monotonic())
+                                 time.monotonic(), bool(msg.get("load")))
         elif t == "model":
             try:
                 self.window.evaluate_js(
@@ -452,7 +470,8 @@ class AppWindow:
         js = ("window.applyLang && window.applyLang("
               + json.dumps(_i18n_json(lang)) + ")")
         for w in ([self.window] + [o.window for o in self.overlays]
-                  + ([self.tip.window] if self.tip else [])):
+                  + ([self.tip.window] if self.tip else [])
+                  + ([self.picker.window] if self.picker else [])):
             try:
                 w.evaluate_js(js)
             except Exception as e:
@@ -609,7 +628,7 @@ class Overlay:
         if not self.hwnd or on == self.free_hidden:
             return
         self.free_hidden = on
-        _log(f"overlay {self.id}: {'hidden, a game window is open' if on else 'back'}"
+        _log(f"overlay {self.id}: {'hidden (a game window or a loading screen)' if on else 'back'}"
              f" (shown={self.shown}, wanted={self.wanted})")
         u = ctypes.windll.user32
         if on and self.shown:
@@ -765,6 +784,10 @@ class Overlay:
             return None
         if action == "focus":
             self._focus(bool(arg))
+        if action == "picker":
+            picker = PICKER[0]
+            if picker is not None:
+                picker.open(self)
         if action == "tip":
             tip = TIP[0]
             if tip is not None:
@@ -807,6 +830,7 @@ def _i18n_json(lang):
 
 
 TIP = [None]            # the meter's tip window (MenuHost.tip)
+PICKER = [None]         # the goals' chooser (MenuHost.picker)
 GAME_CURSOR_SECS = 3.0  # the game's cursor state (hook, each second) trusted this long
 _SKILL_PICS = {}
 
@@ -921,6 +945,67 @@ class Tip(Overlay):
         pass
 
 
+class Picker(Overlay):
+    """The goals' chooser: a window of its own in the middle of the game,
+    the game frame's, with the keyboard while it is open (its search, the
+    count) and given back to the game when it closes."""
+
+    def __init__(self, pipe, lang):
+        super().__init__("picker", pipe, "default", lang)
+
+    def open(self, owner):
+        self.game = owner.game
+        if not self.hwnd or not self.game:
+            return
+        try:
+            self.window.evaluate_js("window.openPicker && window.openPicker()")
+        except Exception as e:
+            _log(f"goal chooser failed: {e!r}")
+            return
+        if not self.shown:
+            self._place()
+            ctypes.windll.user32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+            self.shown = True
+        self._focus(True)
+
+    def hide(self):
+        if not self.shown or not self.hwnd:
+            return
+        self._focus(False)
+        ctypes.windll.user32.ShowWindow(self.hwnd, SW_HIDE)
+        self.shown = False
+
+    def _place(self):
+        if not self.game or not self.hwnd:
+            return
+        gx, gy, gw, gh = self.game
+        w, h = self.size
+        ctypes.windll.user32.SetWindowPos(
+            self.hwnd, HWND_TOPMOST, int(gx + (gw - w) // 2),
+            int(gy + max(0, (gh - h) // 2)), int(w), int(h), SWP_NOACTIVATE)
+        self._shape()
+
+    def act(self, action, arg=None):
+        if action == "close":
+            self.hide()
+            return None
+        if action == "size" and arg and self.hwnd:
+            self.size = (max(int(arg[0]), 60), max(int(arg[1]), 24))
+            if self.shown:
+                self._place()
+            return None
+        if action in ("rect", "move", "drop"):
+            # dragged by its header like the overlays, its place not kept
+            got = super().act(action, arg) if action != "drop" else None
+            if action == "drop":
+                self.dragging = False
+            return got
+        return None
+
+    def update(self, d):
+        pass
+
+
 _FRAME = []
 
 
@@ -1008,6 +1093,19 @@ def _title_font():
         return ""
 
 
+def _ui_cursor_file(name):
+    """A game piece copied to analysis_out (gamedata.ensure_ui_frame) as a
+    data URI, or ""."""
+    import base64
+    path = Path(os.environ.get("FAREVER_ANALYSIS")
+                or HERE.parent / "analysis_out") / name
+    try:
+        return "data:image/png;base64," + base64.b64encode(
+            path.read_bytes()).decode()
+    except OSError:
+        return ""
+
+
 def _ui_cursor(name):
     """One of the game's cursors (gamedata.ensure_ui_frame) as a data URI,
     or ""."""
@@ -1026,7 +1124,10 @@ def _overlay_document(oid, theme, lang):
     # the game's own cursors over the overlays, its hotspot the top-left
     arrow, hand = _ui_cursor("default"), _ui_cursor("button")
     cls = (["framed"] if frame else []) + (["gcur"] if arrow and hand else [])
+    close, cross = _ui_cursor_file("ui_close.png"), _ui_cursor_file("ui_close_x.png")
     style = (("--ov-frame: url(" + frame + ");" if frame else "")
+             + ("--close: url(" + close + ");--cross: url(" + cross + ");"
+                if close and cross else "")
              + ("--cur: url(" + arrow + ") 0 0, default;"
                 "--cur-hand: url(" + hand + ") 0 0, pointer;"
                 if arrow and hand else ""))
@@ -1040,7 +1141,11 @@ def _overlay_document(oid, theme, lang):
             '<div id="ov"></div><script>window.__OVERLAY__ = '
             + json.dumps(oid) + ";window.__I18N__ = " + _i18n_json(lang)
             + ";window.__ICONS__ = "
-            + json.dumps(_class_icons()) + ";window.__TITLE_FONT__ = "
+            + json.dumps(_class_icons())
+            # the chooser: the character sheet's empty slots and attributes
+            + (";window.__SHEET__ = " + json.dumps(_sheet_art())
+               if oid == "picker" else "")
+            + ";window.__TITLE_FONT__ = "
             + (font or "null") + ";</script><script>"
             + _web("js/overlay.js") + "</script></body></html>")
 

@@ -744,7 +744,8 @@ class App:
             "ov_lock": self._ov_lock_toggle,
             "ov_hide_free": self._ov_hide_toggle,
             "ov_style": self._ov_set_style,
-            "goal_search": lambda p: G.search(p.get("q")),
+            "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
+                                                self._learnt()),
             "goal_add": self._goal_add,
             "goal_del": lambda p: self.goals.remove(p.get("id")),
             # settings
@@ -1408,7 +1409,8 @@ class App:
             self.me.put(self._me_name, "stock",
                         {"items": p.get("items") or {},
                          "banks": p.get("banks")})
-            for g in self.goals.on_stock(p.get("items"), p.get("banks")):
+            for g in self.goals.on_stock(p.get("items"), p.get("banks"),
+                                         p.get("gear")):
                 self._goal_reached(g)
         self._enqueue(done)()
 
@@ -1424,8 +1426,15 @@ class App:
         self._event(tr("Objectif atteint : {n} × {what}.", n=g['n'],
                        what=self.goals.label(g)), "ok")
 
+    def _learnt(self):
+        """The mounts and gliders in the account's collection (the goals
+        count one learnt)."""
+        c = self._collection()
+        return set(c.get("mounts") or ()) | set(c.get("gliders") or ())
+
     def _goal_add(self, p):
-        self.goals.add(p.get("kind"), p.get("ref"), p.get("n"))
+        self.goals.add(p.get("kind"), p.get("ref"), p.get("n"),
+                       p.get("rar"), p.get("istat"))
 
     def on_hero_seen(self, name):
         """The hook saw our hero (every 3 s in the world). Hook thread."""
@@ -1561,6 +1570,7 @@ class App:
         # copies: the bridge pushes only a spec unlike the last one, and
         # these dicts change in place
         spec["style"] = {k: dict(v) for k, v in self._ov_style.items()}
+        self.goals.learnt = self._learnt()
         spec["goals"] = self.goals.view()
         # the loot luck counters, as the live tab shows them
         spec["luck"] = {"rows": (_profile_luck(self._self_prof)
@@ -1760,7 +1770,8 @@ class App:
         window open, the FreeCursor key's toggle. Straight to the overlays,
         which hide for a window but stay for the key. Hook thread."""
         self.menubridge.send({"t": "cursor", "win": bool(p.get("win")),
-                              "alt": bool(p.get("alt"))})
+                              "alt": bool(p.get("alt")),
+                              "load": bool(p.get("load"))})
 
     def on_character(self, p):
         """The players around (roster) or one player's profile, from the

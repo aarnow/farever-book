@@ -417,7 +417,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 6
+DATA_FORMAT = 8
 
 
 def _hook_needs():
@@ -763,7 +763,10 @@ UI_FRAME = "UI/Elements/background_close.png"
 # an atlas).
 UI_TITLE_FONT = "Font/platypi-bold-20.fnt"
 # Bumped when what ensure_ui_frame copies changes: copied again.
-UI_ASSETS = 4
+UI_ASSETS = 6
+# its windows' close button: its cross, cut out of it (the button's ground
+# is its hovered look)
+UI_CLOSE = "UI/Elements/closeButton.png"
 
 
 def ensure_ui_frame():
@@ -801,6 +804,19 @@ def ensure_ui_frame():
                                                      encoding="utf-8")
         _ui_cursors(game)
         _ui_title_font(game)
+        close = Image.open(io.BytesIO(pak_extract.read_entry(
+            game / "res.pak", UI_CLOSE))).convert("RGBA")
+        close.save(ANALYSIS / "ui_close.png")
+        # the cross alone: its white over the button's orange (blue apart)
+        cross = Image.new("L", close.size, 0)
+        for y in range(close.height):
+            for x in range(close.width):
+                r, g, b, a = close.getpixel((x, y))
+                cross.putpixel((x, y), max(0, min(255, (b - 70) * 255 // 185)) * a // 255)
+        # white, its shape in the alpha (a CSS mask reads the alpha)
+        white = Image.new("RGBA", close.size, (255, 255, 255, 0))
+        white.putalpha(cross)
+        white.save(ANALYSIS / "ui_close_x.png")
         stamp.write_text(json.dumps({"v": UI_ASSETS}), encoding="utf-8")
         return True
     except Exception as e:

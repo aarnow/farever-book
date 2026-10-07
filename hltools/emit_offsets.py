@@ -112,6 +112,8 @@ def hook_layout(code):
     dact = offs("st.activity.Dungeon")
     lobby = offs("st.player.InstanceLobby")
     gameapp = offs("GameApp")
+    # a currency held: {amount, kind} (st.Loadout.addCurrency reads them)
+    cproxy = offs("hxbit.ObjProxy_Oamount_Int_kind_Data_ItemKind")
 
     # st.Equipment extends st.Inventory: the hook reads both with one offset.
     if equip["content"][0] != inv["content"][0]:
@@ -155,7 +157,11 @@ def hook_layout(code):
         "Loadout": {"inventory": loadout["inventory"][0],
                     "equipment": loadout["equipment"][0],
                     # the bank's tabs (hxbit.ArrayProxyData)
-                    "banks": loadout["banks"][0]},
+                    "banks": loadout["banks"][0],
+                    # the currencies held, apart from the bag (same)
+                    "currencies": loadout["currencies"][0]},
+        "CurrencyProxy": {"amount": cproxy["amount"][0],
+                          "kind": cproxy["kind"][0]},
         # content holds slot virtuals {count, item}, not items (see readSlot()
         # in meter_hook.js).
         "Inventory": {"content": inv["content"][0]},
@@ -237,7 +243,9 @@ def hook_layout(code):
         # the FreeCursor key's toggle (GameApp.updateInputs flips it, a game
         # window resets it: GameApp.updateMouseLock)
         "GameApp": {"playerRequestedFreeCursor":
-                    gameapp["playerRequestedFreeCursor"][0]},
+                    gameapp["playerRequestedFreeCursor"][0],
+                    # loading while it is not 10 (GameApp.get_isLoading)
+                    "loadingState": gameapp["loadingState"][0]},
         # The codex (measured 2026-08-05): Progress.unitsProgress -> MapData.map
         # (a virtual, the StringMap at +8) -> StringMap.h -> hbget(unitKind)
         # -> {killCount, rank}. Every unit set has three tiers: rank 3 = done.
