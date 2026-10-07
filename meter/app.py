@@ -43,14 +43,14 @@ from gamedata import (
     dungeon_catalogue,
     item_rarity,
     dungeon_name, item_icon, item_label, item_type,
-    item_model_json, locate_hlboot, regenerate_data, world_map,
+    ensure_ui_frame, item_model_json, locate_hlboot, regenerate_data, world_map,
     DATA_GENERATION, DATA_CONSENT, GENERATED_GROUPS, GENERATED_PICTURES,
     GENERATED_PICTURE_COST,
     game_folder_hlboot, generated_pictures,
     needs_first_data)
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot)
-from bosssheet import boss_sheet_view
+from bosssheet import _icon_ok, boss_sheet_view
 from views import (
     LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
@@ -112,6 +112,17 @@ def _dungeon_backdrop(kind, boss, region=""):
     return art if art in stems else ""
 
 
+def _ov_style(v):
+    """An overlay's settings, kept in bounds: opacity 30-100 %, size
+    70-150 %."""
+    def num(k, lo, hi):
+        try:
+            return max(lo, min(hi, int(v.get(k) or 100)))
+        except (TypeError, ValueError):
+            return 100
+    return {"opacity": num("opacity", 30, 100), "scale": num("scale", 70, 150)}
+
+
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
     saved data, and the window (a WebView2 app in its own process, see
@@ -153,6 +164,7 @@ class App:
         self._ov_lock_always = False
         # hidden while the game's cursor is free (one of its windows open)
         self._ov_hide_free = False
+        self._ov_style = {}                 # overlay -> {opacity, scale} (%)
         self._hero_at = 0.0                 # last time the hook saw our hero
         self._action_q = []
         self._q_lock = threading.Lock()
@@ -194,6 +206,8 @@ class App:
         self._ach_data = None
         self._item_codex_cache = (None, {})
         self._roster = []                   # players around, from the hook
+        self._party = []                    # the local player's group (names)
+        self._icons_ok = {}                 # skill id -> has its own picture
         self._roster_at = 0.0
         self._profiles = None               # profiles analysed this session
         self._char_sel = None               # the profile being read
@@ -275,6 +289,11 @@ class App:
             self._ov_lock_always = data["overlay_lock_always"]
         if isinstance(data.get("overlay_hide_free"), bool):
             self._ov_hide_free = data["overlay_hide_free"]
+        style = data.get("overlay_style")
+        if isinstance(style, dict):
+            for k, v in style.items():
+                if k in self._ov_on and isinstance(v, dict):
+                    self._ov_style[k] = _ov_style(v)
 
     def _save_settings(self):
         try:
@@ -293,6 +312,7 @@ class App:
                 "overlay_tab": self._ov_tab,
                 "overlay_lock_always": bool(self._ov_lock_always),
                 "overlay_hide_free": bool(self._ov_hide_free),
+                "overlay_style": self._ov_style,
             }, indent=2))
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
@@ -718,6 +738,7 @@ class App:
             "ov_reset": self._ov_reset,
             "ov_lock": self._ov_lock_toggle,
             "ov_hide_free": self._ov_hide_toggle,
+            "ov_style": self._ov_set_style,
             "goal_search": lambda p: G.search(p.get("q")),
             "goal_add": self._goal_add,
             "goal_del": lambda p: self.goals.remove(p.get("id")),
@@ -774,6 +795,10 @@ class App:
     def run(self):
         """The main loop: the window's actions, the timers, and the refresh
         that turns the session into what the window shows."""
+        try:
+            ensure_ui_frame()               # the overlays' frame, the game's
+        except Exception as e:
+            print(f"[meter] overlay frame: {e!r}", file=sys.stderr)
         self.menubridge.start(self._win_geom, self._theme, self._lang)
         if self.menubridge.proc is None:
             message_box(tr("La fenêtre de Farever Book n'a pas pu s'ouvrir "
@@ -915,6 +940,51 @@ class App:
                  "f": round(val(p) / top, 4),
                  "on": p.name == focus}
                 for i, p in enumerate(got[:limit], 1)]
+
+    def _player_tip(self, p, duration, heal):
+        """A player's details for the meter overlay's tip: its damage, or
+        its heals (the tab shown), and its skills that did them."""
+        if p is None:
+            return None
+        kind = self.world.class_of(p.name)
+        if heal:
+            total = p.heal_total
+            stats = [[tr("Soins"), _n(total)],
+                     ["HPS", _n(total / duration) if duration > 0 else "—"]]
+            if total > 0.5:
+                stats.append([tr("Soin en excès"), f"{p.overheal_pct:.0f}%"])
+            table = p.heals
+        else:
+            total = p.total
+            crit = (p.crits / p.hits * 100) if p.hits else 0.0
+            stats = [[tr("Dégâts"), _n(total)],
+                     ["DPS", _n(total / duration) if duration > 0 else "—"],
+                     [tr("Coups"), _n(p.hits)],
+                     [tr("Critiques"), f"{crit:.0f}%"]]
+            if p.kills:
+                stats.append([tr("Kills"), _n(p.kills)])
+            table = p.skills
+        entries = self._merge_named(table)[:6]
+        top = max((e[1] for e in entries), default=0.0) or 1.0
+        # a row's icon: the first of its skills (merged by name) that has
+        # its own picture; a summon's by its skill
+        icons = {}
+        for sid in table:
+            label = self.session.skill_names.get(sid) or _pretty_id(sid)
+            if label not in icons:
+                base = sid.split(":")[-1]
+                ok = self._icons_ok.get(base)
+                if ok is None:                  # a file read: once each
+                    ok = self._icons_ok[base] = _icon_ok(base)
+                if ok:
+                    icons[label] = base
+        return {"name": p.name, "ck": class_key(kind), "cls": _class_tag(kind),
+                "heal": bool(heal), "stats": stats,
+                "skills": [{"t": label, "v": _n(amount),
+                            "pct": f"{(amount / total * 100) if total else 0:.0f}%",
+                            "n": hits, "f": round(amount / top, 4),
+                            "ic": icons.get(label, "")}
+                           for label, amount, hits, _c, _s in entries]}
 
     def _page_live(self):
         rows, duration, holding, in_combat = self._live
@@ -1413,6 +1483,14 @@ class App:
         self._ov_hide_free = not self._ov_hide_free
         self._save_settings()
 
+    def _ov_set_style(self, p):
+        """An overlay's opacity and size, from its settings (the gear)."""
+        oid = p.get("id")
+        if oid not in self._ov_on:
+            return
+        self._ov_style[oid] = _ov_style(p)
+        self._save_settings()
+
     def _ov_lock_toggle(self):
         self._ov_lock_always = not self._ov_lock_always
         self._save_settings()
@@ -1447,16 +1525,32 @@ class App:
         # the live tab's very rows (its mode, its resets, its last fight):
         # only a view of them
         rows, duration, holding, in_combat = self._live
-        # the heal tab only while the heal columns are on
-        heal = self._show_heal and self._ov_tab == "heal"
-        title = tr("Groupe") if self.mode == "party" else tr("Tous les joueurs")
+        heal = self._ov_tab == "heal"
+        ranked = self._ranking(rows, duration, heal, limit=8)
+        # each player's details, for the tip under the mouse
+        by_name = {p.name: p for p in rows}
+        for r in ranked:
+            r["tip"] = self._player_tip(by_name.get(r["name"]), duration, heal)
+        # the group always there, those yet to hit (or heal) at nothing
+        shown = {r["name"] for r in ranked}
+        for name in self._party:
+            if name in shown or len(ranked) >= 8:
+                continue
+            kind = self.world.class_of(name)
+            ranked.append({"rank": len(ranked) + 1, "name": name,
+                           "me": name == self._me_name,
+                           "cls": _class_tag(kind), "ck": class_key(kind),
+                           "rate": "0", "total": "0", "pct": "0%", "f": 0,
+                           "zero": True,
+                           "tip": self._player_tip(by_name.get(name),
+                                                   duration, heal)})
         spec["meter"] = {
             "tab": "heal" if heal else "dmg",
-            "heals": bool(self._show_heal),
-            "title": title + (" · " + tr("dernier combat") if holding else ""),
+            "held": bool(holding),
             "time": _mmss(duration) if duration > 0 else "",
             "fight": bool(in_combat),
-            "rows": self._ranking(rows, duration, heal, limit=8)}
+            "rows": ranked}
+        spec["style"] = self._ov_style
         spec["goals"] = self.goals.view()
         # the loot luck counters, as the live tab shows them
         spec["luck"] = {"rows": (_profile_luck(self._self_prof)
@@ -1663,6 +1757,8 @@ class App:
                 return
             if p.get("kind") == "roster":
                 self._roster = p.get("players") or []
+                self._party = [n for n in p.get("party") or ()
+                               if isinstance(n, str) and n]
                 self._roster_at = time.time()
                 return
             self._char_wait = None

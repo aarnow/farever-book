@@ -213,6 +213,14 @@ class AppWindow:
                                              self._lang))
             except Exception as e:
                 _log(f"overlay {oid} unavailable: {e!r}")
+        # the meter's player details, under the mouse
+        self.tip = None
+        if self.overlays:
+            try:
+                self.tip = Tip(pipe, self._lang)
+                TIP[0] = self.tip
+            except Exception as e:
+                _log(f"overlay tip unavailable: {e!r}")
 
     def attach(self):
         """Once the native window exists: restore the saved geometry, tell the
@@ -233,7 +241,7 @@ class AppWindow:
                 self.hwnd, 0, int(x), int(y),
                 max(int(self._want["w"]), MIN_W),
                 max(int(self._want["h"]), MIN_H), flags)
-        for o in self.overlays:
+        for o in self.overlays + ([self.tip] if self.tip else []):
             try:
                 o.attach()
             except Exception as e:
@@ -269,6 +277,15 @@ class AppWindow:
                     o.set_free_hidden(o.hide_free and window_open)
                     if o.shown or o.locked:
                         o.set_locked(o.lock_mode == "always" or held)
+                tip = self.tip
+                if tip is not None and tip.shown:
+                    # the mouse taken back by the game, or its overlay gone:
+                    # no tip; else it follows the mouse
+                    owner = tip.owner
+                    if held or owner is None or not owner.shown:
+                        tip.hide()
+                    else:
+                        tip.follow()
             except Exception as e:
                 _log(f"overlay lock failed: {e!r}")
             time.sleep(LOCK_POLL_SECS)
@@ -423,7 +440,8 @@ class AppWindow:
         i18n.set_lang(lang)
         js = ("window.applyLang && window.applyLang("
               + json.dumps(_i18n_json(lang)) + ")")
-        for w in [self.window] + [o.window for o in self.overlays]:
+        for w in ([self.window] + [o.window for o in self.overlays]
+                  + ([self.tip.window] if self.tip else [])):
             try:
                 w.evaluate_js(js)
             except Exception as e:
@@ -503,8 +521,8 @@ CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
 OVERLAY_IDS = ("meter", "goals", "luck")
-OVERLAY_BG = "#6A4E44"              # its edge's colour (overlay.css --ov-edge)
-OVERLAY_RADIUS = 5                  # its corners (overlay.css #ov)
+OVERLAY_BG = "#CEB7AA"              # the frame's outer colour (overlay.css)
+OVERLAY_RADIUS = 3                  # its corners (the frame's, overlay.css)
 
 
 class OverlayApi:
@@ -544,6 +562,8 @@ class Overlay:
         self.hide_free = False              # hidden while the cursor is free
         self.free_hidden = False            # ...and it is: a game window is open
         self.wanted = False                 # the meter wants it shown
+        self.opacity = 100                  # its settings (%), the player's
+        self.scale = 100
         self.window = webview.create_window(
             f"Farever Book — {oid}", html=_overlay_document(oid, theme, lang),
             width=self.size[0], height=self.size[1], x=-4000, y=-4000,
@@ -611,12 +631,15 @@ class Overlay:
         if not self.hwnd:
             return
         data = d.get(self.id)
-        if d.get("show") and data != self._last:
-            self._last = data
+        style = (d.get("style") or {}).get(self.id) or {}
+        self._set_style(style)
+        if d.get("show") and (data, style) != self._last:
+            self._last = (data, style)
             try:
                 self.window.evaluate_js(
                     "window.applyOverlay && window.applyOverlay("
-                    + json.dumps(json.dumps({self.id: data})) + ")")
+                    + json.dumps(json.dumps({self.id: data, "style": style}))
+                    + ")")
             except Exception as e:
                 _log(f"overlay {self.id} push failed: {e!r}")
         self.game = d.get("game")
@@ -636,6 +659,19 @@ class Overlay:
             u.ShowWindow(self.hwnd, SW_HIDE)
             self.shown = False
 
+    def _set_style(self, style):
+        """The player's opacity (the whole window's alpha) and size (the
+        page's zoom, which the frame's cut follows)."""
+        op = max(30, min(100, int(style.get("opacity") or 100)))
+        sc = max(70, min(150, int(style.get("scale") or 100)))
+        if op != self.opacity and self.hwnd:
+            ctypes.windll.user32.SetLayeredWindowAttributes(
+                self.hwnd, 0, round(255 * op / 100), LWA_ALPHA)
+            self.opacity = op
+        if sc != self.scale:
+            self.scale = sc
+            self._shaped = None
+
     def _place(self):
         gx, gy, gw, gh = self.game
         w, h = self.size
@@ -653,13 +689,33 @@ class Overlay:
         self._shape()
 
     def _shape(self):
-        """Round the window's corners to the panel's: outside, the game."""
+        """Cut the window to the panel's outline: outside, the game. Framed,
+        the game frame's own (its corners standing out past its edges),
+        else rounded corners."""
         w, h = self.size
-        if (w, h) == getattr(self, "_shaped", None):
+        if (w, h, self.scale) == getattr(self, "_shaped", None):
             return
-        self._shaped = (w, h)
-        d = OVERLAY_RADIUS * 2
-        rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)
+        self._shaped = (w, h, self.scale)
+        mask = _frame_mask() if _ui_frame() else []
+        if mask:
+            dpi = 96
+            try:
+                dpi = ctypes.windll.user32.GetDpiForWindow(self.hwnd) or 96
+            except Exception:
+                pass
+            g = ctypes.windll.gdi32
+            rgn = g.CreateRectRgn(0, 0, 0, 0)
+            for y0, y1, runs in _frame_runs(w, h, FRAME_CSS / FRAME_SLICE
+                                            * dpi / 96 * self.scale / 100,
+                                            mask):
+                for x0, x1 in runs:
+                    part = g.CreateRectRgn(x0, y0, x1, y1)
+                    g.CombineRgn(rgn, rgn, part, 2)         # RGN_OR
+                    g.DeleteObject(part)
+        else:
+            d = OVERLAY_RADIUS * 2
+            rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1,
+                                                         d, d)
         # the window owns the region from here on: no DeleteObject
         ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
 
@@ -698,6 +754,13 @@ class Overlay:
             return None
         if action == "focus":
             self._focus(bool(arg))
+        if action == "tip":
+            tip = TIP[0]
+            if tip is not None:
+                if arg:
+                    tip.show(self, arg)
+                else:
+                    tip.hide()
         return None
 
     def _focus(self, on):
@@ -732,8 +795,197 @@ def _i18n_json(lang):
     return json.dumps({"lang": lang, "dict": i18n.catalog(lang)})
 
 
+TIP = [None]            # the meter's tip window (MenuHost.tip)
+_SKILL_PICS = {}
+
+
+def _skill_pic(sid):
+    """A skill's picture (analysis_out/skill_img/<id>.webp) as a data URI,
+    "" when it has none; read once each."""
+    sid = str(sid or "")
+    if sid not in _SKILL_PICS:
+        import base64
+        import re
+        uri = ""
+        if re.fullmatch(r"[A-Za-z0-9_]+", sid):
+            path = Path(os.environ.get("FAREVER_ANALYSIS")
+                        or HERE.parent / "analysis_out") / "skill_img" \
+                / f"{sid}.webp"
+            try:
+                uri = "data:image/webp;base64," + base64.b64encode(
+                    path.read_bytes()).decode()
+            except OSError:
+                pass
+        _SKILL_PICS[sid] = uri
+    return _SKILL_PICS[sid]
+TIP_GAP = 18            # its distance from the mouse, right and below
+
+
+class Tip(Overlay):
+    """A player's details, under the mouse (the meter's rows): a window of
+    its own, never focused, the clicks going through it. It follows the
+    mouse (MenuHost._lock_loop) and stays inside the game's window."""
+
+    def __init__(self, pipe, lang):
+        super().__init__("tip", pipe, "default", lang)
+        self.owner = None                   # the overlay it is shown for
+        self.at = None                      # where it was put
+
+    def attach(self):
+        super().attach()
+        if self.hwnd:
+            u = ctypes.windll.user32
+            ex = u.GetWindowLongW(self.hwnd, GWL_EXSTYLE)
+            u.SetWindowLongW(self.hwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT)
+
+    def show(self, owner, data):
+        self.owner = owner
+        self.game = owner.game
+        data = dict(data, skills=[dict(s, img=_skill_pic(s.get("ic")))
+                                  for s in data.get("skills") or ()])
+        try:
+            self.window.evaluate_js(
+                "window.applyOverlay && window.applyOverlay("
+                + json.dumps(json.dumps({"tip": data})) + ")")
+        except Exception as e:
+            _log(f"overlay tip push failed: {e!r}")
+            return
+        if not self.shown and self.hwnd:
+            self.at = None
+            self.follow()
+            ctypes.windll.user32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+            self.shown = True
+
+    def hide(self):
+        if self.shown and self.hwnd:
+            ctypes.windll.user32.ShowWindow(self.hwnd, SW_HIDE)
+        self.shown = False
+        self.owner = None
+
+    def follow(self):
+        """Beside the mouse, flipped to its other side near the game's
+        window's edges."""
+        pt = wintypes.POINT()
+        if not self.hwnd or not ctypes.windll.user32.GetCursorPos(
+                ctypes.byref(pt)):
+            return
+        w, h = self.size
+        x, y = pt.x + TIP_GAP, pt.y + TIP_GAP
+        if self.game:
+            gx, gy, gw, gh = self.game
+            if x + w > gx + gw:
+                x = pt.x - TIP_GAP - w
+            if y + h > gy + gh:
+                y = pt.y - TIP_GAP - h
+        if (x, y, w, h) == self.at:
+            return
+        self.at = (x, y, w, h)
+        ctypes.windll.user32.SetWindowPos(
+            self.hwnd, HWND_TOPMOST, int(x), int(y), int(w), int(h),
+            SWP_NOACTIVATE)
+        self._shape()
+
+    def _place(self):
+        self.follow()
+
+    def _shape(self):
+        w, h = self.size
+        if (w, h) == getattr(self, "_shaped", None):
+            return
+        self._shaped = (w, h)
+        d = OVERLAY_RADIUS * 2
+        rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)
+        ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+
+    def act(self, action, arg=None):
+        if action == "size" and arg and self.hwnd:
+            self.size = (max(int(arg[0]), 60), max(int(arg[1]), 24))
+            self.at = None
+            if self.shown:
+                self.follow()
+        return None
+
+    def update(self, d):
+        pass
+
+
+_FRAME = []
+
+
+def _ui_frame():
+    """The game's window frame (gamedata.ensure_ui_frame) as a data URI, or
+    "" when it was not copied: the overlays then keep a plain border."""
+    if not _FRAME:
+        import base64
+        path = Path(os.environ.get("FAREVER_ANALYSIS")
+                    or HERE.parent / "analysis_out") / "ui_frame.png"
+        try:
+            _FRAME.append("data:image/png;base64," + base64.b64encode(
+                path.read_bytes()).decode())
+        except OSError:
+            _FRAME.append("")
+    return _FRAME[0]
+
+
+# The frame texture's corner slice, in pixels (overlay.css html.framed #ov
+# draws it FRAME_CSS pixels wide, the texture's middle stretched between).
+FRAME_SLICE, FRAME_CSS = 32, 32
+
+
+def _frame_mask():
+    """The frame texture's opaque pixels (gamedata.ensure_ui_frame): rows
+    of "0"/"1". [] without them."""
+    path = Path(os.environ.get("FAREVER_ANALYSIS")
+                or HERE.parent / "analysis_out") / "ui_frame_mask.json"
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8"))
+        return rows if rows and all(len(r) == len(rows[0]) for r in rows) \
+            else []
+    except (OSError, ValueError):
+        return []
+
+
+def _frame_runs(w, h, k, mask):
+    """The window's opaque pixels, the texture laid as the CSS lays it
+    (corners kept, its middle stretched), scaled by k: [(y0, y1, [(x0,
+    x1), ...])], rows alike merged into bands."""
+    th, tw = len(mask), len(mask[0])
+    c = FRAME_SLICE * k
+
+    def tex(p, size, n):
+        # a window pixel's texture pixel along one axis
+        if p < c:
+            return min(int(p / k), FRAME_SLICE - 1)
+        if p >= size - c:
+            return n - 1 - min(int((size - 1 - p) / k), FRAME_SLICE - 1)
+        return n // 2
+    cols = [tex(x, w, tw) for x in range(w)]
+    out = []
+    for y in range(h):
+        row = mask[tex(y, h, th)]
+        runs, start = [], None
+        for x, tx in enumerate(cols):
+            on = row[tx] == "1"
+            if on and start is None:
+                start = x
+            elif not on and start is not None:
+                runs.append((start, x))
+                start = None
+        if start is not None:
+            runs.append((start, w))
+        if out and out[-1][2] == runs and out[-1][1] == y:
+            out[-1] = (out[-1][0], y + 1, runs)
+        else:
+            out.append((y, y + 1, runs))
+    return out
+
+
 def _overlay_document(oid, theme, lang):
-    return ('<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+    frame = _ui_frame() if oid != "tip" else ""
+    return ('<!doctype html><html lang="fr"'
+            + (' class="framed" style="--ov-frame: url(' + frame + ')"'
+               if frame else "")
+            + '><head><meta charset="utf-8">'
             '<style id="css">' + _web("overlay.css")
             + "</style></head><body>"
             '<div id="ov"></div><script>window.__OVERLAY__ = '

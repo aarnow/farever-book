@@ -1,5 +1,6 @@
-/* An overlay over the game (menu_host.Overlay): "meter" or "goals", set by
-   window.__OVERLAY__. State arrives through applyOverlay(json). */
+/* An overlay over the game (menu_host.Overlay): "meter", "goals", "luck",
+   or "tip" (the meter's player details under the mouse, menu_host.Tip), set
+   by window.__OVERLAY__. State arrives through applyOverlay(json). */
 const OV_ID = window.__OVERLAY__;
 
 /* The interface's language, as in the window (core.js): the texts are
@@ -13,7 +14,7 @@ function tr(s, vars) {
 }
 document.documentElement.lang = I18N.lang || 'fr';
 let OV = null;                  // the last state
-let OV_SMALL = false;           // collapsed to the header
+let SETTINGS = false;           // the gear's panel open
 const ADD = { open: false, q: '', res: [], pick: null, n: 1, seq: 0 };
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -47,7 +48,10 @@ window.applyLang = function (json) {
 };
 
 window.applyOverlay = function (json) {
+  const was = OV && JSON.stringify(OV.style || {});
   try { OV = JSON.parse(json); } catch (e) { return; }
+  // the settings open: a slider held must not be redrawn under the mouse
+  if (SETTINGS && was === JSON.stringify(OV.style || {})) return;
   // the add form keeps its own state: a push must not wipe what is typed
   if (document.activeElement && document.activeElement.tagName === 'INPUT') {
     renderList();
@@ -88,11 +92,19 @@ let LAST_SIZE = '';
 function reportSize() {
   const box = document.getElementById('ov');
   if (!box || !api()) return;
+  // whole pixels: the window (and its cut, the frame's outline) is, and a
+  // panel a fraction short would leave its last row to the background
+  box.style.minWidth = box.style.minHeight = '';
   const r = box.getBoundingClientRect();
-  const s = Math.ceil(r.width) + 'x' + Math.ceil(r.height);
+  const w = Math.ceil(r.width), h = Math.ceil(r.height);
+  // the measure is zoomed (the player's size), the minimum is not
+  const z = parseFloat(box.style.zoom) || 1;
+  box.style.minWidth = (w / z) + 'px';
+  box.style.minHeight = (h / z) + 'px';
+  const s = w + 'x' + h;
   if (s === LAST_SIZE) return;
   LAST_SIZE = s;
-  api().ov('size', [Math.ceil(r.width), Math.ceil(r.height)]);
+  api().ov('size', [w, h]);
 }
 new ResizeObserver(reportSize).observe(document.getElementById('ov'));
 
@@ -108,9 +120,14 @@ function head(title, extra) {
 
 function render() {
   const box = document.getElementById('ov');
-  box.textContent = '';
-  if (!OV) return;
-  if (OV_ID === 'meter') renderMeter(box);
+  if (!OV) { box.textContent = ''; return; }
+  // the meter keeps its tabs between redraws (their background slides)
+  if (OV_ID !== 'meter') box.textContent = '';
+  // the player's size for this overlay (its gear), the window following
+  const st = OV.style || {};
+  box.style.zoom = (st.scale || 100) / 100;
+  if (OV_ID === 'tip') renderTip(box);
+  else if (OV_ID === 'meter') renderMeter(box);
   else if (OV_ID === 'luck') renderLuck(box);
   else renderGoals(box);
 }
@@ -119,35 +136,56 @@ function renderMeter(box) {
   const m = OV.meter || { rows: [] };
   const heal = m.tab === 'heal';
   box.className = heal ? 'heal' : '';
-  // damage or heals: one switch, its knob on the side shown
-  const sw = btn('sw' + (heal ? ' heal' : ''), '', heal ? tr('Afficher les dégâts') : tr('Afficher les soins'),
-    () => api() && api().notify('ov_tab', { tab: heal ? 'dmg' : 'heal' }));
-  sw.appendChild(el('span', 'swl d', tr('Dégâts')));
-  const track = el('span', 'swt');
-  track.appendChild(el('i'));
-  sw.appendChild(track);
-  sw.appendChild(el('span', 'swl h', tr('Soins')));
-  const h = head(m.title || tr('Groupe'), m.heals ? [sw] : []);
-  if (m.time) h.appendChild(el('span', 'clock' + (m.fight ? ' hot' : ''), m.time));
-  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
-    () => { OV_SMALL = !OV_SMALL; render(); }));
-  box.appendChild(h);
-  if (OV_SMALL) return;
-  const body = el('div', 'body');
-  if (!(m.rows || []).length) {
-    body.appendChild(el('div', 'empty', tr('En attente d’un combat…')));
-    box.appendChild(body);
+  const h = head(tr('Meter'));
+  if (m.time) {
+    const c = el('span', 'clock' + (m.fight ? ' hot' : ''), m.time);
+    if (m.held) c.title = tr('dernier combat');
+    h.appendChild(c);
+  }
+  h.appendChild(gearBtn());
+  if (SETTINGS) {
+    box.textContent = '';
+    box.appendChild(h);
+    box.appendChild(settingsPanel());
     return;
   }
+  // damage or heals: two tabs side by side across the whole width, the
+  // shown one's background sliding to it; the same tabs from one redraw to
+  // the next, so the slide plays out
+  let tabs = box.querySelector(':scope > .mtabs');
+  if (!tabs) {
+    box.textContent = '';
+    tabs = el('div', 'mtabs');
+    [['dmg', tr('Dégâts')], ['heal', tr('Soins')]].forEach(([k, t]) => {
+      const b = btn('mtab', t, null, () => {
+        if (tabs.dataset.tab === k) return;
+        setTabs(tabs, k);                   // at once, the push follows
+        if (api()) api().notify('ov_tab', { tab: k });
+      });
+      b.dataset.k = k;
+      tabs.appendChild(b);
+    });
+    box.appendChild(h);
+    box.appendChild(tabs);
+    box.appendChild(el('div', 'body'));
+  } else {
+    box.replaceChild(h, box.firstChild);
+    tabs.querySelectorAll('.mtab').forEach((b) => { b.textContent = b.dataset.k === 'heal' ? tr('Soins') : tr('Dégâts'); });
+  }
+  setTabs(tabs, heal ? 'heal' : 'dmg');
+  const body = el('div', 'body');
   // the rift reports' ranking (report.js rankTable): the class colour
-  // filling the row as far as the player's share against the best
+  // filling the row as far as the player's share against the best; the
+  // group always listed, at nothing until it fights
   const th = el('div', 'rkr h');
   th.appendChild(el('span', 'ic'));
   [tr('Joueur'), heal ? 'HPS' : 'DPS', tr('Total'), tr('Part')]
     .forEach((t, i) => th.appendChild(el('span', i ? 'num' : 'nm', t)));
   body.appendChild(th);
-  m.rows.forEach((r) => {
-    const row = el('div', 'rkr' + (r.ck ? ' c-' + r.ck : '') + (r.rank <= 3 ? ' top' : ''));
+  if (!(m.rows || []).length) body.appendChild(el('div', 'empty', tr('En attente d’un combat…')));
+  (m.rows || []).forEach((r) => {
+    const row = el('div', 'rkr' + (r.ck ? ' c-' + r.ck : '') + (r.rank <= 3 && !r.zero ? ' top' : '')
+      + (r.zero ? ' zero' : ''));
     row.style.setProperty('--fill', (Math.max(0, Math.min(1, r.f || 0)) * 100) + '%');
     const ic = el('span', 'ic');
     const icon = (window.__ICONS__ || {})[r.ck];
@@ -157,9 +195,97 @@ function renderMeter(box) {
     row.appendChild(el('span', 'num', r.rate));
     row.appendChild(el('span', 'num', r.total));
     row.appendChild(el('span', 'num', r.pct));
+    // its details under the mouse, damage or heals as the tab
+    if (r.tip) {
+      row.addEventListener('mouseenter', () => { TIP_ROW = r.name; if (api()) api().ov('tip', r.tip); });
+      row.addEventListener('mouseleave', () => { TIP_ROW = null; if (api()) api().ov('tip', null); });
+      if (TIP_ROW === r.name && api()) api().ov('tip', r.tip);   // kept fresh while hovered
+    }
     body.appendChild(row);
   });
-  box.appendChild(body);
+  box.replaceChild(body, box.lastChild);
+}
+let TIP_ROW = null;
+
+function setTabs(tabs, k) {
+  tabs.dataset.tab = k;
+  tabs.classList.toggle('heal', k === 'heal');
+  tabs.querySelectorAll('.mtab').forEach((b) => b.classList.toggle('on', b.dataset.k === k));
+}             // the row the mouse is on (its tip shown)
+document.addEventListener('mouseleave', () => {
+  if (TIP_ROW !== null && api()) api().ov('tip', null);
+  TIP_ROW = null;
+});
+
+/* The gear: this overlay's settings, in place of its content. */
+function gearBtn() {
+  const g = btn('ib gear' + (SETTINGS ? ' on' : ''), '', SETTINGS ? tr('Fermer') : tr('Réglages'),
+    () => { SETTINGS = !SETTINGS; render(); });
+  g.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M9.4 1l.3 1.8c.4.1.8.3 1.1.5l1.5-1 1.4 1.4-1 1.5c.2.3.4.7.5 1.1L15 6.6v2l-1.8.3c-.1.4-.3.8-.5 1.1l1 1.5-1.4 1.4-1.5-1c-.3.2-.7.4-1.1.5L9.4 15h-2l-.3-1.8c-.4-.1-.8-.3-1.1-.5l-1.5 1-1.4-1.4 1-1.5c-.2-.3-.4-.7-.5-1.1L1.8 9V7l1.8-.3c.1-.4.3-.8.5-1.1l-1-1.5 1.4-1.4 1.5 1c.3-.2.7-.4 1.1-.5L7.4 1h2zM8.4 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg>';
+  return g;
+}
+
+function settingsPanel() {
+  const st = Object.assign({ opacity: 100, scale: 100 }, OV.style || {});
+  const p = el('div', 'body sets');
+  const send = () => api() && api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale });
+  [['opacity', tr('Opacité'), 30, 100, 5], ['scale', tr('Taille'), 70, 150, 5]].forEach(([k, t, lo, hi, step]) => {
+    const row = el('label', 'set');
+    const top = el('span', 'setl');
+    top.appendChild(el('span', null, t));
+    const v = el('b', null, st[k] + ' %');
+    top.appendChild(v);
+    row.appendChild(top);
+    const r = el('input');
+    r.type = 'range'; r.min = lo; r.max = hi; r.step = step; r.value = st[k];
+    r.addEventListener('mousedown', (e) => e.stopPropagation());
+    r.addEventListener('input', () => { st[k] = +r.value; v.textContent = st[k] + ' %'; });
+    // sent once let go: the size redraws and moves the window
+    r.addEventListener('change', send);
+    row.appendChild(r);
+    p.appendChild(row);
+  });
+  const reset = btn('chip', tr('Par défaut'), null, () => { st.opacity = 100; st.scale = 100; send(); });
+  p.appendChild(reset);
+  return p;
+}
+
+/* The tip: a player's damage or heals, and the skills that did them. */
+function renderTip(box) {
+  const t = OV.tip;
+  if (!t) return;
+  box.className = 'tipbox' + (t.heal ? ' heal' : '');
+  const h = el('div', 'tiph' + (t.ck ? ' c-' + t.ck : ''));
+  const icon = (window.__ICONS__ || {})[t.ck];
+  if (icon) { const im = el('img'); im.src = icon; im.alt = ''; h.appendChild(im); }
+  h.appendChild(el('b', null, t.name));
+  h.appendChild(el('span', 'tipk', t.heal ? tr('Soins') : tr('Dégâts')));
+  box.appendChild(h);
+  const st = el('div', 'tips');
+  (t.stats || []).forEach(([k, v]) => {
+    const c = el('div', 'tipst');
+    c.appendChild(el('span', null, k));
+    c.appendChild(el('b', null, v));
+    st.appendChild(c);
+  });
+  box.appendChild(st);
+  if ((t.skills || []).length) {
+    const sk = el('div', 'tipsk');
+    t.skills.forEach((s) => {
+      const r = el('div', 'tipr');
+      r.style.setProperty('--f', (Math.max(0, Math.min(1, s.f || 0)) * 100) + '%');
+      const ic = el('span', 'tic');
+      if (s.img) { const im = el('img'); im.src = s.img; im.alt = ''; ic.appendChild(im); }
+      r.appendChild(ic);
+      r.appendChild(el('span', 'tn', s.t));
+      r.appendChild(el('span', 'tv', s.v));
+      r.appendChild(el('span', 'tp', s.pct));
+      sk.appendChild(r);
+    });
+    box.appendChild(sk);
+  } else {
+    box.appendChild(el('div', 'empty', t.heal ? tr('Aucun soin pour l’instant.') : tr('Aucun dégât pour l’instant.')));
+  }
 }
 
 /* The loot luck counters (the live tab's): each bonus, how far to its cap,
@@ -167,10 +293,7 @@ function renderMeter(box) {
 function renderLuck(box) {
   const l = OV.luck || {};
   const h = head(tr('Chance de butin'));
-  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
-    () => { OV_SMALL = !OV_SMALL; render(); }));
   box.appendChild(h);
-  if (OV_SMALL) return;
   const body = el('div', 'body');
   if (!l.rows) {
     body.appendChild(el('div', 'empty', tr('Lecture des compteurs…')));
@@ -234,11 +357,8 @@ function renderGoals(box) {
   const h = head(tr('Objectifs'), [el('span', 'clock', (g.rows || []).length
     ? done + ' / ' + g.rows.length : '')]);
   h.appendChild(btn('ib', ADD.open ? '−' : '+', ADD.open ? tr('Fermer') : tr('Ajouter un objectif'),
-    () => { ADD.open = !ADD.open; OV_SMALL = false; if (!ADD.open) leaveTyping(); render(); }));
-  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
-    () => { OV_SMALL = !OV_SMALL; render(); }));
+    () => { ADD.open = !ADD.open; if (!ADD.open) leaveTyping(); render(); }));
   box.appendChild(h);
-  if (OV_SMALL) return;
   const list = el('div', 'body glist');
   box.appendChild(list);
   renderList(list);

@@ -755,6 +755,45 @@ def _game_dir():
     return hb.parent if hb else None
 
 
+UI_FRAME = "UI/Elements/background.png"    # the game's window frame
+
+
+def ensure_ui_frame():
+    """The game's window frame (its corners and rivets, a 9-slice texture)
+    copied from res.pak into analysis_out/ui_frame.png once, for the
+    overlays (menu_host), with its opaque pixels (ui_frame_mask.json, one
+    "0"/"1" string a row) that cut the window to its outline. False when
+    the game or the texture is missing."""
+    out = ANALYSIS / "ui_frame.png"
+    mask = ANALYSIS / "ui_frame_mask.json"
+    if out.is_file() and mask.is_file():
+        return True
+    game = _game_dir()
+    if game is None or not (game / "res.pak").is_file():
+        return False
+    if str(ROOT / "hltools") not in sys.path:
+        sys.path.insert(0, str(ROOT / "hltools"))
+    try:
+        import pak_extract
+        raw = pak_extract.read_entry(game / "res.pak", UI_FRAME)
+        if not raw:
+            return False
+        import io
+        from PIL import Image
+        alpha = Image.open(io.BytesIO(raw)).convert("RGBA").getchannel("A")
+        rows = ["".join("1" if alpha.getpixel((x, y)) >= 128 else "0"
+                        for x in range(alpha.width))
+                for y in range(alpha.height)]
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(raw)
+        mask.write_text(json.dumps(rows), encoding="utf-8")
+        return True
+    except Exception as e:
+        print(f"[meter] the game's window frame couldn't be read: {e!r}",
+              file=sys.stderr)
+        return False
+
+
 def item_model_json(item_id):
     """One collectible's model for the viewer, as JSON text, cached and keyed
     to res.pak (a patch rebuilds it). None when there is no readable model or

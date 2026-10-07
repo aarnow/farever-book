@@ -1305,7 +1305,7 @@ function characterTick() {
             rosterDue = false;
             send({ kind: "roster", players: players.map(function (p) {
                 return { n: p.n, k: p.k, lvl: p.lvl, me: p.me };
-            }) });
+            }), party: Object.keys(partyNames) });
         }
         if (analyzeWanted !== null) {
             const want = analyzeWanted;
