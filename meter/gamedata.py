@@ -517,7 +517,8 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
                      on_progress=None):
     """Re-run the generators against the given hlboot.dat (or their own
     auto-detect when None), e.g. after a Farever patch. Skipped when the
-    hlboot.dat is unchanged since the last success. True on success."""
+    hlboot.dat and res.light.pak are unchanged since the last success. True
+    on success."""
     tools = [ROOT / "hltools" / "build_targets.py",
              ROOT / "hltools" / "emit_offsets.py"]
     missing = [t.name for t in tools if not t.exists()]
@@ -530,22 +531,34 @@ def _regenerate_data(hlboot=None, force=False, on_step=None,
         st = Path(hlboot).stat()
         stamp = {"src": str(hlboot), "mtime": st.st_mtime, "size": st.st_size,
                  "format": DATA_FORMAT}
+        # the game's data (data.cdb, in res.light.pak) too: a patch can fix a
+        # table (a loot link) without touching the code
+        light = Path(hlboot).with_name("res.light.pak")
+        if light.is_file():
+            lt = light.stat()
+            stamp["data"] = {"mtime": lt.st_mtime, "size": lt.st_size}
         if not force:
             try:
                 # Log WHY a regenerate (two parses of a 14 MB file) happens.
                 on_disk = json.loads(DATA_STAMP.read_text())
                 if on_disk != stamp:
-                    print(f"[meter] hlboot.dat has changed since the last "
-                          f"regenerate (stamp {on_disk.get('size')} bytes, "
-                          f"now {stamp['size']}); regenerating.",
-                          file=sys.stderr)
+                    data_only = ({k: v for k, v in on_disk.items() if k != "data"}
+                                 == {k: v for k, v in stamp.items() if k != "data"})
+                    if data_only:
+                        was = (on_disk.get("data") or {}).get("size")
+                        now = (stamp.get("data") or {}).get("size")
+                    else:
+                        was, now = on_disk.get("size"), stamp["size"]
+                    print(f"[meter] {'res.light.pak' if data_only else 'hlboot.dat'} "
+                          f"has changed since the last regenerate (stamp {was} "
+                          f"bytes, now {now}); regenerating.", file=sys.stderr)
                 elif (not (ANALYSIS / "resolver_data.json").is_file()
                         or not (ANALYSIS / "meter_offsets.json").is_file()):
                     print("[meter] a generated file is missing; regenerating.",
                           file=sys.stderr)
                 elif _data_is_current():
                     print("[meter] data already matches this build "
-                          "(hlboot.dat unchanged).", file=sys.stderr)
+                          "(hlboot.dat and res.light.pak unchanged).", file=sys.stderr)
                     return True
             except FileNotFoundError:
                 print("[meter] no data stamp yet; regenerating.",
