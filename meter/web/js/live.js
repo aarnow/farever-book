@@ -105,7 +105,7 @@ function buildLuck(n) {
     row.appendChild(v);
     row.appendChild(el('span', 'lst' + (l.on ? ' on' : ''), l.on
       ? (l.left != null ? tr('Offrande active · {left} min', { left: l.left }) : tr('Offrande active'))
-      : tr('Pas d’offrande')));
+      : tr('Pas d’offrande : bonus gelé')));
     lk.appendChild(row);
   });
   box.appendChild(lk);

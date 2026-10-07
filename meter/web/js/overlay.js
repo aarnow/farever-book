@@ -178,13 +178,15 @@ function renderLuck(box) {
     return;
   }
   // one line each: its icon, then a bar to the cap with the name and the
-  // bonus in it (lit while the offering is on, the details in its tooltip)
+  // bonus in it (lit while the offering is on, the details in its tooltip).
+  // Without its offering a bonus is frozen: st.Player.rollLuck then rolls
+  // the base chance alone and leaves the counter as it is
   l.rows.forEach((r) => {
-    const row = el('div', 'lrow' + (r.on ? ' on' : '') + (r.full ? ' full' : ''));
+    const row = el('div', 'lrow' + (r.on ? ' on' : ' frozen') + (r.full ? ' full' : ''));
     row.title = [
       r.grows ? (r.full ? tr('plafond atteint') : tr('max {cap}', { cap: r.cap })) : tr('Bonus fixe'),
       r.on ? (r.left != null ? tr('Offrande active · {left} min', { left: r.left }) : tr('Offrande active'))
-        : tr('Pas d’offrande')].join(' · ');
+        : tr('Bonus gelé : sans offrande, il ne compte pas et le compteur ne bouge pas')].join(' · ');
     const ic = el('span', 'lic');
     if (r.img) { const im = el('img'); im.src = r.img; im.alt = ''; ic.appendChild(im); }
     row.appendChild(ic);
@@ -193,11 +195,37 @@ function renderLuck(box) {
     fill.style.width = (Math.max(0, Math.min(1, r.f || 0)) * 100) + '%';
     bar.appendChild(fill);
     bar.appendChild(el('span', 'nm', r.t));
-    bar.appendChild(el('b', 'v', '+' + r.bonus));
+    const v = el('b', 'v', '+' + r.bonus);
+    if (!r.on) v.prepend(lockIcon());
+    bar.appendChild(v);
     row.appendChild(bar);
     body.appendChild(row);
   });
+  // no offering at all: a veil over the counters, what unfreezes them
+  if (!l.rows.some((r) => r.on)) {
+    body.classList.add('veiled');
+    const veil = el('div', 'lveil');
+    const msg = el('div', 'lvbox');
+    const t = el('div', 'lvt');
+    t.appendChild(lockIcon());
+    t.appendChild(el('span', null, tr('Bonus gelés')));
+    msg.appendChild(t);
+    msg.appendChild(el('div', 'lvs', tr('Fais une offrande au {well} pour les activer.',
+      { well: l.well || tr('Puits des âmes') })));
+    veil.appendChild(msg);
+    body.appendChild(veil);
+  }
   box.appendChild(body);
+}
+
+/* A small padlock, drawn: the same in every font. */
+function lockIcon() {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 12 14');
+  s.setAttribute('class', 'lock');
+  s.innerHTML = '<path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+    + '<rect x="1" y="6" width="10" height="7.5" rx="1.5" fill="currentColor"/>';
+  return s;
 }
 
 function renderGoals(box) {

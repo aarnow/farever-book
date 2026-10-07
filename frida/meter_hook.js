@@ -1283,7 +1283,8 @@ function layerPlayers() {
     return out;
 }
 
-// The local hero's luck and statistics, read every minute.
+// The local hero's luck and statistics, read every 5 s: an offering made
+// shows at once (a few memory reads).
 let selfDue = true;
 
 // GAME THREAD ONLY.
@@ -1506,7 +1507,7 @@ function main() {
     if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");
     every(function () { codexDue = true; }, 8000);
     every(function () { rosterDue = true; }, 5000);
-    every(function () { selfDue = true; }, 60000);
+    every(function () { selfDue = true; }, 5000);
     listenAnalyze();
 
     for (const nm in DATA.funcs) {

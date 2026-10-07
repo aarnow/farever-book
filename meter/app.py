@@ -54,7 +54,7 @@ from bosssheet import boss_sheet_view
 from views import (
     LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
-    hunt_detail_view, map_view, rift_rewards_view)
+    hunt_detail_view, map_view, rift_rewards_view, soulwell_name)
 from reports import (
     _overheal_note, _rate_text, _report_name, render_rift_report_image,
     report_view)
@@ -178,7 +178,7 @@ class App:
         self._launching_until = 0           # Play was clicked: until then
         self._setup = None                  # the welcome screen's state
         self._settings_topic = "meter"      # Réglages: the subject shown
-        self._self_prof = None              # own luck counters (hook, 1 min)
+        self._self_prof = None              # own luck counters (hook, 5 s)
         # a rift's gates: the game's running count when it began, and the
         # report waiting for the count after it (see _rift_gates_seen)
         self._rift_gates0 = None
@@ -1460,7 +1460,8 @@ class App:
         spec["goals"] = self.goals.view()
         # the loot luck counters, as the live tab shows them
         spec["luck"] = {"rows": (_profile_luck(self._self_prof)
-                                 if self._self_prof else None)}
+                                 if self._self_prof else None),
+                        "well": soulwell_name()}
         return spec
 
     def on_achievements(self, p):

@@ -1012,6 +1012,11 @@ LUCK_LABELS = (("Luck_Mount", "Monture"), ("Luck_Glider", "Planeur"),
                ("Luck_PrismaticGear", "Équipement prismatique"))
 
 
+def soulwell_name():
+    """The Soulwell's name in the interface's language (the game's)."""
+    return _fr_names("element").get("Soulwell") or "Soulwell"
+
+
 # an item of the game standing for each counter (the Soulwell statuses
 # share one icon)
 LUCK_ICONS = {"Luck_Mount": "Mount_Boar_01",
