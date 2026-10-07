@@ -15,7 +15,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "DA_Water",
@@ -28,7 +29,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Glider_FlyingFish_Orange",
@@ -38,7 +40,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Manfish_Support",
@@ -48,7 +51,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RManfish_FigWiz",
@@ -467,7 +471,8 @@
 "rogue": 2,
 "priest": 2
 }
-}
+},
+"level": 5
 },
 {
 "kind": "R1_POI_AmaymonGoulp",
@@ -484,7 +489,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Axe_Boomerang",
@@ -497,7 +503,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Glider_Bat_BlackWhite",
@@ -507,7 +514,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Kobold_Support",
@@ -517,7 +525,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RKobold_AssWiz",
@@ -936,7 +945,8 @@
 "rogue": 2,
 "priest": 2
 }
-}
+},
+"level": 7
 },
 {
 "kind": "R1_POI_Boss_Ratsar",
@@ -953,7 +963,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "GS_Nova",
@@ -965,7 +976,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Glider_Bat_WhiteBlack",
@@ -975,7 +987,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Kobold_Tank",
@@ -985,7 +998,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RKobold_AssWiz",
@@ -1415,7 +1429,8 @@
 "rogue": 3,
 "priest": 4
 }
-}
+},
+"level": 10
 },
 {
 "kind": "R1_POI_Nepsid_Boss",
@@ -1433,7 +1448,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Fists_WaterUppecut",
@@ -1446,7 +1462,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Mount_Crab_Blue",
@@ -1456,7 +1473,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Manfish_Tank",
@@ -1466,7 +1484,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RManfish_FigWiz",
@@ -1897,7 +1916,8 @@
 "rogue": 4,
 "priest": 4
 }
-}
+},
+"level": 8
 },
 {
 "kind": "Bee_Hive",
@@ -1915,7 +1935,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Spear_Goo",
@@ -1928,7 +1949,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Glider_Butterfly_Yellow",
@@ -1938,7 +1960,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Bee_DPS",
@@ -1948,7 +1971,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RBee_Fig",
@@ -2368,7 +2392,8 @@
 "rogue": 2,
 "priest": 2
 }
-}
+},
+"level": 12
 },
 {
 "kind": "R1_POI_MokshisHivetree",
@@ -2386,7 +2411,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Sword_Swarm",
@@ -2399,7 +2425,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Mount_Ladybug_Red",
@@ -2409,7 +2436,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Bee_Support",
@@ -2419,7 +2447,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RBee_Fig",
@@ -2839,7 +2868,8 @@
 "rogue": 2,
 "priest": 2
 }
-}
+},
+"level": 13
 },
 {
 "kind": "Z1_POI_Dungeon_ManfishAbyss",
@@ -2857,7 +2887,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Bow_BigGame",
@@ -2870,7 +2901,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Glider_FlyingFish_Acid",
@@ -2880,7 +2912,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Manfish_DPS",
@@ -2890,7 +2923,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RManfish_FigWiz",
@@ -3193,6 +3227,83 @@
 "diff": null
 },
 {
+"item": "Hands_EManfish_FigCle",
+"type": "Hands",
+"rarity": "Epic",
+"apt": [
+"warrior",
+"priest"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Legs_EManfish_FigAss",
+"type": "Legs",
+"rarity": "Epic",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Shoulders_EManfish_AssWiz",
+"type": "Shoulders",
+"rarity": "Epic",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Chest_EManfish_AssCle",
+"type": "Chest",
+"rarity": "Epic",
+"apt": [
+"rogue",
+"priest"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Feet_EManfish_Wiz",
+"type": "Feet",
+"rarity": "Epic",
+"apt": [
+"mage"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Back_EManfish_WizCle",
+"type": "Back",
+"rarity": "Epic",
+"apt": [
+"mage",
+"priest"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
 "item": "UpgradeRare",
 "type": "UpgradeComponent",
 "rarity": "Rare",
@@ -3228,8 +3339,15 @@
 "mage": 12,
 "rogue": 11,
 "priest": 10
+},
+"heroic": {
+"warrior": 2,
+"mage": 3,
+"rogue": 3,
+"priest": 3
 }
-}
+},
+"level": 16
 },
 {
 "kind": "R1_POI_Dungeon_AbbandonedMines",
@@ -3247,7 +3365,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Shield_Firebreath",
@@ -3260,7 +3379,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Glider_Dragon_Lava",
@@ -3270,7 +3390,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Crimson_Support",
@@ -3280,7 +3401,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RKobold_AssWiz",
@@ -3582,6 +3704,81 @@
 "diff": null
 },
 {
+"item": "Waist_ECrimson_FigAss",
+"type": "Waist",
+"rarity": "Epic",
+"apt": [
+"warrior",
+"rogue"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Back_ECrimson_Fig",
+"type": "Back",
+"rarity": "Epic",
+"apt": [
+"warrior"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Chest_ECrimson_Ass",
+"type": "Chest",
+"rarity": "Epic",
+"apt": [
+"rogue"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Back_ECrimson_AssWiz",
+"type": "Back",
+"rarity": "Epic",
+"apt": [
+"rogue",
+"mage"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Waist_ECrimson_WizCle",
+"type": "Waist",
+"rarity": "Epic",
+"apt": [
+"mage",
+"priest"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
+"item": "Legs_ECrimson_Cle",
+"type": "Legs",
+"rarity": "Epic",
+"apt": [
+"priest"
+],
+"src": "heroic",
+"chance": null,
+"qty": null,
+"diff": 2
+},
+{
 "item": "UpgradeRare",
 "type": "UpgradeComponent",
 "rarity": "Rare",
@@ -3617,8 +3814,15 @@
 "mage": 11,
 "rogue": 10,
 "priest": 11
+},
+"heroic": {
+"warrior": 2,
+"mage": 2,
+"rogue": 3,
+"priest": 2
 }
-}
+},
+"level": 15
 },
 {
 "kind": "R1_POI_CleodorasNest",
@@ -3636,7 +3840,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "DS_Z1RBee_AssWiz",
@@ -3649,7 +3854,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Mount_Ladybug_Purple",
@@ -3659,7 +3865,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Bee_Tank",
@@ -3669,7 +3876,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RBee_Fig",
@@ -4008,7 +4216,8 @@
 "rogue": 11,
 "priest": 11
 }
-}
+},
+"level": 19
 },
 {
 "kind": "R1_POI_GorgonsHollow",
@@ -4026,7 +4235,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "GA_Craft",
@@ -4038,7 +4248,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "Mount_Skunk_04",
@@ -4048,7 +4259,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "InfusionPattern_Kobold_DPS",
@@ -4058,7 +4270,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": false
 },
 {
 "item": "Chest_RKobold_AssWiz",
@@ -4396,7 +4609,8 @@
 "rogue": 10,
 "priest": 11
 }
-}
+},
+"level": 19
 },
 {
 "kind": "R1_POI_Dungeon_CrimsonBarraks_POI_Def",
@@ -4411,7 +4625,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "InfusionPattern_Crimson_DPS",
@@ -4421,7 +4636,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": true
 },
 {
 "item": "Fists_LightMonk",
@@ -4434,7 +4650,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "Bow_BigGame",
@@ -4447,7 +4664,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "Chest_RCrimson_FigCle",
@@ -4784,7 +5002,8 @@
 "rogue": 11,
 "priest": 10
 }
-}
+},
+"level": 22
 },
 {
 "kind": "R1_POI_CrimsonSacristy",
@@ -4799,7 +5018,8 @@
 "src": "boss",
 "chance": 0.01,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": true
 },
 {
 "item": "InfusionPattern_Crimson_Tank",
@@ -4809,7 +5029,8 @@
 "src": "boss",
 "chance": 1.0,
 "qty": null,
-"diff": 2
+"diff": 2,
+"bossTable": true
 },
 {
 "item": "Staff_Censer",
@@ -4822,7 +5043,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "Mace_Benediction",
@@ -4835,7 +5057,8 @@
 "src": "coffre",
 "chance": 0.5,
 "qty": null,
-"diff": null
+"diff": null,
+"bossTable": false
 },
 {
 "item": "Chest_RCrimson_FigCle",
@@ -5172,6 +5395,7 @@
 "rogue": 11,
 "priest": 10
 }
-}
+},
+"level": 25
 }
 ]

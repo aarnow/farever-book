@@ -730,6 +730,13 @@ def extract_item_rarity(game_dir):
 # An achievement naming a boss the unit sheet spells differently.
 BOSS_ALIASES = {"Splongeblob": "SpongeBlob"}
 
+# Heroic loot the server drops though the client's data.cdb doesn't link it
+# (no props.heroicLootTable on the boss): the studio fixed it server-side
+# and players loot it (announced on its Discord, 2026-10-07). To drop once a
+# client patch carries the link. MunsterChuck_HM, Phrixes_HM... the other
+# unlinked tables stay out until the same is confirmed for them.
+SERVER_HEROIC_LOOT = {"SpongeBlob": "SpongeBlob_HM", "Golcano": "Golcano_HM"}
+
 
 def extract_dungeons(game_dir):
     """Every dungeon, in the game's order: [{kind, boss, region, ...}]. The
@@ -827,7 +834,8 @@ def dungeon_loot(boss, item_rows, tables, itypes=None):
     * Faction armour (st.activity.DungeonContext.dropBossLoot, read
       2026-10-01): in Normal/Hard ONE sure piece, drawn evenly among the
       faction's Rare non-weapon gear the class can wear (the last 2 received
-      left out); in Heroic the boss's heroicLootTable instead, if any.
+      left out); in Heroic the boss's heroicLootTable instead, if any
+      (or its SERVER_HEROIC_LOOT one, linked on the server only).
       "pools": {mode: {class: pieces eligible}}.
     Each entry: {item, type, rarity, apt, src, chance (0..1 or None), qty,
     diff (conditions.difficulty.min)}."""
@@ -892,7 +900,8 @@ def dungeon_loot(boss, item_rows, tables, itypes=None):
                 and not is_weapon(row.get("type"))]
         out += [entry(iid, "faction", None) for iid in rare]
         pools["faction"] = pool(rare)
-    heroic = (tables.get(props.get("heroicLootTable")) or {}).get("loot") or []
+    heroic = (tables.get(props.get("heroicLootTable")
+                         or SERVER_HEROIC_LOOT.get(boss.get("id"))) or {}).get("loot") or []
     epic = [ln["item"] for ln in heroic if ln.get("item")]
     if epic:
         out += [entry(iid, "heroic", None, diff=2) for iid in epic]
