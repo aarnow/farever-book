@@ -168,7 +168,7 @@ class App:
         self._me_auto_next = 0.0
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
-        self._ov_on = {"meter": False, "goals": False, "luck": False}  # shown, per overlay (alpha: off at first)
+        self._ov_on = {"meter": True, "goals": False, "luck": False}  # shown, per overlay (the meter on at first)
         # locked (the mouse goes through): in the game's focus mode, or always
         self._ov_lock_always = False
         # hidden while the game's cursor is free (one of its windows open)
@@ -2412,31 +2412,6 @@ class App:
                                 "ouverte"))},
             {"k": "button", "id": "ov_reset",
              "t": tr("Remettre les overlays à leur place par défaut")},
-            {"k": "note", "t": tr("Les overlays s'affichent par-dessus le "
-                                  "jeu, seulement sur un personnage (pas "
-                                  "dans les menus) et quand Farever est au "
-                                  "premier plan. Déplace-les en tirant leur "
-                                  "en-tête : chacun s'accroche au bord le "
-                                  "plus proche de l'écran (grille de {n} px) "
-                                  "et garde cette distance si la taille du "
-                                  "jeu change.", n=OVERLAY_GRID)},
-            {"k": "note", "t": tr("Quand tu joues souris capturée (la "
-                                  "caméra suit la souris, curseur caché), "
-                                  "les overlays se verrouillent tout seuls : "
-                                  "la souris les traverse, et un clic ne "
-                                  "peut plus interrompre ton personnage. "
-                                  "Curseur libre, ils se déplacent à "
-                                  "nouveau. Toujours verrouillés : ils ne se "
-                                  "déplacent plus, décoche pour les "
-                                  "replacer.")},
-            {"k": "note", "t": tr("Masquer quand une interface du jeu est "
-                                  "ouverte : les overlays disparaissent quand "
-                                  "une fenêtre du jeu libère le curseur "
-                                  "(inventaire, carte, fiche du "
-                                  "personnage…) et reviennent en combat. "
-                                  "Afficher la souris avec Alt les garde "
-                                  "visibles, pour les utiliser ou les "
-                                  "déplacer.")},
         ]
         return out
 
