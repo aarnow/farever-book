@@ -114,13 +114,18 @@ def _dungeon_backdrop(kind, boss, region=""):
 
 def _ov_style(v):
     """An overlay's settings, kept in bounds: opacity 30-100 %, size
-    70-150 %."""
+    90-110 %, its list's greatest height (px, 0: none) 30-900."""
     def num(k, lo, hi):
         try:
             return max(lo, min(hi, int(v.get(k) or 100)))
         except (TypeError, ValueError):
             return 100
-    return {"opacity": num("opacity", 30, 100), "scale": num("scale", 70, 150)}
+    try:
+        maxh = int(v.get("maxh") or 0)
+    except (TypeError, ValueError):
+        maxh = 0
+    return {"opacity": num("opacity", 30, 100), "scale": num("scale", 90, 110),
+            "maxh": max(30, min(900, maxh)) if maxh else 0}
 
 
 class App:

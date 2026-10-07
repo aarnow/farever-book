@@ -149,17 +149,25 @@ svg.lock { width: 9px; height: 11px; flex: none; }
 html.framed, html.framed body { background: #CEB7AA; }
 html.framed #ov { border: 32px solid transparent; border-image: var(--ov-frame) 32 fill / 32px stretch;
                   background: none; border-radius: 0; overflow: visible; }
-html.framed .head { background: none; border-bottom: 0; margin: -20px -14px 0; padding: 0 10px 6px 6px; }
-html.framed .body { background: var(--ov-bg); border-radius: 4px; margin: 0 -14px -14px;
-                    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25); }
-html.framed .body:has(+ .add) { margin-bottom: 0; }
-html.framed .add { background: var(--ov-bg); border-radius: 4px; border-top: 0; margin: 6px -14px -14px;
-                   box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25); }
+html.framed .head { background: none; border-bottom: 0; margin: -20px -14px 0; padding: 3px 8px 3px 6px; }
+/* the content as the game's windows have it: their body colour across the
+   whole width (to the frame's edge line, 8 px in) between the title and a
+   light footer that keeps the frame's bottom rivets */
+html.framed .body { background: var(--ov-bg); margin: 0 -24px -10px;
+                    border-top: 1px solid rgba(94, 66, 56, .35); border-bottom: 1px solid rgba(94, 66, 56, .35); }
+html.framed .body:has(+ .add) { margin-bottom: 0; border-bottom: 0; }
+html.framed .add { background: var(--ov-bg); border-top: 1px solid rgba(94, 66, 56, .25);
+                   border-bottom: 1px solid rgba(94, 66, 56, .35); margin: 0 -24px -10px; }
 
 /* the meter: its two tabs across the width, damage and heals */
 .mtabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 6px; overflow: hidden;
          border: 1px solid rgba(94, 66, 56, .4); border-radius: 4px; background: rgba(94, 66, 56, .1); }
-html.framed .mtabs { margin: 0 -14px 6px; }
+/* the meter's tabs at the top of its body */
+html.framed .mtabsbar { margin: 0 -24px; padding: 6px 8px 0; background: var(--ov-bg);
+                        border-top: 1px solid rgba(94, 66, 56, .35); }
+html.framed .mtabsbar + .body { border-top: 0; }
+html.framed .mtabs { margin: 0; border-color: rgba(58, 46, 39, .45); background: rgba(255, 246, 230, .18); }
+html.framed .mtab:not(.on) { color: #4A3229; }
 /* the shown tab's background, sliding from one to the other */
 .mtabs::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 50%;
                  background: var(--ov-well); transition: transform .25s ease; }
@@ -170,7 +178,7 @@ html.framed .mtabs { margin: 0 -14px 6px; }
 .mtab.on { color: #fff; }
 .rkr.zero > span { opacity: .6; }
 /* the gear and its settings */
-.ib.gear { display: grid; place-items: center; padding: 3px; }
+.ib.gear { display: grid; place-items: center; padding: 3px; align-self: center; }
 .ib.gear.on { color: var(--ov-text); background: rgba(94, 66, 56, .18); }
 .sets { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 12px; min-width: 240px; }
 .set { display: flex; flex-direction: column; gap: 4px; color: #FFF6E6; font-size: 12px; }
@@ -208,6 +216,30 @@ html:not(.framed) body:has(.tipbox) { background: var(--ov-edge); }
 /* the game's own mouse cursors (menu_host._overlay_document): its arrow
    everywhere, its hand on what can be clicked; typing keeps the caret */
 html.gcur, html.gcur * { cursor: var(--cur); }
-html.gcur button, html.gcur .ri, html.gcur .rkr:not(.h), html.gcur input[type=range],
+html.gcur button, html.gcur .ri, html.gcur input[type=range],
 html.gcur button * { cursor: var(--cur-hand); }
 html.gcur input[type=text], html.gcur input:not([type]) { cursor: text; }
+
+/* the game's window header: its title centred, in its own font
+   (overlay.js titleEl), what the window does on the right */
+.head { position: relative; min-height: 26px; }
+.head .t { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.head img.timg { display: block; image-rendering: auto; }
+html.framed .head .t:not(img) { font-family: Georgia, "Times New Roman", serif; font-size: 15px;
+  text-transform: none; letter-spacing: 0; color: #6A4E44; }
+
+/* the meter: the fight's duration over its tabs */
+.mclock { text-align: left; padding-left: 2px; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #4A3229;
+          margin: -2px 0 5px; }
+.mclock.hot { color: #8A3F0E; font-weight: 700; }
+/* its list, scrolling past the player's height (the footer's grip) */
+.mrows { overflow-y: auto; overscroll-behavior: contain; }
+.mrows::-webkit-scrollbar { width: 6px; }
+.mrows::-webkit-scrollbar-track { background: rgba(58, 46, 39, .25); border-radius: 3px; }
+.mrows::-webkit-scrollbar-thumb { background: var(--ov-well); border-radius: 3px; }
+.mrows > .rkr:first-child { margin-top: 2px; }
+#ov { position: relative; }
+/* the whole footer, between the frame's bottom pieces, sizes the list */
+.grip { position: absolute; left: 0; right: 0; bottom: -24px; height: 16px; cursor: ns-resize; touch-action: none; }
+html.gcur .grip { cursor: ns-resize; }
+.mrows.sizing { outline: 1px dashed rgba(74, 50, 41, .6); outline-offset: -1px; overflow-y: hidden; }

@@ -48,11 +48,12 @@ window.applyLang = function (json) {
 };
 
 window.applyOverlay = function (json) {
-  const mine = SETTINGS && OV ? OV.style : null;
+  const mine = (SETTINGS || GRIP) && OV ? OV.style : null;
   try { OV = JSON.parse(json); } catch (e) { return; }
   // the settings open: they hold the style being chosen, and a slider held
-  // must not be redrawn under the mouse
+  // must not be redrawn under the mouse; the grip held, its height
   if (SETTINGS) { if (mine) OV.style = mine; return; }
+  if (GRIP && mine) OV.style = mine;
   // the add form keeps its own state: a push must not wipe what is typed
   if (document.activeElement && document.activeElement.tagName === 'INPUT') {
     renderList();
@@ -108,15 +109,79 @@ function reportSize() {
   api().ov('size', [w, h]);
 }
 new ResizeObserver(reportSize).observe(document.getElementById('ov'));
+// the panel held at its last whole size (above) never shrinks by itself:
+// measured again after each drawing, which a shorter content needs
+let SIZE_DUE = false;
+function sizeSoon() {
+  if (SIZE_DUE) return;
+  SIZE_DUE = true;
+  requestAnimationFrame(() => { SIZE_DUE = false; reportSize(); });
+}
 
 /* ---- drawing ------------------------------------------------------------ */
 function head(title, extra) {
   const h = el('div', 'head');
   h.addEventListener('mousedown', startDrag);
-  h.appendChild(el('span', 't', title));
-  (extra || []).forEach((x) => h.appendChild(x));
+  h.appendChild(titleEl(title));
+  // the title centred on its own: the rest on the right
   h.appendChild(el('span', 'sp'));
+  (extra || []).forEach((x) => h.appendChild(x));
   return h;
+}
+
+/* A window's title as the game writes it: its own bitmap font (Platypi
+   Bold, menu_host._title_font), in its title brown, centred over the
+   header; the page's font without it. */
+const TITLE_FONT = window.__TITLE_FONT__ || null;
+const TITLE_INK = '#6A4E44';
+let TITLE_ATLAS = null;
+const TITLE_CACHE = {};
+function titleEl(text) {
+  const span = el('span', 't', text);
+  const f = TITLE_FONT;
+  if (!f || !f.glyphs) return span;
+  const chars = Array.from(text);
+  if (!chars.every((c) => f.glyphs[c.codePointAt(0)] || c === ' ')) return span;
+  if (!TITLE_ATLAS) {
+    TITLE_ATLAS = new Image();
+    TITLE_ATLAS.src = f.img;
+    TITLE_ATLAS.addEventListener('load', () => render());
+  }
+  if (!TITLE_ATLAS.complete || !TITLE_ATLAS.naturalWidth) return span;
+  if (!TITLE_CACHE[text]) {
+    const space = f.glyphs[32] ? f.glyphs[32][6] : Math.round(f.size / 4);
+    let w = 0;
+    chars.forEach((c) => { const g = f.glyphs[c.codePointAt(0)]; w += g ? g[6] : space; });
+    const cv = document.createElement('canvas');
+    // even sizes: centred, it falls on whole pixels
+    cv.width = Math.max(2, w + 2 + ((w + 2) % 2));
+    cv.height = f.lineHeight + (f.lineHeight % 2);
+    const cx = cv.getContext('2d');
+    let x = 0;
+    chars.forEach((c) => {
+      const g = f.glyphs[c.codePointAt(0)];
+      if (!g) { x += space; return; }
+      if (g[2] && g[3]) cx.drawImage(TITLE_ATLAS, g[0], g[1], g[2], g[3], x + g[4], g[5], g[2], g[3]);
+      x += g[6];
+    });
+    // the glyphs are white: inked in the game's title colour
+    cx.globalCompositeOperation = 'source-in';
+    cx.fillStyle = TITLE_INK;
+    cx.fillRect(0, 0, cv.width, cv.height);
+    TITLE_CACHE[text] = { src: cv.toDataURL(), w: cv.width, h: cv.height };
+  }
+  const t = TITLE_CACHE[text];
+  const im = el('img', 't timg');
+  im.src = t.src;
+  im.width = t.w;
+  im.height = t.h;
+  // a bitmap font: shown at its own pixels whatever the overlay's size
+  // (the player's zoom would blur it)
+  const z = (OV && OV.style && OV.style.scale || 100) / 100;
+  if (z !== 1) im.style.zoom = 1 / z;
+  im.alt = text;
+  im.draggable = false;
+  return im;
 }
 
 function render() {
@@ -127,6 +192,7 @@ function render() {
   // the player's size for this overlay (its gear), the window following
   const st = OV.style || {};
   box.style.zoom = (st.scale || 100) / 100;
+  sizeSoon();
   if (OV_ID === 'tip') renderTip(box);
   else if (OV_ID === 'meter') renderMeter(box);
   else if (OV_ID === 'luck') renderLuck(box);
@@ -136,27 +202,26 @@ function render() {
 function renderMeter(box) {
   const m = OV.meter || { rows: [] };
   const heal = m.tab === 'heal';
-  box.className = heal ? 'heal' : '';
   const h = head(tr('Meter'));
-  if (m.time) {
-    const c = el('span', 'clock' + (m.fight ? ' hot' : ''), m.time);
-    if (m.held) c.title = tr('dernier combat');
-    h.appendChild(c);
-  }
   h.appendChild(gearBtn());
   if (SETTINGS) {
     box.textContent = '';
+    box.className = '';
     box.appendChild(h);
     box.appendChild(settingsPanel());
     return;
   }
-  // damage or heals: two tabs side by side across the whole width, the
-  // shown one's background sliding to it; the same tabs from one redraw to
-  // the next, so the slide plays out
-  let tabs = box.querySelector(':scope > .mtabs');
-  if (!tabs) {
+  // its parts kept from one redraw to the next (the tabs' slide, the list's
+  // scroll and its scrollbar held), only their content renewed
+  let parts = box.querySelector(':scope > .mtabsbar') ? box : null;
+  if (!parts) {
     box.textContent = '';
-    tabs = el('div', 'mtabs');
+    box.appendChild(h);
+    // the fight's duration, then damage or heals: two tabs side by side
+    // across the whole width, the shown one's background sliding to it
+    const bar = el('div', 'mtabsbar');
+    bar.appendChild(el('div', 'mclock'));
+    const tabs = el('div', 'mtabs');
     [['dmg', tr('Dégâts')], ['heal', tr('Soins')]].forEach(([k, t]) => {
       const b = btn('mtab', t, null, () => {
         if (tabs.dataset.tab === k) return;
@@ -166,24 +231,38 @@ function renderMeter(box) {
       b.dataset.k = k;
       tabs.appendChild(b);
     });
-    box.appendChild(h);
-    box.appendChild(tabs);
-    box.appendChild(el('div', 'body'));
+    bar.appendChild(tabs);
+    box.appendChild(bar);
+    const body = el('div', 'body');
+    body.appendChild(el('div', 'rkr h'));
+    body.appendChild(el('div', 'mrows'));
+    box.appendChild(body);
+    box.appendChild(gripEl());
   } else {
     box.replaceChild(h, box.firstChild);
-    tabs.querySelectorAll('.mtab').forEach((b) => { b.textContent = b.dataset.k === 'heal' ? tr('Soins') : tr('Dégâts'); });
   }
+  box.className = heal ? 'heal' : '';
+  const tabs = box.querySelector('.mtabs');
+  tabs.querySelectorAll('.mtab').forEach((b) => { b.textContent = b.dataset.k === 'heal' ? tr('Soins') : tr('Dégâts'); });
   setTabs(tabs, heal ? 'heal' : 'dmg');
-  const body = el('div', 'body');
+  const clock = box.querySelector('.mclock');
+  clock.className = 'mclock' + (m.fight ? ' hot' : '');
+  clock.textContent = tr('Durée : {t}', { t: m.time || '0:00' })
+    + (m.fight ? ' ' + tr('(en cours)') : m.held ? ' ' + tr('(terminé)') : '');
   // the rift reports' ranking (report.js rankTable): the class colour
   // filling the row as far as the player's share against the best; the
   // group always listed, at nothing until it fights
-  const th = el('div', 'rkr h');
+  const th = box.querySelector('.rkr.h');
+  th.textContent = '';
   th.appendChild(el('span', 'ic'));
   [tr('Joueur'), heal ? 'HPS' : 'DPS', tr('Total'), tr('Part')]
     .forEach((t, i) => th.appendChild(el('span', i ? 'num' : 'nm', t)));
-  body.appendChild(th);
-  if (!(m.rows || []).length) body.appendChild(el('div', 'empty', tr('En attente d’un combat…')));
+  const list = box.querySelector('.mrows');
+  // the player's height for the list: past it, it scrolls
+  const maxh = (OV.style || {}).maxh || 0;
+  list.style.maxHeight = maxh ? maxh + 'px' : '';
+  const rows = [];
+  if (!(m.rows || []).length) rows.push(el('div', 'empty', tr('En attente d’un combat…')));
   (m.rows || []).forEach((r) => {
     const row = el('div', 'rkr' + (r.ck ? ' c-' + r.ck : '') + (r.rank <= 3 && !r.zero ? ' top' : '')
       + (r.zero ? ' zero' : ''));
@@ -202,10 +281,62 @@ function renderMeter(box) {
       row.addEventListener('mouseleave', () => { TIP_ROW = null; if (api()) api().ov('tip', null); });
       if (TIP_ROW === r.name && api()) api().ov('tip', r.tip);   // kept fresh while hovered
     }
-    body.appendChild(row);
+    rows.push(row);
   });
-  box.replaceChild(body, box.lastChild);
+  list.replaceChildren(...rows);
 }
+
+/* The footer, dragged: the list's greatest height (past it, the list
+   scrolls), shown as it is set, saved once let go. */
+let GRIP = null;
+function gripEl() {
+  const g = el('div', 'grip');
+  g.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const list = document.querySelector('.mrows');
+    if (!list) return;
+    const z = parseFloat(document.getElementById('ov').style.zoom) || 1;
+    // at least one player's row
+    const row = list.querySelector('.rkr') || list.firstElementChild;
+    const one = row ? row.getBoundingClientRect().height / z + 4 : GRIP_MIN;
+    GRIP = { y: e.screenY, h: list.getBoundingClientRect().height / z, z: z, min: Math.ceil(one) };
+    list.classList.add('sizing');
+    g.setPointerCapture(e.pointerId);
+  });
+  g.addEventListener('pointermove', (e) => {
+    if (!GRIP) return;
+    const list = document.querySelector('.mrows');
+    let v = Math.round(GRIP.h + (e.screenY - GRIP.y) / GRIP.z);
+    v = Math.max(GRIP.min, Math.min(GRIP_MAX, v));
+    // the height being set shown as it is, the list shorter or not
+    GRIP.v = v;
+    list.style.maxHeight = '';
+    list.style.height = v + 'px';
+    sizeSoon();
+  });
+  const done = () => {
+    if (!GRIP) return;
+    const list = document.querySelector('.mrows');
+    const st = Object.assign({ opacity: 100, scale: 100, maxh: 0 }, OV.style || {});
+    if (GRIP.v != null) st.maxh = GRIP.v;
+    GRIP = null;
+    OV.style = st;
+    if (list) {
+      list.classList.remove('sizing');
+      list.style.height = '';
+      list.style.maxHeight = st.maxh ? st.maxh + 'px' : '';
+    }
+    sizeSoon();
+    if (api()) api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale, maxh: st.maxh, save: true });
+  };
+  g.addEventListener('pointerup', done);
+  g.addEventListener('pointercancel', done);
+  return g;
+}
+const GRIP_MIN = 30, GRIP_MAX = 900;
+
 let TIP_ROW = null;
 
 function setTabs(tabs, k) {
@@ -222,12 +353,12 @@ document.addEventListener('mouseleave', () => {
 function gearBtn() {
   const g = btn('ib gear' + (SETTINGS ? ' on' : ''), '', SETTINGS ? tr('Fermer') : tr('Réglages'),
     () => { SETTINGS = !SETTINGS; render(); });
-  g.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M9.4 1l.3 1.8c.4.1.8.3 1.1.5l1.5-1 1.4 1.4-1 1.5c.2.3.4.7.5 1.1L15 6.6v2l-1.8.3c-.1.4-.3.8-.5 1.1l1 1.5-1.4 1.4-1.5-1c-.3.2-.7.4-1.1.5L9.4 15h-2l-.3-1.8c-.4-.1-.8-.3-1.1-.5l-1.5 1-1.4-1.4 1-1.5c-.2-.3-.4-.7-.5-1.1L1.8 9V7l1.8-.3c.1-.4.3-.8.5-1.1l-1-1.5 1.4-1.4 1.5 1c.3-.2.7-.4 1.1-.5L7.4 1h2zM8.4 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg>';
+  g.innerHTML = '<svg viewBox="0 0 16 16" width="17" height="17"><path fill="currentColor" d="M9.4 1l.3 1.8c.4.1.8.3 1.1.5l1.5-1 1.4 1.4-1 1.5c.2.3.4.7.5 1.1L15 6.6v2l-1.8.3c-.1.4-.3.8-.5 1.1l1 1.5-1.4 1.4-1.5-1c-.3.2-.7.4-1.1.5L9.4 15h-2l-.3-1.8c-.4-.1-.8-.3-1.1-.5l-1.5 1-1.4-1.4 1-1.5c-.2-.3-.4-.7-.5-1.1L1.8 9V7l1.8-.3c.1-.4.3-.8.5-1.1l-1-1.5 1.4-1.4 1.5 1c.3-.2.7-.4 1.1-.5L7.4 1h2zM8.4 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg>';
   return g;
 }
 
 function settingsPanel() {
-  const st = Object.assign({ opacity: 100, scale: 100 }, OV.style || {});
+  const st = Object.assign({ opacity: 100, scale: 100, maxh: 0 }, OV.style || {});
   const p = el('div', 'body sets');
   // shown live while a slider moves (the size here at once, the opacity by
   // the window), saved once it is let go
@@ -236,10 +367,10 @@ function settingsPanel() {
     OV.style = Object.assign({}, st);
     document.getElementById('ov').style.zoom = st.scale / 100;
     if (!api()) return;
-    const go = () => { due = null; api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale, save: save }); };
+    const go = () => { due = null; api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale, maxh: st.maxh, save: save }); };
     if (save) { clearTimeout(due); go(); } else if (!due) due = setTimeout(go, 60);
   };
-  [['opacity', tr('Opacité'), 30, 100, 5], ['scale', tr('Taille'), 70, 150, 5]].forEach(([k, t, lo, hi, step]) => {
+  [['opacity', tr('Opacité'), 30, 100, 5], ['scale', tr('Taille'), 90, 110, 5]].forEach(([k, t, lo, hi, step]) => {
     const row = el('label', 'set');
     const top = el('span', 'setl');
     top.appendChild(el('span', null, t));

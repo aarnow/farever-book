@@ -755,45 +755,104 @@ def _game_dir():
     return hb.parent if hb else None
 
 
-UI_FRAME = "UI/Elements/background.png"    # the game's window frame
+# The game's window frame: its corners and rivets (a 9-slice texture), the
+# top-right one plain, as the game's windows have it (its close button's
+# corner).
+UI_FRAME = "UI/Elements/background_close.png"
+# The game's window titles' font, a bitmap one (Heaps' BFNT: its glyphs in
+# an atlas).
+UI_TITLE_FONT = "Font/platypi-bold-20.fnt"
+# Bumped when what ensure_ui_frame copies changes: copied again.
+UI_ASSETS = 4
 
 
 def ensure_ui_frame():
-    """The game's window frame (its corners and rivets, a 9-slice texture)
-    copied from res.pak into analysis_out/ui_frame.png once, for the
-    overlays (menu_host), with its opaque pixels (ui_frame_mask.json, one
-    "0"/"1" string a row) that cut the window to its outline. False when
-    the game or the texture is missing."""
-    out = ANALYSIS / "ui_frame.png"
-    mask = ANALYSIS / "ui_frame_mask.json"
-    cursors = [ANALYSIS / f"ui_cursor_{k}.png" for k in UI_CURSORS.values()]
-    if out.is_file() and mask.is_file() and all(c.is_file() for c in cursors):
-        return True
+    """The game's interface pieces for the overlays (menu_host), copied from
+    its files into analysis_out/ once: its window frame (ui_frame.png) and
+    its opaque pixels (ui_frame_mask.json, one "0"/"1" string a row) that
+    cut the window to its outline, its two mouse cursors, its title font
+    (ui_font_title.png and .json). False when the game or a piece is
+    missing."""
+    stamp = ANALYSIS / "ui_assets.json"
+    try:
+        if json.loads(stamp.read_text(encoding="utf-8")).get("v") == UI_ASSETS:
+            return True
+    except (OSError, ValueError):
+        pass
     game = _game_dir()
     if game is None or not (game / "res.pak").is_file():
         return False
     if str(ROOT / "hltools") not in sys.path:
         sys.path.insert(0, str(ROOT / "hltools"))
     try:
+        import io
         import pak_extract
+        from PIL import Image
         raw = pak_extract.read_entry(game / "res.pak", UI_FRAME)
         if not raw:
             return False
-        import io
-        from PIL import Image
         alpha = Image.open(io.BytesIO(raw)).convert("RGBA").getchannel("A")
         rows = ["".join("1" if alpha.getpixel((x, y)) >= 128 else "0"
                         for x in range(alpha.width))
                 for y in range(alpha.height)]
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_bytes(raw)
-        mask.write_text(json.dumps(rows), encoding="utf-8")
+        ANALYSIS.mkdir(parents=True, exist_ok=True)
+        (ANALYSIS / "ui_frame.png").write_bytes(raw)
+        (ANALYSIS / "ui_frame_mask.json").write_text(json.dumps(rows),
+                                                     encoding="utf-8")
         _ui_cursors(game)
+        _ui_title_font(game)
+        stamp.write_text(json.dumps({"v": UI_ASSETS}), encoding="utf-8")
         return True
     except Exception as e:
-        print(f"[meter] the game's window frame couldn't be read: {e!r}",
+        print(f"[meter] the game's interface pieces couldn't be read: {e!r}",
               file=sys.stderr)
         return False
+
+
+def _ui_title_font(game):
+    """The title font's atlas and glyphs (analysis_out/ui_font_title.png,
+    .json: {size, lineHeight, base, glyphs: {code: [x, y, w, h, dx, dy,
+    advance]}}), read from its BFNT file (hxd.fmt.bfnt: a header, then each
+    glyph's code, rectangle, offsets, advance and kerning pairs)."""
+    import struct
+    import pak_extract
+    b = pak_extract.read_entry(game / "res.pak", UI_TITLE_FONT)
+    if b[:4] != b"BFNT":
+        raise ValueError(f"{UI_TITLE_FONT}: not a BFNT font")
+    p = 6
+
+    def r(fmt):
+        nonlocal p
+        v = struct.unpack_from(fmt, b, p)[0]
+        p += struct.calcsize(fmt)
+        return v
+
+    def text():
+        nonlocal p
+        n = r("<H")
+        v = b[p:p + n].decode("utf-8")
+        p += n
+        return v
+    text()                                  # its name
+    size, atlas = r("<h"), text()
+    line, base = r("<h"), r("<h")
+    r("<i")                                 # the missing glyph's code
+    glyphs = {}
+    while p < len(b):
+        code = r("<i")
+        if code == 0:
+            break
+        g = [r("<H"), r("<H"), r("<H"), r("<H"), r("<h"), r("<h"), r("<h")]
+        for _ in range(r("<i")):            # kerning pairs: unused
+            r("<i")
+            r("<h")
+        glyphs[code] = g
+    folder = UI_TITLE_FONT.rsplit("/", 1)[0]
+    (ANALYSIS / "ui_font_title.png").write_bytes(
+        pak_extract.read_entry(game / "res.pak", f"{folder}/{atlas}"))
+    (ANALYSIS / "ui_font_title.json").write_text(json.dumps(
+        {"size": size, "lineHeight": line, "base": base, "glyphs": glyphs}),
+        encoding="utf-8")
 
 
 # The game's two mouse cursors (ui.BaseUI.setSystemCursor): data.cdb's

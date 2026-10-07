@@ -674,7 +674,7 @@ class Overlay:
         """The player's opacity (the whole window's alpha) and size (the
         page's zoom, which the frame's cut follows)."""
         op = max(30, min(100, int(style.get("opacity") or 100)))
-        sc = max(70, min(150, int(style.get("scale") or 100)))
+        sc = max(90, min(110, int(style.get("scale") or 100)))
         if op != self.opacity and self.hwnd:
             ctypes.windll.user32.SetLayeredWindowAttributes(
                 self.hwnd, 0, round(255 * op / 100), LWA_ALPHA)
@@ -992,6 +992,22 @@ def _frame_runs(w, h, k, mask):
     return out
 
 
+def _title_font():
+    """The game's title font (gamedata.ensure_ui_frame) as a JSON text:
+    {img: data URI, lineHeight, base, glyphs}, or "" without it."""
+    import base64
+    folder = Path(os.environ.get("FAREVER_ANALYSIS")
+                  or HERE.parent / "analysis_out")
+    try:
+        data = json.loads((folder / "ui_font_title.json").read_text(
+            encoding="utf-8"))
+        data["img"] = "data:image/png;base64," + base64.b64encode(
+            (folder / "ui_font_title.png").read_bytes()).decode()
+        return json.dumps(data)
+    except (OSError, ValueError):
+        return ""
+
+
 def _ui_cursor(name):
     """One of the game's cursors (gamedata.ensure_ui_frame) as a data URI,
     or ""."""
@@ -1014,6 +1030,7 @@ def _overlay_document(oid, theme, lang):
              + ("--cur: url(" + arrow + ") 0 0, default;"
                 "--cur-hand: url(" + hand + ") 0 0, pointer;"
                 if arrow and hand else ""))
+    font = _title_font() if oid != "tip" else ""
     return ('<!doctype html><html lang="fr"'
             + (' class="' + " ".join(cls) + '" style="' + style + '"'
                if cls else "")
@@ -1023,7 +1040,8 @@ def _overlay_document(oid, theme, lang):
             '<div id="ov"></div><script>window.__OVERLAY__ = '
             + json.dumps(oid) + ";window.__I18N__ = " + _i18n_json(lang)
             + ";window.__ICONS__ = "
-            + json.dumps(_class_icons()) + ";</script><script>"
+            + json.dumps(_class_icons()) + ";window.__TITLE_FONT__ = "
+            + (font or "null") + ";</script><script>"
             + _web("js/overlay.js") + "</script></body></html>")
 
 
