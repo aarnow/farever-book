@@ -776,7 +776,40 @@ def extract_dungeons(game_dir):
                             "region": f"{region}_Region" if region else "",
                             **dungeon_loot(unit_rows.get(boss) or {},
                                            item_rows, tables, itypes)})
+    # the loot's level in Normal: the activity's own (props.level), else its
+    # zone's; Veteran and Heroic use Hero.MaxLevel (st.Activity.getLevel,
+    # read in hlboot.dat 2026-10-07)
+    zones = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "zone"
+             for ln in s["lines"] if isinstance(ln.get("id"), str)}
+    levels = _dungeon_levels(game_dir, {d["kind"] for d in out}, zones)
+    for d in out:
+        d["level"] = levels.get(d["kind"])
     return out
+
+
+def _dungeon_levels(game_dir, kinds, zones):
+    """kind -> the dungeon's level in Normal, from the game's levels."""
+    from collection_data import _levels
+    found = {}
+
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("$cdbtype") == "activity" and o.get("id") in kinds \
+                    and o["id"] not in found:
+                props = o.get("props") if isinstance(o.get("props"), dict) \
+                    else {}
+                lvl = props.get("level") or (
+                    zones.get(o.get("zoneBaked")) or {}).get("level")
+                if isinstance(lvl, (int, float)):
+                    found[o["id"]] = int(lvl)
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    for _path, level in _levels(Path(game_dir)):
+        walk(level)
+    return found
 
 
 # Armour slots: the dungeon's faction set, which no loot table lists.
@@ -817,14 +850,20 @@ def dungeon_loot(boss, item_rows, tables, itypes=None):
     for tid in (props.get("bossLootTable"), props.get("lootTable")):
         t = tables.get(tid) or {}
         lines = [ln for ln in t.get("loot") or () if ln.get("item")]
+        # the bossLootTable is dropped with a minimum rarity, Epic in
+        # Heroic and Rare otherwise; the lootTable with none
+        # (DungeonContext.dropBossLoot, read in hlboot.dat 2026-10-07)
+        bt = tid == props.get("bossLootTable")
         if (t.get("flags") or 0) & 1:
             total = sum(float(ln.get("proba") or 0) for ln in lines) or 1.0
-            out += [entry(ln["item"], "coffre",
-                          float(ln.get("proba") or 0) / total,
-                          diff=min_diff(ln)) for ln in lines]
+            out += [dict(entry(ln["item"], "coffre",
+                               float(ln.get("proba") or 0) / total,
+                               diff=min_diff(ln)), bossTable=bt)
+                    for ln in lines]
         else:
-            out += [entry(ln["item"], "boss", float(ln.get("proba") or 0),
-                          diff=min_diff(ln))
+            out += [dict(entry(ln["item"], "boss",
+                               float(ln.get("proba") or 0),
+                               diff=min_diff(ln)), bossTable=bt)
                     for ln in lines]
     itypes = itypes or {}
 

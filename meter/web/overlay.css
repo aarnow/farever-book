@@ -99,14 +99,16 @@ body { font: 13px/1.3 "Segoe UI", system-ui, sans-serif; color: var(--ov-text); 
 .go:disabled { opacity: .4; cursor: default; }
 
 /* the loot luck (overlay.js renderLuck): a bonus, its way to the cap */
-.lrow { padding: 4px 4px 6px; }
-.lrow + .lrow { border-top: 1px solid var(--ov-line); }
-.ltop { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.ltop .nm { font-weight: 600; font-size: 12px; }
-.ltop .v { font-variant-numeric: tabular-nums; color: var(--ov-dim); }
-.lrow.on .ltop .v { color: var(--ov-ok); }
-.lbar { height: 4px; margin: 4px 0 3px; border-radius: 2px; background: rgba(255, 255, 255, .08); overflow: hidden; }
-.lbar i { display: block; height: 100%; background: var(--ov-accent); }
-.lrow.full .lbar i { background: var(--ov-ok); }
-.lsub { color: var(--ov-dim); font-size: 10.5px; }
-.lrow:not(.on) .lsub { color: rgba(169, 165, 204, .7); }
+.lrow { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 6px; padding: 2px 4px; }
+.lic { width: 22px; height: 22px; display: grid; place-items: center; }
+.lic img { width: 22px; height: 22px; object-fit: contain; }
+.lrow:not(.on) .lic img { opacity: .85; }
+.lbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 20px; padding: 0 7px; border-radius: 3px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.lbar i { position: absolute; inset: 0 auto 0 0; background: rgba(169, 165, 204, .3); }
+.lrow.on .lbar i { background: var(--ov-accent); }
+.lrow.on.full .lbar i { background: var(--ov-ok); }
+.lbar .nm, .lbar .v { position: relative; font-size: 11.5px; white-space: nowrap; text-shadow: 0 1px 2px rgba(0, 0, 0, .85); }
+.lbar .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.lbar .v { font-variant-numeric: tabular-nums; }
+.lrow:not(.on) .lbar .v { color: var(--ov-dim); }

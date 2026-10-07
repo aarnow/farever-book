@@ -176,21 +176,24 @@ function renderLuck(box) {
     box.appendChild(body);
     return;
   }
+  // one line each: its icon, then a bar to the cap with the name and the
+  // bonus in it (lit while the offering is on, the details in its tooltip)
   l.rows.forEach((r) => {
     const row = el('div', 'lrow' + (r.on ? ' on' : '') + (r.full ? ' full' : ''));
-    const top = el('div', 'ltop');
-    top.appendChild(el('span', 'nm', r.t));
-    top.appendChild(el('b', 'v', '+' + r.bonus));
-    row.appendChild(top);
+    row.title = [
+      r.grows ? (r.full ? tr('plafond atteint') : tr('max {cap}', { cap: r.cap })) : tr('Bonus fixe'),
+      r.on ? (r.left != null ? tr('Offrande active · {left} min', { left: r.left }) : tr('Offrande active'))
+        : tr('Pas d’offrande')].join(' · ');
+    const ic = el('span', 'lic');
+    if (r.img) { const im = el('img'); im.src = r.img; im.alt = ''; ic.appendChild(im); }
+    row.appendChild(ic);
     const bar = el('div', 'lbar');
     const fill = el('i');
     fill.style.width = (Math.max(0, Math.min(1, r.f || 0)) * 100) + '%';
     bar.appendChild(fill);
+    bar.appendChild(el('span', 'nm', r.t));
+    bar.appendChild(el('b', 'v', '+' + r.bonus));
     row.appendChild(bar);
-    row.appendChild(el('span', 'lsub', [
-      r.grows ? (r.full ? tr('plafond atteint') : tr('max {cap}', { cap: r.cap })) : tr('Bonus fixe'),
-      r.on ? (r.left != null ? tr('Offrande active · {left} min', { left: r.left }) : tr('Offrande active'))
-        : tr('Pas d’offrande')].join(' · ')));
     body.appendChild(row);
   });
   box.appendChild(body);

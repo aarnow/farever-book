@@ -284,6 +284,14 @@ def build(game_dir):
                or {}).get("rarity")
     return {
         "maxLevel": int(num("MaxLevel") or 25),
+        # a weapon's rarity: these weights at the loot's level, from its
+        # minimum rarity up (ent.Hero.makeLootItem, read in hlboot.dat
+        # 2026-10-07): [[minLevel, maxLevel, chance]]
+        "rarityChance": {
+            r["id"]: [[g.get("minLevel"), g.get("maxLevel"), g.get("chance")]
+                      for g in ((r.get("props") or {}).get("generationChance")
+                                or ())]
+            for r in sh["rarity"]["lines"]},
         "talentsFrom": int(num("UnlockLevel_Talents") or 10),
         "tiers": [int(x) for x in floats("Talents_TierThresholds")],
         "weaponSkillLevels": [int(x) for x in floats("UnlockLevel_WeaponSkillSlots")],

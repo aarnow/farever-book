@@ -198,6 +198,44 @@ def _seller(s):
         or (_fr_names("unit").get(npc) if npc else None) or tr("un marchand")
 
 
+def weapon_rarity_odds(level, min_rar=None):
+    """A dropped weapon's rarities and their weights at a loot level, from
+    `min_rar` up (ent.Hero.makeLootItem, read in hlboot.dat): {rar: weight
+    share}, the legendary one being the base of the legendary weapon luck.
+    {} without the game's rarity table."""
+    table = build_data().get("rarityChance") or {}
+    low = RARITY_ORDER.get(min_rar, 0)
+    w = {}
+    for r, brackets in table.items():
+        if RARITY_ORDER.get(r, -1) < low:
+            continue
+        for lo, hi, ch in brackets:
+            if (lo or 0) <= level <= (hi or 10 ** 6) and ch:
+                w[r] = float(ch)
+    total = sum(w.values())
+    return {r: c / total for r, c in w.items()} if total else {}
+
+
+def dungeon_weapon_odds(dg, entry):
+    """{difficulty: weapon_rarity_odds} for a weapon in a dungeon's boss
+    loot: the bossLootTable is dropped rare at least, epic in Heroic, the
+    unit's lootTable with no minimum (DungeonContext.dropBossLoot), at the
+    dungeon's level in Normal and Hero.MaxLevel in Veteran and Heroic
+    (st.Activity.getLevel)."""
+    top = int(build_data().get("maxLevel") or 25)
+    out = {}
+    for d in range(entry.get("diff") or 0, 3):
+        level = dg.get("level") if d == 0 else top
+        if level is None:
+            continue
+        low = (("Epic" if d == 2 else "Rare") if entry.get("bossTable")
+               else None)
+        odds = weapon_rarity_odds(level, low)
+        if odds:
+            out[d] = odds
+    return out
+
+
 def item_where(iid, rar=None, rows_only=False):
     """How to get a piece of gear AT a rarity, for the Build tab: every
     source gives the item's own rarity, except a cache that forces one
@@ -241,11 +279,18 @@ def item_where(iid, rar=None, rows_only=False):
             if src in ("coffre", "boss"):
                 what = (tr("{dungeon} : coffre de fin, {when}") if src == "coffre"
                         else tr("{dungeon} : mort du boss, {when}"))
-                # a weapon's rarity: the game's rarity table at the player's
-                # level, rare at least, legendary by the legendary weapon
-                # luck (read in hlboot.dat), whatever the difficulty
-                if weapon:
-                    rars = ["Rare", "Epic", "Legendary"]
+                # a weapon's rarity: the game's rarity table at the
+                # difficulty's level and minimum, the difficulties that give
+                # the asked one
+                odds = dungeon_weapon_odds(dg, e) if weapon else {}
+                if odds:
+                    rars = sorted({r for o in odds.values() for r in o},
+                                  key=lambda r: RARITY_ORDER.get(r, 9))
+                    at = [d for d in sorted(odds) if rar in odds[d]]
+                    if at and len(at) < 3:
+                        when = tr(" ou ").join(diffs[d] for d in at)
+                    elif at:
+                        when = tr("toutes difficultés")
                 add("dungeon", what.format(dungeon=name, when=when), rars,
                     boss=boss)
             elif src == "faction":
@@ -967,6 +1012,15 @@ LUCK_LABELS = (("Luck_Mount", "Monture"), ("Luck_Glider", "Planeur"),
                ("Luck_PrismaticGear", "Équipement prismatique"))
 
 
+# an item of the game standing for each counter (the Soulwell statuses
+# share one icon)
+LUCK_ICONS = {"Luck_Mount": "Mount_Boar_01",
+              "Luck_Glider": "Glider_Butterfly_Blue",
+              "Luck_LegendaryWeapon": "Sword_Swarm",
+              "Luck_RareMaterial": "Nightblood",
+              "Luck_PrismaticGear": "PrismaticFragment"}
+
+
 # Progress.counters shown as statistics (the others are internal flags).
 # The rift ones head the Failles tab.
 RIFT_STAT_LABELS = (("Rift_NbCompleted", "Failles terminées"),
@@ -1020,6 +1074,7 @@ def _profile_luck(prof):
                  if inc else 0)
         st = p.get("status")
         out.append({"t": tr(label), "n": int(n), "bonus": _pct2(bonus),
+                    "img": item_icon(LUCK_ICONS.get(cid)),
                     "cap": _pct2(cap), "full": bonus >= cap,
                     # how far to the cap, for a bar
                     "f": round(min(1.0, bonus / cap), 4) if cap else 1.0,
