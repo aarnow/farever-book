@@ -3298,3 +3298,14 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .upnotes { max-height: 220px; overflow-y: auto; white-space: pre-wrap; padding: 10px 12px; border-radius: 8px;
            background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font-size: 13px; line-height: 1.5; }
 .upbox .wbar { margin: 16px 0 8px; }
+
+/* a toggle (core.js buildControl): a switch, its knob right and green on,
+   left and red off */
+.toggle { position: relative; width: 46px; height: 24px; flex: none; padding: 0; border: 0; border-radius: 12px;
+          background: var(--warn); cursor: pointer; transition: background .18s; }
+.toggle i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .35); transition: left .18s; }
+.toggle.on { background: var(--ok); }
+.toggle.on i { left: 25px; }
+.toggle:hover { filter: brightness(1.08); }
+.ctl:has(> .toggle) { display: flex; justify-content: flex-end; }

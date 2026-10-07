@@ -6,7 +6,8 @@
  *   {k:"section", t}   {k:"note", t, warn?}   {k:"gap"}
  *   {k:"prose", t}     {k:"bullets", items}   {k:"code", t}
  *   {k:"button", id, t, on?, tone?, p?}
- *   {k:"field", t, c:<control>}   controls: select | slider | label
+ *   {k:"field", t, c:<control>}   controls: select | slider | toggle | label
+ *     (a control's p: params sent with its value)
  *   {k:"list", id, rows:[{t?, name?, cls?, meta?, btns?:[{id,t,p?,off?}]}], empty?}
  *   {k:"sub", t}   a small heading inside a section
  * Live and report nodes:
@@ -204,8 +205,21 @@ function buildControl(c) {
       s.appendChild(opt);
     });
     s.value = c.v;
-    s.addEventListener('change', () => notify(c.id, { value: s.value }));
+    s.addEventListener('change', () => notify(c.id, Object.assign({}, c.p || {}, { value: s.value })));
     return s;
+  }
+  if (c.k === 'toggle') {
+    // on / off: a switch, green on, red off
+    const b = el('button', 'toggle' + (c.on ? ' on' : ''));
+    b.type = 'button';
+    b.title = c.on ? tr('Actif') : tr('Inactif');
+    b.setAttribute('aria-pressed', c.on ? 'true' : 'false');
+    b.appendChild(el('i'));
+    b.addEventListener('click', () => {
+      b.classList.toggle('on');
+      notify(c.id, Object.assign({}, c.p || {}, { value: b.classList.contains('on') }));
+    });
+    return b;
   }
   if (c.k === 'slider') {
     const wrap = el('div', 'ctl');
@@ -214,7 +228,7 @@ function buildControl(c) {
     r.min = c.min; r.max = c.max; r.step = c.step || 1; r.value = c.v;
     const out = el('span', 'slider-val', c.v + (c.unit || ''));
     r.addEventListener('input', () => { out.textContent = r.value + (c.unit || ''); });
-    r.addEventListener('change', () => notify(c.id, { value: Number(r.value) }));
+    r.addEventListener('change', () => notify(c.id, Object.assign({}, c.p || {}, { value: Number(r.value) })));
     wrap.appendChild(r);
     wrap.appendChild(out);
     return wrap;

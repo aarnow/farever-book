@@ -112,6 +112,10 @@ def _dungeon_backdrop(kind, boss, region=""):
     return art if art in stems else ""
 
 
+# the overlays' looks: the game's own frames and colours, for now the only one
+OVERLAY_THEMES = {"farever": "Farever"}
+
+
 def _ov_style(v):
     """An overlay's settings, kept in bounds: opacity 30-100 %, size
     90-110 %, its list's greatest height (px, 0: none) 30-900."""
@@ -170,6 +174,7 @@ class App:
         # hidden while the game's cursor is free (one of its windows open)
         self._ov_hide_free = False
         self._ov_style = {}                 # overlay -> {opacity, scale} (%)
+        self._ov_theme = "farever"          # the overlays' look (OVERLAY_THEMES)
         self._hero_at = 0.0                 # last time the hook saw our hero
         self._action_q = []
         self._q_lock = threading.Lock()
@@ -294,6 +299,8 @@ class App:
             self._ov_lock_always = data["overlay_lock_always"]
         if isinstance(data.get("overlay_hide_free"), bool):
             self._ov_hide_free = data["overlay_hide_free"]
+        if data.get("overlay_theme") in OVERLAY_THEMES:
+            self._ov_theme = data["overlay_theme"]
         style = data.get("overlay_style")
         if isinstance(style, dict):
             for k, v in style.items():
@@ -318,6 +325,7 @@ class App:
                 "overlay_lock_always": bool(self._ov_lock_always),
                 "overlay_hide_free": bool(self._ov_hide_free),
                 "overlay_style": self._ov_style,
+                "overlay_theme": self._ov_theme,
             }, indent=2))
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
@@ -737,13 +745,13 @@ class App:
             # overlays
             "ov_tab": lambda p: self._ov_set_tab(p.get("tab")),
             "ov_moved": self._ov_moved,
-            "ov_toggle_meter": lambda: self._ov_toggle("meter"),
-            "ov_toggle_goals": lambda: self._ov_toggle("goals"),
-            "ov_toggle_luck": lambda: self._ov_toggle("luck"),
             "ov_reset": self._ov_reset,
             "ov_lock": self._ov_lock_toggle,
             "ov_hide_free": self._ov_hide_toggle,
             "ov_style": self._ov_set_style,
+            "ov_style_set": self._ov_style_set,
+            "ov_show": self._ov_show,
+            "ov_theme": self._ov_set_theme,
             "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
                                                 self._learnt()),
@@ -1489,11 +1497,6 @@ class App:
             "dy": snap(min(top, bottom))}
         self._save_settings()
 
-    def _ov_toggle(self, oid):
-        if oid in self._ov_on:
-            self._ov_on[oid] = not self._ov_on[oid]
-            self._save_settings()
-
     def _ov_hide_toggle(self):
         self._ov_hide_free = not self._ov_hide_free
         self._save_settings()
@@ -1504,6 +1507,28 @@ class App:
         self._set_tab("Settings")
         self._settings_topic = "overlay"
         self.menubridge.send({"t": "show"})
+
+    def _ov_show(self, p):
+        """Réglages › Overlay: one overlay shown or hidden."""
+        oid = p.get("id")
+        if oid in self._ov_on:
+            self._ov_on[oid] = bool(p.get("value"))
+            self._save_settings()
+
+    def _ov_style_set(self, p):
+        """Réglages › Overlay: one of an overlay's settings (its gear's)."""
+        oid, key = p.get("id"), p.get("key")
+        if oid not in self._ov_on or key not in ("opacity", "scale"):
+            return
+        st = dict(self._ov_style.get(oid) or _ov_style({}))
+        st[key] = p.get("value")
+        self._ov_style[oid] = _ov_style(st)
+        self._save_settings()
+
+    def _ov_set_theme(self, p):
+        if p.get("value") in OVERLAY_THEMES:
+            self._ov_theme = p["value"]
+            self._save_settings()
 
     def _ov_set_style(self, p):
         """An overlay's opacity and size, from its settings (the gear): shown
@@ -2351,14 +2376,32 @@ class App:
         ]
 
     def _settings_overlay(self):
-        return [
-            {"k": "section", "t": tr("Overlay en jeu")},
-            {"k": "button", "id": "ov_toggle_meter",
-             "t": self._tick(self._ov_on["meter"], tr("Compteur du groupe"))},
-            {"k": "button", "id": "ov_toggle_goals",
-             "t": self._tick(self._ov_on["goals"], tr("Objectifs"))},
-            {"k": "button", "id": "ov_toggle_luck",
-             "t": self._tick(self._ov_on["luck"], tr("Chance de butin"))},
+        names = {"meter": tr("Meter"), "goals": tr("Objectifs"),
+                 "luck": tr("Chance de butin")}
+        out = [{"k": "section", "t": tr("Afficher / masquer")}]
+        # each overlay, a switch at the end of its line
+        for oid, t in names.items():
+            out.append({"k": "field", "t": t,
+                        "c": {"k": "toggle", "id": "ov_show",
+                              "on": bool(self._ov_on.get(oid)), "p": {"id": oid}}})
+        # each one's own settings, as its gear has them
+        for oid, t in names.items():
+            st = self._ov_style.get(oid) or _ov_style({})
+            out += [{"k": "section", "t": t},
+                    {"k": "field", "t": tr("Opacité"),
+                     "c": {"k": "slider", "id": "ov_style_set", "min": 30,
+                           "max": 100, "step": 5, "v": st["opacity"],
+                           "unit": " %", "p": {"id": oid, "key": "opacity"}}},
+                    {"k": "field", "t": tr("Taille"),
+                     "c": {"k": "slider", "id": "ov_style_set", "min": 90,
+                           "max": 110, "step": 5, "v": st["scale"],
+                           "unit": " %", "p": {"id": oid, "key": "scale"}}}]
+        out += [
+            {"k": "section", "t": tr("Thème")},
+            {"k": "field", "t": tr("Thème des overlays"),
+             "c": {"k": "select", "id": "ov_theme", "v": self._ov_theme,
+                   "o": [{"v": k, "t": tr(t)} for k, t in OVERLAY_THEMES.items()]}},
+            {"k": "section", "t": tr("Comportement")},
             {"k": "button", "id": "ov_lock",
              "t": self._tick(self._ov_lock_always,
                              tr("Toujours verrouillés (la souris les "
@@ -2395,6 +2438,7 @@ class App:
                                   "visibles, pour les utiliser ou les "
                                   "déplacer.")},
         ]
+        return out
 
     def _settings_display(self):
         return [
