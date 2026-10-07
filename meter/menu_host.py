@@ -494,7 +494,7 @@ def cursor_captured():
     return False
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
-OVERLAY_IDS = ("meter", "goals")
+OVERLAY_IDS = ("meter", "goals", "luck")
 OVERLAY_BG = "#1D1B33"              # the panel's colour (overlay.css --ov-bg)
 OVERLAY_RADIUS = 10                 # its corners (overlay.css #ov)
 
@@ -633,10 +633,10 @@ class Overlay:
     def _place(self):
         gx, gy, gw, gh = self.game
         w, h = self.size
-        a = self.pos or (
-            {"ax": "r", "dx": 24, "ay": "t", "dy": gh // 3}   # meter: right
-            if self.id == "meter" else
-            {"ax": "l", "dx": 24, "ay": "t", "dy": gh // 3})  # goals: left
+        a = self.pos or {
+            "meter": {"ax": "r", "dx": 24, "ay": "t", "dy": gh // 3},  # right
+            "luck": {"ax": "l", "dx": 24, "ay": "b", "dy": gh // 5},   # low left
+        }.get(self.id, {"ax": "l", "dx": 24, "ay": "t", "dy": gh // 3})  # goals
         x = gx + a["dx"] if a["ax"] == "l" else gx + gw - w - a["dx"]
         y = gy + a["dy"] if a["ay"] == "t" else gy + gh - h - a["dy"]
         x = max(gx, min(x, gx + gw - w))

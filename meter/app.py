@@ -148,7 +148,7 @@ class App:
         self._me_auto_next = 0.0
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
-        self._ov_on = {"meter": False, "goals": False}  # shown, per overlay (alpha: off at first)
+        self._ov_on = {"meter": False, "goals": False, "luck": False}  # shown, per overlay (alpha: off at first)
         # locked (the mouse goes through): in the game's focus mode, or always
         self._ov_lock_always = False
         # hidden while the game's cursor is free (one of its windows open)
@@ -723,6 +723,7 @@ class App:
             "ov_moved": self._ov_moved,
             "ov_toggle_meter": lambda: self._ov_toggle("meter"),
             "ov_toggle_goals": lambda: self._ov_toggle("goals"),
+            "ov_toggle_luck": lambda: self._ov_toggle("luck"),
             "ov_reset": self._ov_reset,
             "ov_lock": self._ov_lock_toggle,
             "ov_hide_free": self._ov_hide_toggle,
@@ -1467,6 +1468,9 @@ class App:
             "fight": bool(in_combat),
             "rows": self._ranking(rows, duration, heal, limit=8)}
         spec["goals"] = self.goals.view()
+        # the loot luck counters, as the live tab shows them
+        spec["luck"] = {"rows": (_profile_luck(self._self_prof)
+                                 if self._self_prof else None)}
         return spec
 
     def on_achievements(self, p):
@@ -2233,6 +2237,8 @@ class App:
              "t": self._tick(self._ov_on["meter"], tr("Compteur du groupe"))},
             {"k": "button", "id": "ov_toggle_goals",
              "t": self._tick(self._ov_on["goals"], tr("Objectifs"))},
+            {"k": "button", "id": "ov_toggle_luck",
+             "t": self._tick(self._ov_on["luck"], tr("Chance de butin"))},
             {"k": "button", "id": "ov_lock",
              "t": self._tick(self._ov_lock_always,
                              tr("Toujours verrouillés (la souris les "

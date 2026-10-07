@@ -111,6 +111,7 @@ function render() {
   box.textContent = '';
   if (!OV) return;
   if (OV_ID === 'meter') renderMeter(box);
+  else if (OV_ID === 'luck') renderLuck(box);
   else renderGoals(box);
 }
 
@@ -155,6 +156,41 @@ function renderMeter(box) {
     row.appendChild(el('span', 'num', r.rate));
     row.appendChild(el('span', 'num', r.total));
     row.appendChild(el('span', 'num', r.pct));
+    body.appendChild(row);
+  });
+  box.appendChild(body);
+}
+
+/* The loot luck counters (the live tab's): each bonus, how far to its cap,
+   whether its Soulwell offering is on. Something to look forward to. */
+function renderLuck(box) {
+  const l = OV.luck || {};
+  const h = head(tr('Chance de butin'));
+  h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
+    () => { OV_SMALL = !OV_SMALL; render(); }));
+  box.appendChild(h);
+  if (OV_SMALL) return;
+  const body = el('div', 'body');
+  if (!l.rows) {
+    body.appendChild(el('div', 'empty', tr('Lecture des compteurs…')));
+    box.appendChild(body);
+    return;
+  }
+  l.rows.forEach((r) => {
+    const row = el('div', 'lrow' + (r.on ? ' on' : '') + (r.full ? ' full' : ''));
+    const top = el('div', 'ltop');
+    top.appendChild(el('span', 'nm', r.t));
+    top.appendChild(el('b', 'v', '+' + r.bonus));
+    row.appendChild(top);
+    const bar = el('div', 'lbar');
+    const fill = el('i');
+    fill.style.width = (Math.max(0, Math.min(1, r.f || 0)) * 100) + '%';
+    bar.appendChild(fill);
+    row.appendChild(bar);
+    row.appendChild(el('span', 'lsub', [
+      r.grows ? (r.full ? tr('plafond atteint') : tr('max {cap}', { cap: r.cap })) : tr('Bonus fixe'),
+      r.on ? (r.left != null ? tr('Offrande active · {left} min', { left: r.left }) : tr('Offrande active'))
+        : tr('Pas d’offrande')].join(' · ')));
     body.appendChild(row);
   });
   box.appendChild(body);

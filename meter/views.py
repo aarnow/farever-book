@@ -189,13 +189,6 @@ WHERE_TAGS = {"dungeon": "Donjon", "rift": "Faille", "unit": "Butin",
               "starter": "Départ", "cache": "Coffret"}
 
 
-# a dungeon weapon's rarity by difficulty, as the drops recorded show it
-# (end chest, 44 weapons: Normal rare, Veteran rare or epic, Heroic epic or
-# legendary)
-DUNGEON_WEAPON_RARS = {0: ("Rare",), 1: ("Rare", "Epic"),
-                       2: ("Epic", "Legendary")}
-
-
 def _seller(s):
     """A merchant's name: the one over its head (the element's), else its
     unit's."""
@@ -248,23 +241,13 @@ def item_where(iid, rar=None, rows_only=False):
             if src in ("coffre", "boss"):
                 what = (tr("{dungeon} : coffre de fin, {when}") if src == "coffre"
                         else tr("{dungeon} : mort du boss, {when}"))
-                by = {}
+                # a weapon's rarity: the game's rarity table at the player's
+                # level, rare at least, legendary by the legendary weapon
+                # luck (read in hlboot.dat), whatever the difficulty
                 if weapon:
-                    # a weapon's rarity follows the difficulty (the drops
-                    # recorded): the difficulties that give each one
-                    ok = [d for d in sorted(DUNGEON_WEAPON_RARS)
-                          if diff is None or d >= diff]
-                    rars = [r for r in ("Rare", "Epic", "Legendary")
-                            if any(r in DUNGEON_WEAPON_RARS[d] for d in ok)]
-                    for r in rars:
-                        at_d = [diffs[d] for d in ok
-                                if r in DUNGEON_WEAPON_RARS[d]]
-                        by[r] = what.format(dungeon=name, when=tr(
-                            "en {list}", list=tr(" ou ").join(at_d)))
+                    rars = ["Rare", "Epic", "Legendary"]
                 add("dungeon", what.format(dungeon=name, when=when), rars,
                     boss=boss)
-                if by:
-                    rows[-1]["byRar"] = by
             elif src == "faction":
                 add("dungeon", tr("{dungeon} : pièce de la faction, en "
                                   "{a} et {b}", dungeon=name, a=diffs[0],
@@ -353,7 +336,11 @@ def item_where(iid, rar=None, rows_only=False):
             names = _fr_names("zone")
             # the boss's name as the Codex shows it (the game's French)
             add("rift", tr("Butin du boss de faille {name}",
-                           name=_unit_label(s["id"])), dropped(base),
+                           name=_unit_label(s["id"])),
+                # the rift boss chest's weapon: the game's rarity table at
+                # the player's level, rare at least, legendary by the luck
+                # (st.activity.RiftContext, read in hlboot.dat)
+                ["Rare", "Epic", "Legendary"] if weapon else [base],
                 tr("La faille s'ouvre chaque heure, au choix du jeu : {a} ou {b}.",
                    a=names.get(SPOTS[1], SPOTS[1]),
                    b=names.get(SPOTS[0], SPOTS[0])))
@@ -380,10 +367,6 @@ def item_where(iid, rar=None, rows_only=False):
     if rows_only:
         return rows, base
     at = [r for r in rows if rar in r["rars"]]
-    # a dungeon weapon: the difficulties that give it at this rarity
-    for r in at:
-        if r.get("byRar", {}).get(rar):
-            r["t"] = r["byRar"][rar]
     # a cache at this rarity already says who sells it: the piece's
     # merchants would repeat it
     if any(r["k"] == tr(WHERE_TAGS["cache"]) for r in at):
@@ -1038,6 +1021,8 @@ def _profile_luck(prof):
         st = p.get("status")
         out.append({"t": tr(label), "n": int(n), "bonus": _pct2(bonus),
                     "cap": _pct2(cap), "full": bonus >= cap,
+                    # how far to the cap, for a bar
+                    "f": round(min(1.0, bonus / cap), 4) if cap else 1.0,
                     "grows": bool(inc), "inc": _pct2(inc),
                     "steps": steps,
                     "on": st in active,
