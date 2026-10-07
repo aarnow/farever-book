@@ -48,10 +48,11 @@ window.applyLang = function (json) {
 };
 
 window.applyOverlay = function (json) {
-  const was = OV && JSON.stringify(OV.style || {});
+  const mine = SETTINGS && OV ? OV.style : null;
   try { OV = JSON.parse(json); } catch (e) { return; }
-  // the settings open: a slider held must not be redrawn under the mouse
-  if (SETTINGS && was === JSON.stringify(OV.style || {})) return;
+  // the settings open: they hold the style being chosen, and a slider held
+  // must not be redrawn under the mouse
+  if (SETTINGS) { if (mine) OV.style = mine; return; }
   // the add form keeps its own state: a push must not wipe what is typed
   if (document.activeElement && document.activeElement.tagName === 'INPUT') {
     renderList();
@@ -228,7 +229,16 @@ function gearBtn() {
 function settingsPanel() {
   const st = Object.assign({ opacity: 100, scale: 100 }, OV.style || {});
   const p = el('div', 'body sets');
-  const send = () => api() && api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale });
+  // shown live while a slider moves (the size here at once, the opacity by
+  // the window), saved once it is let go
+  let due = null;
+  const send = (save) => {
+    OV.style = Object.assign({}, st);
+    document.getElementById('ov').style.zoom = st.scale / 100;
+    if (!api()) return;
+    const go = () => { due = null; api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale, save: save }); };
+    if (save) { clearTimeout(due); go(); } else if (!due) due = setTimeout(go, 60);
+  };
   [['opacity', tr('Opacité'), 30, 100, 5], ['scale', tr('Taille'), 70, 150, 5]].forEach(([k, t, lo, hi, step]) => {
     const row = el('label', 'set');
     const top = el('span', 'setl');
@@ -239,13 +249,16 @@ function settingsPanel() {
     const r = el('input');
     r.type = 'range'; r.min = lo; r.max = hi; r.step = step; r.value = st[k];
     r.addEventListener('mousedown', (e) => e.stopPropagation());
-    r.addEventListener('input', () => { st[k] = +r.value; v.textContent = st[k] + ' %'; });
-    // sent once let go: the size redraws and moves the window
-    r.addEventListener('change', send);
+    r.addEventListener('input', () => { st[k] = +r.value; v.textContent = st[k] + ' %'; send(false); });
+    r.addEventListener('change', () => send(true));
     row.appendChild(r);
     p.appendChild(row);
   });
-  const reset = btn('chip', tr('Par défaut'), null, () => { st.opacity = 100; st.scale = 100; send(); });
+  const reset = btn('chip', tr('Par défaut'), null, () => {
+    st.opacity = 100; st.scale = 100;
+    send(true);
+    render();
+  });
   p.appendChild(reset);
   return p;
 }

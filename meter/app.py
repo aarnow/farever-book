@@ -1484,12 +1484,14 @@ class App:
         self._save_settings()
 
     def _ov_set_style(self, p):
-        """An overlay's opacity and size, from its settings (the gear)."""
+        """An overlay's opacity and size, from its settings (the gear): shown
+        at once while a slider moves, saved once it is let go."""
         oid = p.get("id")
         if oid not in self._ov_on:
             return
         self._ov_style[oid] = _ov_style(p)
-        self._save_settings()
+        if p.get("save", True):
+            self._save_settings()
 
     def _ov_lock_toggle(self):
         self._ov_lock_always = not self._ov_lock_always
@@ -1517,7 +1519,8 @@ class App:
         show = bool(win and not win[2] and fg and fg in ours and in_world
                     and any(self._ov_on.values()))
         spec = {"show": show, "game": list(win[1]) if win else None,
-                "pos": self._ov_pos, "on": dict(self._ov_on),
+                "pos": {k: dict(v) for k, v in self._ov_pos.items()},
+                "on": dict(self._ov_on),
                 "lock": "always" if self._ov_lock_always else "auto",
                 "hideFree": bool(self._ov_hide_free)}
         if not show:
@@ -1550,7 +1553,9 @@ class App:
             "time": _mmss(duration) if duration > 0 else "",
             "fight": bool(in_combat),
             "rows": ranked}
-        spec["style"] = self._ov_style
+        # copies: the bridge pushes only a spec unlike the last one, and
+        # these dicts change in place
+        spec["style"] = {k: dict(v) for k, v in self._ov_style.items()}
         spec["goals"] = self.goals.view()
         # the loot luck counters, as the live tab shows them
         spec["luck"] = {"rows": (_profile_luck(self._self_prof)
