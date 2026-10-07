@@ -253,13 +253,23 @@ class HLCode:
     def findex_names(self) -> dict[int, str]:
         """Map function index -> 'ClassName.method' from all obj protos/bindings."""
         out: dict[int, str] = {}
+
+        def all_fields(t, depth=0):
+            # a binding's field index counts the inherited fields first (a
+            # class's statics, "$GameApp.get", sit after its parent's)
+            sup = t.super_index
+            base = (all_fields(self.types[sup], depth + 1)
+                    if sup is not None and 0 <= sup < len(self.types)
+                    and depth < 64 else [])
+            return base + list(t.fields)
         for t in self.types:
             if t.kind not in (HOBJ, HSTRUCT):
                 continue
             for p in t.protos:
                 out[p.findex] = f"{t.name}.{p.name}"
+            fields = all_fields(t) if t.bindings else []
             for fid, findex in t.bindings:
-                fname = t.fields[fid].name if 0 <= fid < len(t.fields) else f"f{fid}"
+                fname = fields[fid].name if 0 <= fid < len(fields) else f"f{fid}"
                 out.setdefault(findex, f"{t.name}.{fname}")
         for n in self.natives:
             out[n.findex] = f"${n.lib}.{n.name}"

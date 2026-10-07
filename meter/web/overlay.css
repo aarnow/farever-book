@@ -204,3 +204,10 @@ html.framed .mtabs { margin: 0 -14px 6px; }
 .tipr .tv, .tipr .tp { text-align: right; font-variant-numeric: tabular-nums; }
 .tipr .tp { color: #CDB8AC; }
 html:not(.framed) body:has(.tipbox) { background: var(--ov-edge); }
+
+/* the game's own mouse cursors (menu_host._overlay_document): its arrow
+   everywhere, its hand on what can be clicked; typing keeps the caret */
+html.gcur, html.gcur * { cursor: var(--cur); }
+html.gcur button, html.gcur .ri, html.gcur .rkr:not(.h), html.gcur input[type=range],
+html.gcur button * { cursor: var(--cur-hand); }
+html.gcur input[type=text], html.gcur input:not([type]) { cursor: text; }

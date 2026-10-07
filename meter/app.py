@@ -1750,6 +1750,13 @@ class App:
                                  self._collection())}]
 
     # ---- character
+    def on_cursor(self, p):
+        """The game's cursor (hook, each second and on a change): a game
+        window open, the FreeCursor key's toggle. Straight to the overlays,
+        which hide for a window but stay for the key. Hook thread."""
+        self.menubridge.send({"t": "cursor", "win": bool(p.get("win")),
+                              "alt": bool(p.get("alt"))})
+
     def on_character(self, p):
         """The players around (roster) or one player's profile, from the
         hook. Hook thread."""

@@ -417,7 +417,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 5
+DATA_FORMAT = 6
 
 
 def _hook_needs():
@@ -766,7 +766,8 @@ def ensure_ui_frame():
     the game or the texture is missing."""
     out = ANALYSIS / "ui_frame.png"
     mask = ANALYSIS / "ui_frame_mask.json"
-    if out.is_file() and mask.is_file():
+    cursors = [ANALYSIS / f"ui_cursor_{k}.png" for k in UI_CURSORS.values()]
+    if out.is_file() and mask.is_file() and all(c.is_file() for c in cursors):
         return True
     game = _game_dir()
     if game is None or not (game / "res.pak").is_file():
@@ -787,11 +788,40 @@ def ensure_ui_frame():
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(raw)
         mask.write_text(json.dumps(rows), encoding="utf-8")
+        _ui_cursors(game)
         return True
     except Exception as e:
         print(f"[meter] the game's window frame couldn't be read: {e!r}",
               file=sys.stderr)
         return False
+
+
+# The game's two mouse cursors (ui.BaseUI.setSystemCursor): data.cdb's
+# icons, each a cell of UI/Inputs/cursor.png, its hotspot props.cursor's
+# offset (none: the top-left corner, ui.BaseUI.getIconCursor).
+UI_CURSORS = {"CursorDefault": "default", "CursorButton": "button"}
+
+
+def _ui_cursors(game):
+    """The game's cursors copied to analysis_out/ui_cursor_<name>.png."""
+    import io
+    import pak_extract
+    from PIL import Image
+    cdb = json.loads(pak_extract.read_entry(game / "res.light.pak", "data.cdb"))
+    icons = {ln.get("id"): ln for s in cdb.get("sheets") or ()
+             if s.get("name") == "icon" for ln in s.get("lines") or ()}
+    sheets = {}
+    for cid, name in UI_CURSORS.items():
+        g = (icons.get(cid) or {}).get("gfx") or {}
+        if not g.get("file"):
+            continue
+        if g["file"] not in sheets:
+            sheets[g["file"]] = Image.open(io.BytesIO(pak_extract.read_entry(
+                game / "res.pak", g["file"]))).convert("RGBA")
+        n = int(g.get("size") or 32)
+        x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
+        sheets[g["file"]].crop((x, y, x + n, y + n)).save(
+            ANALYSIS / f"ui_cursor_{name}.png")
 
 
 def item_model_json(item_id):

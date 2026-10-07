@@ -213,6 +213,9 @@ class AppWindow:
                                              self._lang))
             except Exception as e:
                 _log(f"overlay {oid} unavailable: {e!r}")
+        # the game's own word on its cursor (hook): (window open, FreeCursor
+        # toggle, when)
+        self._game_cursor = None
         # the meter's player details, under the mouse
         self.tip = None
         if self.overlays:
@@ -273,6 +276,11 @@ class AppWindow:
                 elif not held and alt:
                     by_alt = True
                 window_open = not held and not by_alt
+                gc = self._game_cursor
+                if gc is not None and time.monotonic() - gc[2] < GAME_CURSOR_SECS:
+                    # the game says it: a window of its own frees the mouse,
+                    # whatever Alt did before
+                    window_open = not held and gc[0]
                 for o in self.overlays:
                     o.set_free_hidden(o.hide_free and window_open)
                     if o.shown or o.locked:
@@ -373,6 +381,9 @@ class AppWindow:
         elif t == "ov":
             for o in self.overlays:
                 o.update(msg.get("d") or {})
+        elif t == "cursor":
+            self._game_cursor = (bool(msg.get("win")), bool(msg.get("alt")),
+                                 time.monotonic())
         elif t == "model":
             try:
                 self.window.evaluate_js(
@@ -796,6 +807,7 @@ def _i18n_json(lang):
 
 
 TIP = [None]            # the meter's tip window (MenuHost.tip)
+GAME_CURSOR_SECS = 3.0  # the game's cursor state (hook, each second) trusted this long
 _SKILL_PICS = {}
 
 
@@ -980,11 +992,31 @@ def _frame_runs(w, h, k, mask):
     return out
 
 
+def _ui_cursor(name):
+    """One of the game's cursors (gamedata.ensure_ui_frame) as a data URI,
+    or ""."""
+    import base64
+    path = Path(os.environ.get("FAREVER_ANALYSIS")
+                or HERE.parent / "analysis_out") / f"ui_cursor_{name}.png"
+    try:
+        return "data:image/png;base64," + base64.b64encode(
+            path.read_bytes()).decode()
+    except OSError:
+        return ""
+
+
 def _overlay_document(oid, theme, lang):
     frame = _ui_frame() if oid != "tip" else ""
+    # the game's own cursors over the overlays, its hotspot the top-left
+    arrow, hand = _ui_cursor("default"), _ui_cursor("button")
+    cls = (["framed"] if frame else []) + (["gcur"] if arrow and hand else [])
+    style = (("--ov-frame: url(" + frame + ");" if frame else "")
+             + ("--cur: url(" + arrow + ") 0 0, default;"
+                "--cur-hand: url(" + hand + ") 0 0, pointer;"
+                if arrow and hand else ""))
     return ('<!doctype html><html lang="fr"'
-            + (' class="framed" style="--ov-frame: url(' + frame + ')"'
-               if frame else "")
+            + (' class="' + " ".join(cls) + '" style="' + style + '"'
+               if cls else "")
             + '><head><meta charset="utf-8">'
             '<style id="css">' + _web("overlay.css")
             + "</style></head><body>"

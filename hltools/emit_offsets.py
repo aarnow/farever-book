@@ -111,6 +111,7 @@ def hook_layout(code):
     dctx = offs("st.activity.DungeonContext")
     dact = offs("st.activity.Dungeon")
     lobby = offs("st.player.InstanceLobby")
+    gameapp = offs("GameApp")
 
     # st.Equipment extends st.Inventory: the hook reads both with one offset.
     if equip["content"][0] != inv["content"][0]:
@@ -233,6 +234,10 @@ def hook_layout(code):
         "ArrayDyn": {"array": adyn["array"][0]},
         "Group": {"players": group["players"][0],
                   "instanceLobbies": group["instanceLobbies"][0]},
+        # the FreeCursor key's toggle (GameApp.updateInputs flips it, a game
+        # window resets it: GameApp.updateMouseLock)
+        "GameApp": {"playerRequestedFreeCursor":
+                    gameapp["playerRequestedFreeCursor"][0]},
         # The codex (measured 2026-08-05): Progress.unitsProgress -> MapData.map
         # (a virtual, the StringMap at +8) -> StringMap.h -> hbget(unitKind)
         # -> {killCount, rank}. Every unit set has three tiers: rank 3 = done.

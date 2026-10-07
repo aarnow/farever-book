@@ -77,7 +77,8 @@ class GameSession:
                   "itemcodex": "on_item_codex",
                   "achievements": "on_achievements",
                   "roster": "on_character", "profile": "on_character",
-                  "selfprofile": "on_character", "elements": "on_elements"}
+                  "selfprofile": "on_character", "elements": "on_elements",
+                  "cursor": "on_cursor"}
 
     def __init__(self, link, device, proc, session, ui_state, world,
                  rift_rec, heal_sizer):

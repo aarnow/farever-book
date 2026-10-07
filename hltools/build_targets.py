@@ -30,6 +30,10 @@ TARGETS = (
     # elites get a bar too: this tells a boss (Foe.shouldShowBossInfo throws
     # when called with `this` only)
     ("boss_fns", ("ent.Unit.isBoss",), "boss target"),
+    # whether a game window frees the mouse (inventory, map...), apart from
+    # the player's own FreeCursor key (GameApp.playerRequestedFreeCursor)
+    ("cursor_fns", ("GameApp.shouldFreeCursor",), "cursor target",
+     "the overlays tell a game window from Alt by the cursor alone"),
 )
 # The local player, through the game's singletons.
 SINGLETON_FNS = ("GameApp.getCameraHero", "ui.Console.getMyHero",

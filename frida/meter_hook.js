@@ -387,6 +387,50 @@ function checkRift() {
     } catch (e) {}
 }
 
+// ---- the game's cursor: a game window open, or the FreeCursor key ----
+// GameApp.shouldFreeCursor() says whether a game window (inventory, map...)
+// frees the mouse; GameApp.playerRequestedFreeCursor is the FreeCursor key's
+// toggle (Alt), which a window resets. Read every 100 ms, sent when it
+// changes and each second (the overlays trust a fresh state only).
+let cursorGetApp = null, cursorShould = null, cursorAt = 0, cursorSent = 0;
+let cursorLast = "";
+
+function setupCursor(base) {
+    const fi = DATA.cursor_fns && DATA.cursor_fns["GameApp.shouldFreeCursor"];
+    const gi = DATA.funcs && DATA.funcs["GameApp.get"];
+    if (fi == null || gi == null || !OFF.GameApp) {
+        log("game cursor state unavailable; the overlays go by the cursor alone");
+        return;
+    }
+    try {
+        cursorGetApp = new NativeFunction(base.add(gi * 8).readPointer(), "pointer", []);
+        cursorShould = new NativeFunction(base.add(fi * 8).readPointer(), "uint8", ["pointer"]);
+    } catch (e) {
+        cursorGetApp = cursorShould = null;
+        log("game cursor state failed: " + e);
+    }
+}
+
+// GAME THREAD ONLY.
+function cursorTick() {
+    if (!cursorShould) return;
+    const now = Date.now();
+    if (now - cursorAt < 100) return;
+    cursorAt = now;
+    try {
+        const app = cursorGetApp();
+        if (!app || app.isNull()) return;
+        const win = cursorShould(app) ? 1 : 0;
+        const alt = app.add(OFF.GameApp.playerRequestedFreeCursor).readU8() ? 1 : 0;
+        const s = win + ":" + alt;
+        if (s !== cursorLast || now - cursorSent > 1000) {
+            cursorLast = s;
+            cursorSent = now;
+            send({ kind: "cursor", win: win, alt: alt });
+        }
+    } catch (e) {}
+}
+
 // ---- the game-thread tick ----
 // HL calls must run on the game thread: from a timer they kill the game ("Can't
 // lock GC in unregistered thread"). client.BaseCamera.postUpdate runs every
@@ -397,6 +441,7 @@ function hookGameTick(base) {
     try {
         Interceptor.attach(base.add(fi * 8).readPointer(), {
             onEnter: function () {
+                cursorTick();
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
                 if (rosterDue || analyzeWanted !== null || selfDue) characterTick();
                 if (codexDue && hbKeys) {
@@ -1504,6 +1549,7 @@ function main() {
     }
 
     if (!setupNameApi()) log("skill-name API unavailable; showing raw ids");
+    setupCursor(base);
     if (!setupCodexApi(base)) log("!! map natives missing; no kill counts");
     every(function () { codexDue = true; }, 8000);
     every(function () { rosterDue = true; }, 5000);
