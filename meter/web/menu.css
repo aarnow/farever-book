@@ -2571,7 +2571,10 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .rk.rkfill .rkbar > span { text-shadow: 0 1px 2px rgba(0, 0, 0, .75); }
 .rk.rkfill .nm { color: #fff; }
 .rk.rkfill.zero .nm { color: var(--faint); }
-.rk.rkfill + .rk.rkfill { border-top: 1px solid rgba(0, 0, 0, .35); }
+/* each player framed in a lighter shade of its class colour, a gap between */
+.rk.rkfill { border-radius: 4px; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cc) 70%, #fff); }
+.rk.rkfill.zero { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cc) 40%, transparent); }
+.rk.rkfill + .rk.rkfill { margin-top: 3px; }
 /* the live tab: the player shown below framed; the heals' title clear of
    the damage table */
 .rk.rkfill.on { box-shadow: inset 0 0 0 2px var(--accent); }

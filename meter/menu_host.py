@@ -258,7 +258,8 @@ class AppWindow:
                 alt = bool(u.GetAsyncKeyState(0x12) & 0x8000)   # VK_MENU
                 if held != was:
                     by_alt = not held and alt
-                    _log(f"overlay: game cursor {'held' if held else 'free'}"
+                    _log(f"overlay: game cursor "
+                         f"{'held, ' + CURSOR_WHY[0] if held else 'free'}"
                          + (" (Alt)" if by_alt else ""))
                     was = held
                 elif not held and alt:
@@ -483,6 +484,7 @@ def cursor_captured():
     ci.cbSize = ctypes.sizeof(_CURSORINFO)
     if u.GetCursorInfo(ctypes.byref(ci)) and (
             not (ci.flags & 1) or not ci.hCursor):       # CURSOR_SHOWING
+        CURSOR_WHY[0] = "hidden"
         return True
     clip = wintypes.RECT()
     if u.GetClipCursor(ctypes.byref(clip)):
@@ -490,13 +492,19 @@ def cursor_captured():
         vw, vh = u.GetSystemMetrics(78), u.GetSystemMetrics(79)
         if (clip.left > vx or clip.top > vy
                 or clip.right < vx + vw or clip.bottom < vy + vh):
+            CURSOR_WHY[0] = (f"clipped {clip.left},{clip.top},"
+                             f"{clip.right},{clip.bottom}")
             return True
+    CURSOR_WHY[0] = ""
     return False
+
+
+CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
 OVERLAY_IDS = ("meter", "goals", "luck")
-OVERLAY_BG = "#1D1B33"              # the panel's colour (overlay.css --ov-bg)
-OVERLAY_RADIUS = 10                 # its corners (overlay.css #ov)
+OVERLAY_BG = "#6A4E44"              # its edge's colour (overlay.css --ov-edge)
+OVERLAY_RADIUS = 5                  # its corners (overlay.css #ov)
 
 
 class OverlayApi:
@@ -541,7 +549,7 @@ class Overlay:
             width=self.size[0], height=self.size[1], x=-4000, y=-4000,
             frameless=True, easy_drag=False, resizable=False, shadow=False,
             hidden=True, on_top=True, focus=False,
-            background_color=themes.color(OVERLAY_BG, theme),
+            background_color=OVERLAY_BG,   # the game's colours, not the app theme's
             js_api=self.api)
 
     def attach(self):
@@ -570,6 +578,8 @@ class Overlay:
         if not self.hwnd or on == self.free_hidden:
             return
         self.free_hidden = on
+        _log(f"overlay {self.id}: {'hidden, a game window is open' if on else 'back'}"
+             f" (shown={self.shown}, wanted={self.wanted})")
         u = ctypes.windll.user32
         if on and self.shown:
             u.ShowWindow(self.hwnd, SW_HIDE)
@@ -593,12 +603,8 @@ class Overlay:
                          else ex & ~WS_EX_TRANSPARENT)
 
     def set_theme(self, theme):
-        try:
-            self.window.evaluate_js(
-                "window.applyTheme && window.applyTheme("
-                + json.dumps(themes.themed(_web("overlay.css"), theme)) + ")")
-        except Exception as e:
-            _log(f"overlay {self.id} theme failed: {e!r}")
+        """The overlays keep the game's colours (overlay.css): the app's
+        theme leaves them as they are."""
 
     # -- the meter's state -------------------------------------------------
     def update(self, d):
@@ -728,7 +734,7 @@ def _i18n_json(lang):
 
 def _overlay_document(oid, theme, lang):
     return ('<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-            '<style id="css">' + themes.themed(_web("overlay.css"), theme)
+            '<style id="css">' + _web("overlay.css")
             + "</style></head><body>"
             '<div id="ov"></div><script>window.__OVERLAY__ = '
             + json.dumps(oid) + ";window.__I18N__ = " + _i18n_json(lang)

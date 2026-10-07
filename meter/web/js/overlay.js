@@ -119,14 +119,15 @@ function renderMeter(box) {
   const m = OV.meter || { rows: [] };
   const heal = m.tab === 'heal';
   box.className = heal ? 'heal' : '';
-  const tabs = el('div', 'tabs');
-  if (m.heals) {
-    [['dmg', tr('Dégâts')], ['heal', tr('Soins')]].forEach(([k, t]) => {
-      tabs.appendChild(btn('tab' + (m.tab === k ? ' on' : ''), t, null,
-        () => api() && api().notify('ov_tab', { tab: k })));
-    });
-  }
-  const h = head(m.title || tr('Groupe'), m.heals ? [tabs] : []);
+  // damage or heals: one switch, its knob on the side shown
+  const sw = btn('sw' + (heal ? ' heal' : ''), '', heal ? tr('Afficher les dégâts') : tr('Afficher les soins'),
+    () => api() && api().notify('ov_tab', { tab: heal ? 'dmg' : 'heal' }));
+  sw.appendChild(el('span', 'swl d', tr('Dégâts')));
+  const track = el('span', 'swt');
+  track.appendChild(el('i'));
+  sw.appendChild(track);
+  sw.appendChild(el('span', 'swl h', tr('Soins')));
+  const h = head(m.title || tr('Groupe'), m.heals ? [sw] : []);
   if (m.time) h.appendChild(el('span', 'clock' + (m.fight ? ' hot' : ''), m.time));
   h.appendChild(btn('ib', OV_SMALL ? '▸' : '▾', OV_SMALL ? tr('Déplier') : tr('Replier'),
     () => { OV_SMALL = !OV_SMALL; render(); }));

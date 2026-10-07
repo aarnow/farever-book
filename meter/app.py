@@ -166,7 +166,6 @@ class App:
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
-        self._rift_auto_view = False
         self._zoom = 130                    # the window's own size, percent
         self._theme = themes.DEFAULT        # the colour theme
         self._lang = i18n.DEFAULT           # the interface's language
@@ -237,8 +236,7 @@ class App:
         if data.get("mode") in ("party", "all"):
             self.mode = data["mode"]
         for key, attr in (("show_heal", "_show_heal"),
-                          ("auto_reset_boss", "_auto_reset_boss"),
-                          ("rift_auto_view", "_rift_auto_view")):
+                          ("auto_reset_boss", "_auto_reset_boss")):
             if isinstance(data.get(key), bool):
                 setattr(self, attr, data[key])
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
@@ -285,7 +283,6 @@ class App:
                 "mode": self.mode,
                 "show_heal": bool(self._show_heal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
-                "rift_auto_view": bool(self._rift_auto_view),
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
@@ -414,8 +411,8 @@ class App:
         self.menubridge.send({"t": "show"})
 
     def _tick_rift(self):
-        """Follow rift crossings for the "all players in rifts" setting;
-        without it the view is left alone."""
+        """Follow rift crossings: the journal's line, the gates count read
+        anew on entering (the group mode counts the whole rift, _apply_mode)."""
         in_rift = self.ui_state.in_rift()
         if in_rift == self._rift_seen:
             return
@@ -428,12 +425,6 @@ class App:
             self._rift_gates0 = "wait"
             self._rift_gates_for = None
             self._me_auto_next = 0.0
-        if self._rift_auto_view:
-            self._apply_rift_view("enter" if in_rift else "leave")
-
-    def _toggle_rift_auto_view(self):
-        self._rift_auto_view = not self._rift_auto_view
-        self._save_settings()
 
     # ------------------------------------------------------------------ actions
     def _toggle_heal(self):
@@ -732,7 +723,6 @@ class App:
             "goal_del": lambda p: self.goals.remove(p.get("id")),
             # settings
             "toggle_heal": self._toggle_heal,
-            "toggle_rift_auto_view": self._toggle_rift_auto_view,
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
@@ -2210,14 +2200,6 @@ class App:
             {"k": "button", "id": "toggle_auto_reset",
              "t": self._tick(self._auto_reset_boss,
                              tr("Réinitialiser au pull d'un boss"))},
-            {"k": "button", "id": "toggle_rift_auto_view",
-             "t": self._tick(self._rift_auto_view,
-                             tr("Tous les joueurs automatiquement en "
-                                "faille"))},
-            {"k": "note", "t": tr("Passe le compteur sur « Tous les joueurs » "
-                                  "en entrant dans une faille, et revient au "
-                                  "groupe en sortant. Chaque bascule "
-                                  "réinitialise le combat.")},
             {"k": "section", "t": tr("Raccourci clavier")},
             {"k": "field", "t": tr("Réinitialiser le combat"),
              "c": {"k": "label", "t": self._bind_prompt()}},
@@ -2696,6 +2678,10 @@ class App:
 
     def _apply_mode(self, rows):
         if self.mode == "party":
+            # a rift is an instance of its own: everyone in it fights with
+            # the player, its group as much as the party
+            if self.ui_state.in_rift():
+                return rows
             party = [p for p in rows if p.in_party]
             # no party known yet (solo, group not read): me alone
             return party if party else [p for p in rows if p.is_me]
@@ -2733,7 +2719,7 @@ class App:
             return rows, duration, False
         # A set held from all-players mode has strangers in it: in party mode
         # it is dropped whole, since its totals and percentages count them.
-        if self.mode == "party" and any(
+        if self.mode == "party" and not self.ui_state.in_rift() and any(
                 not p.in_party and not p.is_me for p in self._held_rows):
             self._held_rows = []
             self._held_duration = 0.0
@@ -2745,19 +2731,6 @@ class App:
             return self.focus_player
         me = next((p.name for p in rows if p.is_me), None)
         return me or (rows[0].name if rows else None)
-
-    def _apply_rift_view(self, kind):
-        """All-players on entering a rift, party-only on leaving. Resets the
-        encounter like the mode button (the views can't share one) and saves
-        the setting."""
-        want = "all" if kind == "enter" else "party"
-        if self.mode == want:
-            return False
-        self.mode = want
-        self.focus_player = None
-        self.session.reset()
-        self._save_settings()
-        return True
 
     @staticmethod
     def _help_articles():
