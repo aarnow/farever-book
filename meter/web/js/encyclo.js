@@ -66,6 +66,9 @@ function renderEncyclo(box, n) {
       if (ENC.cat === c.v) return;
       ENC.cat = c.v; ENC.type = ''; ENC.rar = '';
       rerenderEncyclo();
+      // the category's first item, shown at once
+      const first = items.find((it) => it.c === c.v);
+      if (first) encOpen(first.id);
     });
     list_.appendChild(card);
   });
