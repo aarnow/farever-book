@@ -9,7 +9,7 @@ import time
 
 from common import dec_sep, pct_sp, ANALYSIS, _n, _pretty_id, class_key, date_fr
 from gamedata import (
-    weapon_upgrade, weapon_upgrade_skill,
+    talent_tip, weapon_upgrade, weapon_upgrade_skill,
     RARITY_ORDER, _augments_data, _codex_thresholds, _element_done, build_data,
     _family_label, _fr_desc, _fr_names, _fr_ref, _item_flag, _skill_label,
     _spark_units, _unit_label, _zone_label, achievements_catalogue,
@@ -817,7 +817,8 @@ def _talent_tree(cls, ranks, granted=()):
         return {"id": t["s"], "name": _skill_label(t["s"])
                 + (" " + tr("(offert par l'équipement)") if gift else ""),
                 "pts": t["max"] if gift else pts, "max": t["max"],
-                "gift": gift}
+                "gift": gift,
+                "tip": talent_tip(t["s"], t["max"], t["max"] if gift else pts)}
     root = next((t for t in tree["talents"] if t["tier"] == 0), None)
     tiers = []
     for tier in (1, 2, 3, 4):
@@ -903,6 +904,69 @@ def _sheet(prof, entries):
             "arsenal": weapon("Weapon2", tr("Arme de rechange"))}
 
 
+def piece_view(slot, cell=None):
+    """One gear copy as the sheet shows it (name, rarity, stats at its
+    level, augments, upgrade effect, infusion), `cell` its equipment
+    slot (its share of the stats there), or None for the copy alone."""
+    kind, rar, lvl, upg, gslots, effects, infu, istat, iflags = (
+        list(slot) + [None] * 9)[:9]
+    prism = _item_flag(iflags, "Prismatic")
+    rar = rar or item_rarity(kind) or ""
+    t = item_type(kind)
+    fac = slot_factor(cell) if cell else 1
+    extras = [_augment_view(g, fac) for g in gslots or ()
+              if g and not str(g).startswith("[")]
+    for e in effects or ():
+        if e and not str(e).startswith("["):
+            extras.append({"k": "enchant", "name": tr("Enchantement"),
+                           "fx": _skill_label(e)})
+    # a weapon's upgrade effect: its type's, at its rarity, from the
+    # upgrade level the game opens it at
+    up = weapon_upgrade(t, rar) if t else None
+    if up:
+        text, at = up
+        on = isinstance(upg, int) and upg >= at
+        extras.append({"k": "upgrade", "name": tr("Amélioration"),
+                       "fx": text if on else tr(
+                           "{effect} (à partir de l'amélioration {n})",
+                           effect=text.rstrip(". "), n=at),
+                       "off": not on})
+    entry = {"id": kind, "name": item_label(kind),
+             "img": item_icon(kind), "rk": rar.lower(),
+             "rar": rarity_label(rar) if rar else "",
+             "type": item_type_label(t) if t else "",
+             "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None,
+             "up": upg if isinstance(upg, int) and upg > 0 else 0,
+             "extras": extras,
+             "prism": prism,
+             "inf": _gear_infusion(kind, infu, istat, prism),
+             "chips": _augment_chips(t, gslots),
+             "plan": (_fr_names("attribute").get(istat)
+                      or _pretty_id(istat))
+             if istat and not infu else None,
+             "t": t,
+             # its upgrade skill at work, for the sheet's attributes
+             "upskill": weapon_upgrade_skill(t, rar)
+             if up and on else None}
+    st = gear_stats(kind, rar, lvl, upg, gslots, iflags)
+    inf = entry["inf"]
+    if st and inf and istat:
+        bonus = infusion_bonus(kind, rar, st[0], istat)
+        if bonus:
+            inf["val"] = _scaled(bonus, fac)
+    if st:
+        entry["il"] = st[0]
+        entry["stats"] = [{"k": k, "t": n, "v": _scaled(v, fac)}
+                          for k, n, v in st[1]]
+    entry["augs"] = [[(atb, _scaled(val, fac)) for atb, val in
+                      (_augments_data().get(g) or {}).get("a") or ()]
+                     for g in gslots or ()
+                     if g and not str(g).startswith("[")]
+    if fac != 1:
+        entry["eff"] = round(fac * 100)
+    return entry
+
+
 def character_view(roster, profiles, sel, waiting, live):
     """The Character tab: the players around (to analyse), the profiles
     already built, and the open one."""
@@ -929,63 +993,9 @@ def character_view(roster, profiles, sel, waiting, live):
         for idx, slot in enumerate(prof.get("equip") or ()):
             if not slot:
                 continue
-            kind, rar, lvl, upg, gslots, effects, infu, istat, iflags = (
-                list(slot) + [None] * 9)[:9]
-            prism = _item_flag(iflags, "Prismatic")
-            rar = rar or item_rarity(kind) or ""
-            t = item_type(kind)
             cell = EQUIP_SLOTS[idx] if idx < len(EQUIP_SLOTS) else None
-            fac = slot_factor(cell) if cell else 1
-            extras = [_augment_view(g, fac) for g in gslots or ()
-                      if g and not str(g).startswith("[")]
-            for e in effects or ():
-                if e and not str(e).startswith("["):
-                    extras.append({"k": "enchant", "name": tr("Enchantement"),
-                                   "fx": _skill_label(e)})
-            # a weapon's upgrade effect: its type's, at its rarity, from the
-            # upgrade level the game opens it at
-            up = weapon_upgrade(t, rar) if t else None
-            if up:
-                text, at = up
-                on = isinstance(upg, int) and upg >= at
-                extras.append({"k": "upgrade", "name": tr("Amélioration"),
-                               "fx": text if on else tr(
-                                   "{effect} (à partir de l'amélioration {n})",
-                                   effect=text.rstrip(". "), n=at),
-                               "off": not on})
-            entry = {"id": kind, "name": item_label(kind),
-                     "img": item_icon(kind), "rk": rar.lower(),
-                     "rar": rarity_label(rar) if rar else "",
-                     "type": item_type_label(t) if t else "",
-                     "lvl": lvl if isinstance(lvl, int) and lvl > 0 else None,
-                     "up": upg if isinstance(upg, int) and upg > 0 else 0,
-                     "extras": extras,
-                     "prism": prism,
-                     "inf": _gear_infusion(kind, infu, istat, prism),
-                     "chips": _augment_chips(t, gslots),
-                     "plan": (_fr_names("attribute").get(istat)
-                              or _pretty_id(istat))
-                     if istat and not infu else None,
-                     "t": t,
-                     # its upgrade skill at work, for the sheet's attributes
-                     "upskill": weapon_upgrade_skill(t, rar)
-                     if up and on else None}
-            st = gear_stats(kind, rar, lvl, upg, gslots, iflags)
-            inf = entry["inf"]
-            if st and inf and istat:
-                bonus = infusion_bonus(kind, rar, st[0], istat)
-                if bonus:
-                    inf["val"] = _scaled(bonus, fac)
-            if st:
-                entry["il"] = st[0]
-                entry["stats"] = [{"k": k, "t": n, "v": _scaled(v, fac)}
-                                  for k, n, v in st[1]]
-            entry["augs"] = [[(atb, _scaled(val, fac)) for atb, val in
-                              (_augments_data().get(g) or {}).get("a") or ()]
-                             for g in gslots or ()
-                             if g and not str(g).startswith("[")]
-            if fac != 1:
-                entry["eff"] = round(fac * 100)
+            entry = piece_view(slot, cell)
+            t = entry["t"]
             (other if t in NOT_GEAR else gear).append(entry)
             if t not in NOT_GEAR:
                 cells.append((idx, entry))
@@ -1465,7 +1475,20 @@ def _pct(chance):
         else f"{v:.2g}{pct_sp()}".replace(".", dec_sep())
 
 
-def droptable_view(dg, got, diff=None):
+def _loot_piece(item, rarity, lvl):
+    """A piece of loot as the sheet's tooltip shows it, at level `lvl` (the
+    level a piece drops at is the server's: not known here), or None when
+    it is no gear."""
+    if not lvl:
+        return None
+    g = piece_view([item, rarity, lvl, 0])
+    if not g.get("stats"):
+        return None
+    g["note"] = tr("Attributs d'une pièce de niveau {n}", n=lvl)
+    return g
+
+
+def droptable_view(dg, got, diff=None, lvl=None):
     """A dungeon's possible loot as table rows, rarest first. `got`: item id
     -> how many the saved runs of this dungeon brought back. `diff`: only
     what that difficulty gives (the rare faction armour up to Vétéran, the
@@ -1517,6 +1540,8 @@ def droptable_view(dg, got, diff=None):
             # the chance as a number, for sorting (guaranteed 1, unknown -1)
             "cv": (chance if chance is not None else -1),
             "qty": qty, "got": got.get(e["item"], 0),
+            # its tooltip, the sheet's
+            "g": _loot_piece(e["item"], e.get("rarity"), lvl),
             # rarest first; the faction armour (chance unknown) after the
             # chest's pick, the guaranteed shards last
             "_k": (chance if chance is not None else 0.75,

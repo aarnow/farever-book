@@ -40,7 +40,7 @@ import goals as G
 from me import MeStore
 from gamedata import (
     REGENERATING, _boss_label, _element_done, _fr_names, bestiary_catalogue,
-    dungeon_catalogue,
+    build_data, dungeon_catalogue,
     item_rarity,
     dungeon_name, item_icon, item_label, item_type,
     ensure_ui_frame, item_model_json, locate_hlboot, regenerate_data, world_map,
@@ -2235,6 +2235,10 @@ class App:
             if sheet:
                 out += [{"k": "section", "t": tr("Fiche du boss")}, sheet]
             if dg and dg.get("loot"):
+                # the pieces' tooltips: at the hero's level, else the top one
+                me = self._me()
+                loot_lvl = ((me or {}).get("lvl")
+                            or build_data().get("maxLevel") or 25)
                 out += [{"k": "section", "t": tr("Butin possible")},
                         {"k": "note", "t": tr(
                          "D'après les données et le code du jeu. Le coffre "
@@ -2255,7 +2259,8 @@ class App:
                          "tes runs ont rapporté dans cette difficulté.")},
                         {"k": "droptable", "id": "dungeon_drops",
                          "tables": [{"d": k, "t": tr(label),
-                                     "rows": droptable_view(dg, got[k], k)}
+                                     "rows": droptable_view(
+                                         dg, got[k], k, loot_lvl)}
                                     for k, label
                                     in DUNGEON_DIFFICULTIES.items()]}]
             return out

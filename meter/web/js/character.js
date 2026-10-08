@@ -228,12 +228,13 @@ function skillTipEl(tip) {
   box.appendChild(head);
   if (tip.desc) box.appendChild(el('p', 'skd', tip.desc));
   (tip.rows || []).forEach((r) => {
-    const row = el('div', 'skr');
+    const row = el('div', 'skr' + (r.on ? ' on' : ''));
     row.appendChild(el('span', 'skrk', r.r));
-    row.appendChild(el('span', 'skwn', r.when));
+    row.appendChild(el('span', 'skwn', r.when || ''));
     row.appendChild(el('span', 'sktx', r.t));
     box.appendChild(row);
   });
+  if (tip.foot) box.appendChild(el('div', 'skfoot', tip.foot));
   return box;
 }
 
@@ -303,6 +304,7 @@ function pieceTipEl(g) {
   head.appendChild(ht);
   box.appendChild(head);
   if (g.il) box.appendChild(el('div', 'ptil', tr('Niveau d’objet {n}', { n: g.il })));
+  if (g.note) box.appendChild(el('div', 'ptnote', g.note));
   (g.stats || []).forEach((x) => {
     const r = el('div', 'ptst');
     r.appendChild(el('span', null, x.t));
@@ -768,8 +770,9 @@ function talentTree(t, ranked, onPoint) {
   const node = (x) => {
     const n = el('span', 'tnode' + (x.pts ? ' on' : '') + (x.gift ? ' gift' : '')
       + (onPoint && x.add ? ' can' : '') + (onPoint && !x.add && !x.pts ? ' locked' : ''));
-    n.title = x.name + (onPoint ? '\n' + (x.add ? tr('Clic : +1') : '')
-      + (x.remove ? (x.add ? ' · ' : '') + tr('Clic droit : −1') : '') : '');
+    const hint = onPoint ? (x.add ? tr('Clic : +1') : '')
+      + (x.remove ? (x.add ? ' · ' : '') + tr('Clic droit : −1') : '') : '';
+    n.title = x.name + (hint ? '\n' + hint : '');
     if (onPoint) {
       n.addEventListener('click', () => { if (x.add) onPoint(x.id, 1); });
       n.addEventListener('contextmenu', (e) => {
@@ -779,6 +782,8 @@ function talentTree(t, ranked, onPoint) {
     }
     n.appendChild(skillIcon({ id: x.id, name: x.name }));
     n.appendChild(el('b', null, x.pts + '/' + x.max));
+    // the skill tooltip's look: its effect at each rank, how to spend
+    if (x.tip) attachTip(n, Object.assign({}, x.tip, { name: x.name, foot: hint }), x.id);
     return n;
   };
   // where the talents sit in a shape, around its centre

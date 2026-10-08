@@ -259,6 +259,29 @@ def skill_tip(sid):
     return out
 
 
+def talent_tip(sid, max_rank, rank=0):
+    """A talent's tooltip: {name, desc} or, when its numbers change with its
+    points, {name, rows: [{r, t, on}]} for each of its ranks, the one it is
+    at marked."""
+    tip = skill_tip(sid)
+    if not tip:
+        return None
+    e = (_table("skill_tips.json").get("skills") or {}).get(sid) or {}
+    t = e.get(i18n.lang()) or e.get("en") or {}
+    by = t.get("byRank") or []
+    if t.get("ranks") and any(t["ranks"]):
+        # the game's own text per rank: the description, then ranks 2, 3...
+        by = [t.get("desc") or ""] + list(t["ranks"])
+    if max_rank and max_rank > 1 and len(by) >= max_rank:
+        tip.pop("rows", None)
+        tip.pop("desc", None)
+        tip["rows"] = [{"r": tr("Rang {n}", n=i + 1), "t": _fr_ref(by[i]),
+                        "on": i + 1 == rank} for i in range(max_rank)]
+    else:
+        tip.pop("rows", None)       # a talent's ranks come with points, not kills
+    return tip
+
+
 def weapon_upgrade_skill(item_type, rarity):
     """A weapon's upgrade skill and its rank (the rarity's row, from 0:
     st.item.Weapon.getWeaponUpgradeSkill), or None."""

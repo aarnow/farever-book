@@ -98,6 +98,7 @@ function dropTable(rows, redraw, lite) {
     row.appendChild(ic);
     row.appendChild(el('span', 'nm', r.name));
     row.appendChild(el('span', 'dim', r.type));
+    if (r.g) attachCard(row, r.g);         // the sheet's tooltip
     if (!lite) {
       const cl = el('span', 'apt');
       (r.apt || []).forEach((k) => cl.appendChild(classEl('', k)));

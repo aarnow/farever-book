@@ -181,11 +181,17 @@ class SkillText:
 
     def tip(self, sid, lang):
         t = self.texts[lang].get(sid) or {}
-        return {"name": t.get("name") or sid,
-                "desc": self.fill(t.get("desc"), sid, lang),
-                # the rank descriptions are ranks 2, 3...
-                "ranks": [self.fill(r, sid, lang, i + 2)
-                          for i, r in enumerate(t.get("ranks") or ())]}
+        out = {"name": t.get("name") or sid,
+               "desc": self.fill(t.get("desc"), sid, lang),
+               # the rank descriptions are ranks 2, 3...
+               "ranks": [self.fill(r, sid, lang, i + 2)
+                         for i, r in enumerate(t.get("ranks") or ())]}
+        # its description at ranks 1 to 5, when its numbers change with the
+        # rank (a talent's points: affixes from / up to a rank, overrides)
+        by = [self.fill(t.get("desc"), sid, lang, r) for r in range(1, 6)]
+        if len(set(by)) > 1:
+            out["byRank"] = by
+        return out
 
 
 def build(game_dir):
