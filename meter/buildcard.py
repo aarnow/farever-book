@@ -153,8 +153,10 @@ def _extras(g):
     rows = []
     for x in g.get("extras") or ():
         img = icons.get(x.get("name"))
+        fx = (f'<span class="off">{e(x.get("fx"))}</span>' if x.get("off")
+              else _fx(x.get("fx")))
         rows.append(f'<div class="ex">{f"<img src={img!r}>" if img else "<i></i>"}'
-                    f'<b>{e(x.get("name"))}</b>{_fx(x.get("fx"))}</div>')
+                    f'<b>{e(x.get("name"))}</b>{fx}</div>')
     inf = g.get("inf") or {}
     if inf:
         icon = _img("skill_img", inf.get("id"))

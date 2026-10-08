@@ -310,7 +310,7 @@ function pieceTipEl(g) {
     box.appendChild(r);
   });
   (g.extras || []).forEach((x) => {
-    const r = el('div', 'ptx');
+    const r = el('div', 'ptx' + (x.off ? ' off' : ''));
     r.appendChild(el('b', null, x.name));
     if (x.fx) r.appendChild(el('span', null, x.fx));
     box.appendChild(r);
@@ -627,6 +627,15 @@ function gearRow(g, ed) {
       r.appendChild(el('b', null, '+' + fmtN(x.v)));
       st.appendChild(r);
     });
+    // a weapon's upgrade effect, right under its attributes (the editor's
+    // too)
+    const up = (g.extras || []).find((x) => x.k === 'upgrade');
+    if (up) {
+      const r = el('div', 'gupg' + (up.off ? ' off' : ''));
+      r.appendChild(el('b', null, up.name));
+      r.appendChild(document.createTextNode(tr(' : {text}', { text: up.fx })));
+      st.appendChild(r);
+    }
     gt.appendChild(st);
   }
   if (ed && ed.lines) {          // the editor: its own lines for these
@@ -636,8 +645,8 @@ function gearRow(g, ed) {
     r.appendChild(gt);
     return r;
   }
-  (g.extras || []).forEach((x2) => {
-    const line = el('span', 'gx ' + x2.k);
+  (g.extras || []).filter((x2) => !(x2.k === 'upgrade' && (g.stats || []).length)).forEach((x2) => {
+    const line = el('span', 'gx ' + x2.k + (x2.off ? ' off' : ''));
     line.appendChild(el('b', null, x2.name));
     if (x2.fx) line.appendChild(document.createTextNode(tr(' : {text}', { text: x2.fx })));
     gt.appendChild(line);

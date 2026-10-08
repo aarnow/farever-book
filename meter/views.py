@@ -9,6 +9,7 @@ import time
 
 from common import dec_sep, pct_sp, ANALYSIS, _n, _pretty_id, class_key, date_fr
 from gamedata import (
+    weapon_upgrade, weapon_upgrade_skill,
     RARITY_ORDER, _augments_data, _codex_thresholds, _element_done, build_data,
     _family_label, _fr_desc, _fr_names, _fr_ref, _item_flag, _skill_label,
     _spark_units, _unit_label, _zone_label, achievements_catalogue,
@@ -941,6 +942,17 @@ def character_view(roster, profiles, sel, waiting, live):
                 if e and not str(e).startswith("["):
                     extras.append({"k": "enchant", "name": tr("Enchantement"),
                                    "fx": _skill_label(e)})
+            # a weapon's upgrade effect: its type's, at its rarity, from the
+            # upgrade level the game opens it at
+            up = weapon_upgrade(t, rar) if t else None
+            if up:
+                text, at = up
+                on = isinstance(upg, int) and upg >= at
+                extras.append({"k": "upgrade", "name": tr("Amélioration"),
+                               "fx": text if on else tr(
+                                   "{effect} (à partir de l'amélioration {n})",
+                                   effect=text.rstrip(". "), n=at),
+                               "off": not on})
             entry = {"id": kind, "name": item_label(kind),
                      "img": item_icon(kind), "rk": rar.lower(),
                      "rar": rarity_label(rar) if rar else "",
@@ -954,7 +966,10 @@ def character_view(roster, profiles, sel, waiting, live):
                      "plan": (_fr_names("attribute").get(istat)
                               or _pretty_id(istat))
                      if istat and not infu else None,
-                     "t": t}
+                     "t": t,
+                     # its upgrade skill at work, for the sheet's attributes
+                     "upskill": weapon_upgrade_skill(t, rar)
+                     if up and on else None}
             st = gear_stats(kind, rar, lvl, upg, gslots, iflags)
             inf = entry["inf"]
             if st and inf and istat:

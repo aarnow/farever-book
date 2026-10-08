@@ -3309,3 +3309,9 @@ html.lt-760 #page.page-Settings > .setnav { grid-row: auto; position: static; fl
 .toggle.on i { left: 25px; }
 .toggle:hover { filter: brightness(1.08); }
 .ctl:has(> .toggle) { display: flex; justify-content: flex-end; }
+/* a weapon upgrade effect not yet unlocked (views.character_view "off") */
+.gx.upgrade.off, .ptip .ptx.off { opacity: .6; font-style: italic; }
+/* under a weapon's attributes: its upgrade effect (character.js) */
+.gstats .gupg { margin-top: 6px; color: var(--ok); font-size: 12.5px; }
+.gstats .gupg b { color: var(--dim); font-weight: 600; }
+.gstats .gupg.off { color: var(--faint); font-style: italic; }

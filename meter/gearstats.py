@@ -393,16 +393,22 @@ def _hero_effects(prof, gear):
     for sid, n in pieces.items():
         if sid in aff and n >= 2:
             ranks[sid] = max(ranks.get(sid, 0), n // 2)
+    # each equipped weapon's upgrade skill, at its rarity's rank
+    # (st.item.Weapon.applySkills: one per weapon, so two add up)
+    at_work = list(ranks.items()) + [tuple(g["upskill"]) for g in gear
+                                     if g.get("upskill")]
     out = {}
-    for sid, rank in ranks.items():
+    for sid, rank in at_work:
         for ref, atb, val, conds in aff.get(sid) or ():
             if not isinstance(val, (int, float)):
                 continue
-            if set(conds) - {"mastery", "minRank"}:
+            if set(conds) - {"mastery", "minRank", "maxRank"}:
                 continue                # a condition the sheet can't judge
             if conds.get("mastery") and conds["mastery"] not in masteries:
                 continue
             if conds.get("minRank") and rank < conds["minRank"]:
+                continue
+            if conds.get("maxRank") is not None and rank > conds["maxRank"]:
                 continue
             e = out.setdefault(atb, [0.0, 0.0, 1.0])
             if ref == "TAttribute_Flat":

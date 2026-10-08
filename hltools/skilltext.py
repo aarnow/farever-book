@@ -52,6 +52,22 @@ class SkillText:
         self.texts = {"fr": {}, "en": {}}
         root = ET.fromstring(pak_extract.read_entry(game_dir / "res.pak",
                                                     "lang/export_fr.xml"))
+        # the game's terms ([BasicAttack] in a text: sheet gameTerm), each
+        # word and its plural
+        self.terms = {"fr": {}, "en": {}}
+        for sheet in root.findall("sheet"):
+            if sheet.get("name") == "gameTerm":
+                for row in sheet:
+                    v, pl = row.find("texts.name.v"), row.find("texts.name.plural")
+                    if v is not None:
+                        one = "".join(v.itertext()).strip()
+                        self.terms["fr"][row.tag] = [
+                            one, "".join(pl.itertext()).strip()
+                            if pl is not None else one]
+        for ln in self.sheets.get("gameTerm", {}).get("lines") or ():
+            nm = (ln.get("texts") or {}).get("name") or {}
+            if isinstance(ln.get("id"), str) and nm.get("v"):
+                self.terms["en"][ln["id"]] = [nm["v"], nm.get("plural") or nm["v"]]
         for sheet in root.findall("sheet"):
             if sheet.get("name") != "skill":
                 continue
@@ -117,7 +133,15 @@ class SkillText:
         m = re.fullmatch(r"val(\d*)", key)
         if m:
             vals = []
-            for a in src.get("affixes") or ():
+            affixes = src.get("affixes") or ()
+            # affixes for some ranks only: those of this rank
+            if any((a.get("conds") or {}).get("minRank") is not None
+                   or (a.get("conds") or {}).get("maxRank") is not None
+                   for a in affixes):
+                affixes = [a for a in affixes
+                           if ((a.get("conds") or {}).get("minRank") or -99) <= rank
+                           <= ((a.get("conds") or {}).get("maxRank") or 99)]
+            for a in affixes:
                 if isinstance(a.get("val"), (int, float)) and a["val"] not in vals:
                     vals.append(a["val"])
             i = int(m.group(1) or 1) - 1
@@ -130,6 +154,9 @@ class SkillText:
 
         def one(m):
             key, is_pct = m.group(1), m.group(2) == "%"
+            # a chance is a percentage, % or not (the game's text formatter:
+            # $HText.percentValue for "chance")
+            is_pct = is_pct or bool(re.fullmatch(r"chance\d*", key))
             src = sk
             mref = re.match(r"ref(\d?)_(.+)", key)
             if mref:
@@ -172,6 +199,26 @@ def build(game_dir):
             continue
         out[sid] = {"cd": st.skills[sid].get("cooldown"),
                     "fr": st.tip(sid, "fr"), "en": st.tip(sid, "en")}
+    # a weapon's upgrade effect (st.item.Weapon.getWeaponUpgradeSkill): the
+    # skill "<item type>_Upgrade", from the upgrade level SkillUnlockLevel
+    # on, at the rank of the weapon's rarity (its row's index, from 0:
+    # cdb.Index.initLines); its text at each rarity
+    rars = [ln["id"] for ln in st.sheets["rarity"]["lines"]]
+    upgrades = {}
+    for sid in sorted(st.skills):
+        if not sid.endswith("_Upgrade") or sid.startswith("Weapon_"):
+            continue
+        texts = {lang: [st.fill((st.texts[lang].get(sid) or {}).get("desc"),
+                                sid, lang, rank) for rank in range(len(rars))]
+                 for lang in ("fr", "en")}
+        if texts["en"][0]:
+            upgrades[sid[:-len("_Upgrade")]] = texts
+    unlock = next((g.get("v", {}).get("float")
+                   for g in ((st.consts.get("GearUpgrades") or {}).get("v") or {})
+                   .get("group") or () if g.get("id") == "SkillUnlockLevel"), 3)
     return {"kills": [st.const("WeaponKills_PerSkillRankPoint", 20),
                       st.const("WeaponKills_PerSkillRankPoint_OffHand", 26)],
-            "skills": out}
+            "skills": out,
+            "terms": st.terms,
+            "upgrades": {"at": int(unlock or 3), "rarities": rars,
+                         "types": upgrades}}

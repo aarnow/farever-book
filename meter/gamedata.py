@@ -82,6 +82,14 @@ def _fr_ref(text):
     """The game's [Id] references in a French text, replaced by names."""
     def one(m):
         rid, plural = m.group(1), m.group(2)
+        # the game's own words (skill_tips.json "terms"), in a sentence
+        # without their capital
+        game = ((_table("skill_tips.json").get("terms") or {})
+                .get("fr" if i18n.lang() == "fr" else "en") or {})
+        if rid in game:
+            word = game[rid][1 if plural else 0]
+            head = not text[:m.start()].strip() or text[:m.start()].rstrip()[-1] in ".!?"
+            return word if head else word.lower()
         terms = FR_TERMS if i18n.lang() == "fr" else EN_TERMS
         if rid in terms:
             return terms[rid][1 if plural else 0]
@@ -251,6 +259,31 @@ def skill_tip(sid):
     return out
 
 
+def weapon_upgrade_skill(item_type, rarity):
+    """A weapon's upgrade skill and its rank (the rarity's row, from 0:
+    st.item.Weapon.getWeaponUpgradeSkill), or None."""
+    u = _table("skill_tips.json").get("upgrades") or {}
+    rars = u.get("rarities") or []
+    if item_type not in (u.get("types") or {}) or rarity not in rars:
+        return None
+    return item_type + "_Upgrade", rars.index(rarity)
+
+
+def weapon_upgrade(item_type, rarity):
+    """A weapon's upgrade effect (its type's), at its rarity: (text, upgrade
+    level it opens at), or None (skill_tips.json "upgrades")."""
+    u = _table("skill_tips.json").get("upgrades") or {}
+    t = (u.get("types") or {}).get(item_type)
+    rars = u.get("rarities") or []
+    if not t or rarity not in rars:
+        return None
+    texts = t.get(i18n.lang()) or t.get("en") or []
+    i = rars.index(rarity)
+    if i >= len(texts) or not texts[i]:
+        return None
+    return _fr_ref(texts[i]), int(u.get("at") or 3)
+
+
 def skill_rank_kills():
     """Kills per weapon skill rank: (main hand, off hand)."""
     k = _table("skill_tips.json").get("kills") or [20, 26]
@@ -417,7 +450,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 12
+DATA_FORMAT = 14
 
 
 def _hook_needs():
