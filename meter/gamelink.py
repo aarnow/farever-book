@@ -80,6 +80,10 @@ class GameSession:
                   "selfprofile": "on_character", "elements": "on_elements",
                   "cursor": "on_cursor"}
 
+    def _on_dungeon(self, p):
+        self.dungeon.update(p.get("d") or {})
+        self.ui_state.set_dungeon(self.dungeon.run is not None)
+
     def __init__(self, link, device, proc, session, ui_state, world,
                  rift_rec, heal_sizer):
         self.link, self.device, self.pid = link, device, proc.pid
@@ -113,7 +117,7 @@ class GameSession:
             "bossbar": self._on_bossbar, "bossgone": self._on_bossgone,
             "zone": self._on_zone, "server": self._on_server,
             "hero": self._on_hero, "pickup": self._on_pickup,
-            "dungeon": lambda p: self.dungeon.update(p.get("d") or {}),
+            "dungeon": self._on_dungeon,
             "shard": lambda p: self.world.set_shard(p.get("list") or []),
             "log": self._on_log, "progress": self._on_progress,
             "ready": self._on_ready,

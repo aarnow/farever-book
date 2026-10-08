@@ -379,3 +379,11 @@ html:has(#ov.escbox), html:has(#ov.escbox) body { background: #B1978D; }
           transition: background .12s; }
 .escbtn:hover { background: #8A5F46; }
 html:has(#ov.escbox:hover), html:has(#ov.escbox:hover) body { background: #8A5F46; }
+
+/* a text alone over the game (menu_host.KEYED): drawn on a canvas, the
+   window cut to its pixels; its ground dark under the soft edges */
+html.keyed, html.keyed body { background: #6B5A52 !important; }
+#ov.bonusbox { display: block; min-width: 0; max-width: none; padding: 0; border: 0; border-radius: 0;
+               background: none; overflow: visible; cursor: move; line-height: 0; }
+#ov.bonusbox canvas { display: block; }
+html.gcur #ov.bonusbox, html.gcur #ov.bonusbox * { cursor: var(--cur); }

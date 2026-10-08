@@ -417,7 +417,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 10
+DATA_FORMAT = 11
 
 
 def _hook_needs():
@@ -763,7 +763,9 @@ UI_FRAME = "UI/Elements/background_close.png"
 # an atlas).
 UI_TITLE_FONT = "Font/platypi-bold-20.fnt"
 # Bumped when what ensure_ui_frame copies changes: copied again.
-UI_ASSETS = 6
+UI_ASSETS = 7
+# the game's plus (white, tinted where it is shown): the bonus dungeon's mark
+UI_PLUS = "UI/Elements/plus.png"
 # its windows' close button: its cross, cut out of it (the button's ground
 # is its hovered look)
 UI_CLOSE = "UI/Elements/closeButton.png"
@@ -807,6 +809,8 @@ def ensure_ui_frame():
         close = Image.open(io.BytesIO(pak_extract.read_entry(
             game / "res.pak", UI_CLOSE))).convert("RGBA")
         close.save(ANALYSIS / "ui_close.png")
+        (ANALYSIS / "ui_plus.png").write_bytes(
+            pak_extract.read_entry(game / "res.pak", UI_PLUS))
         # the cross alone: its white over the button's orange (blue apart)
         cross = Image.new("L", close.size, 0)
         for y in range(close.height):

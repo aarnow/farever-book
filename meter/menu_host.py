@@ -566,7 +566,11 @@ def cursor_captured():
 CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
-OVERLAY_IDS = ("meter", "goals", "luck")
+OVERLAY_IDS = ("meter", "goals", "luck", "bonus")
+# the overlays drawn as text alone: the window cut to what the page draws
+# (its canvas's opaque pixels, sent as rows of runs); a colour key would not
+# do, WebView2 drawing on a surface of its own
+KEYED = {"bonus"}
 OVERLAY_BG = "#CEB7AA"              # the frame's outer colour (overlay.css)
 OVERLAY_RADIUS = 3                  # its corners (the frame's, overlay.css)
 
@@ -617,7 +621,8 @@ class Overlay:
             width=self.size[0], height=self.size[1], x=-4000, y=-4000,
             frameless=True, easy_drag=False, resizable=False, shadow=False,
             hidden=True, on_top=True, focus=False,
-            background_color=OVERLAY_BG,   # the game's colours, not the app theme's
+            # the game's colours, not the app theme's; a keyed one's key
+            background_color="#6B5A52" if oid in KEYED else OVERLAY_BG,
             js_api=self.api)
 
     def attach(self):
@@ -636,7 +641,12 @@ class Overlay:
                          (ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
                           | WS_EX_LAYERED) & ~WS_EX_APPWINDOW)
         # layered, fully opaque: only WS_EX_TRANSPARENT changes (set_locked)
-        u.SetLayeredWindowAttributes(self.hwnd, 0, 255, LWA_ALPHA)
+        self._layer(255)
+
+    def _layer(self, alpha):
+        """The window's opacity."""
+        ctypes.windll.user32.SetLayeredWindowAttributes(
+            self.hwnd, 0, alpha, LWA_ALPHA)
 
     def set_free_hidden(self, on):
         """Out of the way while the game's cursor is free (a game window
@@ -698,7 +708,10 @@ class Overlay:
         self.hide_free = bool(d.get("hideFree"))
         u = ctypes.windll.user32
         on = (d.get("on") or {}).get(self.id, True)
-        self.wanted = bool(d.get("show") and on and self.game)
+        # an overlay with nothing to say (the bonus dungeon unknown, or
+        # inside one) stays hidden
+        self.wanted = bool(d.get("show") and on and self.game
+                           and (data is not None or self.id not in KEYED))
         if self.wanted and not self.free_hidden:
             if not self.dragging:
                 self._place()
@@ -715,8 +728,7 @@ class Overlay:
         op = max(30, min(100, int(style.get("opacity") or 100)))
         sc = max(90, min(110, int(style.get("scale") or 100)))
         if op != self.opacity and self.hwnd:
-            ctypes.windll.user32.SetLayeredWindowAttributes(
-                self.hwnd, 0, round(255 * op / 100), LWA_ALPHA)
+            self._layer(round(255 * op / 100))
             self.opacity = op
         if sc != self.scale:
             self.scale = sc
@@ -728,6 +740,8 @@ class Overlay:
         a = self.pos or {
             "meter": {"ax": "r", "dx": 24, "ay": "t", "dy": gh // 3},  # right
             "luck": {"ax": "l", "dx": 24, "ay": "b", "dy": gh // 5},   # low left
+            "bonus": {"ax": "l", "dx": max(0, (gw - w) // 2), "ay": "t",
+                      "dy": 70},                                       # top middle
         }.get(self.id, {"ax": "l", "dx": 24, "ay": "t", "dy": gh // 3})  # goals
         x = gx + a["dx"] if a["ax"] == "l" else gx + gw - w - a["dx"]
         y = gy + a["dy"] if a["ay"] == "t" else gy + gh - h - a["dy"]
@@ -746,6 +760,19 @@ class Overlay:
         if (w, h, self.scale) == getattr(self, "_shaped", None):
             return
         self._shaped = (w, h, self.scale)
+        if self.id in KEYED:
+            # cut to what the page drew (act "mask")
+            runs = getattr(self, "mask", None) or []
+            g = ctypes.windll.gdi32
+            # nothing drawn yet: nothing shown
+            rgn = g.CreateRectRgn(0, 0, 0, 0)
+            for y, row in enumerate(runs):
+                for x0, x1 in row:
+                    part = g.CreateRectRgn(int(x0), y, int(x1), y + 1)
+                    g.CombineRgn(rgn, rgn, part, 2)         # RGN_OR
+                    g.DeleteObject(part)
+            ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+            return
         mask = _frame_mask() if _ui_frame() else []
         if mask:
             dpi = 96
@@ -804,6 +831,11 @@ class Overlay:
             return None
         if action == "focus":
             self._focus(bool(arg))
+        if action == "mask" and isinstance(arg, list):
+            # a text alone: its pixels, the window cut to them
+            self.mask = arg
+            self._shaped = None
+            self._shape()
         if action == "picker":
             picker = PICKER[0]
             if picker is not None:
@@ -1205,7 +1237,7 @@ def _ui_cursor(name):
 
 
 def _overlay_document(oid, theme, lang):
-    frame = _ui_frame() if oid not in ("tip", "esc") else ""
+    frame = _ui_frame() if oid not in ("tip", "esc") and oid not in KEYED else ""
     # the game's own cursors over the overlays, its hotspot the top-left
     arrow, hand = _ui_cursor("default"), _ui_cursor("button")
     cls = (["framed"] if frame else []) + (["gcur"] if arrow and hand else [])
@@ -1230,6 +1262,13 @@ def _overlay_document(oid, theme, lang):
             # the chooser: the character sheet's empty slots and attributes
             + (";window.__SHEET__ = " + json.dumps(_sheet_art())
                if oid == "picker" else "")
+            # the bonus dungeon: its boss's portrait, the heroic mark
+            + (";window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
+               + ";window.__HEROIC_ICON__ = "
+               + json.dumps(_sheet_art().get("dungeon_diff_2", ""))
+               + ";window.__PLUS__ = " + json.dumps(_ui_cursor_file("ui_plus.png"))
+               + ";document.documentElement.classList.add('keyed')"
+               if oid in KEYED else "")
             + ";window.__TITLE_FONT__ = "
             + (font or "null") + ";</script><script>"
             + _web("js/overlay.js") + "</script></body></html>")

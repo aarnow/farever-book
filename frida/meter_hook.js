@@ -1405,6 +1405,18 @@ function characterTick() {
         try {
             const me = { counters: countersOf(localHero),
                          luckStatuses: statusesOf(localHero, ["Luck_"]) };
+            // the heroic dungeon with a bonus, the hero's own
+            // (HeroSpecialization.bonusHeroicDungeon: {activity, ...})
+            if (OFF.HeroDetail && OFF.Specialization
+                && OFF.Specialization.bonusHeroicDungeon != null && OFF.BonusProxy) {
+                try {
+                    const sp = localHero.add(OFF.HeroDetail.specialization).readPointer();
+                    const b = (sp && !sp.isNull())
+                        ? sp.add(OFF.Specialization.bonusHeroicDungeon).readPointer() : null;
+                    me.bonus = (b && !b.isNull())
+                        ? hlStr(b.add(OFF.BonusProxy.activity).readPointer()) : null;
+                } catch (e) {}
+            }
             try { me.now = serverNowOf(localHero.add(OFF.Hero.layer).readPointer()); } catch (e) {}
             send({ kind: "selfprofile", profile: me });
         } catch (e) { log("self profile failed: " + e); }

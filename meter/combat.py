@@ -796,6 +796,7 @@ class GameUIState:
     def __init__(self):
         self._lock = threading.Lock()
         self._rift = False
+        self._dungeon = False       # inside a dungeon (DungeonTracker)
         self._server = None         # None until the hook reports it
 
     def set_server(self, name):
@@ -813,3 +814,11 @@ class GameUIState:
     def in_rift(self) -> bool:
         with self._lock:
             return self._rift
+
+    def set_dungeon(self, state: bool):
+        with self._lock:
+            self._dungeon = bool(state)
+
+    def in_dungeon(self) -> bool:
+        with self._lock:
+            return self._dungeon

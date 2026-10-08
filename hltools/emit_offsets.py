@@ -281,7 +281,13 @@ def hook_layout(code):
                        ("skills", "specialization", "weaponSkills")},
         "Specialization": {k: spec[k][0] for k in
                            ("talents", "skillSlots", "skillMasteries",
-                            "arsenals", "prayerSequence")},
+                            "arsenals", "prayerSequence",
+                            # the heroic dungeon its bonus is on
+                            # (HeroSpecialization.rollBonusHeroicDungeon)
+                            "bonusHeroicDungeon")},
+        "BonusProxy": {"activity": offs(
+            "hxbit.ObjProxy_Oactivity_Data_ActivityKind_lastProposalTime_Float")
+            ["activity"][0]},
         # the talent map's values ({rank}) and the arsenal map's ({skills})
         "RankProxy": {"rank": offs("hxbit.ObjProxy_Orank_Int")["rank"][0]},
         # Progress.itemProgress's values: the item codex (count, rank)

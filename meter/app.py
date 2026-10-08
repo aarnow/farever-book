@@ -168,7 +168,9 @@ class App:
         self._me_auto_next = 0.0
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
-        self._ov_on = {"meter": True, "goals": False, "luck": False}  # shown, per overlay (the meter on at first)
+        self._ov_on = {"meter": True, "goals": False, "luck": False,
+                       "bonus": True}       # shown, per overlay
+        self._bonus_dungeon = None          # the hero's bonus heroic dungeon
         # locked (the mouse goes through): in the game's focus mode, or always
         self._ov_lock_always = False
         # hidden while the game's cursor is free (one of its windows open)
@@ -1608,6 +1610,12 @@ class App:
         # these dicts change in place
         spec["style"] = {k: dict(v) for k, v in self._ov_style.items()}
         self.goals.learnt = self._learnt()
+        # the next heroic dungeon with a bonus, outside the dungeons
+        kind = self._bonus_dungeon
+        boss = next((d.get("boss") for d in dungeon_catalogue()
+                     if d.get("kind") == kind), None) if kind else None
+        spec["bonus"] = ({"kind": kind, "t": dungeon_name(kind), "boss": boss}
+                         if kind and not self.ui_state.in_dungeon() else None)
         spec["goals"] = self.goals.view()
         # the loot luck counters, as the live tab shows them
         spec["luck"] = {"rows": (_profile_luck(self._self_prof)
@@ -1817,6 +1825,12 @@ class App:
         def done():
             if p.get("kind") == "selfprofile":
                 self._self_prof = dict(p.get("profile") or {}, at=time.time())
+                if "bonus" in (p.get("profile") or {}):
+                    bonus = p["profile"]["bonus"] or None
+                    if bonus != self._bonus_dungeon:
+                        print(f"[meter] bonus heroic dungeon: {bonus}",
+                              file=sys.stderr)
+                    self._bonus_dungeon = bonus
                 self._rift_gates_seen((p.get("profile") or {}).get("counters"))
                 self.me.put(self._me_name, "counters",
                             p.get("profile") or {})
@@ -2377,7 +2391,8 @@ class App:
 
     def _settings_overlay(self):
         names = {"meter": tr("Meter"), "goals": tr("Objectifs"),
-                 "luck": tr("Chance de butin")}
+                 "luck": tr("Chance de butin"),
+                 "bonus": tr("Donjon héroïque bonus")}
         out = [{"k": "section", "t": tr("Afficher / masquer")}]
         # each overlay, a switch at the end of its line
         for oid, t in names.items():

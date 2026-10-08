@@ -198,6 +198,7 @@ function render() {
   else if (OV_ID === 'meter') renderMeter(box);
   else if (OV_ID === 'luck') renderLuck(box);
   else if (OV_ID === 'goals') renderGoals(box);
+  else if (OV_ID === 'bonus') renderBonus(box);
 }
 
 function renderMeter(box) {
@@ -564,6 +565,131 @@ function renderList(into) {
     list.appendChild(el('div', 'note', tr('Banque pas encore lue : ouvre-la une fois en jeu.')));
   }
 }
+
+/* ---- the bonus heroic dungeon: a text alone, over the game ------------- */
+/* Drawn on a canvas at the window's own pixels, then its opaque ones sent to
+   the host, which cuts the window to them (menu_host.KEYED): nothing of the
+   window shows but the boss's portrait, the dungeon's name and the heroic
+   mark. A thin dark outline keeps them readable on any scene. */
+const BONUS_PICS = {};
+function bonusPic(src) {
+  if (!src) return null;
+  if (!BONUS_PICS[src]) {
+    const im = new Image();
+    im.src = src;
+    im.addEventListener('load', () => render());
+    BONUS_PICS[src] = im;
+  }
+  const im = BONUS_PICS[src];
+  return im.complete && im.naturalWidth ? im : null;
+}
+
+// a picture with an outline of `r` pixels: its silhouette, dark, around it
+function outlined(cx, im, x, y, w, h, r) { outlinedInk(cx, im, x, y, w, h, r, BONUS_INK); }
+function outlinedInk(cx, im, x, y, w, h, r, ink) {
+  const sil = document.createElement('canvas');
+  sil.width = Math.ceil(w); sil.height = Math.ceil(h);
+  const sx = sil.getContext('2d');
+  sx.drawImage(im, 0, 0, w, h);
+  sx.globalCompositeOperation = 'source-in';
+  sx.fillStyle = ink;
+  sx.fillRect(0, 0, sil.width, sil.height);
+  for (let a = 0; a < 16; a++) {
+    const t = a / 16 * Math.PI * 2;
+    cx.drawImage(sil, x + Math.cos(t) * r, y + Math.sin(t) * r);
+  }
+  cx.drawImage(im, x, y, w, h);
+}
+const BONUS_INK = '#6B5A52';   // a mid brown grey: lighter on bright scenes
+
+function renderBonus(box) {
+  const b = OV.bonus;
+  box.className = 'bonusbox';
+  if (!b) return;
+  box.title = tr('Donjon héroïque bonus');
+  const portrait = bonusPic((window.__PORTRAITS__ || {})[b.boss]);
+  const heroic = bonusPic(window.__HEROIC_ICON__);
+  const plus = bonusPic(window.__PLUS__);
+  const z = ((OV.style || {}).scale || 100) / 100;
+  const font = '700 17px "Segoe UI", system-ui, sans-serif';
+  // the text's outline, and the icons' thinner one
+  const pad = 4, face = 34, mark = 34, gap = 8, line = 1, ring = 0.5;
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.font = font;
+  const tw = Math.ceil(probe.measureText(b.t).width);
+  const w = pad * 2 + face + gap + tw + gap + mark + line;
+  const h = pad * 2 + face;
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * z);
+  cv.height = Math.round(h * z);
+  cv.style.width = w + 'px';
+  cv.style.height = h + 'px';
+  const cx = cv.getContext('2d');
+  cx.scale(z, z);
+  // the boss's portrait, round, in a thin dark ring
+  if (portrait) {
+    const r = face / 2, ox = pad + r, oy = pad + r;
+    cx.beginPath();
+    cx.arc(ox, oy, r, 0, Math.PI * 2);
+    cx.fillStyle = BONUS_INK;
+    cx.fill();
+    cx.save();
+    cx.beginPath();
+    cx.arc(ox, oy, r - ring, 0, Math.PI * 2);
+    cx.clip();
+    cx.drawImage(portrait, pad + ring, pad + ring, face - ring * 2, face - ring * 2);
+    cx.restore();
+  }
+  // the dungeon's name
+  const tx = pad + face + gap;
+  cx.font = font;
+  cx.textBaseline = 'middle';
+  cx.lineJoin = 'round';
+  cx.lineWidth = line * 2;
+  cx.strokeStyle = BONUS_INK;
+  cx.strokeText(b.t, tx, h / 2 + 1);
+  cx.fillStyle = '#fff';
+  cx.fillText(b.t, tx, h / 2 + 1);
+  // the heroic difficulty's mark, after it
+  const mx = tx + tw + gap, my = (h - mark) / 2;
+  if (heroic) outlined(cx, heroic, mx, my, mark, mark * heroic.naturalHeight / heroic.naturalWidth, ring);
+  // the game's plus, green, over the mark's lower right corner: a bonus
+  if (plus) {
+    const ps = 16, g = document.createElement('canvas');
+    g.width = g.height = ps;
+    const gx = g.getContext('2d');
+    gx.drawImage(plus, 0, 0, ps, ps);
+    gx.globalCompositeOperation = 'source-in';
+    const grad = gx.createLinearGradient(0, 0, 0, ps);
+    grad.addColorStop(0, '#9BE04E');
+    grad.addColorStop(1, '#4E9F27');
+    gx.fillStyle = grad;
+    gx.fillRect(0, 0, ps, ps);
+    outlinedInk(cx, g, mx + mark - ps + 1, my + mark - ps - 5, ps, ps, 1, '#2A3A1C');
+  }
+  box.appendChild(cv);
+  // its opaque pixels, row by row: the window's shape
+  const px = cx.getImageData(0, 0, cv.width, cv.height).data;
+  const rows = [];
+  for (let y = 0; y < cv.height; y++) {
+    const row = [];
+    let start = -1;
+    for (let x = 0; x < cv.width; x++) {
+      const on = px[(y * cv.width + x) * 4 + 3] >= 110;
+      if (on && start < 0) start = x;
+      if (!on && start >= 0) { row.push([start, x]); start = -1; }
+    }
+    if (start >= 0) row.push([start, cv.width]);
+    rows.push(row);
+  }
+  const sig = cv.width + 'x' + cv.height + ':' + b.t + ':' + !!portrait + !!heroic + !!plus;
+  if (api() && sig !== BONUS_SIG) { BONUS_SIG = sig; api().ov('mask', rows); }
+}
+let BONUS_SIG = '';
+// held, the text moves (as the overlays' headers)
+document.addEventListener('mousedown', (e) => {
+  if (OV_ID === 'bonus' && e.target.closest('#ov')) startDrag(e);
+});
 
 /* ---- the button over the game's menu (menu_host.EscButton) ------------ */
 window.openEsc = function () { OV = OV || {}; render(); };
