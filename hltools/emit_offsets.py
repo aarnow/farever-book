@@ -459,6 +459,12 @@ def extract_heal_specs(game_dir):
       dyn   -> the amount is in BaseSkill.dynVal1/2/3 (replicated)
       scale -> ratio x one of the caster's attributes
       base  -> a flat number (a floor when a dyn is also given)
+      ticks -> a heal over time: the amount is spread over that many ticks
+               (st.skill.SkillStep.isEffectSpreadOverTicks: a looping step of
+               type 12, or its loop flagged so; initTicks: the duration over
+               the tick, rounded down; $HSkill.getStepEffectVal divides)
+      stack -> times the status's stacks ($HSkill.getStackFactor: the
+               effect flagged so), which no client message carries
     """
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
@@ -482,7 +488,22 @@ def extract_heal_specs(game_dir):
         if not isinstance(sid, str):
             continue
         steps = {}
+        lvars = ln.get("vars") or {}
+
+        def num(v):
+            # a number, or one of the skill's own vars by its name
+            v = lvars.get(v) if isinstance(v, str) else v
+            return float(v) if isinstance(v, (int, float)) else None
         for i, st in enumerate(ln.get("steps") or []):
+            loop = (st.get("props") or {}).get("loop") or {}
+            ticks = 0
+            tick = num(loop.get("tick")) if loop else None
+            if tick and (st.get("type") == 12 or (loop.get("flags") or 0) & 1):
+                dur = num(st.get("duration"))
+                if dur is None or dur < 0:
+                    dur = num(ln.get("duration"))
+                if dur and dur > 0:
+                    ticks = int(dur // tick)
             specs = []
             for ef in (st.get("effects") or []):
                 if ef.get("effect") != heal_idx:
@@ -498,6 +519,10 @@ def extract_heal_specs(game_dir):
                     spec["scale"] = scale
                 if isinstance(ef.get("dynVal"), int) and ef["dynVal"] > 0:
                     spec["dyn"] = ef["dynVal"]
+                if spec and ticks > 0:
+                    spec["ticks"] = ticks
+                if spec and (ef.get("flags") or 0) & 1:
+                    spec["stack"] = 1
                 if spec:
                     specs.append(spec)
             if specs:

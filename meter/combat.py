@@ -101,6 +101,8 @@ class HealSizeEstimator:
         dyn, atb = ev.get("dyn") or [], ev.get("atb") or {}
         total = 0.0
         for spec in specs:
+            if spec.get("stack"):
+                return None      # times the status's stacks: never told
             amount = 0.0
             # A spec carrying both is a dyn with a floor: the dyn is the real
             # value and the base is what it falls back to.
@@ -114,8 +116,19 @@ class HealSizeEstimator:
                     amount += float(ratio) * float(atb[name])
             if not amount:
                 amount = float(spec.get("base") or 0.0)
+            # a heal over time: each tick a share of it (the game divides)
+            if spec.get("ticks"):
+                amount /= spec["ticks"]
             total += amount
         return total if total > 0 else None
+
+    def is_over_time(self, ev):
+        """The heal is a tick of a heal over time (heal_specs' "ticks")."""
+        steps = self._specs.get(ev.get("skill")) or {}
+        specs = steps.get(str(ev.get("step")))
+        if specs is None and len(steps) == 1:
+            specs = next(iter(steps.values()))
+        return any(s.get("ticks") for s in specs or ())
 
     def stamp(self, ev: dict) -> None:
         """Fold one heal event in and fill in its raw size.
@@ -136,6 +149,14 @@ class HealSizeEstimator:
         if spec is not None:
             self._computed += 1
             ev["sized"] = "spec"
+        elif self.is_over_time(ev):
+            # a tick of a heal over time the formula can't size (a share of
+            # the max health, the stacks unknown): what it was seen to
+            # restore, never another tick's — a big heal landing with one
+            # would otherwise become every tick's size
+            spec = landed
+            self._guessed += 1
+            ev["sized"] = "tick"
         else:
             spec = max(obs) if obs else 0.0
             if spec > 0:
