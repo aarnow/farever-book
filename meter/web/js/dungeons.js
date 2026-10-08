@@ -280,3 +280,84 @@ function buildBossSheet(n) {
   box.appendChild(el('div', 'bsfoot', tr('Valeurs calculées depuis les données du jeu, dégâts avant l’armure et les résistances du joueur touché.')));
   return box;
 }
+
+/* ---- a dungeon's page (app.py _page_dungeons) ------------------------- */
+/* Tabs whose switch the meter makes (n.act: the action, n.on: the one shown),
+   drawn as the Build tab's. */
+function buildTabs(n) {
+  const tabs = el('div', 'btabs');
+  (n.items || []).forEach((it) => {
+    const b = el('button', 'btab' + (it.id === n.on ? ' on' : ''), it.t);
+    b.type = 'button';
+    b.addEventListener('click', () => { if (it.id !== n.on) notify(n.act, { id: it.id }); });
+    tabs.appendChild(b);
+  });
+  return tabs;
+}
+
+/* Who and where: the boss's portrait, the dungeon's name, its boss, level
+   and zone, and beside them its way in on the world map (fixed, framed on
+   the entrance). */
+function buildDungeonHead(n) {
+  const box = el('div', 'dghead panel');
+  const who = el('div', 'dhwho');
+  const pic = el('div', 'portrait');
+  const src = (window.__PORTRAITS__ || {})[n.boss];
+  if (src) { const im = el('img'); im.src = src; im.alt = ''; pic.appendChild(im); }
+  who.appendChild(pic);
+  const t = el('div', 'dhtxt');
+  t.appendChild(el('div', 'dhname', n.t));
+  if (n.bossName) t.appendChild(el('div', 'dhboss', tr('Boss : {name}', { name: n.bossName })));
+  const facts = [n.level ? tr('Niveau {n}', { n: n.level }) : '', n.zone !== n.t ? n.zone : '', n.region].filter(Boolean);
+  if (facts.length) t.appendChild(el('div', 'dhfacts', facts.join(' · ')));
+  who.appendChild(t);
+  box.appendChild(who);
+  if (n.meta && (n.doors || []).length) {
+    const map = huntMiniMap({ meta: n.meta,
+      insts: [{ t: n.t, kind: 'Donjon', doors: n.doors }] });
+    map.classList.add('dhmap');
+    box.appendChild(map);
+    requestAnimationFrame(() => { mapIcons(); map.focusZone(null, 900); });
+  }
+  return box;
+}
+
+/* A video of the fight the player keeps for this dungeon: a YouTube link,
+   its picture opening it in the browser. */
+function buildDungeonVideo(n) {
+  const box = el('div', 'dvideo');
+  if (n.vid) {
+    const card = el('button', 'dvcard');
+    card.type = 'button';
+    card.title = tr('Ouvrir sur YouTube');
+    const im = el('img');
+    im.src = 'https://i.ytimg.com/vi/' + n.vid + '/hqdefault.jpg';
+    im.alt = '';
+    card.appendChild(im);
+    card.appendChild(el('span', 'dvplay', '▶'));
+    card.addEventListener('click', () => notify('open_dungeon_video', { kind: n.kind }));
+    box.appendChild(card);
+  } else {
+    box.appendChild(el('p', 'note', tr('Colle le lien YouTube d’une vidéo du combat (la tienne ou celle '
+      + 'd’un joueur qui le maîtrise) : elle sera gardée pour ce donjon.')));
+  }
+  const row = el('div', 'dvrow');
+  const inp = el('input');
+  inp.type = 'text';
+  inp.placeholder = 'https://www.youtube.com/watch?v=…';
+  inp.value = n.url || '';
+  const save = el('button', 'btn', n.vid ? tr('Changer') : tr('Ajouter'));
+  save.type = 'button';
+  save.addEventListener('click', () => notify('dungeon_video', { kind: n.kind, url: inp.value }));
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') save.click(); });
+  row.appendChild(inp);
+  row.appendChild(save);
+  if (n.vid) {
+    const del = el('button', 'btn', tr('Retirer'));
+    del.type = 'button';
+    del.addEventListener('click', () => notify('dungeon_video', { kind: n.kind, url: '' }));
+    row.appendChild(del);
+  }
+  box.appendChild(row);
+  return box;
+}

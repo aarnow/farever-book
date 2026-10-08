@@ -1477,8 +1477,7 @@ def _pct(chance):
 
 def _loot_piece(item, rarity, lvl):
     """A piece of loot as the sheet's tooltip shows it, at level `lvl` (the
-    level a piece drops at is the server's: not known here), or None when
-    it is no gear."""
+    activity's: st.Activity.getLevel), or None when it is no gear."""
     if not lvl:
         return None
     g = piece_view([item, rarity, lvl, 0])

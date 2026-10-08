@@ -500,6 +500,9 @@ function buildNode(n) {
     case 'statcards': return buildStatCards(n);
     case 'report': return buildReport(n);
     case 'droptable': return buildDropTable(n);
+    case 'tabs': return buildTabs(n);
+    case 'dungeonhead': return buildDungeonHead(n);
+    case 'dvideo': return buildDungeonVideo(n);
     case 'bosssheet': return buildBossSheet(n);
     case 'welcome': return buildWelcome(n);
     case 'setnav': return buildSetNav(n);

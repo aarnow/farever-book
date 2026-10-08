@@ -132,6 +132,14 @@ def _ov_style(v):
             "maxh": max(30, min(900, maxh)) if maxh else 0}
 
 
+def _youtube_id(url):
+    """A YouTube video's id in a link (watch?v=, youtu.be/, shorts/, embed/,
+    live/), or None."""
+    m = re.search(r"(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)"
+                  r"|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])", str(url or ""))
+    return m.group(1) if m else None
+
+
 class App:
     """The whole meter, minus the game connection: the aggregation loop, the
     saved data, and the window (a WebView2 app in its own process, see
@@ -208,6 +216,8 @@ class App:
         self._rift_gates0 = None
         self._rift_gates_for = None
         self._dungeon_kind = None           # the dungeon whose runs are listed
+        self._dungeon_tab = "info"          # its page's tab: info, runs, help
+        self._dungeon_videos = {}           # dungeon -> a YouTube video's id
         self._hunt_sel = None               # the monster whose page is open
         self._dungeon_view = None           # the dungeon run being read
         self._collection_owned = None       # .meter_collection.json, loaded
@@ -303,6 +313,11 @@ class App:
             self._ov_hide_free = data["overlay_hide_free"]
         if data.get("overlay_theme") in OVERLAY_THEMES:
             self._ov_theme = data["overlay_theme"]
+        vids = data.get("dungeon_videos")
+        if isinstance(vids, dict):
+            self._dungeon_videos = {
+                k: v for k, v in vids.items() if isinstance(k, str)
+                and _youtube_id(f"https://youtu.be/{v}") == v}
         style = data.get("overlay_style")
         if isinstance(style, dict):
             for k, v in style.items():
@@ -328,6 +343,7 @@ class App:
                 "overlay_hide_free": bool(self._ov_hide_free),
                 "overlay_style": self._ov_style,
                 "overlay_theme": self._ov_theme,
+                "dungeon_videos": self._dungeon_videos,
             }, indent=2))
         except OSError as e:
             print(f"[meter] couldn't save settings: {e}", file=sys.stderr)
@@ -727,8 +743,15 @@ class App:
             "rift_delete_cancel": self._rift_delete_cancel,
             "set_rift_keep": lambda p: self._set_rift_keep(p.get("value")),
             # dungeons
-            "open_dungeon_kind": lambda p: setattr(
-                self, "_dungeon_kind", p.get("kind")),
+            "open_dungeon_kind": lambda p: self._open_dungeon_kind(
+                p.get("kind")),
+            "dungeon_tab": lambda p: setattr(
+                self, "_dungeon_tab", p.get("id") if p.get("id") in
+                ("info", "runs", "help") else "info"),
+            "dungeon_video": lambda p: self._set_dungeon_video(
+                p.get("kind"), p.get("url")),
+            "open_dungeon_video": lambda p: self._open_dungeon_video(
+                p.get("kind")),
             "close_dungeon_kind": lambda: setattr(self, "_dungeon_kind", None),
             "open_dungeon_run": lambda p: self._open_dungeon_run(
                 p.get("file", "")),
@@ -2128,6 +2151,37 @@ class App:
                  and d.get("result") == "victoire"]
         return min(times) if times else None
 
+    def _open_dungeon_kind(self, kind):
+        self._dungeon_kind = kind
+        self._dungeon_tab = "info"
+
+    def _set_dungeon_video(self, kind, url):
+        """A video of the fight, pasted by the player: a YouTube link, kept
+        as its id (nothing else is ever opened)."""
+        if not isinstance(kind, str) or not kind:
+            return
+        vid = _youtube_id(url)
+        if vid:
+            self._dungeon_videos[kind] = vid
+        elif not str(url or "").strip():
+            self._dungeon_videos.pop(kind, None)
+        else:
+            self._toast_msg(tr("Ce lien n'est pas une vidéo YouTube."))
+            return
+        self._save_settings()
+
+    def _open_dungeon_video(self, kind):
+        vid = self._dungeon_videos.get(kind)
+        if vid:
+            import webbrowser
+            webbrowser.open(f"https://www.youtube.com/watch?v={vid}")
+
+    def _dungeon_video_node(self, kind):
+        vid = self._dungeon_videos.get(kind) or ""
+        return {"k": "dvideo", "id": "dungeon_video", "kind": kind,
+                "vid": vid,
+                "url": f"https://www.youtube.com/watch?v={vid}" if vid else ""}
+
     def _open_dungeon_run(self, name):
         name = Path(str(name)).name
         data = next((d for n, d in self._dungeon_runs() if n == name), None)
@@ -2221,24 +2275,51 @@ class App:
                                          + int(it.get("count") or 1))
             dg = next((x for x in dungeon_catalogue()
                        if x["kind"] == kind), None)
+            # three tabs: what it is (records, boss, where, loot), the runs,
+            # help for the fight
+            tab = self._dungeon_tab
             out = [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
                        {"id": "close_dungeon_kind",
                         "t": tr("‹  Tous les donjons")}]},
                    self._dungeon_backdrop_node(kind),
-                   {"k": "section", "t": name},
-                   {"k": "cards", "id": "dungeon_records", "items": cards},
-                   {"k": "gap"},
-                   {"k": "section", "t": tr("Historique")},
-                   {"k": "riftcards", "id": "dungeon_runs", "groups": days,
-                    "empty": tr("Aucun run pour ce donjon.")}]
-            sheet = boss_sheet_view(dg.get("boss")) if dg else None
-            if sheet:
-                out += [{"k": "section", "t": tr("Fiche du boss")}, sheet]
+                   {"k": "tabs", "id": "dungeon_tabs", "act": "dungeon_tab",
+                    "on": tab, "items": [
+                        {"id": "info", "t": tr("Informations")},
+                        {"id": "runs", "t": tr("Historique")
+                         + (f" ({len(mine)})" if mine else "")},
+                        {"id": "help", "t": tr("Aide")}]}]
+            if tab == "runs":
+                out += [{"k": "riftcards", "id": "dungeon_runs",
+                         "groups": days,
+                         "empty": tr("Aucun run pour ce donjon.")}]
+                return out
+            if tab == "help":
+                sheet = boss_sheet_view(dg.get("boss")) if dg else None
+                if sheet:
+                    out += [{"k": "section", "t": tr("Fiche du boss")}, sheet]
+                # the fight's video (_dungeon_video_node): hidden for now
+                return out
+            # where it is: its way in, in the open world (the Hunt tab's)
+            ways = (bestiary_catalogue().get("entrances") or {}).get(kind) or []
+            doors = [{"x": x, "y": y} for x, y, _z in ways]
+            zone = next((z for _x, _y, z in ways if z), "")
+            boss = (dg or {}).get("boss") or ""
+            zones = _fr_names("zone")
+            out += [{"k": "dungeonhead", "id": "dungeon_head", "t": name,
+                     "boss": boss,
+                     "bossName": _boss_label(boss) if boss else "",
+                     "level": (dg or {}).get("level"),
+                     "zone": zones.get(zone) or "" if zone else "",
+                     "region": zones.get((dg or {}).get("region") or "") or "",
+                     "meta": world_map().get("meta") if doors else None,
+                     "doors": doors},
+                    {"k": "section", "t": tr("Records")},
+                    {"k": "cards", "id": "dungeon_records", "items": cards}]
             if dg and dg.get("loot"):
-                # the pieces' tooltips: at the hero's level, else the top one
-                me = self._me()
-                loot_lvl = ((me or {}).get("lvl")
-                            or build_data().get("maxLevel") or 25)
+                # the pieces' tooltips at the loot's level: the dungeon's in
+                # Normal, the top one in Veteran and Heroic
+                # (st.Activity.getLevel)
+                top = build_data().get("maxLevel") or 25
                 out += [{"k": "section", "t": tr("Butin possible")},
                         {"k": "note", "t": tr(
                          "D'après les données et le code du jeu. Le coffre "
@@ -2260,7 +2341,8 @@ class App:
                         {"k": "droptable", "id": "dungeon_drops",
                          "tables": [{"d": k, "t": tr(label),
                                      "rows": droptable_view(
-                                         dg, got[k], k, loot_lvl)}
+                                         dg, got[k], k,
+                                         dg.get("level") if k == 0 else top)}
                                     for k, label
                                     in DUNGEON_DIFFICULTIES.items()]}]
             return out
