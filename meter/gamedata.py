@@ -388,7 +388,8 @@ def dungeon_catalogue():
     analysis_out/dungeons.json (the game's achievements). [] when absent."""
     return _table("dungeons.json", list)
 # the raw materials' types, which the game's translation leaves unnamed
-ITEM_TYPE_FR = {"Ore": "Minerai", "Cloth": "Tissu", "Leather": "Cuir"}
+ITEM_TYPE_FR = {"Ore": "Minerai", "Cloth": "Tissu", "Leather": "Cuir",
+                "UpgradeComponent": "Composant d'amélioration"}
 
 
 def item_type_label(t):
@@ -794,7 +795,7 @@ def locate_hlboot(pid):
 # 3D models, for the Collection's viewer
 # ---------------------------------------------------------------------------
 MODELS_DIR = ANALYSIS / "models"
-MODEL_FORMAT = 14
+MODEL_FORMAT = 15
 _model_lock = threading.Lock()
 
 

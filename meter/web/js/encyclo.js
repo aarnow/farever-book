@@ -106,9 +106,24 @@ function renderEncyclo(box, n) {
   if (bare) { ENC.type = ''; ENC.rar = ''; }
   const types = [];
   pool.forEach((it) => { if (it.tk && !types.some((x) => x.v === it.tk)) types.push({ v: it.tk, t: it.type, id: it.id }); });
+  // the slots in the character sheet's order
+  const SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
+    'GearNeck', 'GearFinger', 'GearTrinket'];
+  if (types.every((x) => SLOTS.includes(x.v))) types.sort((a, b) => SLOTS.indexOf(a.v) - SLOTS.indexOf(b.v));
   if (types.length > 1 && !bare) {
+    // an armour slot: the build's empty slot art, neutral; another kind:
+    // one of its items
+    const slotArt = (k) => {
+      const src = (window.__SHEET__ || {})['slot_' + k];
+      if (!src) return null;
+      const im = el('img', 'cfic');
+      im.src = src;
+      im.alt = '';
+      return im;
+    };
     list.appendChild(chips([{ v: '', t: tr('Tous') }].concat(types.map((x) => (
-      { v: x.v, t: x.t, icon: encIcon(x.id, 'cfic') }))), ENC.type, (v) => { ENC.type = v; }));
+      { v: x.v, t: x.t, icon: ((ENC.cat === 'armor' || ENC.cat === 'jewels') && slotArt(x.v.replace(/^Gear/, ''))) || encIcon(x.id, 'cfic') }))),
+    ENC.type, (v) => { ENC.type = v; }));
   }
   const rars = [];
   pool.forEach((it) => { if (it.rk && !rars.some((x) => x.v === it.rk)) rars.push({ v: it.rk, t: it.rar }); });
@@ -217,7 +232,13 @@ function encSheet(s) {
   if (s.desc) body.appendChild(el('p', 'desc it', s.desc));
   // the attributes and the ways to get it, at the rarity of the tab picked
   const tabs = s.tabs || [];
-  if (ENC.tabFor !== s.id) { ENC.tabFor = s.id; ENC.rtab = tabs.length ? tabs[0].v : ''; }
+  if (ENC.tabFor !== s.id) {
+    ENC.tabFor = s.id;
+    // no tabs: the one rarity it comes at
+    ENC.rtab = tabs.length ? tabs[0].v
+      : (Object.keys(s.levels || s.pieces || {})[0] || '');
+    ENC.lvl = s.lvl0 || 0;      // the piece's own level, else the top
+  }
   const part = el('div', 'encpart');
   body.appendChild(part);
   const draw = () => {

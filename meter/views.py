@@ -1677,8 +1677,9 @@ def encyclopedia_view():
                       "type": item_type_label(t) if t else "",
                       "tk": t, "rk": rar.lower(),
                       "rar": rarity_label(rar) if rar else "",
-                      # a weapon drops at any level: none shown
-                      "lvl": None if t in WEAPON_TYPES else e.get("l")})
+                      # a weapon or armour drops at many levels: none shown
+                      "lvl": None if t in WEAPON_TYPES + ARMOR_TYPES
+                      else e.get("l")})
     order = {k: i for i, (k, _l, _o, _t) in enumerate(ENCYCLO_CATS)}
     items.sort(key=lambda it: (order[it["c"]], it["type"],
                                RARITY_ORDER.get(it["rk"].capitalize(), 9),
@@ -1698,12 +1699,13 @@ def encyclopedia_item(iid):
     if e is None:
         return None
     rar, t = e.get("r") or "", e.get("t") or ""
-    weapon = t in WEAPON_TYPES
-    # a weapon drops at any level: none shown, its attributes at the top
-    lvl = None if weapon else (e.get("l") or None)
+    # a weapon or a piece of armour drops at many levels: none shown, its
+    # attributes at the level picked (a slider)
+    gear = t in WEAPON_TYPES + ARMOR_TYPES
+    lvl = None if gear else (e.get("l") or None)
     out = {"id": iid, "name": item_label(iid), "img": item_icon(iid),
-           # a weapon: its model, turned in 3D (the Collection's viewer)
-           "m3d": weapon,
+           # its model, turned in 3D (the Collection's viewer)
+           "m3d": gear,
            "type": item_type_label(t) if t else "", "rk": rar.lower(),
            "rar": rarity_label(rar) if rar else "", "lvl": lvl,
            "desc": _fr_ref(_fr_desc("item").get(iid) or ""),
@@ -1728,9 +1730,11 @@ def encyclopedia_item(iid):
         out["tabs"] = [{"v": x, "t": rarity_label(x), "rk": x.lower()}
                        for x in rars]
     # a piece of gear: its attributes, the sheet's tooltip, at its level
-    # (a weapon, dropped at any level: from level 1 to the top), at each
-    # rarity it is got at
+    # (a weapon or armour: at each level, the slider set on its own, else
+    # the top), at each rarity it is got at
     at = lvl or build_data().get("maxLevel") or 25
+    if gear:
+        out["lvl0"] = min(int(e.get("l") or at), at)
     pieces = {}
     for x in rars or [rar]:
         g = piece_view([iid, x or None, at, 0])
@@ -1738,7 +1742,7 @@ def encyclopedia_item(iid):
             continue
         g["note"] = tr("Attributs d'une pièce de niveau {n}", n=at)
         pieces[x or ""] = g
-        if weapon and at > 1:
+        if gear and at > 1:
             # its attributes at each level, for the sheet's level slider
             out.setdefault("levels", {})[x or ""] = [
                 {"il": p.get("il"), "stats": p.get("stats") or []}

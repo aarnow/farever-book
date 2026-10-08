@@ -1087,6 +1087,11 @@ def item_model(game_dir, item_id, anim=False, models=None, idle=None):
         for i in range(0, len(a), 3):
             a[i + 1], a[i + 2] = a[i + 2], -a[i + 1]
     big = n > 0x10000
+    # a piece of armour shown on its own: its thin parts (a brim, a feather,
+    # a cape) seen from behind too, which on the hero nobody does (the
+    # game culls their back faces); the viewer lights a back face by its
+    # flipped normal
+    worn = bool(prefab) and prefab.startswith("Character/Hero/")
     out = []
     for tris, gm in groups:
         grad, nslots = gradients_png(game_dir, gm.get("slots"), gm.get("color"))
@@ -1099,7 +1104,9 @@ def item_model(game_dir, item_id, anim=False, models=None, idle=None):
                     "alpha": texture_png(game_dir, gm.get("alpha")),
                     "shade": shading(gm),
                     "glass": gm.get("glass"),
-                    "cull": gm.get("cull", "Back"), "blend": gm.get("blend", "None")})
+                    "cull": ("None" if worn and gm.get("cull", "Back") == "Back"
+                             and not gm.get("glass") else gm.get("cull", "Back")),
+                    "blend": gm.get("blend", "None")})
     # normals as signed bytes: a third of the size, and plenty for shading
     nb = [max(-127, min(127, round(x * 127))) for x in nor]
     payload = {"id": item_id, "n": n, "big": big,
