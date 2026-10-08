@@ -1,5 +1,7 @@
 """The collection catalogue: every mount, glider, companion and armour
-appearance, with how each is obtained, for the app's Collection tab.
+appearance, with how each is obtained, for the app's Collection tab — and
+every item of the game with its sources, what it is used for and what it
+holds, for the Encyclopedia tab ("encyclo").
 
 Sources: data.cdb (items, Critter units, loot tables and who rolls them,
 achievement rewards, unitGroup spawn weights, starting gliders) and the
@@ -121,7 +123,8 @@ def build(game_dir, img_dir=None):
     caches = {iid: r for iid, r in items.items()
               if r.get("type") == "LootableContainer"
               and ((r.get("props") or {}).get("gainItem") or {}).get("lootTable")}
-    tracked = collectible | equip | set(caches)
+    # every item: the Encyclopedia lists them all, with their sources
+    tracked = set(items)
     # unnamed Critter units are scenery
     critters = [uid for uid, r in units.items() if r.get("type") == "Critter"
                 and (r.get("texts") or {}).get("name")]
@@ -172,8 +175,60 @@ def build(game_dir, img_dir=None):
     # child is placed through its parent (offset, rotation in degrees); only
     # the world level's are on the map
     in_world = [False]
+    prefab_npcs = {}
+    zones = rows("zone")
 
-    def walk(o, zone, px=0.0, py=0.0, rot=0.0):
+    def region(z):
+        """A zone's region (its first ancestor of type 0), or None."""
+        seen = set()
+        while z in zones and z not in seen:
+            seen.add(z)
+            if zones[z].get("type") == 0:
+                return z
+            z = zones[z].get("parent")
+        return None
+
+    def chest_entry(o, zone, wx, wy, **more):
+        """A chest as a source: in the open world, where it stands and its
+        region (the map's pin)."""
+        e = {"k": "chest", "id": o.get("name") or "Chest", "zone": zone,
+             **more}
+        if in_world[0]:
+            e["at"] = [round(wx, 1), round(wy, 1)]
+            e["region"] = region(zone) or ""
+        else:
+            e["lv"] = cur_level[0]      # its level: the dungeon, once known
+        return e
+
+    cur_level = [""]
+    level_dungeon = {}                  # level path -> its dungeon
+
+    def prefab_npc(source):
+        """The NPC element a prefab places (its id, English name and unit):
+        a merchant placed by reference names itself there, its translation
+        keyed by that id (MountTamer.prefab: MountTamer_NPC)."""
+        if source not in prefab_npcs:
+            found = None
+            try:
+                raw = pak_extract.read_entry(game_dir / "res.pak", source)
+                stack = [hbson.loads(raw)] if raw and raw[:5] == b"HBSON" else []
+            except Exception:
+                stack = []
+            while stack and found is None:
+                o = stack.pop()
+                if isinstance(o, dict):
+                    if o.get("$cdbtype") == "element" and isinstance(
+                            (o.get("props") or {}).get("npc"), dict):
+                        found = {"el": o.get("id"),
+                                 "eln": (o.get("texts") or {}).get("name"),
+                                 "npc": o["props"]["npc"].get("unit")}
+                    stack.extend(o.values())
+                elif isinstance(o, list):
+                    stack.extend(o)
+            prefab_npcs[source] = found
+        return prefab_npcs[source]
+
+    def walk(o, zone, px=0.0, py=0.0, rot=0.0, ref=None):
         if isinstance(o, dict):
             props = o.get("props") if isinstance(o.get("props"), dict) else {}
             zone = props.get("zoneBaked") or o.get("zoneBaked") or zone
@@ -183,8 +238,15 @@ def build(game_dir, img_dir=None):
                 c, s_ = math.cos(math.radians(rot)), math.sin(math.radians(rot))
                 wx, wy = px + x * c - y * s_, py + x * s_ + y * c
                 wr = rot + float(o.get("rotationZ") or 0)
+            # inside a prefab placed by reference: what it places
+            if o.get("type") == "reference" and str(
+                    o.get("source") or "").endswith(".prefab"):
+                ref = o["source"]
             fac = props.get("faction") or o.get("faction")
             oid = o.get("id")
+            if o.get("$cdbtype") == "activity" and o.get("inherit") == \
+                    "Dungeon" and isinstance(oid, str):
+                level_dungeon.setdefault(cur_level[0], oid)
             if fac in FACTIONS and isinstance(oid, str):
                 if o.get("$cdbtype") == "activity":
                     fac_acts[fac][oid] = o.get("inherit") or "?"
@@ -216,23 +278,27 @@ def build(game_dir, img_dir=None):
                              "zone": zone, "cost": cost}
                     if el_name and isinstance(o.get("id"), str):
                         entry["el"], entry["eln"] = o["id"], el_name
+                    elif ref and prefab_npc(ref):
+                        # unnamed here: the prefab's NPC, its name and unit
+                        p = prefab_npc(ref)
+                        if p.get("el") and p.get("eln"):
+                            entry["el"], entry["eln"] = p["el"], p["eln"]
+                        entry["npc"] = entry["npc"] or p.get("npc")
                     if in_world[0]:
                         entry["at"] = [round(wx, 1), round(wy, 1)]
                     if iid in tracked:
                         add(iid, entry)
-                    elif pet in critter_set:
+                    if pet in critter_set:
                         add(pet, entry)
             if props.get("lootTable") and isinstance(props["lootTable"], str):
                 table_users[props["lootTable"]].append(
-                    {"k": "chest", "id": o.get("name") or "Chest",
-                     "zone": zone})
+                    chest_entry(o, zone, wx, wy))
             for li in props.get("lootItems") or ():
                 if isinstance(li, dict) and li.get("item") in tracked:
                     rate = li.get("dropRate")
-                    add(li["item"], {"k": "chest",
-                                     "id": o.get("name") or "Chest",
-                                     "zone": zone,
-                                     "chance": float(rate) if rate else 1.0})
+                    add(li["item"], chest_entry(
+                        o, zone, wx, wy,
+                        chance=float(rate) if rate else 1.0))
             if isinstance(o.get("unitGroup"), str) and zone:
                 group_zones[o["unitGroup"]].add(zone)
             if isinstance(o.get("unit"), str) and o["unit"] in critter_set \
@@ -243,16 +309,31 @@ def build(game_dir, img_dir=None):
                 # its children, and the elements in its props (a merchant),
                 # are where it is
                 if k in ("children", "props"):
-                    walk(v, zone, wx, wy, wr)
+                    walk(v, zone, wx, wy, wr, ref)
                 else:
-                    walk(v, zone, px, py, rot)
+                    walk(v, zone, px, py, rot, ref)
         elif isinstance(o, list):
             for v in o:
-                walk(v, zone, px, py, rot)
+                walk(v, zone, px, py, rot, ref)
 
     for path, level in _levels(game_dir):
         in_world[0] = path.startswith("Level/World/W1_Siagarta.dat/gameplayData/")
+        # a level's parts share its folder (….dat/gameplayData/…)
+        cur_level[0] = path.split(".dat/")[0]
         walk(level, None)
+
+    # -- a chest in an instance's level: that dungeon's, when it is one
+    def placed(s):
+        if s.get("k") == "chest" and "lv" in s:
+            s = dict(s)
+            dg = level_dungeon.get(s.pop("lv"))
+            if dg:
+                s["dg"] = dg
+        return s
+    for users in table_users.values():
+        users[:] = [placed(u) for u in users]
+    for iid in list(src):
+        src[iid] = [placed(s) for s in src[iid]]
 
     # -- loot tables -> the collectibles they can give
     for tid, users in table_users.items():
@@ -318,6 +399,42 @@ def build(game_dir, img_dir=None):
     out["equip"] = {i: src[i] for i in sorted(equip - gear_set) if src.get(i)}
     out["caches"] = {c: {"rar": r.get("rarity"), "src": src.get(c, [])}
                      for c, r in caches.items()}
+
+    # -- the Encyclopedia: every item the game names (a template, ItemShell,
+    # is none), with its sources, the recipes it goes into, and what a
+    # container holds
+    shell_flag = flag_bit(sheets, "item", "ItemShell")
+    used = defaultdict(list)
+    for r in sheets["craft"].get("lines") or ():
+        for i in r.get("input") or ():
+            if i.get("item") and r.get("item"):
+                used[i["item"]].append([r["item"], i.get("count") or 1,
+                                        r.get("job"), r.get("level")])
+    encyclo = {}
+    for iid, r in items.items():
+        if not (r.get("texts") or {}).get("name") \
+                or (r.get("flags") or 0) & shell_flag:
+            continue
+        e = {"t": r.get("type") or "", "r": r.get("rarity") or "",
+             "src": src.get(iid, [])}
+        for key, col in (("l", "level"), ("p", "sellPrice"),
+                         ("f", "faction")):
+            if r.get(col):
+                e[key] = r[col]
+        if r.get("aptitudes"):
+            e["apt"] = [a.get("ref") for a in r["aptitudes"] if a.get("ref")]
+        if used.get(iid):
+            e["in"] = used[iid]
+        gi = (r.get("props") or {}).get("gainItem") or {}
+        if gi.get("lootTable"):
+            lv = gi.get("levelRange") or {}
+            e["gives"] = {"items": {i: round(p, 6) for i, p in
+                                    _table_items(tables, gi["lootTable"]).items()
+                                    if p > 0},
+                          "rar": (gi.get("rarity") or {}).get("min"),
+                          "lvl": [lv.get("min"), lv.get("max")] if lv else None}
+        encyclo[iid] = e
+    out["encyclo"] = encyclo
     out["factions"] = {
         f: {"dungeons": sorted(a for a, k in fac_acts[f].items()
                                if k == "Dungeon"),

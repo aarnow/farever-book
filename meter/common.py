@@ -475,8 +475,9 @@ VERSION = "1.18.0"
 # The application window
 # ---------------------------------------------------------------------------
 # Tab ids are what the window sends back; the labels are what it shows.
-APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt", "Map",
-            "Achievements", "Character", "Build", "Settings", "Help")
+APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt",
+            "Encyclopedia", "Map", "Achievements", "Character", "Build",
+            "Settings", "Help")
 
 
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
@@ -484,7 +485,8 @@ APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 
 APP_TAB_LABELS = {"Live": "En jeu", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
-                  "Hunt": "Codex", "Map": "Carte",
+                  "Hunt": "Codex", "Encyclopedia": "Encyclopédie",
+                  "Map": "Carte",
                   "Achievements": "Succès",
                   "Character": "Inspecter",
                   "Build": "Build",

@@ -3,7 +3,7 @@
 const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '' };
 let COLL_NODE = null;
 // the categories with 3D models
-const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears', 'items']);
+const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears']);
 // ...and those that have a skeleton to play their idle animation on
 const COLL_ANIM = new Set(['mounts', 'pets']);
 
@@ -118,7 +118,6 @@ function renderCollection(box, n) {
   tools.appendChild(seg);
   list.appendChild(tools);
   const gears = COLL.cat === 'gears';
-  const things = COLL.cat === 'items';
   // a filter row: big chips, each led by its icon
   const chips = (opts, cur, set) => {
     const row = el('div', 'collfilters');
@@ -154,19 +153,6 @@ function renderCollection(box, n) {
     list.appendChild(chips([{ v: '', t: tr('Toutes les classes') }].concat(n.classes.map((c) => (
       { v: c.v, t: c.t, icon: classEl(c.t, c.v, 'cfic') }))), COLL.cls, (v) => { COLL.cls = v; }));
   }
-  if (things && (n.itemCats || []).length) {
-    // each kind shown by one of its items (an owned one if any)
-    const pick = (v) => {
-      const it = (n.items || []).find((x) => x.c === 'items' && x.ic === v && x.own)
-        || (n.items || []).find((x) => x.c === 'items' && x.ic === v);
-      if (!it) return null;
-      const im = collImg(it.id);
-      im.classList.add('cfic');
-      return im;
-    };
-    list.appendChild(chips([{ v: '', t: tr('Tous') }].concat(n.itemCats.map((c) => (
-      { v: c.v, t: c.t, icon: pick(c.v) }))), COLL.icat, (v) => { COLL.icat = v; }));
-  }
 
   const cat = cats.find((c) => c.v === COLL.cat) || cats[0] || { one: tr('élément') };
   const needle = COLL.q.trim().toLowerCase();
@@ -174,7 +160,6 @@ function renderCollection(box, n) {
     && (COLL.filter === 'all' || (COLL.filter === 'own') === it.own)
     && (!gears || !COLL.slot || it.sl === COLL.slot)
     && (!gears || !COLL.cls || !(it.cls || []).length || it.cls.includes(COLL.cls))
-    && (!things || !COLL.icat || it.ic === COLL.icat)
     && (!needle || it.name.toLowerCase().includes(needle)));
   const main = el('div', 'collmain');
   main.appendChild(side);

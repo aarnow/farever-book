@@ -473,7 +473,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 14
+DATA_FORMAT = 15
 
 
 def _hook_needs():
@@ -794,7 +794,7 @@ def locate_hlboot(pid):
 # 3D models, for the Collection's viewer
 # ---------------------------------------------------------------------------
 MODELS_DIR = ANALYSIS / "models"
-MODEL_FORMAT = 13
+MODEL_FORMAT = 14
 _model_lock = threading.Lock()
 
 

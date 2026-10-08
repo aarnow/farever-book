@@ -29,8 +29,7 @@ from i18n import tr
 COLLECTION_CATS = (("mounts", "Montures", "monture"),
                    ("gliders", "Planeurs", "planeur"),
                    ("pets", "Compagnons", "compagnon"),
-                   ("gears", "Équipements", "équipement"),
-                   ("items", "Objets", "objet"))
+                   ("gears", "Équipements", "équipement"))
 
 
 # armour appearance slots, in the game's order
@@ -187,7 +186,16 @@ WHERE_TAGS = {"dungeon": "Donjon", "rift": "Faille", "unit": "Butin",
               "family": "Butin",
               "chest": "Coffre", "shop": "Marchand", "craft": "Fabrication",
               "faction": "Faction", "world": "Monde", "ach": "Succès",
-              "starter": "Départ", "cache": "Coffret"}
+              "starter": "Départ", "cache": "Coffret", "gather": "Récolte",
+              "salvage": "Démontage", "scrap": "Recyclage",
+              "combine": "Combinaison"}
+
+
+def _cost_text(s):
+    """A merchant's price: "1000 × Or, 5 × ...", or ""."""
+    return ", ".join(f"{c['n']} × {item_label(c['item'])}"
+                     if c.get("n") else item_label(c["item"])
+                     for c in s.get("cost") or () if c.get("item"))
 
 
 def _seller(s):
@@ -284,16 +292,30 @@ def item_where(iid, rar=None, rows_only=False):
                 # difficulty's level and minimum, the difficulties that give
                 # the asked one
                 odds = dungeon_weapon_odds(dg, e) if weapon else {}
+                by_rar = {}
                 if odds:
                     rars = sorted({r for o in odds.values() for r in o},
                                   key=lambda r: RARITY_ORDER.get(r, 9))
-                    at = [d for d in sorted(odds) if rar in odds[d]]
-                    if at and len(at) < 3:
-                        when = tr(" ou ").join(diffs[d] for d in at)
-                    elif at:
-                        when = tr("toutes difficultés")
+
+                    def diffs_of(x, every=tr("toutes difficultés")):
+                        at = [d for d in sorted(odds) if x in odds[d]]
+                        return (tr(" ou ").join(diffs[d] for d in at)
+                                if at and len(at) < 3 else
+                                every if at else None)
+                    when = diffs_of(rar) or when
+                    by_rar = {x: diffs_of(x, tr("toutes les difficultés"))
+                              for x in rars}
                 add("dungeon", what.format(dungeon=name, when=when), rars,
                     boss=boss)
+                # for the Encyclopedia's tabs: the dungeon, where in it, and
+                # its difficulties at each rarity
+                rows[-1].update(
+                    dungeon=name,
+                    where=(tr("Coffre de fin") if src == "coffre"
+                           else tr("Mort du boss")),
+                    diffs={x: d for x, d in by_rar.items() if d}
+                    or {x: (tr("toutes les difficultés") if diff is None
+                            else when) for x in rars})
             elif src == "faction":
                 add("dungeon", tr("{dungeon} : pièce de la faction, en "
                                   "{a} et {b}", dungeon=name, a=diffs[0],
@@ -306,7 +328,16 @@ def item_where(iid, rar=None, rows_only=False):
     srcs = (cat.get("equip") or {}).get(iid)
     if srcs is None:
         srcs = next((e.get("src") or [] for e in cat.get("gears") or ()
-                     if e.get("id") == iid), [])
+                     if e.get("id") == iid), None)
+    if srcs is None:
+        # any other item (the Encyclopedia): the game's sources for it, and
+        # the item codex's (gathering, salvage, recycling)
+        srcs = list(((cat.get("encyclo") or {}).get(iid) or {}).get("src")
+                    or ())
+        for e in codex_items_catalogue():
+            if e.get("id") == iid:
+                srcs += [s for s in e.get("src") or () if s not in srcs]
+                break
     def shop_pins(lst):
         """Where the merchants of a source list stand on the world map."""
         return [{"x": s["at"][0], "y": s["at"][1],
@@ -340,6 +371,36 @@ def item_where(iid, rar=None, rows_only=False):
                 k == "chest" and s.get("zone")
                 and _zone_label(s["zone"]) in listed):
             continue
+        if k == "chest" and s.get("dg"):
+            # a chest inside a dungeon: said with the dungeon when it is
+            # already, else the dungeon's chest
+            name = dungeon_name(s["dg"])
+            if name in listed:
+                continue
+            boss = next((d.get("boss") for d in dungeon_catalogue()
+                         if d.get("kind") == s["dg"]), "")
+            text = tr("{dungeon} : coffre", dungeon=name)
+            if text not in seen:
+                add("dungeon", text, dropped(base), boss=boss or "")
+                rows[-1].update(dungeon=name, where=tr("Coffre"))
+            continue
+        if k == "chest" and s.get("at"):
+            reg = s.get("region") or ""
+            if reg in MAP_UNRELEASED_REGIONS:
+                continue                # not playable yet (the Map's rule)
+            text = tr("Coffre du monde ouvert — {region}",
+                      region=_fr_names("zone").get(reg) or _pretty_id(reg)
+                      if reg else tr("Siagarta"))
+            pin = {"x": s["at"][0], "y": s["at"][1],
+                   "t": _zone_label(s.get("zone")) if s.get("zone") else ""}
+            if text in seen:
+                row = next(r for r in rows if r["t"] == text)
+                if pin not in row["pins"]:
+                    row["pins"].append(pin)
+                continue
+            add(k, text, dropped(base))
+            rows[-1].update(pins=[pin], pinCls="chest", mapIcon="chest")
+            continue
         if k == "cache":
             cid = s.get("id")
             lvl = s.get("lvl")
@@ -364,6 +425,19 @@ def item_where(iid, rar=None, rows_only=False):
                 if text not in seen:
                     add(k, text, [base])
                     rows[-1]["pins"] = shop_pins(same)
+                    # the merchant apart: its unit (portrait), its name in
+                    # game, its towns, its price
+                    rows[-1].update(
+                        npc=s.get("npc") or "", who=_seller(s),
+                        place=", ".join(dict.fromkeys(
+                            _zone_label(x["zone"]) for x in same
+                            if x.get("zone"))),
+                        cost=_cost_text(s),
+                        costs=[{"n": c.get("n") or 0,
+                                "name": item_label(c["item"]),
+                                "img": item_icon(c["item"])}
+                               for c in s.get("cost") or ()
+                               if c.get("item")])
             continue
         if k == "craft":
             # the job with its tool, then the recipe, each ingredient with
@@ -373,7 +447,7 @@ def item_where(iid, rar=None, rows_only=False):
             add(k, tr("{job} niv. {lvl}", job=job, lvl=s.get("lvl") or 1)
                 + made, [base], img=item_icon("job_" + str(s.get("job"))))
             rows[-1]["parts"] = [{"n": n, "t": item_label(i),
-                                  "img": item_icon(i)}
+                                  "img": item_icon(i), "id": i}
                                  for i, n in s.get("input") or ()]
             continue
         # faction loot in the world (activities, chests) gives its rare
@@ -391,6 +465,7 @@ def item_where(iid, rar=None, rows_only=False):
                    a=names.get(SPOTS[1], SPOTS[1]),
                    b=names.get(SPOTS[0], SPOTS[0])))
             rows[-1]["unit"] = s["id"]
+            rows[-1]["boss"] = s["id"]      # its portrait
             rows[-1]["pinCls"] = "rift"
             rows[-1]["pins"] = [
                 {"x": x, "y": y, "t": names.get(z, z)}
@@ -503,8 +578,9 @@ def collection_view(owned, item_codex=None):
                                   if a in APTITUDE_CLASSES)
                         or tr("toutes")) if key == "gears" else "",
                 "lvl": e.get("lvl"),
-                "src": [line for s in srcs
-                        for line in _source_text(s, bosses).split("\n")]})
+                "src": list(dict.fromkeys(
+                    line for s in srcs
+                    for line in _source_text(s, bosses).split("\n")))})
     return {"cats": cats, "items": items,
             "slots": [{"v": v, "t": tr(t)} for v, t in GEAR_SLOTS],
             "classes": [{"v": c, "t": tr(CLASS_LABELS[c])}
@@ -1547,4 +1623,149 @@ def droptable_view(dg, got, diff=None, lvl=None):
                    -RARITY_ORDER.get(e.get("rarity"), -1))})
     rows.sort(key=lambda r: r.pop("_k"))
     return rows
+
+
+# ---- the Encyclopedia --------------------------------------------------------
+# its categories: (key, label, one, item types), in the order shown; an item
+# whose type none lists goes to the last
+WEAPON_TYPES = ("Sword", "Mace", "Axe", "DualSwords", "DualMaces", "DualAxes",
+                "Daggers", "Fists", "GreatSword", "GreatAxe", "GreatMace",
+                "Spear", "Crescent", "Staff", "Bow", "Book", "Halos",
+                "Scepter", "Thrown", "Shield", "Relic", "CaptureNet")
+ARMOR_TYPES = ("Head", "Shoulders", "Chest", "Hands", "Waist", "Legs", "Feet",
+               "Back")
+ENCYCLO_CATS = (
+    ("weapons", "Armes", "arme", WEAPON_TYPES),
+    ("armor", "Armures", "armure", ARMOR_TYPES),
+    ("jewels", "Bijoux", "bijou", ("GearNeck", "GearFinger", "GearTrinket")),
+    ("mounts", "Montures", "monture", ("Mount",)),
+    ("gliders", "Planeurs", "planeur", ("GearGlider",)),
+    ("consumables", "Consommables", "consommable",
+     ("HealthPotion", "Potion", "Elixir", "Food", "Consumable")),
+    ("augments", "Améliorations", "amélioration",
+     ("AugmentBlacksmith", "AugmentJeweller", "AugmentOutfitter",
+      "AugmentEnchantFeet", "AugmentEnchantHands", "AugmentEnchantWeapon",
+      "AugmentDemon", "AugmentDemonSigil", "InfusionPattern", "Mastery",
+      "SkillPointBook")),
+    ("recipes", "Recettes", "recette", ("Recipe",)),
+    ("resources", "Ressources", "ressource",
+     ("CraftingComponent", "UpgradeComponent", "Ore", "Leather", "Cloth",
+      "Prospecting")),
+    ("containers", "Coffrets", "coffret",
+     ("LootableContainer", "Package", "CompletedPackage")),
+    ("tools", "Outils et sacs", "objet",
+     ("GearPickaxe", "GearSickle", "ToolBlacksmith", "ToolAlchemist",
+      "ToolOutfitter", "ToolJeweller", "ToolCook", "ToolEnchanter", "Bag")),
+    ("other", "Divers", "objet", ()),
+)
+
+
+def _encyclo_cat(t):
+    return next((k for k, _l, _o, ts in ENCYCLO_CATS if t in ts), "other")
+
+
+def encyclopedia_view():
+    """The Encyclopedia's list: every item the game names, by category,
+    with its type, rarity and level (its sheet: encyclopedia_item)."""
+    enc = collection_catalogue().get("encyclo") or {}
+    items = []
+    for iid, e in enc.items():
+        rar = e.get("r") or ""
+        t = e.get("t") or ""
+        items.append({"id": iid, "c": _encyclo_cat(t),
+                      "name": item_label(iid),
+                      "type": item_type_label(t) if t else "",
+                      "tk": t, "rk": rar.lower(),
+                      "rar": rarity_label(rar) if rar else "",
+                      # a weapon drops at any level: none shown
+                      "lvl": None if t in WEAPON_TYPES else e.get("l")})
+    order = {k: i for i, (k, _l, _o, _t) in enumerate(ENCYCLO_CATS)}
+    items.sort(key=lambda it: (order[it["c"]], it["type"],
+                               RARITY_ORDER.get(it["rk"].capitalize(), 9),
+                               it["lvl"] or 0, it["name"]))
+    cats = [{"v": k, "t": tr(label), "one": tr(one),
+             "n": sum(1 for it in items if it["c"] == k)}
+            for k, label, one, _t in ENCYCLO_CATS]
+    return {"cats": [c for c in cats if c["n"]], "items": items}
+
+
+def encyclopedia_item(iid):
+    """One item's sheet: what it is, its description, its attributes (a
+    piece of gear, at its level), how to get it, what it is used for and
+    what it holds. None when the game has no such item."""
+    enc = collection_catalogue().get("encyclo") or {}
+    e = enc.get(iid)
+    if e is None:
+        return None
+    rar, t = e.get("r") or "", e.get("t") or ""
+    weapon = t in WEAPON_TYPES
+    # a weapon drops at any level: none shown, its attributes at the top
+    lvl = None if weapon else (e.get("l") or None)
+    out = {"id": iid, "name": item_label(iid), "img": item_icon(iid),
+           # a weapon: its model, turned in 3D (the Collection's viewer)
+           "m3d": weapon,
+           "type": item_type_label(t) if t else "", "rk": rar.lower(),
+           "rar": rarity_label(rar) if rar else "", "lvl": lvl,
+           "desc": _fr_ref(_fr_desc("item").get(iid) or ""),
+           # a faction the game names (not "Starter", an internal tag)
+           "fac": (_fr_names("faction").get(e["f"]) or "") if e.get("f")
+           else "",
+           "apt": [tr(CLASS_LABELS[APTITUDE_CLASSES[a]])
+                   for a in e.get("apt") or () if a in APTITUDE_CLASSES]}
+    # how to get it: the Build tab's sources (dungeons, merchants on the
+    # map, recipes with their ingredients...), each with the rarities it
+    # gives: one tab per rarity when there are several
+    rows, _base = item_where(iid, rows_only=True)
+    out["where"] = [{k: r.get(k) for k in ("k", "t", "sub", "img", "boss",
+                                            "parts", "pins", "pinCls", "rars",
+                                            "npc", "who", "place", "cost",
+                                            "mapIcon", "dungeon", "where",
+                                            "diffs", "costs")
+                     if r.get(k)} for r in rows]
+    rars = sorted({x for r in rows for x in r.get("rars") or () if x},
+                  key=lambda x: RARITY_ORDER.get(x, 9))
+    if len(rars) > 1:
+        out["tabs"] = [{"v": x, "t": rarity_label(x), "rk": x.lower()}
+                       for x in rars]
+    # a piece of gear: its attributes, the sheet's tooltip, at its level
+    # (a weapon, dropped at any level: from level 1 to the top), at each
+    # rarity it is got at
+    at = lvl or build_data().get("maxLevel") or 25
+    pieces = {}
+    for x in rars or [rar]:
+        g = piece_view([iid, x or None, at, 0])
+        if not g.get("stats"):
+            continue
+        g["note"] = tr("Attributs d'une pièce de niveau {n}", n=at)
+        pieces[x or ""] = g
+        if weapon and at > 1:
+            # its attributes at each level, for the sheet's level slider
+            out.setdefault("levels", {})[x or ""] = [
+                {"il": p.get("il"), "stats": p.get("stats") or []}
+                for p in (piece_view([iid, x or None, n, 0])
+                          for n in range(1, at + 1))]
+    if pieces:
+        out["pieces"] = pieces
+        out["piece"] = pieces.get(rar) or next(iter(pieces.values()))
+    if any(r.get("pins") for r in rows):
+        out["meta"] = world_map().get("meta")
+    # the recipes it goes into
+    jobs = _fr_names("job")
+    out["uses"] = [{"id": made, "name": item_label(made),
+                    "img": item_icon(made), "n": n,
+                    "job": jobs.get(job) or _pretty_id(job or ""),
+                    "lvl": jl or 1}
+                   for made, n, job, jl in e.get("in") or ()]
+    # what a container holds: its items, the rarity and levels it forces
+    gives = e.get("gives") or {}
+    if gives.get("items"):
+        out["gives"] = {
+            "items": sorted(({"id": i, "name": item_label(i),
+                              "img": item_icon(i),
+                              "rk": ((enc.get(i) or {}).get("r") or "").lower()}
+                             for i in gives["items"]),
+                            key=lambda x: x["name"]),
+            "rar": rarity_label(gives["rar"]) if gives.get("rar") else "",
+            "lvl": gives.get("lvl")}
+    return out
 

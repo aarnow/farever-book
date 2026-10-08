@@ -426,6 +426,9 @@ class AppWindow:
                     f"{json.dumps(msg.get('d'))})")
             except Exception as e:
                 _log(f"model push failed: {e!r}")
+        elif t == "icons":
+            # the items' icons, for the Encyclopedia: in batches, once
+            self._send_images("item", "item_icons", "*.png", "image/png")
         elif t == "quit":
             self._closing = True
             try:
@@ -447,25 +450,32 @@ class AppWindow:
         for ns, folder in (("coll", "collection_img"),
                            ("best", "bestiary_img"), ("map", "map_tiles"),
                            ("skill", "skill_img"), ("dbg", "dungeon_bg")):
-            imgs = list(_analysis_images(folder).items())
-            # at most 40 pictures / ~600 KB (dungeon screens are 100 KB+)
-            batches, cur, size = [], [], 0
-            for k, v in imgs:
-                if cur and (len(cur) >= 40 or size + len(v) > 600_000):
-                    batches.append(cur)
-                    cur, size = [], 0
-                cur.append((k, v))
-                size += len(v)
-            if cur:
+            if not self._send_images(ns, folder):
+                break
+
+    def _send_images(self, ns, folder, pattern="*.webp", mime="image/webp"):
+        """One folder of analysis_out's pictures to the window, in batches;
+        False when the window refused one."""
+        imgs = list(_analysis_images(folder, pattern, mime).items())
+        # at most 40 pictures / ~600 KB (dungeon screens are 100 KB+)
+        batches, cur, size = [], [], 0
+        for k, v in imgs:
+            if cur and (len(cur) >= 40 or size + len(v) > 600_000):
                 batches.append(cur)
-            for batch in batches:
-                chunk = json.dumps(dict(batch))
-                try:
-                    self.window.evaluate_js(
-                        f"window.addImages('{ns}', {json.dumps(chunk)})")
-                except Exception as e:
-                    _log(f"{ns} images push failed: {e!r}")
-                    break
+                cur, size = [], 0
+            cur.append((k, v))
+            size += len(v)
+        if cur:
+            batches.append(cur)
+        for batch in batches:
+            chunk = json.dumps(dict(batch))
+            try:
+                self.window.evaluate_js(
+                    f"window.addImages('{ns}', {json.dumps(chunk)})")
+            except Exception as e:
+                _log(f"{ns} images push failed: {e!r}")
+                return False
+        return True
 
     def _set_theme(self, theme):
         """Recolour the window and the overlays, in place."""
@@ -1355,7 +1365,11 @@ def _rect(hwnd):
 
 # Joined in this order: core first (shared helpers), boot last (starts the page).
 JS_FILES = ("core", "frame", "live", "report", "dungeons", "model3d",
-            "collection", "achievements", "hunt", "map", "character", "build", "boot")
+            "collection", "encyclo", "achievements", "hunt", "map", "character", "build", "boot")
+
+
+PAGE_MAX_BYTES = 1_572_864            # 1.5 MiB: see _document
+PAGE_WARN_BYTES = 1_400_000
 
 
 def _document(theme, lang):
@@ -1368,32 +1382,37 @@ def _document(theme, lang):
             .replace("/*ICONS*/",
                      "window.__I18N__ = " + _i18n_json(lang) + ";"
                      "window.__ICONS__ = " + json.dumps(_class_icons()) + ";"
-                     "window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
-                     + ";window.__SHEET__ = " + json.dumps(_sheet_art())
+                     # the bosses' portraits come after (addPortraits): 16
+                     # of them are 0.9 MB, which put the page over the limit
+                     + "window.__SHEET__ = " + json.dumps(_sheet_art())
                      + ";window.__LOGO__ = " + json.dumps(_asset_uri("wordmark.png"))
                      + ";window.__CREST__ = " + json.dumps(_asset_uri("grimoire.png"))
                      + ";"))
-    # WebView2 shows nothing at all for an HTML string over 2 MB.
-    if len(html.encode("utf-8")) > 1_800_000:
-        _log(f"page is {len(html.encode('utf-8')) // 1024} KB — close to "
-             "WebView2's 2 MB limit")
+    # WebView2 refuses the HTML string past 1.5 MiB of UTF-8 (2 MiB once
+    # base64-encoded; measured 2026-10-08: 1 560 061 bytes shown, 1 580 061
+    # an ArgumentException in NavigateToString and a blank window). Any
+    # picture belongs in a push after the page is up, not in the page.
+    size = len(html.encode("utf-8"))
+    if size > PAGE_WARN_BYTES:
+        _log(f"page is {size // 1024} KB — close to WebView2's limit "
+             f"({PAGE_MAX_BYTES // 1024} KB): the window stays blank past it")
     return html
 
 
-def _analysis_images(name):
-    """{"Mount_Wolf_01": data URI, ...}: the .webp pictures extracted into
-    analysis_out/<name>/."""
+def _analysis_images(name, pattern="*.webp", mime="image/webp"):
+    """{"Mount_Wolf_01": data URI, ...}: the pictures (.webp unless told)
+    extracted into analysis_out/<name>/."""
     import base64
     folder = Path(os.environ.get("FAREVER_ANALYSIS")
                   or HERE.parent / "analysis_out") / name
     out = {}
     try:
-        files = sorted(folder.glob("*.webp"))
+        files = sorted(folder.glob(pattern))
     except OSError:
         return out
     for path in files:
         try:
-            out[path.stem] = ("data:image/webp;base64,"
+            out[path.stem] = (f"data:{mime};base64,"
                               + base64.b64encode(path.read_bytes()).decode())
         except OSError:
             continue

@@ -408,14 +408,19 @@ TABLES = (
               _cdb(g), [d["boss"] for d in t["dungeons.json"]
                         if d.get("boss")]),
           lambda d: f"{len(d['bosses'])} bosses", PLAIN, "boss sheets"),
-    Table("boss_portraits",
-          lambda g, o, t: extract_boss_portraits(
-              g, [d["boss"] for d in t["dungeons.json"]], o / "boss_portraits"),
-          lambda n: f"{n} portraits", label="boss portraits"),
     Table("augments.json", lambda g, o, t: extract_augments(g),
           lambda d: f"{len(d)} augments", PLAIN),
     Table("rift_rewards.json", lambda g, o, t: extract_rift_rewards(g),
           lambda d: f"{len(d['bosses'])} bosses", PLAIN),
+    # the dungeons' bosses, the merchants and the rifts' bosses
+    Table("boss_portraits",
+          lambda g, o, t: extract_boss_portraits(
+              g, [d["boss"] for d in t["dungeons.json"]]
+              + _merchant_units(t.get("collection.json"))
+              + [b["id"] for b in (t.get("rift_rewards.json") or {})
+                 .get("bosses") or () if b.get("id")],
+              o / "boss_portraits"),
+          lambda n: f"{n} portraits", label="boss portraits"),
     Table("luck.json", lambda g, o, t: extract_luck(g),
           lambda d: f"{len(d)} counters", PLAIN),
     Table("item_types.json", lambda g, o, t: extract_item_types(g),
@@ -976,6 +981,17 @@ def dungeon_loot(boss, item_rows, tables, itypes=None):
 
 
 BOSS_PORTRAIT_PX = 192
+
+
+def _merchant_units(coll):
+    """The units of the merchants the collection's sources name (their
+    portraits, beside the bosses')."""
+    units = set()
+    for e in ((coll or {}).get("encyclo") or {}).values():
+        for s in e.get("src") or ():
+            if s.get("k") == "shop" and s.get("npc"):
+                units.add(s["npc"])
+    return sorted(units)
 
 
 def extract_boss_portraits(game_dir, bosses, out_dir):

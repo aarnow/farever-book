@@ -510,6 +510,7 @@ function buildNode(n) {
     case 'langs': return buildLangs(n);
     case 'linkcards': return buildLinkCards(n);
     case 'collection': return buildCollection(n);
+    case 'encyclo': return buildEncyclo(n);
     case 'hunt': return buildHunt(n);
     case 'huntmon': return buildHuntMon(n);
     case 'achievements': return buildAch(n);
@@ -652,10 +653,12 @@ window.__COLL__ = window.__COLL__ || {};
 window.__BEST__ = window.__BEST__ || {};
 window.__MAP__ = window.__MAP__ || {};
 window.__SKILL__ = window.__SKILL__ || {};
+window.__ITEM__ = window.__ITEM__ || {};
 window.__DBG__ = window.__DBG__ || {};
 window.addImages = function (ns, json) {
   const into = ns === 'best' ? window.__BEST__ : ns === 'map' ? window.__MAP__
-    : ns === 'skill' ? window.__SKILL__ : ns === 'dbg' ? window.__DBG__ : window.__COLL__;
+    : ns === 'skill' ? window.__SKILL__ : ns === 'dbg' ? window.__DBG__
+    : ns === 'item' ? window.__ITEM__ : window.__COLL__;
   Object.assign(into, JSON.parse(json));
   if (ns === 'dbg') {
     document.querySelectorAll('[data-bg]').forEach(applyBackdrop);
@@ -666,6 +669,10 @@ window.addImages = function (ns, json) {
     return;
   }
   if (ns === 'map') { mapTiles(); return; }
+  if (ns === 'item') { document.querySelectorAll('img.itic[data-id]').forEach((im) => {
+    const src = window.__ITEM__[im.dataset.id];
+    if (src && !im.src) im.src = src;
+  }); return; }
   if (ns === 'skill') { document.querySelectorAll('img.skic[data-id]').forEach((im) => {
     const src = window.__SKILL__[im.dataset.id];
     if (src && !im.src) im.src = src;

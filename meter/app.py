@@ -40,7 +40,7 @@ import goals as G
 from me import MeStore
 from gamedata import (
     REGENERATING, _boss_label, _element_done, _fr_names, bestiary_catalogue,
-    build_data, dungeon_catalogue,
+    build_data, collection_catalogue, dungeon_catalogue,
     item_rarity,
     dungeon_name, item_icon, item_label, item_type,
     ensure_ui_frame, item_model_json, locate_hlboot, regenerate_data, world_map,
@@ -52,6 +52,7 @@ from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot)
 from bosssheet import _icon_ok, boss_sheet_view
 from views import (
+    encyclopedia_item, encyclopedia_view,
     LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
     hunt_detail_view, map_view, rift_rewards_view, soulwell_name)
@@ -217,6 +218,10 @@ class App:
         self._rift_gates_for = None
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_tab = "info"          # its page's tab: info, runs, help
+        self._encyclo_sel = None            # the Encyclopedia's item shown
+        self._encyclo_list = (None, None)   # (data, its list), computed once
+        self._encyclo_sheets = {}           # item -> its sheet, for that data
+        self._icons_sent = False
         self._dungeon_videos = {}           # dungeon -> a YouTube video's id
         self._hunt_sel = None               # the monster whose page is open
         self._dungeon_view = None           # the dungeon run being read
@@ -743,6 +748,10 @@ class App:
             "rift_delete_cancel": self._rift_delete_cancel,
             "set_rift_keep": lambda p: self._set_rift_keep(p.get("value")),
             # dungeons
+            # the Encyclopedia: the item shown, its icons (sent once asked)
+            "encyclo_open": lambda p: setattr(
+                self, "_encyclo_sel", str(p.get("id") or "") or None),
+            "encyclo_icons": self._send_item_icons,
             "open_dungeon_kind": lambda p: self._open_dungeon_kind(
                 p.get("kind")),
             "dungeon_tab": lambda p: setattr(
@@ -945,6 +954,7 @@ class App:
         builder = {"Live": self._page_live, "Rifts": self._page_rifts,
                    "Dungeons": self._page_dungeons,
                    "Collection": self._page_collection,
+                   "Encyclopedia": self._page_encyclopedia,
                    "Hunt": self._page_hunt,
                    "Achievements": self._page_achievements,
                    "Map": self._page_map,
@@ -2025,6 +2035,33 @@ class App:
             d = item_model_json(item_id)
             self.menubridge.send({"t": "model", "id": item_id, "d": d})
         threading.Thread(target=work, daemon=True).start()
+
+    def _page_encyclopedia(self):
+        """Every item of the game: its list (computed once per data), and
+        the sheet of the one picked."""
+        cat = collection_catalogue()
+        if self._encyclo_list[0] is not cat:
+            self._encyclo_list = (cat, encyclopedia_view())
+            self._encyclo_sheets = {}
+        view = self._encyclo_list[1]
+        if not view["items"]:
+            return [{"k": "section", "t": tr("Encyclopédie")},
+                    {"k": "note", "t": tr("Données absentes : relance Farever "
+                                          "Book avec le jeu installé pour "
+                                          "les générer.")}]
+        sel = self._encyclo_sel
+        if not sel or not any(it["id"] == sel for it in view["items"]):
+            sel = view["items"][0]["id"]
+        if sel not in self._encyclo_sheets:
+            self._encyclo_sheets[sel] = encyclopedia_item(sel)
+        return [{"k": "encyclo", "id": "encyclo", **view,
+                 "sel": self._encyclo_sheets[sel]}]
+
+    def _send_item_icons(self):
+        """The items' icons, to the window (asked by the Encyclopedia)."""
+        if not self._icons_sent:
+            self._icons_sent = True
+            self.menubridge.send({"t": "icons"})
 
     def _page_collection(self):
         owned = self._collection()

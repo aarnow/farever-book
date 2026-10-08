@@ -792,11 +792,17 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
         return None
     m = mesh(raw, d, model["geom"])
     m["pos"], m["nor"] = list(m["pos"]), list(m["nor"])
+    sub_mats = [model["mats"][k] if k < len(model["mats"]) else 0
+                for k in range(len(m["subs"]))]
+    if not model.get("skin") and not frames:
+        # a rigid object in several pieces (a sword's blade, guard and
+        # handle): every geometry, each placed by its node, relative to the
+        # first's
+        _merge_geoms(raw, d, model, m, sub_mats)
     sub_of = [0] * m["n"]
     for k, tris in enumerate(m["subs"]):
-        mi = model["mats"][k] if k < len(model["mats"]) else 0
         for t in tris:
-            sub_of[t] = mi
+            sub_of[t] = sub_mats[k]
     G = rest_pose(m, sub_of, model)
     anim = (skin_animation(model, m, sub_of, frames, G, matrix)
             if frames else None)
@@ -819,7 +825,7 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
                    key=lambda v: -len(v["slots"]))
     parts = []
     for k, tris in enumerate(m["subs"]):
-        mi = model["mats"][k] if k < len(model["mats"]) else 0
+        mi = sub_mats[k]
         mat = d["mats"][mi] if mi < len(d["mats"]) else {}
         if str(mat.get("name", "")).lower() == "outline":
             # the outline's inverted hull: drawn plainly, it hides the object
@@ -828,6 +834,49 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
               or (spare[0] if spare else {}))
         parts.append((tris, gm))
     return m, parts, anim
+
+
+def _node_abs(d, i):
+    """A model node's matrix in the file's space: its own times its
+    parents'."""
+    M, seen = _IDENTITY, set()
+    while 0 <= i < len(d["models"]) and i not in seen:
+        seen.add(i)
+        node = d["models"][i]
+        M = _mul(M, _mat(node.get("pos") or [0, 0, 0, 0, 0, 0, 1, 1, 1]))
+        i = node.get("parent", -1)
+    return M
+
+
+def _merge_geoms(raw, d, first, m, sub_mats):
+    """The file's other unskinned geometries into `m` (in place), each moved
+    from its node into the first's: the first stays as it was drawn."""
+    i0 = d["models"].index(first)
+    back = _inv(_node_abs(d, i0))
+    for i, node in enumerate(d["models"]):
+        if i == i0 or node["geom"] < 0 or node.get("skin"):
+            continue
+        g = mesh(raw, d, node["geom"])
+        M = _mul(_node_abs(d, i), back)
+        base = m["n"]
+        pos, nor = list(g["pos"]), list(g["nor"])
+        for j in range(0, len(pos), 3):
+            px, py, pz = pos[j:j + 3]
+            nx, ny, nz = nor[j:j + 3]
+            pos[j:j + 3] = [px * M[0][c] + py * M[1][c] + pz * M[2][c] + M[3][c]
+                            for c in range(3)]
+            v = [nx * M[0][c] + ny * M[1][c] + nz * M[2][c] for c in range(3)]
+            ln = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) ** 0.5 or 1.0
+            nor[j:j + 3] = [v[0] / ln, v[1] / ln, v[2] / ln]
+        m["pos"] += pos
+        m["nor"] += nor
+        m["uv"] = list(m["uv"]) + list(g["uv"])
+        m["uv2"] = list(m["uv2"]) + list(g["uv2"])
+        for k, tris in enumerate(g["subs"]):
+            m["subs"] = list(m["subs"]) + [tuple(t + base for t in tris)]
+            sub_mats.append(node["mats"][k] if k < len(node["mats"]) else 0)
+        m["n"] += g["n"]
+    m["big"] = m["n"] > 0x10000
 
 
 # the hero as the game dresses it: a body in parts, each worn piece in place
