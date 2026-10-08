@@ -307,6 +307,8 @@ class AppWindow:
                     o.set_free_hidden((o.hide_free and window_open) or loading)
                     if o.shown or o.locked:
                         o.set_locked(o.lock_mode == "always" or held)
+                    if o.shown:
+                        o.keep_styles()
                 # the game's menu open: its button above it
                 if self.esc is not None:
                     own = next((o for o in self.overlays if o.game), None)
@@ -532,6 +534,31 @@ WS_EX_NOACTIVATE = 0x08000000
 WS_EX_LAYERED, WS_EX_TRANSPARENT = 0x80000, 0x20
 LWA_ALPHA = 0x2
 LOCK_POLL_SECS = 0.05               # how often the game's cursor is looked at
+# Those styles don't always stay: on a player's Windows 10 (22H2, display at
+# 125 %) the overlays ignored their opacity and their lock, even "always",
+# until the lock loop put the styles back whenever they were gone (test
+# build 1.18.0.1, 2026-10-08). Overlay.keep_styles; its log, a few lines.
+STYLE_LOG_MAX = 20
+_U32 = ctypes.WinDLL("user32", use_last_error=True)
+_U32.GetWindowLongW.restype = ctypes.c_long
+_U32.GetLayeredWindowAttributes.argtypes = [
+    wintypes.HWND, ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.POINTER(wintypes.DWORD)]
+_U32.SetLayeredWindowAttributes.argtypes = [
+    wintypes.HWND, wintypes.DWORD, ctypes.c_ubyte, wintypes.DWORD]
+
+
+def _ex_style(hwnd):
+    return _U32.GetWindowLongW(hwnd, GWL_EXSTYLE) & 0xFFFFFFFF
+
+
+def _alpha_of(hwnd):
+    """The alpha a layered window is drawn with, or None."""
+    key, a, fl = wintypes.DWORD(), ctypes.c_ubyte(), wintypes.DWORD()
+    if _U32.GetLayeredWindowAttributes(hwnd, ctypes.byref(key), ctypes.byref(a),
+                                       ctypes.byref(fl)):
+        return a.value
+    return None
 
 
 class _CURSORINFO(ctypes.Structure):
@@ -648,6 +675,36 @@ class Overlay:
         ctypes.windll.user32.SetLayeredWindowAttributes(
             self.hwnd, 0, alpha, LWA_ALPHA)
 
+    def keep_styles(self):
+        """Put back what something took off the window (WinForms rewriting
+        its styles, on some Windows 10 at least): WS_EX_LAYERED with the
+        player's alpha, WS_EX_TRANSPARENT while locked. The lock loop calls
+        it on every pass for a shown overlay."""
+        if not self.hwnd:
+            return
+        ex = _ex_style(self.hwnd)
+        want = round(255 * self.opacity / 100)
+        lost = []
+        if not ex & WS_EX_LAYERED:
+            lost.append("layered")
+        elif _alpha_of(self.hwnd) not in (want, None):
+            lost.append("alpha")
+        if bool(ex & WS_EX_TRANSPARENT) != self.locked:
+            lost.append("click-through")
+        if not lost:
+            return
+        new = ex | WS_EX_LAYERED
+        new = new | WS_EX_TRANSPARENT if self.locked else new & ~WS_EX_TRANSPARENT
+        _U32.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
+                            ctypes.c_long(new - (1 << 32) if new & 0x80000000 else new))
+        ctypes.set_last_error(0)
+        ok = _U32.SetLayeredWindowAttributes(self.hwnd, 0, want, LWA_ALPHA)
+        self._kept = getattr(self, "_kept", 0) + 1
+        if self._kept <= STYLE_LOG_MAX or not self._kept % 500:
+            _log(f"overlay {self.id}: {', '.join(lost)} lost, put back "
+                 f"(#{self._kept}"
+                 + ("" if ok else f", alpha error {ctypes.get_last_error()}") + ")")
+
     def set_free_hidden(self, on):
         """Out of the way while the game's cursor is free (a game window
         open: inventory, map...), back in its focus mode. Never while a goal
@@ -728,8 +785,10 @@ class Overlay:
         op = max(30, min(100, int(style.get("opacity") or 100)))
         sc = max(90, min(110, int(style.get("scale") or 100)))
         if op != self.opacity and self.hwnd:
-            self._layer(round(255 * op / 100))
+            # wanted first: keep_styles (the lock loop) must not put the
+            # old alpha back in between
             self.opacity = op
+            self._layer(round(255 * op / 100))
         if sc != self.scale:
             self.scale = sc
             self._shaped = None
