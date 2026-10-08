@@ -104,11 +104,11 @@ function renderEncyclo(box, n) {
     });
     return row;
   };
-  // the weapons: few of each kind, no filter
-  const bare = !needle && ENC.cat === 'weapons';
+  // the weapons, the tools and bags: few of each kind, no filter
+  const bare = !needle && (ENC.cat === 'weapons' || ENC.cat === 'tools');
   if (bare) { ENC.type = ''; ENC.rar = ''; }
   const types = [];
-  pool.forEach((it) => { if (it.tk && !types.some((x) => x.v === it.tk)) types.push({ v: it.tk, t: it.type, id: it.id }); });
+  pool.forEach((it) => { if (it.tk && !types.some((x) => x.v === it.tk)) types.push({ v: it.tk, t: it.tf || it.type, id: it.id }); });
   // the slots in the character sheet's order
   const SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
     'GearNeck', 'GearFinger', 'GearTrinket'];
@@ -132,7 +132,8 @@ function renderEncyclo(box, n) {
   pool.forEach((it) => { if (it.rk && !rars.some((x) => x.v === it.rk)) rars.push({ v: it.rk, t: it.rar }); });
   const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
   rars.sort((a, b) => order.indexOf(a.v) - order.indexOf(b.v));
-  if (rars.length > 1 && !bare) {
+  // a consumable's rarity tells nothing: no filter
+  if (rars.length > 1 && !bare && !(ENC.cat === 'consumables' && !needle)) {
     list.appendChild(chips([{ v: '', t: tr('Toutes les raretés') }].concat(rars.map((x) => (
       { v: x.v, t: x.t, cls: 'r-' + x.v }))), ENC.rar, (v) => { ENC.rar = v; }));
   }
@@ -151,7 +152,8 @@ function renderEncyclo(box, n) {
     row.appendChild(pic);
     const t = el('span', 'enct');
     t.appendChild(el('b', 'nm', it.name));
-    t.appendChild(el('span', null, [it.type, it.lvl ? tr('niv. {n}', { n: it.lvl }) : ''].filter(Boolean).join(' · ')));
+    // an augment: its effect (the corrupted gifts share one name)
+    t.appendChild(el('span', null, it.fx || [it.type, it.lvl ? tr('niv. {n}', { n: it.lvl }) : ''].filter(Boolean).join(' · ')));
     row.appendChild(t);
     row.addEventListener('click', () => {
       grid.querySelectorAll('.encitem.sel').forEach((x) => x.classList.remove('sel'));
@@ -212,14 +214,15 @@ function encSheet(s) {
   v.appendChild(head);
 
   const body = el('div', 'encbody');
-  // a weapon: its model, to turn and zoom (the Collection's viewer); its
+  // its model (gear, mount, glider), to turn and zoom (the Collection's viewer); its
   // icon until the model is in
   if (s.m3d && m3dSupported()) {
     const stage = el('div', 'cvstage encstage is3d');
     const pic = el('div', 'cvpic own');
     if (s.img) { const im = el('img'); im.src = s.img; im.alt = ''; pic.appendChild(im); }
     stage.appendChild(pic);
-    stage.appendChild(m3dCanvas(s.id, (st) => { stage.dataset.st = st; }, { pitch: 0.18 }));
+    stage.appendChild(m3dCanvas(s.id, (st) => { stage.dataset.st = st; },
+      Object.assign({ pitch: 0.18 }, s.m3dView || {})));
     stage.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
     stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
     body.appendChild(stage);
@@ -231,6 +234,11 @@ function encSheet(s) {
     const row = el('div', 'enctags');
     tags.forEach((t) => row.appendChild(el('span', 'enctag', t)));
     body.appendChild(row);
+  }
+  if (s.fx) {
+    // an augment's effect on the piece it is set in
+    body.appendChild(el('div', 'sub2', tr('Effet')));
+    body.appendChild(el('p', 'desc encfx', s.fx));
   }
   if (s.desc) body.appendChild(el('p', 'desc it', s.desc));
   // the attributes and the ways to get it, at the rarity of the tab picked
@@ -377,7 +385,19 @@ function encWhereRow(r, meta, rar) {
     // an open world chest: the map's chest marker
     const mk = r.mapIcon && (window.__MAP__ || {})['icon_' + r.mapIcon];
     if (r.boss) line.appendChild(encFace(r.boss));
-    else if (mk) {
+    else if (r.mob) {
+      // a monster (or its family): the Codex's picture
+      const f = el('span', 'encface mob');
+      const src = (window.__BEST__ || {})[r.mob];
+      if (src) { const im = el('img'); im.src = src; im.alt = ''; f.appendChild(im); }
+      line.appendChild(f);
+    } else if (r.ach) {
+      // an achievement: its category's crest, on the Succès tab's shield
+      const ic = el('span', 'enccrest cat-' + r.ach);
+      const src = (window.__COLL__ || {})['achcat_' + r.ach];
+      if (src) { const im = el('img'); im.src = src; im.alt = ''; ic.appendChild(im); }
+      line.appendChild(ic);
+    } else if (mk) {
       const ic = el('span', 'encmk');
       const im = el('img'); im.src = mk; im.alt = ''; ic.appendChild(im);
       line.appendChild(ic);

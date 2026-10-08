@@ -226,7 +226,22 @@ def build(game_dir, codex, img_dir=None):
     if img_dir is not None:
         type_gfx = {tid: r.get("gfx") for tid, r in rows("unitType").items()}
         gfx = {uid: units[uid].get("gfx") for uid in every}
-        gfx.update({f"family_{f}": type_gfx.get(f) for f in families})
+        # a family's own picture; one the data gives several families (the
+        # skunks have the boars', the four golems the lava golem's) is
+        # none of theirs: their species' pictures stand in (views.py)
+        seen = {}
+        for f in families:
+            if type_gfx.get(f):
+                key = json.dumps(type_gfx[f], sort_keys=True)
+                seen[key] = seen.get(key, 0) + 1
+        for f in families:
+            g = type_gfx.get(f)
+            if g and seen[json.dumps(g, sort_keys=True)] == 1:
+                gfx[f"family_{f}"] = g
+            else:
+                stale = Path(img_dir) / f"family_{f}.webp"
+                if stale.exists():
+                    stale.unlink()
         _images(game_dir, img_dir, gfx)
         # the screens the instances name, plus those named after a boss no
         # instance claims

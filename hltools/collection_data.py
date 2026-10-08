@@ -12,6 +12,7 @@ rolls on its own. Nested tables multiply."""
 import io
 import json
 import math
+import re
 import struct
 from collections import defaultdict
 from pathlib import Path
@@ -221,7 +222,9 @@ def build(game_dir, img_dir=None):
                             (o.get("props") or {}).get("npc"), dict):
                         found = {"el": o.get("id"),
                                  "eln": (o.get("texts") or {}).get("name"),
-                                 "npc": o["props"]["npc"].get("unit")}
+                                 "npc": o["props"]["npc"].get("unit"),
+                                 # what it sells, when the prefab says
+                                 "shop": o["props"].get("shop")}
                     stack.extend(o.values())
                 elif isinstance(o, list):
                     stack.extend(o)
@@ -242,6 +245,16 @@ def build(game_dir, img_dir=None):
             if o.get("type") == "reference" and str(
                     o.get("source") or "").endswith(".prefab"):
                 ref = o["source"]
+                # a merchant whose wares are in its prefab alone (Shiro
+                # James's caches): placed here, it sells them here
+                p = prefab_npc(ref)
+                inst = o.get("props")
+                if p and isinstance(p.get("shop"), list) and isinstance(
+                        inst, dict) and not isinstance(
+                        (inst.get("props") or {}).get("shop"), list):
+                    o = dict(o, props=dict(inst, props=dict(
+                        inst.get("props") or {}, shop=p["shop"],
+                        npc={"unit": p.get("npc")})))
             fac = props.get("faction") or o.get("faction")
             oid = o.get("id")
             if o.get("$cdbtype") == "activity" and o.get("inherit") == \
@@ -425,6 +438,25 @@ def build(game_dir, img_dir=None):
             e["apt"] = [a.get("ref") for a in r["aptitudes"] if a.get("ref")]
         if used.get(iid):
             e["in"] = used[iid]
+        # what its description's ::placeholders:: read (HText.item): its
+        # affixes, its effects, its one skill, what it refers to
+        afx = [[(a.get("target") or {}).get("attribute"), a.get("val")]
+               for a in r.get("affixes") or ()
+               if (a.get("target") or {}).get("attribute")]
+        if afx:
+            e["afx"] = afx
+        props = r.get("props") or {}
+        if props.get("effects"):
+            e["fx"] = [{"res": [[x.get("res"), x.get("amount"), x.get("duration")]
+                                for x in ef.get("resource") or ()],
+                        "st": [[x.get("ref"), x.get("duration")]
+                               for x in ef.get("status") or ()]}
+                       for ef in props["effects"]]
+        sk = [x.get("skill") for x in r.get("skills") or () if x.get("skill")]
+        if sk:
+            e["sk"] = sk
+        if isinstance(props.get("ref"), dict) and props["ref"]:
+            e["ref"] = props["ref"]
         gi = (r.get("props") or {}).get("gainItem") or {}
         if gi.get("lootTable"):
             lv = gi.get("levelRange") or {}
@@ -435,6 +467,22 @@ def build(game_dir, img_dir=None):
                           "lvl": [lv.get("min"), lv.get("max")] if lv else None}
         encyclo[iid] = e
     out["encyclo"] = encyclo
+    # the game's durations in a text (HText.timerVerbosePrec): hours,
+    # minutes, seconds, French (res.pak lang) and English (data.cdb)
+    durs = {"en": {}, "fr": {}}
+    for s in cdb["sheets"]:
+        for ln in s.get("lines") or ():
+            if str(ln.get("id", "")).startswith("rich_duration_"):
+                durs["en"][ln["id"][14:]] = (ln.get("value") or {}).get("text")
+    try:
+        fr = pak_extract.read_entry(game_dir / "res.pak",
+                                    "lang/export_fr.xml").decode("utf-8")
+        for k, v in re.findall(r"<rich_duration_(\w+)>\s*<value\.text>(.*?)"
+                               r"</value\.text>", fr):
+            durs["fr"][k] = v
+    except Exception:
+        pass
+    out["durations"] = durs
     out["factions"] = {
         f: {"dungeons": sorted(a for a, k in fac_acts[f].items()
                                if k == "Dungeon"),

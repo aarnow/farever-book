@@ -15,9 +15,11 @@ from gamedata import (
     _spark_units, _unit_label, _zone_label, achievements_catalogue,
     bestiary_catalogue, codex_items_catalogue, collection_catalogue,
     dungeon_catalogue, dungeon_name, faction_label, item_icon, item_label,
-    item_rarity, item_type, item_type_label, luck_data, rarity_label,
+    gear_stats_data, item_rarity, item_type, item_type_label, luck_data,
+    rarity_label,
     rift_rewards_data, skill_tip, talent_data, world_map)
 from gearstats import (
+    ATB_PERCENT,
     EQUIP_SLOTS, HERO_SLOTS, SHEET_LEFT, SHEET_RIGHT, SLOT_ICON, _equip_by_slot,
     _gear_infusion, _hero_sheet, _infusion_sets, _scaled, gear_stats,
     infusion_bonus, slot_factor)
@@ -189,6 +191,33 @@ WHERE_TAGS = {"dungeon": "Donjon", "rift": "Faille", "unit": "Butin",
               "starter": "Départ", "cache": "Coffret", "gather": "Récolte",
               "salvage": "Démontage", "scrap": "Recyclage",
               "combine": "Combinaison"}
+
+
+def _bestiary_pic(key):
+    """Whether the Codex has a picture under that key (analysis_out/
+    bestiary_img/<key>.webp)."""
+    return bool(key) and (ANALYSIS / "bestiary_img" / f"{key}.webp").exists()
+
+
+def _family_pic(fid):
+    """A monster family's picture: its own, else one of its species' (the
+    Codex's), or ""."""
+    if _bestiary_pic(f"family_{fid}"):
+        return f"family_{fid}"
+    return next((u["id"] for u in bestiary_catalogue().get("placed") or ()
+                 if u.get("family") == fid and _bestiary_pic(u["id"])), "")
+
+
+def _ach_crest(aid):
+    """An achievement's top category (its crest: achcat_<id>), or ""."""
+    cat = achievements_catalogue()
+    a = next((x for x in cat.get("achievements") or () if x["id"] == aid), {})
+    cats = {c["id"]: c for c in cat.get("categories") or ()}
+    cid, seen = a.get("cat") or "", set()
+    while cid in cats and cats[cid].get("parent") and cid not in seen:
+        seen.add(cid)
+        cid = cats[cid]["parent"]
+    return cid
 
 
 def _cost_text(s):
@@ -482,9 +511,21 @@ def item_where(iid, rar=None, rows_only=False):
             continue
         # no drop rate here: where, not how often
         # merchants and crafts sell it as it is, any loot may be legendary
+        before = len(rows)
         add(k, _source_text(dict(s, chance=None), bosses).split("\n")[0],
             [base] if k in ("shop", "craft", "ach", "starter")
             else dropped(base))
+        if len(rows) > before:
+            # its picture: the monster (or its family) the Codex shows, the
+            # achievement's category crest
+            if k == "unit" and _bestiary_pic(s.get("id")):
+                rows[-1]["mob"] = s["id"]
+            elif k == "family" and _family_pic(s.get("id")):
+                rows[-1]["mob"] = _family_pic(s.get("id"))
+            elif k == "ach":
+                crest = _ach_crest((s.get("chain") or [s.get("id")])[0])
+                if crest:
+                    rows[-1]["ach"] = crest
     if rows_only:
         return rows, base
     at = [r for r in rows if rar in r["rars"]]
@@ -1634,10 +1675,14 @@ WEAPON_TYPES = ("Sword", "Mace", "Axe", "DualSwords", "DualMaces", "DualAxes",
                 "Scepter", "Thrown", "Shield", "Relic", "CaptureNet")
 ARMOR_TYPES = ("Head", "Shoulders", "Chest", "Hands", "Waist", "Legs", "Feet",
                "Back")
+JEWEL_TYPES = ("GearNeck", "GearFinger", "GearTrinket")
+# the items shown in 3D, beside the gear: how the viewer starts (the
+# Collection's: a glider seen from above, a mount in its idle)
+MODEL_VIEWS = {"Mount": {"anim": True}, "GearGlider": {"pitch": 0.6}}
 ENCYCLO_CATS = (
     ("weapons", "Armes", "arme", WEAPON_TYPES),
     ("armor", "Armures", "armure", ARMOR_TYPES),
-    ("jewels", "Bijoux", "bijou", ("GearNeck", "GearFinger", "GearTrinket")),
+    ("jewels", "Bijoux", "bijou", JEWEL_TYPES),
     ("mounts", "Montures", "monture", ("Mount",)),
     ("gliders", "Planeurs", "planeur", ("GearGlider",)),
     ("consumables", "Consommables", "consommable",
@@ -1645,23 +1690,25 @@ ENCYCLO_CATS = (
     ("augments", "Améliorations", "amélioration",
      ("AugmentBlacksmith", "AugmentJeweller", "AugmentOutfitter",
       "AugmentEnchantFeet", "AugmentEnchantHands", "AugmentEnchantWeapon",
-      "AugmentDemon", "AugmentDemonSigil", "InfusionPattern", "Mastery",
-      "SkillPointBook")),
+      "AugmentDemon", "AugmentDemonSigil")),
     ("recipes", "Recettes", "recette", ("Recipe",)),
     ("resources", "Ressources", "ressource",
-     ("CraftingComponent", "UpgradeComponent", "Ore", "Leather", "Cloth",
-      "Prospecting")),
-    ("containers", "Coffrets", "coffret",
-     ("LootableContainer", "Package", "CompletedPackage")),
+     ("CraftingComponent", "UpgradeComponent", "Ore", "Leather", "Cloth")),
+    ("containers", "Coffrets", "coffret", ("LootableContainer",)),
     ("tools", "Outils et sacs", "objet",
      ("GearPickaxe", "GearSickle", "ToolBlacksmith", "ToolAlchemist",
       "ToolOutfitter", "ToolJeweller", "ToolCook", "ToolEnchanter", "Bag")),
-    ("other", "Divers", "objet", ()),
 )
 
 
+FILTER_AS = {"Ore": "CraftingComponent", "Leather": "CraftingComponent",
+             "Cloth": "CraftingComponent"}
+
+
 def _encyclo_cat(t):
-    return next((k for k, _l, _o, ts in ENCYCLO_CATS if t in ts), "other")
+    """Its category, or None: an item no category lists is left out (a rune
+    template, the parcels, the currencies...)."""
+    return next((k for k, _l, _o, ts in ENCYCLO_CATS if t in ts), None)
 
 
 def encyclopedia_view():
@@ -1672,14 +1719,24 @@ def encyclopedia_view():
     for iid, e in enc.items():
         rar = e.get("r") or ""
         t = e.get("t") or ""
+        if _encyclo_cat(t) is None:
+            continue
         items.append({"id": iid, "c": _encyclo_cat(t),
                       "name": item_label(iid),
                       "type": item_type_label(t) if t else "",
-                      "tk": t, "rk": rar.lower(),
+                      # its filter: ores, leathers and cloths are crafting
+                      # components (their own kind still said)
+                      "tk": FILTER_AS.get(t, t), "tf": item_type_label(
+                          FILTER_AS[t]) if t in FILTER_AS else "",
+                      "rk": rar.lower(),
+                      # an augment's effect: what tells the corrupted gifts
+                      # (one name for all) apart
+                      "fx": _augment_view(iid)["fx"]
+                      if t.startswith("Augment") else "",
                       "rar": rarity_label(rar) if rar else "",
                       # a weapon or armour drops at many levels: none shown
                       "lvl": None if t in WEAPON_TYPES + ARMOR_TYPES
-                      else e.get("l")})
+                      + JEWEL_TYPES else e.get("l")})
     order = {k: i for i, (k, _l, _o, _t) in enumerate(ENCYCLO_CATS)}
     items.sort(key=lambda it: (order[it["c"]], it["type"],
                                RARITY_ORDER.get(it["rk"].capitalize(), 9),
@@ -1688,6 +1745,68 @@ def encyclopedia_view():
              "n": sum(1 for it in items if it["c"] == k)}
             for k, label, one, _t in ENCYCLO_CATS]
     return {"cats": [c for c in cats if c["n"]], "items": items}
+
+
+def _duration_text(sec):
+    """A duration as the game writes it (HText.timerVerbosePrec: hours,
+    minutes, seconds, with the language's own words)."""
+    import i18n
+    d = (collection_catalogue().get("durations") or {})
+    t = d.get(i18n.lang()) or d.get("en") or {}
+    sec = float(sec or 0)
+    out = ""
+    h, m, s = int(sec // 3600), int(sec / 60 % 60), sec % 60
+    for n, k in ((h, "hours"), (m, "minutes")):
+        if n > 0:
+            out += (t.get(k) or "::duration::").replace("::duration::", str(n))
+    if s > 0:
+        v = f"{s:.2f}".rstrip("0").rstrip(".").replace(".", dec_sep())
+        out += (t.get("seconds") or "::duration::").replace("::duration::", v)
+    return out
+
+
+def _item_desc(iid, e):
+    """An item's description with its ::placeholders:: filled as the game
+    fills them (HText.item): its affixes' attributes and values, its
+    effects' resource, amount and duration, its status's duration, its one
+    skill's name; one only a copy carries (a rune) left as "…"."""
+    import i18n
+    text = _fr_desc("item").get(iid) or ""
+    atbs = (gear_stats_data().get("attributes") or {})
+    afx = e.get("afx") or []
+    fx = e.get("fx") or []
+    sk = e.get("sk") or []
+
+    def num(v):
+        v = float(v or 0)
+        return (f"{v:.2f}".rstrip("0").rstrip(".").replace(".", dec_sep())
+                if v != int(v) else str(int(v)))
+
+    def one(m):
+        key, i = m.group(1), int(m.group(2) or 0)
+        res = (fx[i]["res"][0] if i < len(fx) and fx[i]["res"] else None)
+        st = (fx[i]["st"][0] if i < len(fx) and fx[i]["st"] else None)
+        if key == "afx_atb" and i < len(afx):
+            return f"[{afx[i][0]}]"
+        if key == "afx_val" and i < len(afx):
+            a, v = afx[i]
+            if (atbs.get(a) or {}).get("flags", 0) & ATB_PERCENT:
+                return num(v) + pct_sp()
+            return num(v)
+        if key == "effect_atb" and res:
+            return f"[{res[0]}]"
+        if key == "effect_val" and res:
+            return num(res[1])
+        if key == "effect_dur" and res and res[2]:
+            return _duration_text(res[2])
+        if key == "status_dur" and st and st[1]:
+            return _duration_text(st[1])
+        if key == "name" and len(sk) == 1:
+            return _skill_label(sk[0])
+        if key == "ref_skill" and (e.get("ref") or {}).get("skill"):
+            return _skill_label(e["ref"]["skill"])
+        return "…"
+    return _fr_ref(re.sub(r"::([a-z_]+?)(\d*)::", one, text))
 
 
 def encyclopedia_item(iid):
@@ -1701,14 +1820,18 @@ def encyclopedia_item(iid):
     rar, t = e.get("r") or "", e.get("t") or ""
     # a weapon or a piece of armour drops at many levels: none shown, its
     # attributes at the level picked (a slider)
-    gear = t in WEAPON_TYPES + ARMOR_TYPES
+    gear = t in WEAPON_TYPES + ARMOR_TYPES + JEWEL_TYPES
     lvl = None if gear else (e.get("l") or None)
     out = {"id": iid, "name": item_label(iid), "img": item_icon(iid),
            # its model, turned in 3D (the Collection's viewer)
-           "m3d": gear,
+           "m3d": gear or t in MODEL_VIEWS
+           or _encyclo_cat(t) in ("augments", "consumables", "resources",
+                                  "containers", "tools"),
+           "fx": _augment_view(iid)["fx"] if t.startswith("Augment") else "",
+           "m3dView": MODEL_VIEWS.get(t) or {},
            "type": item_type_label(t) if t else "", "rk": rar.lower(),
            "rar": rarity_label(rar) if rar else "", "lvl": lvl,
-           "desc": _fr_ref(_fr_desc("item").get(iid) or ""),
+           "desc": _item_desc(iid, e),
            # a faction the game names (not "Starter", an internal tag)
            "fac": (_fr_names("faction").get(e["f"]) or "") if e.get("f")
            else "",
@@ -1722,7 +1845,7 @@ def encyclopedia_item(iid):
                                             "parts", "pins", "pinCls", "rars",
                                             "npc", "who", "place", "cost",
                                             "mapIcon", "dungeon", "where",
-                                            "diffs", "costs")
+                                            "diffs", "costs", "mob", "ach")
                      if r.get(k)} for r in rows]
     rars = sorted({x for r in rows for x in r.get("rars") or () if x},
                   key=lambda x: RARITY_ORDER.get(x, 9))
@@ -1737,7 +1860,7 @@ def encyclopedia_item(iid):
         out["lvl0"] = min(int(e.get("l") or at), at)
     pieces = {}
     for x in rars or [rar]:
-        g = piece_view([iid, x or None, at, 0])
+        g = piece_view([iid, x or None, at, 0]) if gear else {}
         if not g.get("stats"):
             continue
         g["note"] = tr("Attributs d'une pièce de niveau {n}", n=at)
