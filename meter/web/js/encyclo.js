@@ -283,8 +283,7 @@ function encSheet(s) {
     } else {
       part.appendChild(el('p', 'none', (s.where || []).length
         ? tr('Aucune source connue à cette rareté.')
-        : tr("Aucune source dans les données du jeu : récompense "
-          + "spéciale (événement, précommande…), boutique, ou pas encore disponible.")));
+        : tr('Source inconnue. Peut-être indisponible pour le moment.')));
     }
   };
   draw();

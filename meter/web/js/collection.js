@@ -267,8 +267,7 @@ function buildCollView(it, cat) {
     it.src.forEach((s) => ul.appendChild(el('li', null, s)));
     d.appendChild(ul);
   } else {
-    d.appendChild(el('p', 'none', tr("Aucune source dans les données du jeu : récompense "
-      + "spéciale (événement, précommande…), boutique, ou pas encore disponible.")));
+    d.appendChild(el('p', 'none', tr('Source inconnue. Peut-être indisponible pour le moment.')));
   }
   v.appendChild(d);
   return v;
