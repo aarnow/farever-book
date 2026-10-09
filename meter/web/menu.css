@@ -3471,3 +3471,25 @@ html.lt-760 .enc .collmain { grid-template-columns: minmax(0, 1fr); }
 .enccrest.cat-Collection { --cat: #C55A9C; }
 .encbody .desc.encfx { margin-top: 0; color: #fff; font-weight: 600; }
 .encgrid .encmore { grid-column: 1 / -1; height: 1px; }
+
+/* the 2D / 3D switch, at the bottom left of a preview (core.js view3dToggle) */
+.v3dtog { position: absolute; left: 10px; bottom: 10px; z-index: 3; display: flex; padding: 2px; gap: 2px;
+          border-radius: 8px; border: 1px solid var(--line); background: rgba(20, 18, 40, .7); }
+.v3dtog button { padding: 3px 9px; border: 0; border-radius: 6px; background: none; color: var(--dim);
+                 font: 700 11px var(--font-head); letter-spacing: .04em; cursor: pointer; }
+.v3dtog button:hover { color: #fff; }
+.v3dtog button.on { background: var(--accent); color: #1B1A22; }
+.shero .v3dtog { top: auto; }
+.cvstage:not(.is3d) .cvpic img { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+.encview .encchip, .enct .chip { align-self: flex-start; margin-top: 4px; }
+.enct .chip { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; color: var(--dim);
+              border: 1px solid var(--line); background: rgba(0, 0, 0, .25); }
+.enct .chip.own { color: var(--heal); border-color: #2F6B45; }
+/* in 2D: the picture, large */
+.encview .encstage:not(.is3d) .cvpic { inset: 18px 15%; }
+/* at its own size at most: a picture blown up past it blurs */
+.encview .encstage:not(.is3d) .cvpic img { width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+/* in 2D: kept inside the frame, centred (a flex box: the percentages hold) */
+.encview .encstage:not(.is3d) .cvpic { display: flex; align-items: center; justify-content: center;
+                                       inset: 16px 12%; overflow: hidden; }
+.encview .encstage:not(.is3d) .cvpic img { flex: none; min-width: 0; min-height: 0; }

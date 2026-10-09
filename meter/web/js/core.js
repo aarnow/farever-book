@@ -595,6 +595,8 @@ window.applyState = function (json) {
   STATE = s;
 
   if (s.zoom !== prev.zoom) setZoom(s.zoom);
+  // the 2D / 3D choice changed elsewhere: the previews redrawn
+  const view3dChanged = prev.view3d !== undefined && s.view3d !== prev.view3d;
   if (s.version !== prev.version) $('#version').textContent = 'v' + s.version;
   if (JSON.stringify([s.link, s.shard]) !== JSON.stringify([prev.link, prev.shard])) {
     renderLink(s.link || {}, s.shard);
@@ -630,6 +632,8 @@ window.applyState = function (json) {
     if (s.tab === prev.tab && view !== PAGE_VIEW) $('#page').scrollTop = 0;
     PAGE_VIEW = view;
     renderPage(s.page || []);
+  } else if (view3dChanged) {
+    redrawPage();
   }
   if (changed) pageEnter();
   renderEvents();
@@ -641,6 +645,39 @@ window.applyState = function (json) {
   if (s.updateAvail !== prev.updateAvail) renderUpdateBar(s.updateAvail);
   if (s.support !== prev.support) renderSupport(s.support);
 };
+
+/* Previews in 3D or as pictures (Réglages: one choice for the whole app,
+   a model costing far more than a picture). */
+function view3d() {
+  return (typeof STATE === 'undefined' || STATE.view3d !== false) && m3dSupported();
+}
+
+/* The 2D / 3D switch, at the bottom left of a preview: the page redrawn at
+   once, the choice kept by the meter. */
+function view3dToggle() {
+  const box = el('div', 'v3dtog');
+  [['2D', false], ['3D', true]].forEach(([t, on]) => {
+    const b = el('button', view3d() === on ? 'on' : '', t);
+    b.type = 'button';
+    b.title = on ? tr('Modèle 3D') : tr('Image (plus léger)');
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (view3d() === on) return;
+      STATE.view3d = on;
+      notify('set_view3d', { on: on });
+      redrawPage();
+    });
+    box.appendChild(b);
+  });
+  return box;
+}
+
+/* Every node of the page built again (a display choice changed). */
+function redrawPage() {
+  NODES.forEach((v) => v.el.remove());
+  NODES = new Map();
+  renderPage(STATE.page || []);
+}
 
 /* Entry animation, on a tab change only: live redraws must not animate. */
 let PAGE_ENTER = 0;

@@ -467,6 +467,49 @@ def build(game_dir, img_dir=None):
                           "lvl": [lv.get("min"), lv.get("max")] if lv else None}
         encyclo[iid] = e
     out["encyclo"] = encyclo
+
+    # -- the recipes a job learns from an item (craft.unlockSource), for the
+    # Collection: what each makes, its job and level, its ingredients, and
+    # how to get it: a merchant, or the world's random recipe
+    # (WorldRecipeWithJob: ent.Hero.generateWorldRecipeItem picks, among
+    # the WorldLoot recipes of the loot's level window, one of the hero's
+    # jobs, not learnt yet, within its job level)
+    world_flag = world_loot_flag
+    recipes = []
+    for r in sheets["craft"].get("lines") or ():
+        rid = r.get("unlockSource")
+        if not rid or rid not in items:
+            continue
+        e = {"id": rid, "item": r.get("item"), "job": r.get("job"),
+             "lvl": r.get("level") or 1, "n": r.get("count") or 1,
+             "input": [[i.get("item"), i.get("count") or 1]
+                       for i in r.get("input") or ()],
+             "src": [s for s in src.get(rid, []) if s.get("k") != "craft"]}
+        if (items[rid].get("flags") or 0) & world_flag:
+            e["world"] = True
+        recipes.append(e)
+    # where the world's random recipe drops: the tables that list it, who
+    # rolls them (directly, or through a table that nests one)
+    world = []
+    for tid, t in tables.items():
+        for ln in t.get("loot") or ():
+            if ln.get("item") != "WorldRecipeWithJob":
+                continue
+            users = list(table_users.get(tid, []))
+            for pid, pt in tables.items():
+                if any(x.get("lootTable") == tid for x in pt.get("loot") or ()):
+                    users += table_users.get(pid, [])
+            fams = sorted({u["id"] for u in users if u.get("k") == "family"})
+            chests = sum(1 for u in users if u.get("k") == "chest")
+            # the open world's ones, where they stand (the map's pins)
+            at = sorted({(u["at"][0], u["at"][1], u.get("zone") or "")
+                         for u in users if u.get("k") == "chest"
+                         and u.get("at") and u.get("region")
+                         != "Bel_Etir_Region"})
+            world.append({"table": tid, "chance": ln.get("proba"),
+                          "minLvl": ln.get("minLvl"), "families": fams,
+                          "chests": chests, "at": [list(a) for a in at]})
+    out["recipes"] = {"list": recipes, "world": world}
     # the game's durations in a text (HText.timerVerbosePrec): hours,
     # minutes, seconds, French (res.pak lang) and English (data.cdb)
     durs = {"en": {}, "fr": {}}
@@ -494,7 +537,10 @@ def build(game_dir, img_dir=None):
     if img_dir is not None:
         _images(game_dir, img_dir,
                 {i: items[i].get("gfx") for ids in wanted.values()
-                 for i in ids} | {u: units[u].get("gfx") for u in critters})
+                 for i in ids} | {u: units[u].get("gfx") for u in critters}
+                # a recipe shown by what it makes
+                | {r["id"]: (items.get(r["item"]) or {}).get("gfx")
+                   for r in recipes})
     return out
 
 

@@ -886,6 +886,35 @@ function readCollList(coll, off) {
     return out;
 }
 
+// The hero's jobs (HeroSpecialization.jobs: a replicated array of job
+// proxies), each with its level and the crafts its recipes taught
+// (learnedCrafts: the made items' ids). {job: {lvl, learnt: [...]}}, or null.
+function readJobs() {
+    if (!OFF.JobProxy || OFF.JobProxy.learnedCrafts == null || !OFF.HeroDetail
+        || !OFF.Specialization || OFF.Specialization.jobs == null) return null;
+    const sp = localHero.add(OFF.HeroDetail.specialization).readPointer();
+    if (!sp || sp.isNull()) return null;
+    const proxy = sp.add(OFF.Specialization.jobs).readPointer();
+    if (!proxy || proxy.isNull()) return {};
+    const dyn = proxy.add(OFF.ArrayProxyData.array).readPointer();
+    if (!dyn || dyn.isNull()) return {};
+    const arr = dyn.add(OFF.ArrayDyn.array).readPointer();
+    if (!arr || arr.isNull()) return {};
+    const n = arr.add(OFF.ArrayObj.length).readS32();
+    if (n < 0 || n > 64) return null;
+    const data = arr.add(OFF.ArrayObj.array).readPointer();
+    const out = {};
+    for (let i = 0; i < n; i++) {
+        const j = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+        if (!j || j.isNull()) continue;
+        const id = hlStr(j.add(OFF.JobProxy.job).readPointer());
+        if (!id) continue;
+        out[id] = { lvl: j.add(OFF.JobProxy.level).readS32(),
+                    learnt: readCollList(j, OFF.JobProxy.learnedCrafts) || [] };
+    }
+    return out;
+}
+
 function checkCollection() {
     try {
         if (!localHero || localHero.isNull() || !OFF.Collection
@@ -904,6 +933,8 @@ function checkCollection() {
                       pets: readCollList(coll, C.pets),
                       // the armour appearances (null on older offsets)
                       gears: readCollList(coll, C.gears) };
+        // the hero's jobs and the recipes they learnt (per character)
+        try { msg.jobs = readJobs(); } catch (e) { msg.jobs = null; }
         if (msg.mounts === null || msg.gliders === null || msg.pets === null)
             return;
         const sig = JSON.stringify(msg);

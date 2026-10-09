@@ -1,6 +1,6 @@
 /* The Collection page. */
 
-const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '' };
+const COLL = { cat: 'mounts', filter: 'all', q: '', open: null, slot: '', cls: '', icat: '', job: '' };
 let COLL_NODE = null;
 // the categories with 3D models
 const COLL_3D = new Set(['mounts', 'gliders', 'pets', 'gears']);
@@ -50,7 +50,7 @@ function rerenderCollection() {
 
 function renderCollection(box, n) {
   // the list keeps its scroll across rebuilds, not across a change of list
-  const listKey = [COLL.cat, COLL.filter, COLL.q, COLL.slot, COLL.cls, COLL.icat].join('|');
+  const listKey = [COLL.cat, COLL.filter, COLL.q, COLL.slot, COLL.cls, COLL.icat, COLL.job].join('|');
   if (COLL.listKey !== listKey) { COLL.listKey = listKey; COLL.top = 0; }
   const keepQ = document.activeElement && document.activeElement.classList.contains('collq');
   const caret = keepQ ? document.activeElement.selectionStart : null;
@@ -145,6 +145,19 @@ function renderCollection(box, n) {
     im.alt = '';
     return im;
   };
+  // the recipes: by job, each led by its tool's icon
+  const recipes = COLL.cat === 'recipes';
+  if (recipes && (n.jobs || []).length) {
+    const jobIcon = (src) => {
+      if (!src) return null;
+      const im = el('img', 'cfic');
+      im.src = src;
+      im.alt = '';
+      return im;
+    };
+    list.appendChild(chips([{ v: '', t: tr('Tous les métiers') }].concat(n.jobs.map((j) => (
+      { v: j.v, t: j.t, icon: jobIcon(j.img) }))), COLL.job, (v) => { COLL.job = v; }));
+  }
   if (gears && (n.slots || []).length) {
     list.appendChild(chips([{ v: '', t: tr('Tous') }].concat(n.slots.map((sl) => (
       { v: sl.v, t: sl.t, icon: art('slot_' + sl.v) }))), COLL.slot, (v) => { COLL.slot = v; }));
@@ -160,6 +173,7 @@ function renderCollection(box, n) {
     && (COLL.filter === 'all' || (COLL.filter === 'own') === it.own)
     && (!gears || !COLL.slot || it.sl === COLL.slot)
     && (!gears || !COLL.cls || !(it.cls || []).length || it.cls.includes(COLL.cls))
+    && (!recipes || !COLL.job || it.job === COLL.job)
     && (!needle || it.name.toLowerCase().includes(needle)));
   const main = el('div', 'collmain');
   main.appendChild(side);
@@ -196,7 +210,7 @@ function renderCollection(box, n) {
       grid.querySelectorAll('.citem.sel').forEach((x) => x.classList.remove('sel'));
       card.classList.add('sel');
       const old = main.querySelector('.collview');
-      const v = buildCollView(it, cat);
+      const v = collPanel(it, cat, n);
       if (old) old.replaceWith(v); else main.appendChild(v);
       if (document.documentElement.classList.contains('lt-760')) {
         v.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -207,7 +221,7 @@ function renderCollection(box, n) {
   if (!shown.length) grid.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   list.appendChild(grid);
   main.appendChild(list);
-  main.appendChild(sel ? buildCollView(sel, cat) : el('div', 'collview empty'));
+  main.appendChild(sel ? collPanel(sel, cat, n) : el('div', 'collview empty'));
   box.appendChild(main);
   grid.addEventListener('scroll', () => { COLL.top = grid.scrollTop; }, { passive: true });
   // once in the page (a fresh node is built before it is placed)
@@ -224,14 +238,26 @@ function renderCollection(box, n) {
   }
 }
 
-/* The panel beside the list: 3D model (else picture) and description. */
+/* The panel beside the list: the Encyclopedia's sheet, once the meter has
+   sent it (asked for here); the short panel until then. */
+function collPanel(it, cat, n) {
+  if (n.sel && n.sel.id === it.id) return encSheet(n.sel);
+  const want = it.c + ':' + it.id;
+  if (COLL.asked !== want) {
+    COLL.asked = want;
+    notify('coll_open', { cat: it.c, id: it.id });
+  }
+  return buildCollView(it, cat);
+}
+
+/* The short panel: 3D model (else picture) and description. */
 function buildCollView(it, cat) {
   const v = el('div', 'collview' + (it.rk ? ' r-' + it.rk : ''));
   const stage = el('div', 'cvstage');
   const pic = el('div', 'cvpic' + (it.own ? ' own' : ''));
   pic.appendChild(collImg(it.id));
   stage.appendChild(pic);
-  if (COLL_3D.has(it.c) && m3dSupported()) {
+  if (COLL_3D.has(it.c) && view3d()) {
     const wait = el('div', 'cvwait', tr('Chargement du modèle 3D…'));
     const hint = el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer'));
     stage.classList.add('is3d');
@@ -242,6 +268,7 @@ function buildCollView(it, cat) {
     stage.appendChild(wait);
     stage.appendChild(hint);
   }
+  if (COLL_3D.has(it.c) && m3dSupported()) stage.appendChild(view3dToggle());
   const head = el('div', 'cvhead');
   head.appendChild(el('h3', 'nm', it.name));
   head.appendChild(el('span', 'sub', [cat.t && cat.t.replace(/s$/, ''), it.slot, it.rar].filter(Boolean).join(' · ')));

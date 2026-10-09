@@ -15,7 +15,8 @@ from gamedata import (
     _spark_units, _unit_label, _zone_label, achievements_catalogue,
     bestiary_catalogue, codex_items_catalogue, collection_catalogue,
     dungeon_catalogue, dungeon_name, faction_label, item_icon, item_label,
-    gear_stats_data, item_rarity, item_type, item_type_label, luck_data,
+    gear_stats_data, item_art, item_rarity, item_type, item_type_label,
+    luck_data,
     rarity_label,
     rift_rewards_data, skill_tip, talent_data, world_map)
 from gearstats import (
@@ -367,6 +368,12 @@ def item_where(iid, rar=None, rows_only=False):
             if e.get("id") == iid:
                 srcs += [s for s in e.get("src") or () if s not in srcs]
                 break
+        # a companion (a unit), a recipe (unnamed, out of the Encyclopedia)
+        for e in (cat.get("pets") or []) + ((cat.get("recipes") or {})
+                                             .get("list") or []):
+            if e.get("id") == iid:
+                srcs += [s for s in e.get("src") or () if s not in srcs]
+                break
     def shop_pins(lst):
         """Where the merchants of a source list stand on the world map."""
         return [{"x": s["at"][0], "y": s["at"][1],
@@ -561,6 +568,30 @@ def item_rarities(iid):
     return _RARITIES[key]
 
 
+def _world_recipe_lines(world):
+    """Where the world's random recipe drops, and how the game picks it
+    (ent.Hero.generateWorldRecipeItem), one line each."""
+    out = []
+    for w in world:
+        p = w.get("chance")
+        pct = f" — {_pct(p)}" if p else ""
+        lvl = (" " + tr("(dès le niveau {n})", n=w["minLvl"])
+               if w.get("minLvl") else "")
+        if w.get("chests"):
+            out.append(tr("Recette aléatoire du monde : caisses du monde")
+                       + pct + lvl)
+        if w.get("families"):
+            out.append(tr("Recette aléatoire du monde : butin des ennemis "
+                          "{list}", list=", ".join(
+                              _family_label(f) for f in w["families"]))
+                       + pct + lvl)
+    if out:
+        out.append(tr("La recette tirée est d'un de tes métiers, pas encore "
+                      "apprise, de ton niveau de métier ou moins, selon le "
+                      "niveau du butin."))
+    return out
+
+
 def collection_view(owned, item_codex=None):
     """The Collection page's data: categories with counts, every item with
     its name, rarity, whether it is owned, description and sources — and
@@ -622,7 +653,44 @@ def collection_view(owned, item_codex=None):
                 "src": list(dict.fromkeys(
                     line for s in srcs
                     for line in _source_text(s, bosses).split("\n")))})
+    # the recipes a job learns from an item: learnt when the hero's job
+    # knows the craft it teaches
+    rec = cat.get("recipes") or {}
+    jobs = owned.get("jobs") if isinstance(owned.get("jobs"), dict) else None
+    learnt = {i for j in (jobs or {}).values() for i in j.get("learnt") or ()}
+    job_names = _fr_names("job")
+    world_lines = _world_recipe_lines(rec.get("world") or ())
+    rows = rec.get("list") or []
+    if rows:
+        cats.append({"v": "recipes", "t": tr("Recettes"), "one": tr("recette"),
+                     "n": len(rows),
+                     "got": sum(1 for r in rows if r["item"] in learnt)})
+    for r in rows:
+        rar = item_rarity(r["id"]) or ""
+        job = job_names.get(r.get("job")) or _pretty_id(r.get("job") or "")
+        made = f" (×{r['n']})" if (r.get("n") or 1) > 1 else ""
+        srcs = [line for s in r.get("src") or ()
+                for line in _source_text(s, bosses).split("\n")]
+        if r.get("world"):
+            srcs += world_lines
+        items.append({
+            "id": r["id"], "c": "recipes", "own": r["item"] in learnt,
+            "name": item_label(r["item"]), "job": r.get("job"),
+            "rk": rar.lower(), "rar": rarity_label(rar) if rar else "",
+            "slot": tr("{job} niv. {lvl}", job=job, lvl=r.get("lvl") or 1),
+            "desc": tr("Apprend à fabriquer {item}{made}. Ingrédients : "
+                       "{parts}.", item=item_label(r["item"]), made=made,
+                       parts=", ".join(f"{n} × {item_label(i)}"
+                                       for i, n in r.get("input") or ())),
+            "src": list(dict.fromkeys(srcs))})
     return {"cats": cats, "items": items,
+            # the jobs, with their tools' icons, for the recipes' filter
+            "jobs": [{"v": j, "t": job_names.get(j) or _pretty_id(j),
+                      "img": item_icon("job_" + j),
+                      "lvl": ((jobs or {}).get(j) or {}).get("lvl")}
+                     for j in sorted({r.get("job") for r in rows
+                                      if r.get("job")},
+                                     key=lambda j: job_names.get(j) or j)],
             "slots": [{"v": v, "t": tr(t)} for v, t in GEAR_SLOTS],
             "classes": [{"v": c, "t": tr(CLASS_LABELS[c])}
                         for c in GEAR_CLASSES],
@@ -1809,6 +1877,101 @@ def _item_desc(iid, e):
     return _fr_ref(re.sub(r"::([a-z_]+?)(\d*)::", one, text))
 
 
+def _world_recipe_rows(world, meta_out):
+    """The world's random recipe as sheet rows: the open world's crates (a
+    pin on each), each family whose loot gives it (its Codex picture), and
+    how the game picks the recipe."""
+    rows = []
+    for w in world:
+        p = w.get("chance")
+        pct = f" — {_pct(p)}" if p else ""
+        lvl = (" " + tr("(dès le niveau {n})", n=w["minLvl"])
+               if w.get("minLvl") else "")
+        if w.get("at"):
+            rows.append({"k": tr("Coffre"), "t": tr("Caisses du monde ouvert")
+                         + pct + lvl, "mapIcon": "chest", "pinCls": "chest",
+                         "pins": [{"x": x, "y": y,
+                                   "t": _zone_label(z) if z else ""}
+                                  for x, y, z in w["at"]]})
+            meta_out["meta"] = world_map().get("meta")
+        for f in w.get("families") or ():
+            rows.append({"k": tr("Butin"),
+                         "t": tr("Butin des ennemis : {name}",
+                                 name=_family_label(f)) + pct + lvl,
+                         "mob": _family_pic(f)})
+    if rows:
+        rows.append({"k": tr("Tirage"),
+                     "t": tr("La recette tirée est d'un de tes métiers, pas "
+                             "encore apprise, de ton niveau de métier ou "
+                             "moins, selon le niveau du butin.")})
+    return rows
+
+
+def collection_sheet(key, iid, owned):
+    """A Collection item's sheet, the Encyclopedia's: a mount, glider or
+    armour appearance is its item's sheet; a companion and a recipe their
+    own. `own`: whether the account (the hero, for a recipe) has it."""
+    cat = collection_catalogue()
+    if key == "recipes":
+        r = next((x for x in (cat.get("recipes") or {}).get("list") or ()
+                  if x["id"] == iid), None)
+        if r is None:
+            return None
+        jobs = owned.get("jobs") if isinstance(owned.get("jobs"), dict) else {}
+        learnt = {i for j in jobs.values() for i in j.get("learnt") or ()}
+        rar = item_rarity(iid) or ""
+        job = _fr_names("job").get(r.get("job")) or _pretty_id(r.get("job") or "")
+        rows, _b = item_where(iid, rows_only=True)
+        out = {"id": iid, "model": r["item"], "m3d": True, "coll": iid,
+               "art": item_art(r["item"]),
+               "name": item_label(r["item"]), "img": item_icon(r["item"]),
+               "type": tr("Recette · {job} niv. {lvl}", job=job,
+                          lvl=r.get("lvl") or 1),
+               "rk": rar.lower(), "rar": rarity_label(rar) if rar else "",
+               "own": r["item"] in learnt, "owned": True,
+               "desc": tr("Apprend à fabriquer {item}.",
+                          item=item_label(r["item"])),
+               # what it makes from what
+               "makes": {"id": r["item"], "name": item_label(r["item"]),
+                         "img": item_icon(r["item"]), "n": r.get("n") or 1,
+                         "parts": [{"id": i, "name": item_label(i),
+                                    "img": item_icon(i), "n": n}
+                                   for i, n in r.get("input") or ()]}}
+        out["where"] = [{k: x.get(k) for k in (
+            "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc", "who",
+            "place", "cost", "costs", "mob", "ach", "mapIcon") if x.get(k)}
+            for x in rows]
+        if r.get("world"):
+            out["where"] += _world_recipe_rows(
+                (cat.get("recipes") or {}).get("world") or (), out)
+        if any(x.get("pins") for x in out["where"]):
+            out["meta"] = world_map().get("meta")
+        return out
+    if key == "pets":
+        e = next((x for x in cat.get("pets") or () if x["id"] == iid), None)
+        if e is None:
+            return None
+        rows, _b = item_where(iid, rows_only=True)
+        out = {"id": iid, "name": _unit_label(iid), "coll": iid,
+               "art": item_art(iid, unit=True),
+               "type": tr("Compagnon"), "rk": "", "m3d": True,
+               "m3dView": {"anim": True},
+               "own": iid in set(owned.get("pets") or ()), "owned": True,
+               "where": [{k: x.get(k) for k in (
+                   "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc",
+                   "who", "place", "cost", "costs", "mob", "ach", "mapIcon")
+                   if x.get(k)} for x in rows]}
+        if any(x.get("pins") for x in out["where"]):
+            out["meta"] = world_map().get("meta")
+        return out
+    out = encyclopedia_item(iid)
+    if out is not None:
+        out["own"] = iid in set(owned.get(key) or ())
+        out["owned"] = True
+        out["coll"] = iid
+    return out
+
+
 def encyclopedia_item(iid):
     """One item's sheet: what it is, its description, its attributes (a
     piece of gear, at its level), how to get it, what it is used for and
@@ -1823,6 +1986,8 @@ def encyclopedia_item(iid):
     gear = t in WEAPON_TYPES + ARMOR_TYPES + JEWEL_TYPES
     lvl = None if gear else (e.get("l") or None)
     out = {"id": iid, "name": item_label(iid), "img": item_icon(iid),
+           # its picture at the game's own size, for the 2D preview
+           "art": item_art(iid),
            # its model, turned in 3D (the Collection's viewer)
            "m3d": gear or t in MODEL_VIEWS
            or _encyclo_cat(t) in ("augments", "consumables", "resources",

@@ -241,30 +241,52 @@ function encLink(x, extra) {
 
 /* The picked item's sheet: what it is, its description, its attributes,
    how to get it, what it is used for, what it holds. */
+// a sheet's picture: its icon, else the Collection's (a companion); `big`:
+// the Collection's first, larger than the icon
+function encSheetImg(s, big) {
+  const coll = s.coll && (window.__COLL__ || {})[s.coll];
+  // large: the game's own size first (never blown up past it)
+  const src = big ? (s.art || coll || s.img) : (s.img || coll);
+  if (!src) return null;
+  const im = el('img');
+  im.src = src;
+  im.alt = '';
+  return im;
+}
+
 function encSheet(s) {
   const v = el('div', 'collview encview' + (s.rk ? ' r-' + s.rk : ''));
   const head = el('div', 'enchead');
   const pic = el('span', 'encpic big');
-  if (s.img) { const im = el('img'); im.src = s.img; im.alt = ''; pic.appendChild(im); }
+  const hi = encSheetImg(s);
+  if (hi) pic.appendChild(hi);
   head.appendChild(pic);
   const ht = el('div', 'enct');
   ht.appendChild(el('h3', 'nm', s.name));
   ht.appendChild(el('span', null, [s.type, s.tabs ? '' : s.rar, s.lvl ? tr('niv. {n}', { n: s.lvl }) : ''].filter(Boolean).join(' · ')));
+  // in the Collection: got or not
+  if (s.owned) ht.appendChild(el('span', 'chip' + (s.own ? ' own' : ''), s.own ? tr('✓ Obtenu') : tr('Manquant')));
   head.appendChild(ht);
   v.appendChild(head);
 
   const body = el('div', 'encbody');
   // its model (gear, mount, glider), to turn and zoom (the Collection's viewer); its
   // icon until the model is in
+  // in 2D (Réglages, or the switch): its picture, large
   if (s.m3d && m3dSupported()) {
-    const stage = el('div', 'cvstage encstage is3d');
+    const on = view3d();
+    const stage = el('div', 'cvstage encstage' + (on ? ' is3d' : ''));
     const pic = el('div', 'cvpic own');
-    if (s.img) { const im = el('img'); im.src = s.img; im.alt = ''; pic.appendChild(im); }
+    const si = encSheetImg(s, true);
+    if (si) pic.appendChild(si);
     stage.appendChild(pic);
-    stage.appendChild(m3dCanvas(s.id, (st) => { stage.dataset.st = st; },
-      Object.assign({ pitch: 0.18 }, s.m3dView || {})));
-    stage.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
-    stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
+    if (on) {
+      stage.appendChild(m3dCanvas(s.model || s.id, (st) => { stage.dataset.st = st; },
+        Object.assign({ pitch: 0.18 }, s.m3dView || {})));
+      stage.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
+      stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
+    }
+    stage.appendChild(view3dToggle());
     body.appendChild(stage);
   }
   const tags = [];
@@ -281,6 +303,17 @@ function encSheet(s) {
     body.appendChild(el('p', 'desc encfx', s.fx));
   }
   if (s.desc) body.appendChild(el('p', 'desc it', s.desc));
+  if (s.makes) {
+    // a recipe: what it makes, from what
+    body.appendChild(el('div', 'sub2', tr('Fabrique')));
+    const box = el('div', 'enclinks');
+    box.appendChild(encLink(s.makes));
+    body.appendChild(box);
+    body.appendChild(el('div', 'sub2', tr('Ingrédients')));
+    const parts = el('div', 'encparts');
+    (s.makes.parts || []).forEach((p) => parts.appendChild(encLink(p)));
+    body.appendChild(parts);
+  }
   // the attributes and the ways to get it, at the rarity of the tab picked
   const tabs = s.tabs || [];
   if (ENC.tabFor !== s.id) {

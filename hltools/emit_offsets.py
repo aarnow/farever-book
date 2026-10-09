@@ -103,6 +103,12 @@ def hook_layout(code):
     kproxy = offs("hxbit.ObjProxy_OkillCount_Int_rank_Int")
     eproxy = offs("hxbit.ObjProxy_Ocompleted_Float")
     spec = offs("st.player.HeroSpecialization")
+    # a job (HeroSpecialization.jobs' proxy, its name hashed): found by its
+    # fields, the recipes it learnt among them
+    job = next((code.field_offsets(t.index) for t in code.types
+                if t.name and t.name.startswith("hxbit.ObjProxy_")
+                and {"job", "level", "learnedCrafts"}
+                <= set(code.field_offsets(t.index))), {})
     gear = offs("st.item.Gear")
     weapon_ = offs("st.item.Weapon")
     skill = offs("st.skill.Skill")
@@ -284,7 +290,11 @@ def hook_layout(code):
                             "arsenals", "prayerSequence",
                             # the heroic dungeon its bonus is on
                             # (HeroSpecialization.rollBonusHeroicDungeon)
-                            "bonusHeroicDungeon")},
+                            "bonusHeroicDungeon", "jobs")},
+        # a job: its id, level and the crafts its recipes taught (their
+        # items' ids: HeroSpecialization.iterRecipesLearnt)
+        "JobProxy": {k: job[k][0] for k in ("job", "level", "learnedCrafts")
+                     if k in job},
         "BonusProxy": {"activity": offs(
             "hxbit.ObjProxy_Oactivity_Data_ActivityKind_lastProposalTime_Float")
             ["activity"][0]},

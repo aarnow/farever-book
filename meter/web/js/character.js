@@ -503,7 +503,8 @@ function charSheet(o, onSlot, extra) {
   hid.appendChild(el('b', 'hn', o.n));
   hid.appendChild(el('span', 'hl', tr('{cls} · niveau {lvl}', { cls: o.cls, lvl: o.lvl || '?' })));
   if (extra.hint) hid.appendChild(el('span', 'hhint', extra.hint));
-  if (extra.model && m3dSupported()) {
+  if (extra.model && m3dSupported()) hero.appendChild(view3dToggle());
+  if (extra.model && view3d()) {
     hero.classList.add('is3d');
     hero.appendChild(m3dCanvas(extra.model, (st) => { hero.dataset.st = st; },
       { pitch: 0.1, dist: 0.68, lift: -0.08, spin: false, yaw: 1.75 }));

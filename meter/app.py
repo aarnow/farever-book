@@ -52,6 +52,7 @@ from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot)
 from bosssheet import _icon_ok, boss_sheet_view
 from views import (
+    collection_sheet,
     encyclopedia_item, encyclopedia_view,
     LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
@@ -204,6 +205,8 @@ class App:
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
         self._zoom = 130                    # the window's own size, percent
+        self._view3d = True                 # previews in 3D (else the picture)
+        self._coll_sel = None               # (category, id): the Collection's pick
         self._theme = themes.DEFAULT        # the colour theme
         self._lang = i18n.DEFAULT           # the interface's language
 
@@ -301,6 +304,8 @@ class App:
         if data.get("lang") in i18n.LANGS:
             self._lang = data["lang"]
         i18n.set_lang(self._lang)
+        if isinstance(data.get("view3d"), bool):
+            self._view3d = data["view3d"]
         z = data.get("zoom")
         if isinstance(z, int) and 50 <= z <= 200:
             self._zoom = z
@@ -347,6 +352,7 @@ class App:
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),
+                "view3d": bool(self._view3d),
                 "theme": self._theme,
                 "lang": self._lang,
                 "overlay_pos": self._ov_pos,
@@ -497,6 +503,12 @@ class App:
 
     def _focus(self, name):
         self.focus_player = name or None
+
+    def _set_view3d(self, on):
+        """Previews in 3D or as pictures, everywhere (a model costs memory
+        and work the picture does not)."""
+        self._view3d = bool(on)
+        self._save_settings()
 
     def _set_zoom(self, pct):
         self._zoom = max(50, min(200, int(pct)))
@@ -821,6 +833,10 @@ class App:
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
+            "set_view3d": lambda p: self._set_view3d(p.get("on")),
+            "coll_open": lambda p: setattr(
+                self, "_coll_sel", (str(p.get("cat") or ""),
+                                    str(p.get("id") or ""))),
             "set_theme": lambda p: self._set_theme(p.get("id")),
             "set_lang": lambda p: self._set_lang(p.get("id")),
             "open_log": self._open_log_folder,
@@ -951,6 +967,8 @@ class App:
             # the header's "Soutenir" button, under Réglages and Aide
             "support": bool(TIPEEE_URL) and not self._setup,
             "zoom": int(self._zoom),
+            # previews: the 3D model, or the picture (lighter)
+            "view3d": bool(self._view3d),
             "theme": self._theme,
             "lang": self._lang,
             "shard": self.ui_state.server() or "",
@@ -1455,8 +1473,19 @@ class App:
         tab shows it with the game closed. Hook thread."""
         owned = {k: sorted(set(p.get(k) or ()))
                  for k in ("mounts", "gliders", "pets", "gears")}
+        # the hero's jobs and the recipes they learnt (per character: the
+        # one played); kept from the last read when this one has none
+        jobs = p.get("jobs")
 
         def done():
+            if isinstance(jobs, dict):
+                owned["jobs"] = {
+                    str(k): {"lvl": int((v or {}).get("lvl") or 0),
+                             "learnt": sorted(set((v or {}).get("learnt")
+                                                  or ()))}
+                    for k, v in jobs.items()}
+            elif (self._collection_owned or {}).get("jobs") is not None:
+                owned["jobs"] = self._collection_owned["jobs"]
             owned["at"] = time.time()
             self._collection_owned = owned
             try:
@@ -2100,9 +2129,17 @@ class App:
                               "seule."))
         codex = self._item_codex()
         entry = (codex.get("heroes") or {}).get(codex.get("last")) or {}
+        # the item picked: the Encyclopedia's sheet (computed per pick)
+        sel = None
+        if self._coll_sel and self._coll_sel[1]:
+            key = (self._coll_sel, id(owned), id(collection_catalogue()))
+            if getattr(self, "_coll_sheet", (None,))[0] != key:
+                self._coll_sheet = (key, collection_sheet(*self._coll_sel,
+                                                          owned))
+            sel = self._coll_sheet[1]
         return [{"k": "collection", "id": "collection",
-                 "sync": sync, **collection_view(owned,
-                                                 entry.get("items") or {})}]
+                 "sync": sync, "sel": sel,
+                 **collection_view(owned, entry.get("items") or {})}]
 
     def _item_codex(self):
         try:

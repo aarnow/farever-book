@@ -256,12 +256,13 @@ function huntModel(n) {
   const pic = el('div', 'cvpic' + (n.kills ? ' own' : ''));
   pic.appendChild(huntImg(n.uid));
   stage.appendChild(pic);
-  if (m3dSupported()) {
+  if (view3d()) {
     stage.classList.add('is3d');
     stage.appendChild(m3dCanvas(n.uid, (st) => { stage.dataset.st = st; }, { anim: true }));
     stage.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
     stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
   }
+  if (m3dSupported()) stage.appendChild(view3dToggle());
   v.appendChild(stage);
   return v;
 }

@@ -7,6 +7,7 @@ import ctypes
 import hashlib
 import json
 import os
+import base64
 import re
 import subprocess
 import sys
@@ -474,7 +475,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 16
+DATA_FORMAT = 17
 
 
 def _hook_needs():
@@ -958,6 +959,55 @@ def _ui_cursors(game):
         x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
         sheets[g["file"]].crop((x, y, x + n, y + n)).save(
             ANALYSIS / f"ui_cursor_{name}.png")
+
+
+ART_DIR = ANALYSIS / "item_art"
+_ART = {}
+
+
+def item_art(kind, unit=False):
+    """An item's (a companion's: `unit`) picture at the game's own size (its
+    gfx tile in res.pak, 256 px or so: the icons are 48, the Collection's
+    128), as a data URI; "" without it. Made once, kept in item_art/."""
+    kind = str(kind or "")
+    if not re.fullmatch(r"[A-Za-z0-9_]+", kind):
+        return ""
+    key = ("u:" if unit else "i:") + kind
+    if key in _ART:
+        return _ART[key]
+    path = ART_DIR / f"{'u_' if unit else ''}{kind}.webp"
+    uri = ""
+    try:
+        uri = "data:image/webp;base64," + base64.b64encode(
+            path.read_bytes()).decode()
+    except OSError:
+        game = _game_dir()
+        if game is not None and (game / "res.pak").is_file():
+            try:
+                if str(ROOT / "hltools") not in sys.path:
+                    sys.path.insert(0, str(ROOT / "hltools"))
+                import io
+                import hmd_model
+                from PIL import Image
+                g = (hmd_model._sheets(game)["unit" if unit else "item"]
+                     .get(kind) or {}).get("gfx") or {}
+                raw = hmd_model._read(game / "res.pak", g.get("file") or "")
+                if raw:
+                    img = Image.open(io.BytesIO(raw)).convert("RGBA")
+                    n = int(g.get("size") or img.width)
+                    x, y = int(g.get("x") or 0) * n, int(g.get("y") or 0) * n
+                    w = int(g.get("width") or 1) * n
+                    h = int(g.get("height") or 1) * n
+                    if x + w <= img.width and y + h <= img.height:
+                        tile = img.crop((x, y, x + w, y + h))
+                        ART_DIR.mkdir(parents=True, exist_ok=True)
+                        tile.save(path, "WEBP", quality=88, method=4)
+                        uri = "data:image/webp;base64," + base64.b64encode(
+                            path.read_bytes()).decode()
+            except Exception as e:
+                print(f"[meter] picture of {kind}: {e!r}", file=sys.stderr)
+    _ART[key] = uri
+    return uri
 
 
 def item_model_json(item_id):
