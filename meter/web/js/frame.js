@@ -152,6 +152,15 @@ function svgIcon(d) {
   return svg;
 }
 
+/* A tab's glyph (the game's, white, drawn in the tab's colour), or null. */
+function tabIcon(key) {
+  const src = (window.__TAB_ICONS__ || {})[key];
+  if (!src) return null;
+  const i = el('i', 'tabic');
+  i.style.setProperty('--ic', 'url("' + src + '")');
+  return i;
+}
+
 /* Tabs are built once and kept, so the active colour can ease in and the
    gold bar (#navink) can slide between them. */
 const NAV_BTNS = {};
@@ -174,7 +183,10 @@ function renderTabs(tabs, active) {
       if (tab.grp) {
         // a tab of a group: an entry of its menu, under the group's tab
         const g = navGroup(nav, tab.grp, tab.grpT || tab.grp);
-        b = el('button', 'navitem', label);
+        b = el('button', 'navitem');
+        const ic = tabIcon(t);
+        if (ic) b.appendChild(ic);
+        b.appendChild(el('span', null, label));
         g.menu.appendChild(b);
       } else if (TAB_ICONS[t]) {
         b = el('button', 'navicon');
@@ -183,7 +195,10 @@ function renderTabs(tabs, active) {
         b.appendChild(svgIcon(TAB_ICONS[t]));
         icons.appendChild(b);
       } else {
-        b = el('button', null, label);
+        b = el('button');
+        const ic = tabIcon(t);
+        if (ic) b.appendChild(ic);
+        b.appendChild(el('span', null, label));
         nav.appendChild(b);
       }
       b.type = 'button';
@@ -213,6 +228,8 @@ function navGroup(nav, key, label) {
   const wrap = el('div', 'navgroup');
   const btn = el('button', 'navgrp');
   btn.type = 'button';
+  const ic = tabIcon(key);
+  if (ic) btn.appendChild(ic);
   btn.appendChild(el('span', null, label));
   btn.appendChild(el('i', 'caret'));
   btn.setAttribute('aria-haspopup', 'true');
@@ -222,6 +239,8 @@ function navGroup(nav, key, label) {
     e.stopPropagation();
     const open = !wrap.classList.contains('open');
     navMenusClose();
+    // under its tab, from the band's edge (the band holds it)
+    menu.style.left = (wrap.offsetLeft + wrap.offsetWidth / 2) + 'px';
     wrap.classList.toggle('open', open);
     btn.setAttribute('aria-expanded', String(open));
   });
@@ -265,8 +284,8 @@ function showTab(t) {
     .concat(Object.values(NAV_GROUPS).map((g) => g.wrap))
     .map((x) => x.offsetTop)).size;
   const y = rows > 1 ? b.offsetTop + b.offsetHeight - 3 : nav.clientHeight - 3;
-  // a group's tab sits in its wrapper: its place in the band is the wrapper's
-  const left = (grp ? grp.wrap.offsetLeft : 0) + b.offsetLeft;
+  // (a group's tab too: its wrapper isn't positioned, the band is)
+  const left = b.offsetLeft;
   ink.style.width = Math.max(0, b.offsetWidth - 28) + 'px';
   ink.style.transform = 'translate(' + (left + 14) + 'px, ' + y + 'px)';
   ink.style.opacity = '1';

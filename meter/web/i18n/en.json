@@ -1166,6 +1166,5 @@
  "Connecté en tant que": "Signed in as",
  "Dernier compte Steam :": "Last Steam account:",
  "Aucun compte Steam n’est synchronisé avec l’application.": "No Steam account is synced with the app.",
- "Kills de tous tes personnages du compte {acct} ({heroes}), additionnés, lus en jeu le {date}. Le rang d'un monstre est le meilleur qu'un de tes personnages a atteint. Le compte est celui du jeu (son Codex) : il inclut tout ce que tu as tué avant Farever Book, et se met à jour tout seul quand le jeu est ouvert.": "Kills of all your characters on the {acct} account ({heroes}), added up, read in game on {date}. A monster's rank is the best one of your characters reached. The count is the game's own (its Codex): it includes everything you killed before Farever Book, and updates by itself while the game is open.",
- "Compte": "Account"
+ "Kills de tous tes personnages du compte {acct} ({heroes}), additionnés, lus en jeu le {date}. Le rang d'un monstre est le meilleur qu'un de tes personnages a atteint. Le compte est celui du jeu (son Codex) : il inclut tout ce que tu as tué avant Farever Book, et se met à jour tout seul quand le jeu est ouvert.": "Kills of all your characters on the {acct} account ({heroes}), added up, read in game on {date}. A monster's rank is the best one of your characters reached. The count is the game's own (its Codex): it includes everything you killed before Farever Book, and updates by itself while the game is open."
 }

@@ -146,18 +146,34 @@ body {
 }
 #nav button:hover { color: #fff; }
 #nav button.active::after { background: var(--accent); box-shadow: 0 0 10px rgba(242, 201, 76, .45); }
+/* a thin line between two tabs of the band (in the middle of their gap) */
+#nav > :is(button, .navgroup) + button::before,
+#nav > :is(button, .navgroup) + .navgroup > .navgrp::before {
+  content: ""; position: absolute; left: -4px; top: 50%; width: 1px; height: 20px; margin-top: -10px;
+  background: linear-gradient(180deg, rgba(201, 197, 236, .08), rgba(201, 197, 236, .5), rgba(201, 197, 236, .08));
+  pointer-events: none;
+}
+/* a tab's glyph (the game's), in front of its name, in its colour */
+#nav button { display: inline-flex; align-items: center; gap: 8px; }
+#nav .tabic { flex: none; width: 17px; height: 17px; background: currentColor;
+              -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
 /* a group of tabs (Compte): its tab, a caret, its menu under it */
-#nav .navgroup { position: relative; display: flex; }
+#nav .navgroup { display: flex; }
 #nav .navgrp { display: inline-flex; align-items: center; gap: 7px; }
 #nav .navgrp .caret { width: 0; height: 0; border-style: solid; border-width: 5px 4px 0 4px;
                       border-color: currentColor transparent transparent transparent; transition: transform .15s ease; }
 #nav .navgroup.open .navgrp .caret { transform: rotate(180deg); }
-#nav .navmenu { display: none; position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+/* its menu: hung from the band's bottom edge (#nav holds it, core.js
+   places it under its tab), unfolding downwards over the page */
+#nav .navmenu { display: flex; visibility: hidden; position: absolute; top: 100%; transform: translateX(-50%);
                 z-index: 60; min-width: 210px; padding: 6px; flex-direction: column; gap: 2px;
-                border-radius: 10px; border: 1px solid #5A5694;
-                background: linear-gradient(180deg, #34305E, #28254A);
-                box-shadow: 0 10px 28px rgba(0, 0, 0, .5); }
-#nav .navgroup.open .navmenu { display: flex; }
+                border-radius: 0 0 10px 10px; border: 1px solid #5A5694; border-top: 0;
+                background: linear-gradient(180deg, var(--head), #28254A);
+                box-shadow: 0 12px 28px rgba(0, 0, 0, .5);
+                clip-path: inset(0 -40px 100% -40px);
+                transition: clip-path .22s ease, visibility 0s linear .22s; }
+#nav .navgroup.open .navmenu { visibility: visible; clip-path: inset(0 -40px -40px -40px);
+                               transition: clip-path .22s ease, visibility 0s; }
 #nav .navmenu .navitem { width: 100%; text-align: left; padding: 9px 12px; border-radius: 7px; }
 #nav .navmenu .navitem::after { display: none; }
 #nav .navmenu .navitem:hover { background: rgba(255, 255, 255, .06); }

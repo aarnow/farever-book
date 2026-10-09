@@ -821,7 +821,17 @@ UI_FRAME = "UI/Elements/background_close.png"
 # an atlas).
 UI_TITLE_FONT = "Font/platypi-bold-20.fnt"
 # Bumped when what ensure_ui_frame copies changes: copied again.
-UI_ASSETS = 7
+UI_ASSETS = 10
+# the game's white glyphs (square cells in a row) in front of the app's
+# tabs: its menu's (window_buttons) and its achievement categories'
+UI_TAB_GLYPHS = {"wb": "UI/icons/window_buttons.png",
+                 "ac": "UI/icons/achievements_categories.png"}
+# tab (or tab group) -> (row, cell)
+UI_TAB_ICONS = {"Live": ("wb", 0), "account": ("wb", 1), "Build": ("wb", 2),
+                "Rifts": ("wb", 3), "Encyclopedia": ("wb", 4),
+                "Achievements": ("wb", 5), "Collection": ("wb", 6),
+                "Character": ("wb", 8), "Map": ("wb", 9),
+                "Dungeons": ("ac", 1), "Hunt": ("ac", 3)}
 # the game's plus (white, tinted where it is shown): the bonus dungeon's mark
 UI_PLUS = "UI/Elements/plus.png"
 # its windows' close button: its cross, cut out of it (the button's ground
@@ -879,6 +889,22 @@ def ensure_ui_frame():
         white = Image.new("RGBA", close.size, (255, 255, 255, 0))
         white.putalpha(cross)
         white.save(ANALYSIS / "ui_close_x.png")
+        # the tabs' glyphs, cut from the game's rows of them
+        rows = {k: Image.open(io.BytesIO(pak_extract.read_entry(
+            game / "res.pak", path))).convert("RGBA")
+            for k, path in UI_TAB_GLYPHS.items()}
+        for tab, (k, i) in UI_TAB_ICONS.items():
+            n = rows[k].height
+            cell = rows[k].crop((i * n, 0, i * n + n, n))
+            # the glyph alone, centred in a square: the rows leave more or
+            # less room around theirs, all show at one size
+            box = cell.getchannel("A").getbbox() or (0, 0, n, n)
+            glyph = cell.crop(box)
+            side = max(glyph.size)
+            sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            sq.paste(glyph, ((side - glyph.width) // 2,
+                             (side - glyph.height) // 2))
+            sq.save(ANALYSIS / f"ui_tab_{tab}.png")
         stamp.write_text(json.dumps({"v": UI_ASSETS}), encoding="utf-8")
         return True
     except Exception as e:

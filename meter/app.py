@@ -1949,7 +1949,7 @@ class App:
                 if not done:
                     done = True
                     out += [{"v": a, "t": tr(APP_TAB_LABELS[a]),
-                             "grp": "account", "grpT": tr("Compte")}
+                             "grp": "account", "grpT": tr("Progression")}
                             for a in ACCOUNT_TABS]
                 continue
             out.append({"v": t, "t": tr(APP_TAB_LABELS[t]),

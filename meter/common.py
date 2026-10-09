@@ -488,7 +488,7 @@ APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt",
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 
 
-# The tabs about the player's account, behind one "Compte" tab (a menu), in
+# The tabs about the player's progress, behind one "Progression" tab (a menu), in
 # its order; the menu stands where the first of them would.
 ACCOUNT_TABS = ("Collection", "Hunt", "Map", "Achievements", "Dungeons",
                 "Rifts")
