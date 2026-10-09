@@ -440,13 +440,25 @@ class AppWindow:
         """The game's pictures, sent in batches once the page is up: inlined,
         they exceed WebView2's 2 MB HTML limit (blank window)."""
         self._images_sent = True
-        try:
-            self.window.evaluate_js(
-                "window.addPortraits && window.addPortraits("
-                + json.dumps(json.dumps({"portraits": _boss_portraits()}))
-                + ")")
-        except Exception as e:
-            _log(f"portraits push failed: {e!r}")
+        # the portraits in batches too (with the window's photos they pass
+        # 2 MB): at most ~600 KB a push
+        batches, cur, size = [], {}, 0
+        for k, v in _boss_portraits().items():
+            if cur and size + len(v) > 600_000:
+                batches.append(cur)
+                cur, size = {}, 0
+            cur[k] = v
+            size += len(v)
+        if cur:
+            batches.append(cur)
+        for batch in batches:
+            try:
+                self.window.evaluate_js(
+                    "window.addPortraits && window.addPortraits("
+                    + json.dumps(json.dumps({"portraits": batch})) + ")")
+            except Exception as e:
+                _log(f"portraits push failed: {e!r}")
+                break
         for ns, folder in (("coll", "collection_img"),
                            ("best", "bestiary_img"), ("map", "map_tiles"),
                            ("skill", "skill_img"), ("dbg", "dungeon_bg")):
@@ -1349,7 +1361,7 @@ def _overlay_document(oid, theme, lang):
             + (";window.__SHEET__ = " + json.dumps(_sheet_art())
                if oid == "picker" else "")
             # the bonus dungeon: its boss's portrait, the heroic mark
-            + (";window.__PORTRAITS__ = " + json.dumps(_boss_portraits())
+            + (";window.__PORTRAITS__ = " + json.dumps(_dungeon_boss_portraits())
                + ";window.__HEROIC_ICON__ = "
                + json.dumps(_sheet_art().get("dungeon_diff_2", ""))
                + ";window.__PLUS__ = " + json.dumps(_ui_cursor_file("ui_plus.png"))
@@ -1448,9 +1460,29 @@ def _asset_uri(name):
         return ""
 
 
-def _boss_portraits():
-    """{"Cleodora": data URI, ...}: the dungeon bosses' portraits from
-    analysis_out/boss_portraits/."""
+# the pictures the window takes itself and keeps with the portraits: the
+# faces of characters in the hero's body (npc_), the hub's stations (stn_),
+# one's own characters (chr_)
+PHOTO_PREFIXES = ("npc_", "stn_", "chr_")
+
+
+def _dungeon_boss_portraits():
+    """The dungeon bosses' portraits alone: what the bonus dungeon's overlay
+    shows (the folder holds the merchants', the rift bosses' and the
+    window's photos too: together they pass WebView2's limit)."""
+    try:
+        from gamedata import dungeon_catalogue
+        bosses = {d.get("boss") for d in dungeon_catalogue() if d.get("boss")}
+    except Exception:
+        bosses = set()
+    return {k: v for k, v in _boss_portraits(False).items() if k in bosses}
+
+
+def _boss_portraits(photos=True):
+    """{"Cleodora": data URI, ...}: the portraits from analysis_out/
+    boss_portraits/ — without the window's own photos when `photos` is
+    False (an overlay needs the bosses alone: with them, its page passes
+    WebView2's limit and stays blank)."""
     import base64
     folder = Path(os.environ.get("FAREVER_ANALYSIS")
                   or HERE.parent / "analysis_out") / "boss_portraits"
@@ -1460,6 +1492,8 @@ def _boss_portraits():
     except OSError:
         return out
     for path in files:
+        if not photos and path.stem.startswith(PHOTO_PREFIXES):
+            continue
         try:
             out[path.stem] = ("data:image/png;base64,"
                               + base64.b64encode(path.read_bytes()).decode())

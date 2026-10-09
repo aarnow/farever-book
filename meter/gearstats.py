@@ -451,7 +451,8 @@ def _infusion_sets(gear):
     for sid, n in sorted(counts.items(), key=lambda kv: -kv[1]):
         e = infs.get(sid) or {}
         out.append({
-            "name": e.get("name") or _pretty_id(sid),
+            # its skill: the game's icon for it (skill_img)
+            "id": sid, "name": e.get("name") or _pretty_id(sid),
             "fac": faction_label(e.get("f")),
             "role": e.get("role") or "", "n": n,
             "tiers": infusion_tiers(sid, n)})

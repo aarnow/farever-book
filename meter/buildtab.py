@@ -316,7 +316,7 @@ class BuildTab:
             B.save_build(self.build, self.file)
 
     def _skill(self, group, index, value):
-        if not self.build or group not in ("class", "arsenal"):
+        if not self.build or group not in ("class", "arsenal", "mechanic"):
             return
 
         def change(b):
@@ -324,7 +324,8 @@ class BuildTab:
             i = int(index or 0)
             while len(cur) <= i:
                 cur.append(None)
-            if value and value in cur:          # a skill sits in one slot
+            # a skill sits in one slot (a conduit may sit in several)
+            if value and value in cur and group != "mechanic":
                 cur[cur.index(value)] = None
             cur[i] = value or None
             while cur and cur[-1] is None:      # slots keep their place
@@ -737,6 +738,7 @@ class BuildTab:
                        "total": B.talent_points(b),
                        "from": d.get("talentsFrom") or 10},
             "tree": tree, "bar": bar, "passives": passives,
+            "mechanic": self._mechanic(b),
             # the hero in 3D, wearing the build's armour
             "model": "hero:" + ".".join(
                 f"{s}={(b['gear'].get(s) or {}).get('id')}" for s in HERO_SLOTS
@@ -910,9 +912,48 @@ class BuildTab:
         al = d.get("arsenalLevels") or [7, 20]
         out = [cell(str(i + 1), "weapon", i, wl, False) for i in range(2)]
         out += [cell(str(i + 3), "arsenal", i, al, True) for i in range(2)]
+        # the class's signature skill, in the middle: fixed, not a choice
+        sig = ((d.get("classes") or {}).get(b.get("cls")) or {}).get(
+            "signature")
+        if sig and sig.get("id"):
+            open_ = int(b.get("lvl") or 1) >= int(sig.get("lvl") or 1)
+            mid = {"key": "", "id": sig["id"], "name": _skill_label(sig["id"]),
+                   "tip": skill_tip(sig["id"]), "open": open_, "big": True,
+                   "sep": True, "fixed": True}
+            if not open_:
+                mid["lock"] = tr("niv. {n}", n=sig["lvl"])
+            out.append(mid)
         out += [dict(cell(k, "class", i, (), True), sep=(i == 0))
                 for i, k in enumerate(class_keys())]
         return out
+
+    def _mechanic(self, b):
+        """The class's own mechanic, over its skills on the bar: the
+        priest's prayers as they come (a level each opens at), the mage's
+        conduits a pick per slot (the conduits unlocked)."""
+        m = B.mechanic_options(b)
+        if not m:
+            return None
+        lvl = int(b.get("lvl") or 1)
+
+        def one(sid):
+            return {"id": sid, "name": _skill_label(sid) if sid else "",
+                    "tip": skill_tip(sid) if sid else None}
+        if m["fixed"]:
+            cells = [dict(one(s["id"]), open=(s.get("lvl") or 1) <= lvl,
+                          lock=tr("niv. {n}", n=s.get("lvl") or 1))
+                     for s in m["all"] if not s.get("talent")]
+        else:
+            chosen = list((b.get("skills") or {}).get("mechanic") or [])
+            cells = []
+            for i, at in enumerate(m["slots"]):
+                sid = chosen[i] if i < len(chosen) else None
+                c = dict(one(sid), group="mechanic", index=i, key=str(i + 1),
+                         open=at <= lvl, lock=tr("niv. {n}", n=at))
+                if at <= lvl:
+                    c["options"] = [one(s) for s in m["options"]]
+                cells.append(c)
+        return {"kind": m["kind"], "fixed": m["fixed"], "cells": cells}
 
     def _editor_view(self, o):
         b, slot, d = self.build, self.slot, build_data()

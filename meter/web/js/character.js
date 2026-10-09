@@ -392,6 +392,8 @@ function infusionCards(list) {
   list.forEach((s) => {
     const card = el('div', 'infucard');
     const hd = el('div', 'infuhd');
+    // its icon, the game's (the infusion's skill)
+    if (s.id) hd.appendChild(skillIcon({ id: s.id, name: s.name }));
     hd.appendChild(el('b', null, s.name));
     hd.appendChild(el('span', null, [s.fac, s.role].filter(Boolean).join(' · ')));
     hd.appendChild(el('span', 'cnt', tr(s.n > 1 ? '{n} pièces' : '{n} pièce', { n: s.n })));
@@ -542,7 +544,9 @@ function charSheet(o, onSlot, extra) {
   pc.appendChild(el('span', null, o.cls || ''));
   plate.appendChild(pc);
   const chips = el('div', 'pchips');
-  chips.appendChild(el('span', null, tr('Niveau {n}', { n: o.lvl || '?' })));
+  // a build's level: a click picks another
+  chips.appendChild(extra.level ? extra.level()
+    : el('span', null, tr('Niveau {n}', { n: o.lvl || '?' })));
   chips.appendChild(el('span', null, tr('{n} / {all} pièces',
     { n: all15.filter(Boolean).length, all: all15.length })));
   plate.appendChild(chips);

@@ -155,6 +155,41 @@ def build(game_dir):
                         for it in sh["item"]["lines"]
                         if it.get("type") == "InfusionPattern"} - {None})
 
+    # a mechanic's skill types, its slots' levels, whether it is a choice
+    # (the priest's prayers come as they are: Priest_Prayer_Slot_Unlocks;
+    # the mage picks a conduit per slot, the same one twice if he likes:
+    # Mage_Conduit_Levels, MageComponent.implEquipConduit)
+    mech_kinds = {"PriestPrayer": ("prayers", "Priest_Prayer_Slot_Unlocks",
+                                   True),
+                  "MageConduit": ("conduits", "Mage_Conduit_Levels", False)}
+
+    def mechanic(c, u):
+        """{kind, fixed, slots: [level each opens at], skills: [{id, lvl,
+        talent}]}: the class's own skills of a mechanic's type, those its
+        unit has (at a level) and those a talent grants (props.subskills),
+        or None."""
+        out = None
+        for s in u.get("skills") or ():
+            t = stype(s.get("skill"))
+            if t in mech_kinds:
+                kind, slots, fixed = mech_kinds[t]
+                out = out or {"kind": kind, "fixed": fixed,
+                              "slots": [int(x or 1) for x in floats(slots)],
+                              "skills": []}
+                out["skills"].append({"id": s.get("skill"),
+                                      "lvl": s.get("level") or 1})
+        if out:
+            types = {k for k, v in mech_kinds.items() if v[0] == out["kind"]}
+            for tid, t in skills.items():
+                if (not isinstance(tid, str) or not tid.startswith(c + "_")
+                        or stype(tid) != "Talent"):
+                    continue
+                for sub in ((t.get("props") or {}).get("subskills") or ()):
+                    if stype(sub.get("skill")) in types:
+                        out["skills"].append({"id": sub["skill"], "lvl": 1,
+                                              "talent": tid})
+        return out
+
     classes = {}
     for c in CLASSES:
         u = unit.get(c) or {}
@@ -166,7 +201,17 @@ def build(game_dir):
                        if stype(s.get("skill")) in CLASS_SKILL_TYPES],
             "passives": [{"id": s.get("skill"), "lvl": s.get("level") or 1}
                          for s in u.get("skills") or ()
-                         if stype(s.get("skill")) == "ClassPassive"]}
+                         if stype(s.get("skill")) == "ClassPassive"],
+            # its own mechanic over its skills (the priest's prayers, the
+            # mage's conduits): mechanic(c)
+            "mechanic": mechanic(c, u),
+            # its signature skill (the skill sheet's SignatureSkill): fixed
+            # in the middle of the bar, no choice
+            "signature": next(({"id": s.get("skill"),
+                                "lvl": s.get("level") or 1}
+                               for s in u.get("skills") or ()
+                               if stype(s.get("skill")) == "SignatureSkill"),
+                              None)}
 
     # what each skill does, for the simulator
     eff_kinds = next(c for c in sh["skill@steps@effects"]["columns"]

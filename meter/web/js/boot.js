@@ -41,7 +41,8 @@ window.addPortraits = function (json) {
   let d;
   try { d = JSON.parse(json); } catch (e) { return; }
   const had = Object.keys(window.__PORTRAITS__ || {}).length;
-  window.__PORTRAITS__ = d.portraits || {};
+  // a batch: added to those already there (the window's own photos too)
+  window.__PORTRAITS__ = Object.assign(window.__PORTRAITS__ || {}, d.portraits || {});
   if (Object.keys(window.__PORTRAITS__).length !== had && typeof STATE !== 'undefined') {
     NODES.forEach((v) => v.el.remove());
     NODES = new Map();

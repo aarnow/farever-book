@@ -1392,6 +1392,9 @@ function profileOf(h) {
             }
             if (S.prayerSequence != null)
                 r.prayers = proxyStrings(sp.add(S.prayerSequence).readPointer(), 10);
+            // the mage's conduits, slot by slot
+            if (S.conduits != null)
+                r.conduits = proxyStrings(sp.add(S.conduits).readPointer(), 10);
         }
     } catch (e) {}
     // the action bar as the game holds it

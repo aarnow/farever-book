@@ -4,8 +4,7 @@
    (meter/buildtab.py); this only draws it and sends the changes. */
 
 let BUILD_NODE = null;
-const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'], ['sim', 'Simulation'],
-  ['settings', 'Paramètres']];
+const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'], ['sim', 'Simulation']];
 let BUILD_VIEW = 'stuff';        // the open build's tab
 let BUILD_FADE = false;         // the next draw follows a tab change
 let BUILD_Q = '';               // the piece editor's search
@@ -18,18 +17,43 @@ function buildBuild(n) {
   const o = n.open;
   if (n.cmp) return buildCompare(n.cmp, box);
   if (!o) { BUILD_VIEW = 'stuff'; return buildList(n, box); }
+  if (!BUILD_VIEWS.some(([k]) => k === BUILD_VIEW)) BUILD_VIEW = 'stuff';
+  // the top: back to the list; the build's own actions at the right
+  const top = el('div', 'btop');
   const back = el('button', 'btn bback', tr('‹  Revenir aux builds'));
   back.type = 'button';
   back.addEventListener('click', () => notify('build_close', {}));
-  box.appendChild(back);
+  top.appendChild(back);
+  const acts = el('div', 'bacts');
+  const ren = el('button', 'btn bren', tr('Renommer'));
+  ren.type = 'button';
+  ren.addEventListener('click', () => renameBuildDialog(o));
+  acts.appendChild(ren);
+  const shr = el('button', 'btn bshare', tr('Partager'));
+  shr.type = 'button';
+  shr.addEventListener('click', () => shareMenu(shr, o));
+  acts.appendChild(shr);
+  top.appendChild(acts);
+  box.appendChild(top);
 
   const main = el('div', 'charmain');
 
-  // the build in tabs: the gear, the talents, the runes, the simulation;
-  // its settings (name, class, level, copy, delete) last, at the right
+  // the header: the character the build makes (class, name, level, a
+  // click on the level picks another), its tabs under it
+  const head = el('div', 'bhead');
+  const who = el('div', 'bwho');
+  if (o.ck) who.appendChild(classEl(o.clsFr, o.ck, 'big'));
+  const wt = el('div', 'bwt');
+  wt.appendChild(el('b', 'bwn', o.name));
+  const ws = el('div', 'bws');
+  ws.appendChild(el('span', null, o.clsFr || ''));
+  ws.appendChild(levelButton(o));
+  wt.appendChild(ws);
+  who.appendChild(wt);
+  head.appendChild(who);
   const tabs = el('div', 'btabs');
   BUILD_VIEWS.forEach(([k, t]) => {
-    const b = el('button', 'btab' + (BUILD_VIEW === k ? ' on' : '') + (k === 'settings' ? ' bset' : ''), tr(t));
+    const b = el('button', 'btab' + (BUILD_VIEW === k ? ' on' : ''), tr(t));
     b.type = 'button';
     b.addEventListener('click', () => {
       if (BUILD_VIEW === k) return;
@@ -42,28 +66,23 @@ function buildBuild(n) {
     });
     tabs.appendChild(b);
   });
-  main.appendChild(tabs);
-  const shown = main.children.length;     // what comes after the tabs
+  head.appendChild(tabs);
+  main.appendChild(head);
+  const shown = main.children.length;     // what comes after the header
 
   if (BUILD_VIEW === 'stuff') {
     main.appendChild(charSheet({ n: o.name, cls: o.clsFr, ck: o.ck, lvl: o.lvl,
                                  sheet: o.sheet, atbs: o.atbs },
                                (slot) => { BUILD_JUMP = true; notify('build_slot', { slot: slot }); },
-                               { below: buildBar(o.bar || []), arms: buildPassives(o.passives || []),
+                               { below: buildBar(o.bar || [], o.passives || [], o.infusions || [], o.mechanic),
                                  center: o.editor ? editorPanel(o.editor) : null,
-                                 model: o.model,
+                                 model: o.model, level: () => levelButton(o),
                                  active: o.editor ? o.editor.slot : null,
                                  hint: tr('Clique sur un emplacement pour choisir ou régler une pièce.') }));
-    if ((o.infusions || []).length) {
-      main.appendChild(el('div', 'sub2', tr('Imprégnations')));
-      main.appendChild(infusionCards(o.infusions));
-    }
   } else if (BUILD_VIEW === 'talents') {
     buildTalents(o, main);
   } else if (BUILD_VIEW === 'runes') {
     main.appendChild(runesSection((o.sim && o.sim.runes) || []));
-  } else if (BUILD_VIEW === 'settings') {
-    main.appendChild(buildSettings(o));
   } else if (o.sim) {
     main.appendChild(buildSim(o.sim));
   } else {
@@ -242,12 +261,24 @@ function runesSection(list) {
 
 /* The action bar under the hero: 1-2 the weapons' skills (set by the
    weapons), 3-4 the arsenal's and A E R G the class's (a click picks). */
-function buildBar(cells) {
+function buildBar(cells, passives, infusions, mechanic) {
   const p = el('div', 'spanel bbar');
-  p.appendChild(el('div', 'sptitle', tr('Barre de sorts')));
-  const bar = el('div', 'skbar actionbar gamebar');
+  p.appendChild(el('div', 'sptitle', tr(passives ? 'Sorts et passifs' : 'Barre de sorts')));
+  // the spells and, under them, the passives: one box, one ground
+  const box = el('div', 'bbarbox');
+  const bar = el('div', 'skbar gamebar');
+  // the class's skills in a column: its own mechanic over them (the
+  // priest's prayers, the mage's conduits), as the game's bar has it
+  let into = bar;
   cells.forEach((c) => {
     if (c.sep) bar.appendChild(el('span', 'barsep'));
+    if (c.group === 'class' && c.index === 0) {
+      const grp = el('div', 'bclassgrp');
+      if (mechanic && (mechanic.cells || []).length) grp.appendChild(mechanicRow(mechanic));
+      into = el('div', 'bclassrow');
+      grp.appendChild(into);
+      bar.appendChild(grp);
+    }
     const cell = barCell(Object.assign({}, c, { key: c.open ? c.key : (c.lock || c.key) }));
     if (c.options) cell.classList.add('pick');
     if (!c.open) {
@@ -257,15 +288,141 @@ function buildBar(cells) {
       cell.title = (c.name ? c.name + '\n' : '') + tr('Clic : choisir');
     }
     if (c.options) cell.addEventListener('click', () => skillMenu(cell, c));
-    bar.appendChild(cell);
+    into.appendChild(cell);
   });
-  p.appendChild(bar);
+  box.appendChild(bar);
+  p.appendChild(box);
+  // the passives under the spells, centred: their icons alone (their
+  // name and what they do on hover)
+  if (passives && passives.length) {
+    const line = el('div', 'bpassline');
+    passives.forEach((s) => {
+      const ic = skillIcon(s);
+      ic.classList.add('bpass1');
+      attachTip(ic, s.tip, s.id);
+      line.appendChild(ic);
+    });
+    box.appendChild(line);
+  }
+  // the infusions worn, in the same block
+  if ((infusions || []).length) {
+    p.appendChild(el('div', 'sptitle sub', tr('Imprégnations')));
+    p.appendChild(infusionCards(infusions));
+  }
   return p;
+}
+
+/* The class's own mechanic, small and round over its skills: the
+   priest's prayers (as they come), the mage's conduits (a click picks one
+   for that slot). A slot not open yet says the level it opens at. */
+function mechanicRow(m) {
+  const row = el('div', 'bmech');
+  (m.cells || []).forEach((c) => {
+    const cell = el('div', 'bmechcell' + (c.options ? ' pick' : '') + (c.open ? '' : ' locked'));
+    cell.appendChild(skillIcon(c.id ? { id: c.id, name: c.name } : null));
+    if (!c.open) cell.title = tr('Débloqué au {lvl}', { lvl: c.lock });
+    else if (c.id) attachTip(cell, c.tip, c.id);
+    else if (c.options) cell.title = tr('Clic : choisir');
+    if (c.options) cell.addEventListener('click', () => skillMenu(cell, c));
+    row.appendChild(cell);
+  });
+  return row;
+}
+
+/* The passives at work, under the weapons (Inspecter's sheet). */
+function buildPassives(list) {
+  const p = el('div', 'spanel bpass');
+  p.appendChild(el('div', 'sptitle', tr('Passifs')));
+  if (!list.length) p.appendChild(el('p', 'anote', tr('Aucun passif.')));
+  list.forEach((s) => {
+    const row = el('div', 'bprow');
+    row.appendChild(skillIcon(s));
+    row.appendChild(el('span', null, s.name));
+    attachTip(row, s.tip, s.id);
+    p.appendChild(row);
+  });
+  return p;
+}
+
+/* The build's level, a button: a click shows every level to pick one. */
+function levelButton(o) {
+  const b = el('button', 'blvlbtn');
+  b.type = 'button';
+  b.title = tr('Changer le niveau du build');
+  b.appendChild(el('span', null, tr('Niveau {n}', { n: o.lvl || '?' })));
+  b.appendChild(el('i', 'caret'));
+  b.addEventListener('click', (e) => { e.stopPropagation(); levelPicker(b, o); });
+  return b;
+}
+
+/* Every level, in a grid under the button (over the page, never cut by
+   the sheet's frame); a click sets it. */
+function levelPicker(anchor, o) {
+  document.querySelectorAll('.blvlpop').forEach((x) => x.remove());
+  const pop = el('div', 'blvlpop');
+  const close = () => { pop.remove(); document.removeEventListener('mousedown', out, true); };
+  const out = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
+  for (let i = 1; i <= (o.maxLvl || 25); i++) {
+    const b = el('button', 'blv' + (i === o.lvl ? ' on' : ''), String(i));
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      close();
+      if (i !== o.lvl) notify('build_level', { value: i });
+    });
+    pop.appendChild(b);
+  }
+  document.body.appendChild(pop);
+  // placed in unzoomed pixels (core.js setZoom), flipped above at the bottom
+  const z = parseFloat(document.documentElement.style.zoom) || 1;
+  const r = anchor.getBoundingClientRect();
+  const h = pop.offsetHeight * z, w = pop.offsetWidth * z;
+  let x = Math.min(r.left, window.innerWidth - w - 8), y = r.bottom + 6;
+  if (y + h > window.innerHeight - 8) y = Math.max(8, r.top - 6 - h);
+  pop.style.left = (Math.max(8, x) / z) + 'px';
+  pop.style.top = (y / z) + 'px';
+  document.addEventListener('mousedown', out, true);
+}
+
+/* The build's new name, in a small window. */
+function renameBuildDialog(o) {
+  let input = null;
+  buildModal('renamebuild', tr('Renommer le build'), (box) => {
+    input = el('input', 'bname');
+    input.type = 'text';
+    input.value = o.name;
+    input.maxLength = 60;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { notify('build_rename', { value: input.value }); $('#renamebuild').remove(); }
+    });
+    box.appendChild(input);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  }, [[tr('Annuler'), 'rowbtn', null],
+      [tr('Renommer'), 'btn bren', () => notify('build_rename', { value: input.value })]]);
+}
+
+/* Partager: the code to paste to another player, or the build's image. */
+function shareMenu(anchor, o) {
+  gearPop(anchor, (box, close) => {
+    box.classList.add('bsharepop');
+    const code = el('button', 'rowbtn', tr('Copier le code'));
+    code.type = 'button';
+    code.title = tr('Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.');
+    code.addEventListener('click', () => { close(); notify('build_share', {}); });
+    box.appendChild(code);
+    const pic = el('button', 'rowbtn', tr(o.imaging ? 'Création de l’image…' : 'Image à partager'));
+    pic.type = 'button';
+    pic.title = tr('Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
+      + 'presse-papiers et enregistrée dans Images › Farever Book.');
+    pic.disabled = !!o.imaging;
+    pic.addEventListener('click', () => { close(); notify('build_image', {}); });
+    box.appendChild(pic);
+  });
 }
 
 /* The skills a bar slot can take, in a window over the page: a click
    places one in THIS slot (and only there), or empties it. */
-const SLOT_TITLES = { arsenal: 'Compétence d’arsenal', class: 'Compétence de classe' };   // through tr() when shown
+const SLOT_TITLES = { arsenal: 'Compétence d’arsenal', class: 'Compétence de classe',
+  mechanic: 'Conduit' };   // through tr() when shown
 
 function skillMenu(_anchor, c) {
   const close = () => { const x = $('#skillmodal'); if (x) x.remove(); };
@@ -319,21 +476,6 @@ function skillMenu(_anchor, c) {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $('#skillmodal')) $('#skillmodal').remove();
 });
-
-/* The passives at work, under the weapons. */
-function buildPassives(list) {
-  const p = el('div', 'spanel bpass');
-  p.appendChild(el('div', 'sptitle', tr('Passifs')));
-  if (!list.length) p.appendChild(el('p', 'anote', tr('Aucun passif.')));
-  list.forEach((s) => {
-    const row = el('div', 'bprow');
-    row.appendChild(skillIcon(s));
-    row.appendChild(el('span', null, s.name));
-    attachTip(row, s.tip, s.id);
-    p.appendChild(row);
-  });
-  return p;
-}
 
 /* Two builds of one class side by side: pick each, then their attributes
    in two columns; where they differ, the higher value is green with its
@@ -916,77 +1058,6 @@ function buildList(n, box) {
   });
   box.appendChild(cols);
   return box;
-}
-
-/* Name, class, level, and the build's own buttons. */
-/* The settings tab: the build's name, class and level, a line each, then
-   copying or deleting it. */
-function buildSettings(o) {
-  const head = el('div', 'spanel bsettings');
-  const row = (label, ctl) => {
-    const r = el('label', 'bsrow');
-    r.appendChild(el('span', 'bsl', label));
-    r.appendChild(ctl);
-    head.appendChild(r);
-  };
-  const name = el('input', 'bname');
-  name.type = 'text';
-  name.value = o.name;
-  name.maxLength = 60;
-  name.addEventListener('change', () => notify('build_rename', { value: name.value }));
-  row(tr('Nom'), name);
-
-  const cls = el('select', 'bcls');
-  (o.classes || []).forEach((c) => {
-    const op = el('option', null, c.t);
-    op.value = c.v;
-    cls.appendChild(op);
-  });
-  cls.value = o.cls;
-  cls.addEventListener('change', () => notify('build_class', { value: cls.value }));
-  row(tr('Classe'), cls);
-
-  const lv = el('div', 'blvl');
-  const out = el('b', null, tr('Niveau {n}', { n: o.lvl }));
-  const r = el('input');
-  r.type = 'range';
-  r.min = 1; r.max = o.maxLvl; r.value = o.lvl;
-  r.addEventListener('input', () => { out.textContent = tr('Niveau {n}', { n: r.value }); });
-  r.addEventListener('change', () => notify('build_level', { value: Number(r.value) }));
-  lv.appendChild(out);
-  lv.appendChild(r);
-  row(tr('Niveau'), lv);
-
-  const btns = el('div', 'bbtns');
-  const share = el('button', 'rowbtn', tr('Copier le code'));
-  share.type = 'button';
-  share.title = tr('Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.');
-  share.addEventListener('click', () => notify('build_share', {}));
-  btns.appendChild(share);
-  const pic = el('button', 'rowbtn', tr(o.imaging ? 'Création de l’image…' : 'Image à partager'));
-  pic.type = 'button';
-  pic.title = tr('Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
-    + 'presse-papiers et enregistrée dans Images › Farever Book.');
-  pic.disabled = !!o.imaging;
-  pic.addEventListener('click', () => notify('build_image', {}));
-  btns.appendChild(pic);
-  const dup = el('button', 'rowbtn', tr('Dupliquer'));
-  dup.type = 'button';
-  dup.addEventListener('click', () => notify('build_dup', {}));
-  btns.appendChild(dup);
-  const del = el('button', 'rowbtn' + (o.confirmDelete ? ' armed' : ''),
-    tr(o.confirmDelete ? 'Confirmer la suppression' : 'Supprimer'));
-  del.type = 'button';
-  del.addEventListener('click', () => notify('build_delete', {}));
-  btns.appendChild(del);
-  if (o.confirmDelete) {
-    const no = el('button', 'rowbtn', tr('Annuler'));
-    no.type = 'button';
-    no.addEventListener('click', () => notify('build_delete_cancel', {}));
-    btns.appendChild(no);
-  }
-  head.appendChild(btns);
-  return head;
 }
 
 /* ---- the piece editor, in the sheet's centre -------------------------- */

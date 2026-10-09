@@ -300,7 +300,7 @@ def hook_layout(code):
                        ("skills", "specialization", "weaponSkills")},
         "Specialization": {k: spec[k][0] for k in
                            ("talents", "skillSlots", "skillMasteries",
-                            "arsenals", "prayerSequence",
+                            "arsenals", "prayerSequence", "conduits",
                             # the heroic dungeon its bonus is on
                             # (HeroSpecialization.rollBonusHeroicDungeon)
                             "bonusHeroicDungeon", "jobs")},

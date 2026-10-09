@@ -1181,5 +1181,11 @@
  "Le compte synchronisé est celui dont l’application additionne la progression (le Codex de la Chasse). En jeu, c’est forcément celui qui joue.": "The synced account is the one whose progress the app adds up (the Hunt's Codex). In game, it is always the one playing.",
  "Tu es en jeu : le compte synchronisé est celui qui joue.": "You are in game: the synced account is the one playing.",
  "Retirer ce personnage de l’application": "Remove this character from the app",
- "Cliquer encore pour retirer {name} et sa progression": "Click again to remove {name} and its progress"
+ "Cliquer encore pour retirer {name} et sa progression": "Click again to remove {name} and its progress",
+ "Renommer": "Rename",
+ "Partager": "Share",
+ "Sorts et passifs": "Spells and passives",
+ "Changer le niveau du build": "Change the build's level",
+ "Renommer le build": "Rename the build",
+ "Conduit": "Conduit"
 }

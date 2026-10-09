@@ -265,6 +265,25 @@ def skill_options(b):
     return opts, slots
 
 
+def mechanic_options(b):
+    """The class's own mechanic at the build's level: {kind, fixed, slots
+    (levels), open (slots open), options (its skills unlocked: by level, or
+    by a talent taken), all: its skills}, or None."""
+    m = (((build_data().get("classes") or {}).get(b.get("cls")) or {})
+         .get("mechanic"))
+    if not m:
+        return None
+    lvl = int(b.get("lvl") or 1)
+    ranks = b.get("talents") or {}
+    opts = [s["id"] for s in m.get("skills") or ()
+            if (s.get("lvl") or 1) <= lvl
+            and (not s.get("talent") or ranks.get(s["talent"]))]
+    return {"kind": m.get("kind"), "fixed": bool(m.get("fixed")),
+            "slots": m.get("slots") or [],
+            "open": sum(1 for x in m.get("slots") or () if x <= lvl),
+            "options": opts, "all": m.get("skills") or []}
+
+
 def normalize(b):
     """Bring a build back within the rules after any change (class, level,
     a weapon swapped...): what no longer fits is dropped."""
@@ -320,6 +339,15 @@ def normalize(b):
             cur.pop()
         b["skills"][g] = cur
     b["skills"]["weapon"] = opts["weapon"][:slots["weapon"]]
+    # the class's own mechanic when it is a choice (the mage's conduits):
+    # among those unlocked, the same one in several slots if need be
+    mech = mechanic_options(b)
+    if mech and not mech["fixed"]:
+        cur = [s if s in mech["options"] else None
+               for s in (sk.get("mechanic") or [])][:mech["open"]]
+        while cur and cur[-1] is None:
+            cur.pop()
+        b["skills"]["mechanic"] = cur
     # runes: the character's own, one per class skill whether it is on
     # the bar or not, among that skill's runes
     info = d.get("skillInfo") or {}
@@ -426,7 +454,9 @@ def from_profile(prof, name):
     w2 = (b["gear"].get("Weapon2") or {}).get("id")
     b["skills"] = {"class": list(prof.get("slots") or []),
                    "weapon": list(ars.get(w1) or []),
-                   "arsenal": list(ars.get(w2) or [])}
+                   "arsenal": list(ars.get(w2) or []),
+                   # the mage's conduits as the character has them
+                   "mechanic": list(prof.get("conduits") or [])}
     return normalize(b)
 
 
