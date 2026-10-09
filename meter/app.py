@@ -133,6 +133,10 @@ def _ov_style(v):
             "maxh": max(30, min(900, maxh)) if maxh else 0}
 
 
+# the saved settings' revision: 1, the boss pull reset turned on for all
+SETTINGS_REV = 1
+
+
 def _youtube_id(url):
     """A YouTube video's id in a link (watch?v=, youtu.be/, shorts/, embed/,
     live/), or None."""
@@ -195,7 +199,7 @@ class App:
         # ---- what the player chose (saved) ----
         self.mode = "party"                 # "party" (group only) or "all"
         self._show_heal = True
-        self._auto_reset_boss = False
+        self._auto_reset_boss = True        # on unless the player turns it off
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
@@ -277,10 +281,12 @@ class App:
             return
         if data.get("mode") in ("party", "all"):
             self.mode = data["mode"]
-        for key, attr in (("show_heal", "_show_heal"),
-                          ("auto_reset_boss", "_auto_reset_boss")):
-            if isinstance(data.get(key), bool):
-                setattr(self, attr, data[key])
+        if isinstance(data.get("show_heal"), bool):
+            self._show_heal = data["show_heal"]
+        # settings saved before revision 1 had the boss pull reset off by
+        # default: turned on once for everyone, then the player's choice
+        if isinstance(data.get("auto_reset_boss"), bool) and                 int(data.get("settings_rev") or 0) >= SETTINGS_REV:
+            self._auto_reset_boss = data["auto_reset_boss"]
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
             self._rift_keep = data["rift_keep"]
         bind = data.get("reset_bind")
@@ -337,6 +343,7 @@ class App:
                 "mode": self.mode,
                 "show_heal": bool(self._show_heal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
+                "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
                 "zoom": int(self._zoom),

@@ -289,6 +289,10 @@ function setMaxState(isMax) {
   if (!b) return;
   b.dataset.i18nTitle = isMax ? 'Restaurer' : 'Agrandir';   // for translateStatic
   b.title = tr(b.dataset.i18nTitle);
+  // Windows' own: one square to maximise, two stacked to restore
+  b.innerHTML = isMax
+    ? '<svg viewBox="0 0 12 12"><rect x="2" y="4" width="6" height="6"/><path d="M4 4V2h6v6H8"/></svg>'
+    : '<svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg>';
 }
 
 /* At most one rectangle per frame, never before the last one is done:
