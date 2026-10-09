@@ -3513,6 +3513,19 @@ html.lt-760 .enc .collmain { grid-template-columns: minmax(0, 1fr); }
 .enctrail button.step:hover { color: #fff; text-decoration: underline; }
 .enctrail .step.cur { color: #fff; font-weight: 600; }
 .enctrail .sep { color: var(--faint); }
+.encgo { cursor: pointer; border-radius: 6px; }
+/* a job's crafts: a heading per level, the ones to learn apart */
+.encgrid > .encgrp { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin: 10px 0 2px;
+                     color: #fff; font-family: var(--font-head); font-size: 14px; letter-spacing: .4px; }
+.encgrid > .encgrp:first-child { margin-top: 0; }
+.encgrid > .encgrp::before { content: ""; width: 8px; height: 8px; flex: none; transform: rotate(45deg);
+                             background: linear-gradient(135deg, #FBE08A, #D69E2E); }
+.encgrid > .encgrp::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+.encgrid > .encgrp.sub { margin: 4px 0 0; color: var(--dim); font-family: inherit; font-size: 12px; letter-spacing: 0; }
+.encgrid > .encgrp.sub::before { width: 6px; height: 6px; background: var(--faint); }
+.encgrid > .encgrp.sub::after { display: none; }
+.encgo:hover :is(.who, > span) { color: #fff; text-decoration: underline; }
+.encgo:hover :is(.encface, .encpic) { border-color: var(--accent); }
 .enc > .colltools { margin: 0 0 14px; }
 .enchome { flex: 1; }
 .enctiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }

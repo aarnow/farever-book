@@ -609,6 +609,10 @@ def extract_fr_names(game_dir):
             txt = "".join(node.itertext()).strip() if node is not None else ""
             if txt:
                 rows[row.tag] = txt
+            # a job's recipe item's name (HItem.recipeName): "Recette : ::item::"
+            rn = row.find("texts.recipeName")
+            if name == "job" and rn is not None:
+                out.setdefault("_recipeName", {})[row.tag] =                     "".join(rn.itertext()).strip()
             # a skill's masteries are rows of their own, nested in it
             for m in row.findall("mastery/*"):
                 mn = m.find("text.name")
@@ -649,6 +653,8 @@ def extract_en_names(game_dir):
             txt = at(row, "texts.name") or at(row, "name")
             if txt:
                 rows[rid] = txt
+            if name == "job" and at(row, "texts.recipeName"):
+                out.setdefault("_recipeName", {})[rid] =                     at(row, "texts.recipeName")
             for m in row.get("mastery") or ():
                 if isinstance(m, dict) and isinstance(m.get("id"), str)                         and at(m, "text.name"):
                     rows[m["id"]] = at(m, "text.name")

@@ -235,6 +235,17 @@ def _cost_text(s):
                      for c in s.get("cost") or () if c.get("item"))
 
 
+def _npc_els():
+    """The elements of the characters the Encyclopedia lists."""
+    return {n.get("el") for n in collection_catalogue().get("npcs") or ()
+            if n.get("el")}
+
+
+def _encyclo_monsters():
+    """The monsters the Encyclopedia lists (the Codex's)."""
+    return {m["id"] for m in bestiary_view({}).get("items") or ()}
+
+
 def _seller(s):
     """A merchant's name: the one over its head (the element's), else its
     unit's."""
@@ -474,6 +485,8 @@ def item_where(iid, rar=None, rows_only=False):
                     # the merchant apart: its unit (portrait), its name in
                     # game, its towns, its price
                     rows[-1].update(
+                        go=("n:" + s["el"]) if s.get("el") in _npc_els()
+                        else None,
                         npc=s.get("npc") or "", who=_seller(s),
                         place=", ".join(dict.fromkeys(
                             _zone_label(x["zone"]) for x in same
@@ -547,6 +560,14 @@ def item_where(iid, rar=None, rows_only=False):
         if len(rows) > before:
             # its picture: the monster (or its family) the Codex shows, the
             # achievement's category crest
+            if k == "unit" and s.get("id") in _encyclo_monsters():
+                rows[-1]["go"] = "u:" + s["id"]
+            elif k == "family":
+                # a family: the Bestiary on it, its first monster open
+                first = next((m["id"] for m in bestiary_view({}).get("items")
+                              or () if m.get("famId") == s.get("id")), None)
+                if first:
+                    rows[-1].update(go="u:" + first, goType=s["id"])
             if k == "unit" and _bestiary_pic(s.get("id")):
                 rows[-1]["mob"] = s["id"]
             elif k == "family" and _family_pic(s.get("id")):
@@ -1870,7 +1891,8 @@ ENCYCLO_FACES = {
     "equipment": "Head_RCrimson_FigAss", "pets": "p:Squirrel_Blue",
     "mounts": "Mount_Goat_03", "gliders": "Glider_FlyingFish_Orange",
     "consumables": "RefillableFlask", "augments": "FormulaHandsMinorVitality",
-    "resources": "Wing_Z1", "npcs": "n:Glory_Merchant"}
+    "resources": "Wing_Z1", "npcs": "n:Glory_Merchant",
+    "jobs": "job_Blacksmith"}
 ENCYCLO_TOPICS = (
     ("bestiary", "Bestiaire", "monstre"),
     ("weapons", "Armes", "arme"),
@@ -1882,6 +1904,7 @@ ENCYCLO_TOPICS = (
     ("augments", "Améliorations", "amélioration"),
     ("resources", "Ressources", "ressource"),
     ("npcs", "PNJ", "PNJ"),
+    ("jobs", "Métiers", "recette"),
 )
 # an NPC whose unit is the hero's generic body: its portrait is not its own
 GENERIC_NPC_UNITS = {"BaseHero"}
@@ -1909,6 +1932,47 @@ def _encyclo_cat(t):
     """Its category, or None: an item no category lists is left out (a rune
     template, the parcels, the currencies...)."""
     return next((k for k, _l, _o, ts in ENCYCLO_CATS if t in ts), None)
+
+
+def _craft_id(c):
+    """A craft's Encyclopedia id: its job and what it makes."""
+    return f"r:{c['job']}:{c['item']}"
+
+
+def _craft_sheet(cid):
+    """A craft's sheet: what it makes (the item's own sheet), at which job
+    level, from what, and the recipe that teaches it when the job doesn't
+    know it from the start."""
+    c = next((x for x in collection_catalogue().get("crafts") or ()
+              if _craft_id(x) == cid), None)
+    if c is None:
+        return None
+    out = dict(encyclopedia_item(c["item"]) or {
+        "name": item_label(c["item"]), "img": item_icon(c["item"])})
+    job = _fr_names("job").get(c["job"]) or _pretty_id(c["job"])
+    # its model: what it makes (the sheet's id is "r:<job>:<item>")
+    out.update(id=cid, model=c["item"],
+               type=tr("{job} niv. {lvl}", job=job, lvl=c["lvl"]),
+               makes={"id": c["item"], "name": item_label(c["item"]),
+                      "img": item_icon(c["item"]), "n": c.get("n") or 1,
+                      "rk": (item_rarity(c["item"]) or "").lower(),
+                      "parts": [{"id": i, "name": item_label(i),
+                                 "img": item_icon(i), "n": n,
+                                 "rk": (item_rarity(i) or "").lower()}
+                                for i, n in c.get("input") or ()]})
+    if c.get("unlock"):
+        # the recipe that teaches it, named as the game names it
+        # (HItem.recipeName: the job's "Recette : ::item::"), and its sources
+        u = c["unlock"]
+        name = (_fr_names("_recipeName").get(c["job"]) or "").replace(
+            "::item::", item_label(c["item"])) or item_label(u)
+        out["learn"] = {"id": u, "name": name, "img": item_icon(u),
+                        "rk": (item_rarity(u) or "").lower()}
+        rec = collection_sheet("recipes", u, {}) or {}
+        out["learnWhere"] = rec.get("where") or []
+        if rec.get("meta"):
+            out["meta"] = rec["meta"]
+    return out
 
 
 def _npc_name(n):
@@ -1975,6 +2039,20 @@ def encyclopedia_view():
                       "tpic": ["coll", base],
                       "rk": "spark" if spark else "",
                       "rar": tr("Étincelle") if spark else "", "lvl": None})
+    # the jobs' crafts, by job (its tool's icon), by level
+    jobs = _fr_names("job")
+    for k, c in enumerate(cat.get("crafts") or ()):
+        rar = item_rarity(c["item"]) or ""
+        job = jobs.get(c["job"]) or _pretty_id(c["job"])
+        items.append({"id": _craft_id(c), "c": "jobs", "pic": ["item", c["item"]],
+                      "name": item_label(c["item"]),
+                      "type": tr("{job} niv. {lvl}", job=job, lvl=c["lvl"]),
+                      "tk": c["job"], "tf": job,
+                      "tpic": ["item", "job_" + c["job"]],
+                      "rk": rar.lower(), "rar": rarity_label(rar) if rar else "",
+                      # its level's heading, the ones to learn after the others
+                      "lvl": None, "grp": c["lvl"], "learn": bool(c.get("unlock")),
+                      "ord": k})
     # the characters of the open world: merchants, the others
     for n in cat.get("npcs") or ():
         sells = bool(n.get("sells"))
@@ -2005,6 +2083,11 @@ def encyclopedia_view():
     for k, label, one in ENCYCLO_TOPICS:
         mine = [it for it in items if it["c"] == k]
         if not mine:
+            continue
+        # the jobs: the Blacksmith's tool, no entry of its own
+        if str(ENCYCLO_FACES.get(k, "")).startswith("job_"):
+            topics.append({"v": k, "t": tr(label), "one": tr(one),
+                           "n": len(mine), "pic": ["item", ENCYCLO_FACES[k]]})
             continue
         face = next((it for it in mine if it["id"] == ENCYCLO_FACES.get(k)
                      and it.get("pic")), None) \
@@ -2098,7 +2181,7 @@ def _world_recipe_rows(world, meta_out):
         for f in w.get("families") or ():
             rows.append({"k": tr("Butin"),
                          "t": tr("Butin des ennemis : {name}",
-                                 name=_shared_name(f)) + pct + lvl,
+                                 name=_family_label(f)) + pct + lvl,
                          "mob": _family_pic(f)})
     if rows:
         rows.append({"k": tr("Tirage"),
@@ -2140,7 +2223,7 @@ def collection_sheet(key, iid, owned):
                                    for i, n in r.get("input") or ()]}}
         out["where"] = [{k: x.get(k) for k in (
             "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc", "who",
-            "place", "cost", "costs", "mob", "ach", "mapIcon") if x.get(k)}
+            "place", "cost", "costs", "mob", "ach", "mapIcon", "go", "goType") if x.get(k)}
             for x in rows]
         if r.get("world"):
             out["where"] += _world_recipe_rows(
@@ -2165,7 +2248,7 @@ def collection_sheet(key, iid, owned):
                "where": [{k: x.get(k) for k in (
                    "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc",
                    "who", "place", "cost", "costs", "mob", "ach", "mapIcon",
-                   "pet", "title") if x.get(k)} for x in rows]}
+                   "pet", "title", "go", "goType") if x.get(k)} for x in rows]}
         if any(x.get("pins") for x in out["where"]):
             out["meta"] = world_map().get("meta")
         return out
@@ -2208,7 +2291,9 @@ def _monster_sheet(uid):
     for b in d.get("by") or ():
         rows.append({"k": tr("Invoqué"), "t": tr("Invoqué par {name}",
                                                  name=b.get("name") or ""),
-                     "mob": b.get("id")})
+                     "mob": b.get("id"),
+                     "go": ("u:" + b["id"]) if b.get("id")
+                     in _encyclo_monsters() else None})
     out["spawn"] = rows
     if any(r.get("pins") for r in rows):
         out["meta"] = d.get("meta") or world_map().get("meta")
@@ -2285,6 +2370,8 @@ def encyclopedia_item(iid):
         if out:
             out.update(id=iid, owned=False)
         return out
+    if iid.startswith("r:"):
+        return _craft_sheet(iid)
     if iid.startswith("n:"):
         return _npc_sheet(iid[2:])
     enc = collection_catalogue().get("encyclo") or {}
@@ -2322,7 +2409,7 @@ def encyclopedia_item(iid):
                                             "npc", "who", "place", "cost",
                                             "mapIcon", "dungeon", "where",
                                             "diffs", "costs", "mob", "ach",
-                                            "rep")
+                                            "rep", "go", "goType")
                      if r.get(k)} for r in rows]
     rars = sorted({x for r in rows for x in r.get("rars") or () if x},
                   key=lambda x: RARITY_ORDER.get(x, 9))

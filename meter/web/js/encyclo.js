@@ -54,7 +54,9 @@ function buildEncyclo(n) {
     ENC.jump = n.jump;
     const it = n.jump && n.sel && (n.items || []).find((x) => x.id === n.sel.id);
     if (it) {
-      Object.assign(ENC, { topic: it.c, q: '', type: '', rar: '', top: 0 });
+      // a monster's family named in a sheet: the Bestiary on that family
+      const fam = ENC.jumpType && ENC.jumpType.id === it.id ? ENC.jumpType.t : '';
+      Object.assign(ENC, { topic: it.c, q: '', type: fam, rar: '', top: 0, jumpType: null });
       ENC.reveal = it.id;
     }
   }
@@ -259,6 +261,9 @@ function renderEncyclo(box, n) {
   const shown = pool.filter((it) => (!ENC.type || (needle ? it.c === ENC.type : it.tk === ENC.type))
     && (!ENC.rar || it.rk === ENC.rar)
     && (!needle || it.name.toLowerCase().includes(needle)));
+  // the jobs' crafts: by level, those known from the start, then those to learn
+  const byLevel = topic && topic.v === 'jobs' && !needle;
+  if (byLevel) shown.sort((a, b) => (a.grp - b.grp) || (a.learn - b.learn) || (a.ord - b.ord));
   // a filter changed: the first entry it keeps shown
   if (ENC.first) {
     ENC.first = false;
@@ -294,7 +299,17 @@ function renderEncyclo(box, n) {
   const more = (upTo) => {
     const stop = Math.min(shown.length, upTo || made + ENC_BATCH);
     const frag = document.createDocumentFragment();
-    for (; made < stop; made++) frag.appendChild(card(shown[made]));
+    for (; made < stop; made++) {
+      const it = shown[made];
+      const prev = shown[made - 1];
+      if (byLevel && (!prev || prev.grp !== it.grp)) {
+        frag.appendChild(el('div', 'encgrp', tr('Niveau {n}', { n: it.grp })));
+      }
+      if (byLevel && it.learn && (!prev || prev.grp !== it.grp || !prev.learn)) {
+        frag.appendChild(el('div', 'encgrp sub', tr('À débloquer en jeu')));
+      }
+      frag.appendChild(card(it));
+    }
     grid.insertBefore(frag, end);
     ENC.made = made;
     end.hidden = made >= shown.length;
@@ -466,6 +481,14 @@ function encSheet(s) {
     const parts = el('div', 'encparts');
     (s.makes.parts || []).forEach((p) => parts.appendChild(encLink(p)));
     body.appendChild(parts);
+  }
+  if (s.learn) {
+    // a craft the job doesn't know from the start: the recipe to learn
+    body.appendChild(el('div', 'sub2', tr('À débloquer en jeu')));
+    const box = el('div', 'enclinks');
+    box.appendChild(encLink(s.learn));
+    body.appendChild(box);
+    (s.learnWhere || []).forEach((r) => body.appendChild(encWhereRow(r, s.meta, '')));
   }
   // the attributes and the ways to get it, at the rarity of the tab picked
   const tabs = s.tabs || [];
@@ -652,6 +675,16 @@ function encWhereRow(r, meta, rar) {
       line.appendChild(ic);
     }
     line.appendChild(el('span', null, r.t));
+  }
+  // a merchant, a monster, a family: its Encyclopedia page a click away
+  if (r.go) {
+    line.classList.add('encgo');
+    line.title = tr('Voir dans l’encyclopédie');
+    line.addEventListener('click', (e) => {
+      if (e.target.closest('.encpin')) return;
+      ENC.jumpType = r.goType ? { id: r.go, t: r.goType } : null;
+      encOpen(r.go, true);
+    });
   }
   if ((r.pins || []).length && meta) {
     const pin = el('button', 'encpin');

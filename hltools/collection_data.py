@@ -571,6 +571,16 @@ def build(game_dir, img_dir=None):
                           "minLvl": ln.get("minLvl"), "families": fams,
                           "chests": chests, "at": [list(a) for a in at]})
     out["recipes"] = {"list": recipes, "world": world}
+    # every craft of the jobs, as the craft sheet lists them: what it makes,
+    # at which job level, from what, and the item that teaches it when the
+    # job doesn't know it from the start
+    out["crafts"] = [{"item": r.get("item"), "job": r.get("job"),
+                      "lvl": r.get("level") or 1, "n": r.get("count") or 1,
+                      "input": [[i.get("item"), i.get("count") or 1]
+                                for i in r.get("input") or ()],
+                      "unlock": r.get("unlockSource")}
+                     for r in sheets["craft"].get("lines") or ()
+                     if r.get("item") and r.get("job")]
     out["npcs"] = sorted(npcs.values(), key=lambda n: n["name"])
     # the game's durations in a text (HText.timerVerbosePrec): hours,
     # minutes, seconds, French (res.pak lang) and English (data.cdb)
