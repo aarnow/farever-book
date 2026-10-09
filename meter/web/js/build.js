@@ -923,7 +923,7 @@ function newBuildDialog(n) {
   close = buildModal('newbuildmodal', tr('Nouveau build'), (box) => {
     const row = el('div', 'bnewpicks');
     row.appendChild(pick(tr('Manuellement'), tr('Un build vide : tu choisis toi-même chaque pièce, '
-      + 'les talents et les compétences.'), () => { BUILD_VIEW = 'stuff'; notify('build_new', {}); }));
+      + 'les talents et les compétences.'), () => newBuildClassDialog()));
     row.appendChild(pick(tr('Avec assistance'), tr('Quelques questions (classe, armes, attributs, '
       + 'statistiques, objectif) et le build est composé pour toi.'), openGuide));
     row.appendChild(pick(tr('Depuis mon personnage'),
@@ -933,6 +933,28 @@ function newBuildDialog(n) {
               + '(le jeu est fermé : tel que lu le {when}).', { name: me.n, when: me.when })
             : tr('Copie l’équipement, les talents, les compétences et les runes de {name}.', { name: me.n }),
       () => { BUILD_VIEW = 'stuff'; notify('build_from_me', {}); }, !me || me.wait));
+    box.appendChild(row);
+  }, [[tr('Annuler'), 'rowbtn', null]]);
+}
+
+/* "Manuellement": the class first, the rest is chosen in the build. */
+const NEW_CLASSES = [['Warrior', 'warrior'], ['Mage', 'mage'], ['Priest', 'priest'], ['Rogue', 'rogue']];
+function newBuildClassDialog() {
+  let close = null;
+  close = buildModal('newbuildcls', tr('Nouveau build — classe'), (box) => {
+    const row = el('div', 'bclspicks');
+    NEW_CLASSES.forEach(([cls, ck]) => {
+      const b = el('button', 'bclspick c-' + ck);
+      b.type = 'button';
+      b.appendChild(classEl(tr(CLASS_NAMES[ck]), ck, 'big'));
+      b.appendChild(el('b', null, tr(CLASS_NAMES[ck])));
+      b.addEventListener('click', () => {
+        if (close) close();
+        BUILD_VIEW = 'stuff';
+        notify('build_new', { cls: cls });
+      });
+      row.appendChild(b);
+    });
     box.appendChild(row);
   }, [[tr('Annuler'), 'rowbtn', null]]);
 }

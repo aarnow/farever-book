@@ -2881,6 +2881,14 @@ html.lt-900 .bbar .infulist { grid-template-columns: minmax(0, 1fr); }
 .bpassline .bpass1 { cursor: help; }
 .bpassline .bpass1:hover { filter: brightness(1.2); }
 .bsharepop { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+/* a new build's class: a tile each */
+.bclspicks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 4px; }
+.bclspick { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px;
+            border-radius: 10px; border: 1px solid var(--line); background: var(--bg-2); color: #fff;
+            font: inherit; cursor: pointer; }
+.bclspick:hover { border-color: var(--accent); background: rgba(242, 201, 76, .08); }
+.bclspick .clsicon { width: 44px; height: 44px; }
+.bclspick b { font-family: var(--font-head); font-size: 14px; letter-spacing: .5px; }
 .bsharepop .rowbtn { width: 100%; text-align: left; }
 .bsettings { max-width: 560px; display: flex; flex-direction: column; gap: 14px; padding: 18px; }
 .bsettings .bsrow { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: center; gap: 12px; }

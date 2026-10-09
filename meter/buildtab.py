@@ -62,7 +62,7 @@ class BuildTab:
     # ---- actions ---------------------------------------------------------
     def actions(self):
         return {
-            "build_new": self._new,
+            "build_new": lambda p: self._new(p.get("cls")),
             "build_open": lambda p: self._open(p.get("file")),
             "build_close": self._close,
             "build_dup": self._duplicate,
@@ -115,9 +115,10 @@ class BuildTab:
         self.slot, self.confirm_delete = None, False
         self._toast(tr("Build créé à partir de {name}.", name=prof.get('n')))
 
-    def _new(self):
+    def _new(self, cls=None):
+        """An empty build, of the class picked (Priest by default)."""
         n = len(B.list_builds()) + 1
-        b = B.normalize(B.new_build(tr("Build {n}", n=n)))
+        b = B.normalize(B.new_build(tr("Build {n}", n=n), cls or "Priest"))
         self.file, self.build = B.save_build(b), b
         self.slot, self.confirm_delete = None, False
 
