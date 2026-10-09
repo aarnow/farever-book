@@ -365,15 +365,28 @@ def rune_skills(b):
     d = build_data()
     info = d.get("skillInfo") or {}
     cls = (d.get("classes") or {}).get(b.get("cls")) or {}
-    return [s["id"] for s in cls.get("skills") or ()
+    return [s["id"] for s in (cls.get("skills") or [])
+            + [{"id": x} for x in [signature(b)] if x]
             if (info.get(s["id"]) or {}).get("runes")]
 
 
+def signature(b):
+    """The class's signature skill once the build's level has it (always
+    in the middle of the bar), or None."""
+    sig = (((build_data().get("classes") or {}).get(b.get("cls")) or {})
+           .get("signature")) or {}
+    if sig.get("id") and int(b.get("lvl") or 1) >= int(sig.get("lvl") or 1):
+        return sig["id"]
+    return None
+
+
 def bar_skills(b):
-    """The skills on the bar: the weapon's, the arsenal's, the class's."""
+    """The skills on the bar: the weapon's, the arsenal's, the signature,
+    the class's."""
     sk = b.get("skills") or {}
-    return [s for g in ("weapon", "arsenal", "class")
-            for s in sk.get(g) or () if s]
+    return ([s for g in ("weapon", "arsenal") for s in sk.get(g) or () if s]
+            + [x for x in [signature(b)] if x]
+            + [s for s in sk.get("class") or () if s])
 
 
 def passives(b):

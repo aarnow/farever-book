@@ -803,7 +803,9 @@ class BuildTab:
         cls = (d.get("classes") or {}).get(b["cls"]) or {}
         groups.append((tr("Compétences de classe"),
                        _cls_fr(b["cls"]) if b["cls"] in CLASS_FR else "",
-                       [(s["id"], None, None) for s in cls.get("skills") or ()]))
+                       [(sid, None, None) for sid in
+                        [x for x in [B.signature(b)] if x]
+                        + [s["id"] for s in cls.get("skills") or ()]]))
         rows = [r for _t, _s, rs in groups for r in rs]
         # the hero alone: critical chances and what an incoming hit leaves
         out = simulate(raw, b["lvl"], [], armor, enemy, hit, runes)
