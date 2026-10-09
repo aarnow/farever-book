@@ -84,12 +84,31 @@ def build(game_dir, img_dir=None):
         if tid in tables:
             users[tid].append({"k": "scrap", "id": tid})
 
+    # the tool a gatherable is worked with: its skill (props.gatherSkill,
+    # inherited, "Mine" by default: Gatherable.getInteractSkill) puts an item
+    # type in the hero's hand (forceItemTypeInHand), the first such item
+    skills = rows("skill")
+
+    def gather_tool(gid):
+        seen, skill = set(), None
+        while gid in gathers and gid not in seen and skill is None:
+            seen.add(gid)
+            skill = (gathers[gid].get("props") or {}).get("gatherSkill")
+            gid = gathers[gid].get("inherit")
+        hand = next((st["visuals"]["forceItemTypeInHand"]
+                     for st in (skills.get(skill or "Mine") or {}).get("steps")
+                     or () if (st.get("visuals") or {}).get(
+                         "forceItemTypeInHand")), None)
+        return next((i for i, r in items.items() if hand
+                     and r.get("type") == hand), None)
+
     for gid, g in gathers.items():
         root = gather_root(gid)
+        tool = gather_tool(gid)
         for key in ("loot", "hitLoot"):
             tid = g.get(key) or root.get(key)
             if tid:
-                users[tid].append({"k": "gather", "id": gid})
+                users[tid].append({"k": "gather", "id": gid, "tool": tool})
 
     for tid, us in users.items():
         for iid, p in _table_items(tables, tid).items():

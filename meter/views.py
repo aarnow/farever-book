@@ -572,6 +572,10 @@ def item_where(iid, rar=None, rows_only=False):
                 rows[-1]["mob"] = s["id"]
             elif k == "family" and _family_pic(s.get("id")):
                 rows[-1]["mob"] = _family_pic(s.get("id"))
+            elif k == "gather" and s.get("tool"):
+                # a lode, a bush: no picture of its own, the tool the
+                # hero works it with (a pickaxe, a sickle)
+                rows[-1]["img"] = item_icon(s["tool"])
             elif k == "ach":
                 crest = _ach_crest((s.get("chain") or [s.get("id")])[0])
                 if crest:
