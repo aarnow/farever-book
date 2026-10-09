@@ -522,6 +522,18 @@ def item_where(iid, rar=None, rows_only=False):
         add(k, _source_text(dict(s, chance=None), bosses).split("\n")[0],
             [base] if k in ("shop", "craft", "ach", "starter")
             else dropped(base))
+        if len(rows) > before and k == "spawn" and not s.get("rift"):
+            # a companion: where it roams, its picture on each spot
+            zs = set(s.get("zones") or ())
+            pins = [{"x": x, "y": y, "t": _zone_label(z) if z else ""}
+                    for x, y, z in (bestiary_catalogue().get("critterSpawns")
+                                    or {}).get(iid) or ()
+                    if not zs or z in zs]
+            if pins:
+                rows[-1].update(pins=pins, pinCls="", pet=iid,
+                                title=_unit_label(iid), place=", ".join(
+                                    _zone_label(z) for z in s.get("zones")
+                                    or ()))
         if len(rows) > before:
             # its picture: the monster (or its family) the Codex shows, the
             # achievement's category crest
@@ -2050,8 +2062,8 @@ def collection_sheet(key, iid, owned):
                "own": iid in set(owned.get("pets") or ()), "owned": True,
                "where": [{k: x.get(k) for k in (
                    "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc",
-                   "who", "place", "cost", "costs", "mob", "ach", "mapIcon")
-                   if x.get(k)} for x in rows]}
+                   "who", "place", "cost", "costs", "mob", "ach", "mapIcon",
+                   "pet", "title") if x.get(k)} for x in rows]}
         if any(x.get("pins") for x in out["where"]):
             out["meta"] = world_map().get("meta")
         return out

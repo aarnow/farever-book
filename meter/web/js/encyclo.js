@@ -656,7 +656,8 @@ function encWhereRow(r, meta, rar) {
     // a monster's spawns: its own picture on each (the Codex's map)
     pin.addEventListener('click', () => encMapModal(r.title || r.who || r.t,
       r.place || (r.title ? r.t : ''), r.pins, meta, r.pinCls,
-      r.mob && !r.pinCls ? r.mob : null, r.face || r.npc));
+      r.mob && !r.pinCls ? r.mob : null, r.face || r.npc,
+      r.pet ? (window.__COLL__ || {})[r.pet] : null));
     line.appendChild(pin);
   }
   t.appendChild(line);
@@ -677,7 +678,7 @@ const PIN_ICON = 'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7
 
 /* The world map in a window over the app, framed on the pins: a merchant's
    towns, a rift's spots. Closed by its cross, a click beside or Échap. */
-function encMapModal(title, sub, pins, meta, cls, mob, face) {
+function encMapModal(title, sub, pins, meta, cls, mob, face, img) {
   const old = $('#encmapmodal');
   if (old) old.remove();
   const back = el('div', 'modalback');
@@ -697,7 +698,8 @@ function encMapModal(title, sub, pins, meta, cls, mob, face) {
   if (sub) head.appendChild(el('div', 'rmwhere', sub));
   box.appendChild(head);
   // an NPC: its portrait on each place
-  const portrait = face && (window.__PORTRAITS__ || {})[face];
+  // a companion: its picture
+  const portrait = img || (face && (window.__PORTRAITS__ || {})[face]);
   const map = (mob || portrait)
     ? huntMiniMap({ meta: meta, uid: mob, pinImg: portrait || null,
       spawns: pins.map((p) => ({ x: p.x, y: p.y, z: p.t })) })

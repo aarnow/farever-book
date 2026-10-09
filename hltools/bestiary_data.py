@@ -184,6 +184,10 @@ def build(game_dir, codex, img_dir=None):
             unit_loot[uid] = own
     spawns = {u: sorted([x, y, z] for x, y, z in pts)
               for u, pts in spots.items() if u in every}
+    # the critters (a companion caught where it roams): their spots too
+    critters = {u: sorted([x, y, z] for x, y, z in pts)
+                for u, pts in spots.items()
+                if u not in every and (units.get(u) or {}).get("type") == "Critter"}
     lvls = {uid: units[uid].get("lvl") for uid in every
             if units[uid].get("lvl")}
 
@@ -270,7 +274,7 @@ def build(game_dir, codex, img_dir=None):
         if f:
             factions[uid] = f
     return {"placed": placed, "units": every, "families": families,
-            "spawns": spawns, "lvl": lvls, "famLoot": fam_loot,
+            "spawns": spawns, "critterSpawns": critters, "lvl": lvls, "famLoot": fam_loot,
             "unitLoot": unit_loot, "where": where, "entrances": entrances,
             "chain": {u: c for u, c in chains.items() if len(c) > 1},
             # an instance's loading screen, by its name in dungeon_bg/
