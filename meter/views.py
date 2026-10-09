@@ -2050,6 +2050,8 @@ def _monster_sheet(uid):
     if d.get("spawns"):
         rows.append({"k": tr("Monde"), "t": ", ".join(d.get("zones") or ())
                      or tr("Monde ouvert"), "mob": uid, "pinCls": "",
+                     # its map's title: the monster, its zones under it
+                     "title": d["name"],
                      "pins": [{"x": p["x"], "y": p["y"], "t": p.get("z", "")}
                               for p in d["spawns"]]})
     for i in d.get("insts") or ():
