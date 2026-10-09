@@ -219,6 +219,7 @@ class App:
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_tab = "info"          # its page's tab: info, runs, help
         self._encyclo_sel = None            # the Encyclopedia's item shown
+        self._encyclo_reset = 0             # bumped: the page on its first category
         self._encyclo_list = (None, None)   # (data, its list), computed once
         self._encyclo_sheets = {}           # item -> its sheet, for that data
         self._icons_sent = False
@@ -716,12 +717,29 @@ class App:
         self._setup_start()
 
     def _set_tab(self, name):
+        """A tab clicked, the one shown or another: it opens on its own
+        first page (the list of dungeons, not one dungeon's), whatever was
+        open in it."""
         if name not in APP_TABS:
             return
-        if name != "Help":
-            self._help_open = None
-        if name == "Build" and self._menu_tab != "Build":
-            self.buildtab.close()       # the tab opens on the list of builds
+        self._help_open = None
+        if name == "Build":
+            self.buildtab.close()       # the list of builds
+        elif name == "Dungeons":
+            self._dungeon_kind = None
+            self._dungeon_view = None
+            self._dungeon_tab = "info"
+        elif name == "Rifts":
+            self._rift_view = None
+            self._rift_sel = set()
+            self._rift_confirm = False
+        elif name == "Hunt":
+            self._hunt_sel = None
+        elif name == "Character":
+            self._char_sel = None
+        elif name == "Encyclopedia":
+            self._encyclo_sel = None
+            self._encyclo_reset += 1    # the page back on its first category
         self._menu_tab = name
 
     def _menu_actions(self):
@@ -2055,6 +2073,7 @@ class App:
         if sel not in self._encyclo_sheets:
             self._encyclo_sheets[sel] = encyclopedia_item(sel)
         return [{"k": "encyclo", "id": "encyclo", **view,
+                 "reset": self._encyclo_reset,
                  "sel": self._encyclo_sheets[sel]}]
 
     def _send_item_icons(self):

@@ -19,6 +19,11 @@ function encIcon(id, cls) {
 
 function buildEncyclo(n) {
   ENC_NODE = n;
+  // the tab clicked again: back on its first category, filters off
+  if (n.reset !== ENC.reset) {
+    ENC.reset = n.reset;
+    Object.assign(ENC, { cat: (n.cats || [{}])[0].v || 'weapons', q: '', type: '', rar: '', top: 0 });
+  }
   if (!ENC_ICONS) { ENC_ICONS = true; notify('encyclo_icons', {}); }
   const box = el('div', 'coll enc');
   renderEncyclo(box, n);
