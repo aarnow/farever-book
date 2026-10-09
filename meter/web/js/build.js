@@ -25,6 +25,11 @@ function buildBuild(n) {
   back.addEventListener('click', () => notify('build_close', {}));
   top.appendChild(back);
   const acts = el('div', 'bacts');
+  const dup = el('button', 'btn bdup', tr('Dupliquer'));
+  dup.type = 'button';
+  dup.title = tr('Une copie de ce build, ouverte à sa place (l’original reste dans la liste).');
+  dup.addEventListener('click', () => notify('build_dup', {}));
+  acts.appendChild(dup);
   const ren = el('button', 'btn bren', tr('Renommer'));
   ren.type = 'button';
   ren.addEventListener('click', () => renameBuildDialog(o));
@@ -46,7 +51,7 @@ function buildBuild(n) {
   const wt = el('div', 'bwt');
   wt.appendChild(el('b', 'bwn', o.name));
   const ws = el('div', 'bws');
-  ws.appendChild(el('span', null, o.clsFr || ''));
+  ws.appendChild(classButton(o));
   ws.appendChild(levelButton(o));
   wt.appendChild(ws);
   who.appendChild(wt);
@@ -345,6 +350,21 @@ function buildPassives(list) {
 }
 
 /* The build's level, a button: a click shows every level to pick one. */
+/* The build's class, a click picks another (the same tiles as a new
+   build's). */
+function classButton(o) {
+  const b = el('button', 'blvlbtn bclsbtn');
+  b.type = 'button';
+  b.title = tr('Changer la classe du build');
+  b.appendChild(el('span', null, o.clsFr || '?'));
+  b.appendChild(el('i', 'caret'));
+  b.addEventListener('click', () => classPickDialog('buildcls', tr('Changer de classe'), o.ck, (cls) => {
+    if (cls !== o.cls) notify('build_class', { value: cls });
+  }, tr('Les talents et les sorts de classe repartent de zéro, les pièces que la nouvelle classe ne peut '
+    + 'pas porter sont retirées. Duplique d’abord le build pour garder celui-ci.')));
+  return b;
+}
+
 function levelButton(o) {
   const b = el('button', 'blvlbtn');
   b.type = 'button';
@@ -947,18 +967,26 @@ function newBuildDialog(n) {
 /* "Manuellement": the class first, the rest is chosen in the build. */
 const NEW_CLASSES = [['Warrior', 'warrior'], ['Mage', 'mage'], ['Priest', 'priest'], ['Rogue', 'rogue']];
 function newBuildClassDialog() {
+  classPickDialog('newbuildcls', tr('Nouveau build — classe'), null, (cls) => {
+    BUILD_VIEW = 'stuff';
+    notify('build_new', { cls: cls });
+  });
+}
+
+/* A class to pick, a tile each (the current one marked), then pick(cls). */
+function classPickDialog(id, title, current, pick, note) {
   let close = null;
-  close = buildModal('newbuildcls', tr('Nouveau build — classe'), (box) => {
+  close = buildModal(id, title, (box) => {
+    if (note) box.appendChild(el('p', 'bclsnote', note));
     const row = el('div', 'bclspicks');
     NEW_CLASSES.forEach(([cls, ck]) => {
-      const b = el('button', 'bclspick c-' + ck);
+      const b = el('button', 'bclspick c-' + ck + (ck === current ? ' on' : ''));
       b.type = 'button';
       b.appendChild(classEl(tr(CLASS_NAMES[ck]), ck, 'big'));
       b.appendChild(el('b', null, tr(CLASS_NAMES[ck])));
       b.addEventListener('click', () => {
         if (close) close();
-        BUILD_VIEW = 'stuff';
-        notify('build_new', { cls: cls });
+        pick(cls);
       });
       row.appendChild(b);
     });
