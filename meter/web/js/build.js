@@ -31,7 +31,7 @@ function buildBuild(n) {
   acts.appendChild(ren);
   const shr = el('button', 'btn bshare', tr('Partager'));
   shr.type = 'button';
-  shr.addEventListener('click', () => shareMenu(shr, o));
+  shr.addEventListener('click', () => shareMenu(o));
   acts.appendChild(shr);
   top.appendChild(acts);
   box.appendChild(top);
@@ -400,23 +400,30 @@ function renameBuildDialog(o) {
       [tr('Renommer'), 'btn bren', () => notify('build_rename', { value: input.value })]]);
 }
 
-/* Partager: the code to paste to another player, or the build's image. */
-function shareMenu(anchor, o) {
-  gearPop(anchor, (box, close) => {
-    box.classList.add('bsharepop');
-    const code = el('button', 'rowbtn', tr('Copier le code'));
-    code.type = 'button';
-    code.title = tr('Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.');
-    code.addEventListener('click', () => { close(); notify('build_share', {}); });
-    box.appendChild(code);
-    const pic = el('button', 'rowbtn', tr(o.imaging ? 'Création de l’image…' : 'Image à partager'));
-    pic.type = 'button';
-    pic.title = tr('Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
-      + 'presse-papiers et enregistrée dans Images › Farever Book.');
-    pic.disabled = !!o.imaging;
-    pic.addEventListener('click', () => { close(); notify('build_image', {}); });
-    box.appendChild(pic);
-  });
+/* Partager, in a window in the middle of the screen: the code to paste
+   to another player, or the build's image. */
+function shareMenu(o) {
+  let close = null;
+  const pick = (box, title, text, act, off) => {
+    const b = el('button', 'bsharepick');
+    b.type = 'button';
+    b.appendChild(el('b', null, title));
+    b.appendChild(el('span', null, text));
+    b.disabled = !!off;
+    b.addEventListener('click', () => { if (close) close(); act(); });
+    box.appendChild(b);
+  };
+  close = buildModal('sharebuild', tr('Partager le build'), (box) => {
+    const list = el('div', 'bsharepicks');
+    pick(list, tr('Copier le code'),
+      tr('Copie un code à coller à un autre joueur (Discord…) : il l’importe depuis sa liste de builds.'),
+      () => notify('build_share', {}));
+    pick(list, tr(o.imaging ? 'Création de l’image…' : 'Image à partager'),
+      tr('Une image du build (héros en 3D, équipement, sorts, imprégnations) copiée dans le '
+        + 'presse-papiers et enregistrée dans Images › Farever Book.'),
+      () => notify('build_image', {}), o.imaging);
+    box.appendChild(list);
+  }, [[tr('Fermer'), 'rowbtn', null]]);
 }
 
 /* The skills a bar slot can take, in a window over the page: a click
