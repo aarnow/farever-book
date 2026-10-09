@@ -468,7 +468,7 @@ def item_where(iid, rar=None, rows_only=False):
                         place=", ".join(dict.fromkeys(
                             _zone_label(x["zone"]) for x in same
                             if x.get("zone"))),
-                        cost=_cost_text(s),
+                        cost=_cost_text(s), rep=_rep_text(s.get("rep")),
                         costs=[{"n": c.get("n") or 0,
                                 "name": item_label(c["item"]),
                                 "img": item_icon(c["item"])}
@@ -2075,6 +2075,23 @@ def _monster_sheet(uid):
     return out
 
 
+def _rep_text(rep):
+    """A reputation a merchant asks: "Réputation : Pèlerins de Merilam
+    niv. 4" (the game numbers its levels, it names none)."""
+    if not rep or not rep[0]:
+        return ""
+    return tr("Réputation : {faction} niv. {n}", faction=faction_label(rep[0]),
+              n=rep[1] or 0)
+
+
+def _offer(o):
+    """An article's price (each currency with its icon) and the reputation
+    it asks."""
+    return {"costs": [{"n": n or 0, "name": item_label(i), "img": item_icon(i)}
+                      for i, n in o.get("cost") or () if i],
+            "rep": _rep_text(o.get("rep"))}
+
+
 def _npc_sheet(key):
     """A character of the open world: who, where (a pin per place), what
     it sells."""
@@ -2103,8 +2120,10 @@ def _npc_sheet(key):
                       "pins": [{"x": x, "y": y, "t": _zone_label(z) if z
                                 else ""} for x, y, z in n["places"]]}],
            "meta": world_map().get("meta"),
-           "sells": [{"id": i, "name": item_label(i), "img": item_icon(i),
-                      "rk": (item_rarity(i) or "").lower()}
+           "sells": [dict({"id": i, "name": item_label(i),
+                           "img": item_icon(i),
+                           "rk": (item_rarity(i) or "").lower()},
+                          **_offer(((n.get("offers") or {}).get(i)) or {}))
                      for i in n.get("sells") or ()]}
     return out
 
@@ -2157,7 +2176,8 @@ def encyclopedia_item(iid):
                                             "parts", "pins", "pinCls", "rars",
                                             "npc", "who", "place", "cost",
                                             "mapIcon", "dungeon", "where",
-                                            "diffs", "costs", "mob", "ach")
+                                            "diffs", "costs", "mob", "ach",
+                                            "rep")
                      if r.get(k)} for r in rows]
     rars = sorted({x for r in rows for x in r.get("rars") or () if x},
                   key=lambda x: RARITY_ORDER.get(x, 9))

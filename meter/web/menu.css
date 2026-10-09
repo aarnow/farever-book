@@ -3545,3 +3545,5 @@ html.lt-760 .enc .collmain { grid-template-columns: minmax(0, 1fr); }
 .enc > .colltools:first-of-type { max-width: 1080px; width: 100%; margin: 0 auto 14px; padding: 0 24px;
                                   box-sizing: border-box; }
 .encnopic { color: var(--faint); font-size: 12px; font-style: italic; text-align: center; }
+.encrep { color: #E8C17A; font-size: 12px; }
+.enclink .enccost, .enclink .encrep { display: flex; }

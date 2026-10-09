@@ -329,6 +329,21 @@ function renderEncyclo(box, n) {
   }
 }
 
+/* A price: each currency's amount and icon. */
+function encCost(costs) {
+  const p = el('small', 'enccost');
+  p.appendChild(document.createTextNode(tr('Prix :') + ' '));
+  costs.forEach((c, i) => {
+    if (i) p.appendChild(document.createTextNode(' + '));
+    const one = el('span', 'enccur');
+    if (c.n) one.appendChild(el('b', null, fmtN(c.n)));
+    if (c.img) { const im = el('img'); im.src = c.img; im.alt = ''; im.title = c.name; one.appendChild(im); }
+    else one.appendChild(document.createTextNode(c.name));
+    p.appendChild(one);
+  });
+  return p;
+}
+
 /* An item named in a sheet (an ingredient, what a recipe makes, what a
    cache holds): its icon and name, a click opens its own sheet. */
 function encLink(x, extra) {
@@ -340,6 +355,9 @@ function encLink(x, extra) {
   const t = el('span', 'enct');
   t.appendChild(el('b', 'nm', (x.n > 1 ? x.n + ' × ' : '') + x.name));
   if (extra) t.appendChild(el('span', null, extra));
+  // a merchant's article: its price and the reputation it asks
+  if ((x.costs || []).length) t.appendChild(encCost(x.costs));
+  if (x.rep) t.appendChild(el('small', 'encrep', x.rep));
   b.appendChild(t);
   if (x.id) b.addEventListener('click', () => encOpen(x.id, true));
   return b;
@@ -621,20 +639,9 @@ function encWhereRow(r, meta, rar) {
     line.appendChild(pin);
   }
   t.appendChild(line);
-  if ((r.costs || []).length) {
-    // the price, each currency by its icon
-    const p = el('small', 'enccost');
-    p.appendChild(document.createTextNode(tr('Prix :') + ' '));
-    r.costs.forEach((c, i) => {
-      if (i) p.appendChild(document.createTextNode(' + '));
-      const one = el('span', 'enccur');
-      if (c.n) one.appendChild(el('b', null, fmtN(c.n)));
-      if (c.img) { const im = el('img'); im.src = c.img; im.alt = ''; im.title = c.name; one.appendChild(im); }
-      else one.appendChild(document.createTextNode(c.name));
-      p.appendChild(one);
-    });
-    t.appendChild(p);
-  } else if (r.cost) t.appendChild(el('small', null, tr('Prix : {cost}', { cost: r.cost })));
+  if ((r.costs || []).length) t.appendChild(encCost(r.costs));
+  else if (r.cost) t.appendChild(el('small', null, tr('Prix : {cost}', { cost: r.cost })));
+  if (r.rep) t.appendChild(el('small', 'encrep', r.rep));
   if (r.sub) t.appendChild(el('small', null, r.sub));
   if ((r.parts || []).length) {
     const parts = el('div', 'encparts');

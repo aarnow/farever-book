@@ -310,6 +310,21 @@ def build(game_dir, img_dir=None):
                             it = sh.get("item") if isinstance(sh, dict) else None
                             if it and it not in n["sells"]:
                                 n["sells"].append(it)
+                                # its price ("1 Gold": a placeholder) and
+                                # the reputation it asks
+                                cost = [[c.get("item") or c.get("kind"),
+                                         c.get("qty") or c.get("count")
+                                         or c.get("amount")]
+                                        for c in sh.get("cost") or ()
+                                        if isinstance(c, dict)
+                                        and not (c.get("kind") == "Gold"
+                                                 and (c.get("amount") or 1) <= 1)]
+                                rep = (sh.get("conds") or {}).get("reputation")                                     if isinstance(sh.get("conds"), dict) else None
+                                n.setdefault("offers", {})[it] = {
+                                    "cost": cost,
+                                    "rep": [rep["faction"], rep.get("level")]
+                                    if isinstance(rep, dict)
+                                    and rep.get("faction") else None}
             # the developers' preview merchants ("Major Update Preview
             # Merchant (debug)") sell what no player can buy
             if isinstance(props.get("shop"), list) \
@@ -330,6 +345,11 @@ def build(game_dir, img_dir=None):
                                      and (c.get("amount") or 1) <= 1)]
                     entry = {"k": "shop", "npc": npc or o.get("name"),
                              "zone": zone, "cost": cost}
+                    # sold from a reputation level with a faction on
+                    rep = ((s.get("conds") or {}).get("reputation")
+                           if isinstance(s.get("conds"), dict) else None)
+                    if isinstance(rep, dict) and rep.get("faction"):
+                        entry["rep"] = [rep["faction"], rep.get("level")]
                     if el_name and isinstance(o.get("id"), str):
                         entry["el"], entry["eln"] = o["id"], el_name
                     elif ref and prefab_npc(ref):
