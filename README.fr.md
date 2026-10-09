@@ -12,16 +12,19 @@ ou 11).
 
 ## Aperçu
 
-![La collection : montures, planeurs, compagnons, équipements et objets, avec leur modèle 3D](docs/screenshots/collection.webp)
+![L'Encyclopédie : une monture en 3D, sa famille et comment l'obtenir](docs/screenshots/encyclopedia.webp)
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/build.webp" alt="Un build : le héros en 3D, l'équipement, la barre de sorts et les statistiques"></td>
-    <td width="50%"><img src="docs/screenshots/codex.webp" alt="Le Codex : un monstre en 3D et où le trouver sur la carte"></td>
+    <td width="50%"><img src="docs/screenshots/build.webp" alt="Un build : le héros en 3D, l'équipement, les sorts et passifs, les statistiques"></td>
+    <td width="50%"><img src="docs/screenshots/collection.webp" alt="La collection : montures, planeurs, compagnons, équipements et objets, avec leur modèle 3D"></td>
   </tr>
   <tr>
+    <td><img src="docs/screenshots/codex.webp" alt="Le Codex : un monstre en 3D et où le trouver sur la carte"></td>
     <td><img src="docs/screenshots/dungeons.webp" alt="Les donjons : records, victoires et butin par difficulté"></td>
-    <td><img src="docs/screenshots/boss.webp" alt="La fiche d'un boss : PV selon le groupe, défenses et compétences"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/boss.webp" alt="La fiche d'un boss : PV selon le groupe, défenses et compétences"></td>
   </tr>
 </table>
 
@@ -29,14 +32,17 @@ ou 11).
 
 * **En jeu** : le compteur de dégâts et de soins, ton groupe, tes chances de
   butin.
-* **Failles et donjons** : le butin, les rapports de chaque faille et de chaque
-  run, tes records.
-* **Collection, Codex, Succès, Carte** : ta progression, ce qu'il te manque et
-  comment l'obtenir.
+* **Progression** (Collection, Codex, Carte, Succès, Donjons, Failles) : ta
+  progression, ce qu'il te manque et comment l'obtenir, le butin et les
+  rapports de chaque faille et de chaque run, tes records.
+* **Encyclopédie** : les objets, monstres, familiers, montures, planeurs, PNJ
+  et métiers du jeu, avec leur modèle 3D, où les trouver et comment les
+  obtenir.
 * **Inspecter** : l'équipement, les talents et les sorts des joueurs autour de
   toi.
-* **Build** : composer et comparer des builds, avec leurs statistiques et une
-  simulation des dégâts, puis les partager.
+* **Build** : composer et comparer des builds (équipement, talents, runes,
+  sorts et passifs), avec leurs statistiques et une simulation des dégâts,
+  puis les partager.
 
 ## Lecture seule
 

@@ -11,29 +11,34 @@ Available in English and French, **for Windows only** (Windows 10 or 11).
 
 ## Preview
 
-![The collection: mounts, gliders, companions, gear and items, with their 3D model](docs/screenshots/collection.webp)
+![The Encyclopedia: a mount in 3D, its family and how to get it](docs/screenshots/encyclopedia.webp)
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/build.webp" alt="A build: the hero in 3D, the gear, the spell bar and the stats"></td>
-    <td width="50%"><img src="docs/screenshots/codex.webp" alt="The Codex: a monster in 3D and where to find it on the map"></td>
+    <td width="50%"><img src="docs/screenshots/build.webp" alt="A build: the hero in 3D, the gear, the spells and passives, the stats"></td>
+    <td width="50%"><img src="docs/screenshots/collection.webp" alt="The collection: mounts, gliders, companions, gear and items, with their 3D model"></td>
   </tr>
   <tr>
+    <td><img src="docs/screenshots/codex.webp" alt="The Codex: a monster in 3D and where to find it on the map"></td>
     <td><img src="docs/screenshots/dungeons.webp" alt="Dungeons: records, victories and loot per difficulty"></td>
-    <td><img src="docs/screenshots/boss.webp" alt="A boss sheet: health per party size, defenses and skills"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/boss.webp" alt="A boss sheet: health per party size, defenses and skills"></td>
   </tr>
 </table>
 
 ## What it offers
 
 * **In game**: the damage and healing meter, your party, your loot chances.
-* **Rifts and dungeons**: the loot, a report of every rift and every run, your
-  records.
-* **Collection, Codex, Achievements, Map**: your progress, what you are
-  missing and how to get it.
+* **Progress** (Collection, Codex, Map, Achievements, Dungeons, Rifts): your
+  progress, what you are missing and how to get it, the loot and a report of
+  every rift and every run, your records.
+* **Encyclopedia**: the game's items, monsters, companions, mounts, gliders,
+  NPCs and professions, with their 3D model, where to find them and how to
+  get them.
 * **Inspect**: the gear, talents and spells of the players around you.
-* **Build**: create and compare builds, with their stats and a damage
-  simulation, then share them.
+* **Build**: create and compare builds (gear, talents, runes, spells and
+  passives), with their stats and a damage simulation, then share them.
 
 ## Read-only
 
