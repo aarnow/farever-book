@@ -1776,6 +1776,35 @@ ENCYCLO_CATS = (
 )
 # the Encyclopedia's subjects, as its first page lists them: the item
 # categories, the monsters (the Codex's), the companions, the characters
+def _pet_families(pets):
+    """{companion: (family key, family name, its first member)}: a
+    family the companions sharing their unit's species (Frog_…, Goat_…, as
+    the unit sheet groups them), named by the words its members' names
+    share with the first's (Grenouflage, Mobêle réduit), at the start or,
+    in English, the end."""
+    groups = {}
+    for e in pets:
+        groups.setdefault(e["id"].split("_")[0], []).append(e["id"])
+    out = {}
+    for key, ids in groups.items():
+        names = [_unit_label(i).split() for i in ids]
+        first = names[0]
+
+        def shared(cut):
+            best = []
+            for n in range(1, len(first) + 1):
+                part = cut(first, n)
+                if 2 * sum(1 for w in names if cut(w, n) == part) > len(names):
+                    best = part
+            return best
+        words = max(shared(lambda w, n: w[:n]), shared(lambda w, n: w[-n:]),
+                    key=len)
+        label = " ".join(words or first)
+        for i in ids:
+            out[i] = (key, label, ids[0])
+    return out
+
+
 # each subject's tile: the entry whose picture stands for it
 ENCYCLO_FACES = {
     "bestiary": "u:Slime_Demonic_Z3W", "weapons": "Sword_Start",
@@ -1870,12 +1899,17 @@ def encyclopedia_view():
                       "type": m.get("fam") or "", "tk": m.get("famId") or "",
                       "tpic": ["best", fam_pic.get(m.get("famId")) or m["id"]],
                       "rk": "", "rar": "", "lvl": None})
-    # the companions
+    # the companions, by family; a sparkling one (rare) apart
+    fams = _pet_families(cat.get("pets") or ())
     for e in cat.get("pets") or ():
+        key, label, base = fams[e["id"]]
+        spark = e["id"] in _spark_units()
         items.append({"id": "p:" + e["id"], "c": "pets",
                       "pic": ["coll", e["id"]], "name": _unit_label(e["id"]),
-                      "type": tr("Familier"), "tk": "", "rk": "", "rar": "",
-                      "lvl": None})
+                      "type": tr("Familier"), "tk": key, "tf": label,
+                      "tpic": ["coll", base],
+                      "rk": "spark" if spark else "",
+                      "rar": tr("Étincelle") if spark else "", "lvl": None})
     # the characters of the open world: merchants, the others
     for n in cat.get("npcs") or ():
         sells = bool(n.get("sells"))
@@ -2055,9 +2089,12 @@ def collection_sheet(key, iid, owned):
             return None
         rows, _b = item_where(iid, rows_only=True)
         # its model by its unit (the Encyclopedia's id is "p:<unit>")
+        spark = iid in _spark_units()
         out = {"id": iid, "model": iid, "name": _unit_label(iid), "coll": iid,
                "art": item_art(iid, unit=True),
-               "type": tr("Compagnon"), "rk": "", "m3d": True,
+               "type": tr("Compagnon") + (" · " + tr("Étincelle")
+                                          if spark else ""),
+               "rk": "spark" if spark else "", "m3d": True,
                "m3dView": {"anim": True},
                "own": iid in set(owned.get("pets") or ()), "owned": True,
                "where": [{k: x.get(k) for k in (

@@ -219,7 +219,7 @@ function renderEncyclo(box, n) {
       if (o.icon) b.appendChild(o.icon);
       b.appendChild(el('span', null, o.t));
       if (o.n !== undefined) b.appendChild(el('small', null, fmtN(o.n)));
-      b.addEventListener('click', () => { set(o.v); rerenderEncyclo(); });
+      b.addEventListener('click', () => { set(o.v); ENC.first = true; rerenderEncyclo(); });
       box_.appendChild(b);
     });
     side.appendChild(box_);
@@ -259,6 +259,11 @@ function renderEncyclo(box, n) {
   const shown = pool.filter((it) => (!ENC.type || (needle ? it.c === ENC.type : it.tk === ENC.type))
     && (!ENC.rar || it.rk === ENC.rar)
     && (!needle || it.name.toLowerCase().includes(needle)));
+  // a filter changed: the first entry it keeps shown
+  if (ENC.first) {
+    ENC.first = false;
+    if (shown[0] && !(n.sel && n.sel.id === shown[0].id)) encOpen(shown[0].id);
+  }
   const one = topic && !needle ? topic.one : tr('résultat');
   list.appendChild(el('div', 'collcount', fmtN(shown.length) + ' ' + one + (shown.length > 1 && !/s$/.test(one) ? 's' : '')));
   const sel = n.sel ? n.sel.id : null;

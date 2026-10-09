@@ -3387,6 +3387,18 @@ html.lt-760 #page.page-Encyclopedia > .coll { height: auto; min-height: 0; }
 :is(.encitem, .enclink, .encview).r-rare { --rar: #7FA6F0; }
 :is(.encitem, .enclink, .encview).r-epic { --rar: #C08BF2; }
 :is(.encitem, .enclink, .encview).r-legendary { --rar: #F0A55E; }
+/* a sparkling companion (rare): cyan, a diamond's frame and glint */
+:is(.encitem, .enclink, .encview).r-spark { --rar: #6FE8F5; }
+.encitem.r-spark { border-color: rgba(111, 232, 245, .55);
+                   background: linear-gradient(135deg, rgba(111, 232, 245, .13), transparent 55%), var(--panel); }
+.encitem.r-spark:hover { border-color: #9FF4FC; }
+.r-spark .encpic { position: relative; border: 1.5px solid #8FF3FD;
+                   background: radial-gradient(circle at 50% 40%, rgba(127, 238, 250, .42), #15303C);
+                   box-shadow: 0 0 8px rgba(111, 232, 245, .5), inset 0 0 10px rgba(190, 250, 255, .22); }
+.r-spark .encpic::after { content: ""; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px;
+                          transform: rotate(45deg); border-radius: 1px;
+                          background: linear-gradient(135deg, #FFFFFF, #8FF3FD 45%, #2CB8D0);
+                          box-shadow: 0 0 6px rgba(143, 243, 253, .9); }
 
 .encview { overflow: hidden; }
 .coll .encview { display: flex; flex-direction: column; }
