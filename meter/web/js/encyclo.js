@@ -167,7 +167,7 @@ function renderEncyclo(box, n) {
   // a subject's kinds, for its aside: label and picture
   const pool = needle ? items : items.filter((it) => topic && it.c === topic.v);
   const types = [];
-  if (topic && !needle && topic.v !== 'weapons') {
+  if (topic && !needle) {
     pool.forEach((it) => {
       if (it.tk && !types.some((x) => x.v === it.tk)) {
         types.push({ v: it.tk, t: it.tf || it.type, pic: it.tpic || it.pic });

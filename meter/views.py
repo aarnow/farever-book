@@ -1776,7 +1776,9 @@ ENCYCLO_CATS = (
     ("mounts", "Montures", "monture", ("Mount",)),
     ("gliders", "Planeurs", "planeur", ("GearGlider",)),
     ("consumables", "Consommables", "consommable",
-     ("HealthPotion", "Potion", "Elixir", "Food", "Consumable")),
+     ("HealthPotion", "Potion", "Elixir", "Food", "Consumable",
+      # the caches: opened, they give what they hold
+      "LootableContainer")),
     ("augments", "Améliorations", "amélioration",
      ("AugmentBlacksmith", "AugmentJeweller", "AugmentOutfitter",
       "AugmentEnchantFeet", "AugmentEnchantHands", "AugmentEnchantWeapon",
