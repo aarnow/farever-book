@@ -589,6 +589,9 @@ window.applyState = function (json) {
     return;
   }
   const prev = STATE;
+  // no page: the one shown is still the one (bridge.py push)
+  const samePage = !('page' in s);
+  if (samePage) s.page = prev.page;
   STATE = s;
 
   if (s.zoom !== prev.zoom) setZoom(s.zoom);
@@ -621,11 +624,13 @@ window.applyState = function (json) {
     page.scrollTop = 0;
   }
   renderTabs(s.tabs || [], s.tab);
-  // a view change inside a tab (a monster's page, a dungeon) starts at the top
-  const view = pageView(s.page || []);
-  if (s.tab === prev.tab && view !== PAGE_VIEW) $('#page').scrollTop = 0;
-  PAGE_VIEW = view;
-  renderPage(s.page || []);
+  if (!samePage || changed) {
+    // a view change inside a tab (a monster's page, a dungeon) starts at the top
+    const view = pageView(s.page || []);
+    if (s.tab === prev.tab && view !== PAGE_VIEW) $('#page').scrollTop = 0;
+    PAGE_VIEW = view;
+    renderPage(s.page || []);
+  }
   if (changed) pageEnter();
   renderEvents();
   updateEventsBadge();

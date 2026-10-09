@@ -3470,3 +3470,4 @@ html.lt-760 .enc .collmain { grid-template-columns: minmax(0, 1fr); }
 .enccrest.cat-Jobs { --cat: #C9902F; } .enccrest.cat-Reputation { --cat: #5E9E3E; }
 .enccrest.cat-Collection { --cat: #C55A9C; }
 .encbody .desc.encfx { margin-top: 0; color: #fff; font-weight: 600; }
+.encgrid .encmore { grid-column: 1 / -1; height: 1px; }

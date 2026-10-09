@@ -5,6 +5,7 @@
 const ENC = { cat: 'weapons', q: '', type: '', rar: '', top: 0, listKey: '' };
 let ENC_NODE = null;
 let ENC_ICONS = false;
+const ENC_BATCH = 60;          // cards made at a time
 
 // an item's icon: sent once the page is opened (menu_host "icons")
 function encIcon(id, cls) {
@@ -149,7 +150,7 @@ function renderEncyclo(box, n) {
     { n: fmtN(shown.length) })));
   const sel = n.sel ? n.sel.id : null;
   const grid = el('div', 'collgrid encgrid');
-  shown.forEach((it) => {
+  const card = (it) => {
     const row = el('button', 'encitem' + (it.rk ? ' r-' + it.rk : '') + (it.id === sel ? ' sel' : ''));
     row.type = 'button';
     const pic = el('span', 'encpic');
@@ -165,8 +166,24 @@ function renderEncyclo(box, n) {
       row.classList.add('sel');
       encOpen(it.id);
     });
-    grid.appendChild(row);
-  });
+    return row;
+  };
+  // the cards made a batch at a time, the next as the end of the list
+  // comes into view (546 armours at once cost a moment); as many as were
+  // shown before a rebuild, so the scroll comes back to its place
+  const end = el('div', 'encmore');
+  let made = 0;
+  const more = (upTo) => {
+    const stop = Math.min(shown.length, upTo || made + ENC_BATCH);
+    const frag = document.createDocumentFragment();
+    for (; made < stop; made++) frag.appendChild(card(shown[made]));
+    grid.insertBefore(frag, end);
+    ENC.made = made;
+    end.hidden = made >= shown.length;
+  };
+  grid.appendChild(end);
+  more(Math.max(ENC_BATCH, ENC.listKeyMade === listKey ? ENC.made || 0 : 0));
+  ENC.listKeyMade = listKey;
   if (!shown.length) grid.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   list.appendChild(grid);
 
@@ -175,6 +192,24 @@ function renderEncyclo(box, n) {
   main.appendChild(list);
   main.appendChild(n.sel ? encSheet(n.sel) : el('div', 'collview empty'));
   box.appendChild(main);
+  // the next batch once the list's end is near the window's bottom, the
+  // list scrolling on its own or with the page (a narrow window)
+  let placed = false;                    // built before it is in the page
+  const check = () => {
+    if (end.isConnected) placed = true;
+    if ((placed && !end.isConnected) || made >= shown.length) {
+      document.removeEventListener('scroll', check, true);
+      return;
+    }
+    if (placed && end.getBoundingClientRect().top < window.innerHeight + 400) {
+      more();
+      requestAnimationFrame(check);      // still near (a tall window): again
+    }
+  };
+  if (made < shown.length) {
+    document.addEventListener('scroll', check, { capture: true, passive: true });
+    requestAnimationFrame(check);
+  }
   grid.addEventListener('scroll', () => { ENC.top = grid.scrollTop; }, { passive: true });
   if (ENC.top) {
     const top = ENC.top;

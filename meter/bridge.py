@@ -110,12 +110,20 @@ class MenuBridge:
         self.send({"t": "show"})
 
     def push(self, spec):
-        """Send the window its state, if it has changed (called every tick)."""
+        """Send the window its state, if it has changed (called every tick).
+        The page goes only when it changed: the rest (the rift countdown,
+        every second) would otherwise carry a whole page each time (the
+        Encyclopedia's list is ~190 KB); without it, the window keeps the
+        one it has."""
         if not self.ready:
             return
         if spec == self._last_push:
             return
+        same = (self._last_push is not None
+                and spec.get("page") == self._last_push.get("page"))
         self._last_push = spec
+        if same:
+            spec = {k: v for k, v in spec.items() if k != "page"}
         self.send({"t": "state", "d": spec})
 
     def push_overlay(self, spec):
