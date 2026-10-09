@@ -22,7 +22,7 @@ from i18n import tr
 from buildtab import BuildTab
 
 from common import (
-    ACCOUNTS_FILE, ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
+    ACCOUNTS_FILE, ACCOUNT_TABS, ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
     SETTINGS_TOPICS, THIRD_PARTY_FILE, month_name,
     APP_TAB_LABELS,
     BEST_TIMES_CACHE, CODEX_FILE, COLLECTION_FILE, DATA_HOME, DUNGEONS_DIR,
@@ -986,9 +986,7 @@ class App:
             # the first launch: the welcome screen alone, no tabs
             "tab": "Welcome" if self._setup else self._menu_tab,
             # The app's own tabs, after the game's, behind a divider.
-            "tabs": [] if self._setup else [
-                {"v": t, "t": tr(APP_TAB_LABELS[t]),
-                 "sep": t == APP_TABS_APP_FIRST} for t in APP_TABS],
+            "tabs": [] if self._setup else self._tabs_spec(),
             "page": ([self._setup_spec()] if self._setup
                      else self._page(self._menu_tab)),
             # the events window (title band button), always up to date
@@ -1940,6 +1938,23 @@ class App:
         alone = set(tied.values()) <= {sid}
         return [h for h in heroes if h != "?" and (
             tied.get(h) == sid or (h not in tied and alone))]
+
+    def _tabs_spec(self):
+        """The tabs in their band's order: the account's together (in
+        ACCOUNT_TABS's order, "grp" naming their menu) where the first of
+        them stands, the others as they come."""
+        out, done = [], False
+        for t in APP_TABS:
+            if t in ACCOUNT_TABS:
+                if not done:
+                    done = True
+                    out += [{"v": a, "t": tr(APP_TAB_LABELS[a]),
+                             "grp": "account", "grpT": tr("Compte")}
+                            for a in ACCOUNT_TABS]
+                continue
+            out.append({"v": t, "t": tr(APP_TAB_LABELS[t]),
+                        "sep": t == APP_TABS_APP_FIRST})
+        return out
 
     def _account_view(self):
         """The header's line under Play: the account signed in, else the

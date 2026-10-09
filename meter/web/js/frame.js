@@ -166,11 +166,17 @@ function renderTabs(tabs, active) {
     const icons = $('#appbtns');
     icons.textContent = '';
     Object.keys(NAV_BTNS).forEach((k) => delete NAV_BTNS[k]);
+    Object.keys(NAV_GROUPS).forEach((k) => delete NAV_GROUPS[k]);
     tabs.forEach((tab) => {
       const t = typeof tab === 'string' ? tab : tab.v;
       const label = typeof tab === 'string' ? tab : tab.t;
       let b;
-      if (TAB_ICONS[t]) {
+      if (tab.grp) {
+        // a tab of a group: an entry of its menu, under the group's tab
+        const g = navGroup(nav, tab.grp, tab.grpT || tab.grp);
+        b = el('button', 'navitem', label);
+        g.menu.appendChild(b);
+      } else if (TAB_ICONS[t]) {
         b = el('button', 'navicon');
         b.title = label;
         b.setAttribute('aria-label', label);
@@ -182,6 +188,7 @@ function renderTabs(tabs, active) {
       }
       b.type = 'button';
       b.addEventListener('click', () => {
+        navMenusClose();
         if (t !== NAV_ACTIVE) {
           showTab(t);
           $('#page').classList.add('leaving');
@@ -198,12 +205,53 @@ function renderTabs(tabs, active) {
   watchNav();
 }
 
+/* A group of tabs (the account's): one tab in the band, its menu under
+   it, opened by a click, closed by a pick, a click elsewhere or Escape. */
+const NAV_GROUPS = {};
+function navGroup(nav, key, label) {
+  if (NAV_GROUPS[key]) return NAV_GROUPS[key];
+  const wrap = el('div', 'navgroup');
+  const btn = el('button', 'navgrp');
+  btn.type = 'button';
+  btn.appendChild(el('span', null, label));
+  btn.appendChild(el('i', 'caret'));
+  btn.setAttribute('aria-haspopup', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  const menu = el('div', 'navmenu');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = !wrap.classList.contains('open');
+    navMenusClose();
+    wrap.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', String(open));
+  });
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  nav.appendChild(wrap);
+  NAV_GROUPS[key] = { wrap: wrap, btn: btn, menu: menu };
+  return NAV_GROUPS[key];
+}
+function navMenusClose() {
+  Object.values(NAV_GROUPS).forEach((g) => {
+    g.wrap.classList.remove('open');
+    g.btn.setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest || !e.target.closest('.navgroup')) navMenusClose();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') navMenusClose(); });
+
 function showTab(t) {
   const first = NAV_ACTIVE === null;
   NAV_ACTIVE = t;
   Object.keys(NAV_BTNS).forEach((k) => NAV_BTNS[k].classList.toggle('active', k === t));
   const ink = $('#navink');
-  const b = NAV_BTNS[t];
+  let b = NAV_BTNS[t];
+  // a tab of a group: the group's tab lit, the bar under it
+  Object.values(NAV_GROUPS).forEach((g) => g.btn.classList.toggle('active', !!b && g.menu.contains(b)));
+  const grp = b && Object.values(NAV_GROUPS).find((g) => g.menu.contains(b));
+  if (grp) b = grp.btn;
   if (!ink) return;
   if (!b || b.classList.contains('navicon')) {   // Réglages, Aide: no bar
     ink.style.opacity = '0';
@@ -214,10 +262,13 @@ function showTab(t) {
   // on the band's bottom edge, or right under the tab when the tabs wrap
   const nav = $('#nav');
   const rows = new Set(Object.values(NAV_BTNS).filter((x) => x.parentNode === nav)
+    .concat(Object.values(NAV_GROUPS).map((g) => g.wrap))
     .map((x) => x.offsetTop)).size;
   const y = rows > 1 ? b.offsetTop + b.offsetHeight - 3 : nav.clientHeight - 3;
+  // a group's tab sits in its wrapper: its place in the band is the wrapper's
+  const left = (grp ? grp.wrap.offsetLeft : 0) + b.offsetLeft;
   ink.style.width = Math.max(0, b.offsetWidth - 28) + 'px';
-  ink.style.transform = 'translate(' + (b.offsetLeft + 14) + 'px, ' + y + 'px)';
+  ink.style.transform = 'translate(' + (left + 14) + 'px, ' + y + 'px)';
   ink.style.opacity = '1';
 }
 

@@ -488,6 +488,12 @@ APP_TABS = ("Live", "Rifts", "Dungeons", "Collection", "Hunt",
 APP_TABS_APP_FIRST = "Settings"     # the first tab about the app, not the game
 
 
+# The tabs about the player's account, behind one "Compte" tab (a menu), in
+# its order; the menu stands where the first of them would.
+ACCOUNT_TABS = ("Collection", "Hunt", "Map", "Achievements", "Dungeons",
+                "Rifts")
+
+
 APP_TAB_LABELS = {"Live": "En jeu", "Rifts": "Failles",
                   "Dungeons": "Donjons", "Collection": "Collection",
                   "Hunt": "Codex", "Encyclopedia": "Encyclopédie",
