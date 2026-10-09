@@ -241,6 +241,20 @@ def _npc_els():
             if n.get("el")}
 
 
+def _encyclo_has(iid):
+    """Whether the Encyclopedia lists that item (a category takes it)."""
+    e = (collection_catalogue().get("encyclo") or {}).get(iid)
+    return bool(e) and _encyclo_cat(e.get("t") or "") is not None
+
+
+def _family_go(fid):
+    """A monster family's link: the Bestiary on it, its first monster open
+    ({go, goType}), or {}."""
+    first = next((m["id"] for m in bestiary_view({}).get("items") or ()
+                  if m.get("famId") == fid), None)
+    return {"go": "u:" + first, "goType": fid} if first else {}
+
+
 def _encyclo_monsters():
     """The monsters the Encyclopedia lists (the Codex's)."""
     return {m["id"] for m in bestiary_view({}).get("items") or ()}
@@ -474,6 +488,8 @@ def item_where(iid, rar=None, rows_only=False):
                 item_icon(cid))
             rows[-1]["pins"] = shop_pins(((cat.get("caches") or {}).get(cid)
                                           or {}).get("src") or ())
+            if _encyclo_has(cid):
+                rows[-1]["go"] = cid
             continue
         if k == "shop":
             same = [x for x in srcs if x.get("npc") == s.get("npc")
@@ -508,6 +524,11 @@ def item_where(iid, rar=None, rows_only=False):
             rows[-1]["parts"] = [{"n": n, "t": item_label(i),
                                   "img": item_icon(i), "id": i}
                                  for i, n in s.get("input") or ()]
+            # its recipe, in the Jobs
+            cid = f"r:{s.get('job')}:{iid}"
+            if any(_craft_id(c) == cid
+                   for c in cat.get("crafts") or ()):
+                rows[-1]["go"] = cid
             continue
         # faction loot in the world (activities, chests) gives its rare
         # pieces: an epic one is heroic only
@@ -525,6 +546,8 @@ def item_where(iid, rar=None, rows_only=False):
                    b=names.get(SPOTS[0], SPOTS[0])))
             rows[-1]["unit"] = s["id"]
             rows[-1]["boss"] = s["id"]      # its portrait
+            if s["id"] in _encyclo_monsters():
+                rows[-1]["go"] = "u:" + s["id"]
             rows[-1]["pinCls"] = "rift"
             rows[-1]["pins"] = [
                 {"x": x, "y": y, "t": names.get(z, z)}
@@ -564,10 +587,11 @@ def item_where(iid, rar=None, rows_only=False):
                 rows[-1]["go"] = "u:" + s["id"]
             elif k == "family":
                 # a family: the Bestiary on it, its first monster open
-                first = next((m["id"] for m in bestiary_view({}).get("items")
-                              or () if m.get("famId") == s.get("id")), None)
-                if first:
-                    rows[-1].update(go="u:" + first, goType=s["id"])
+                rows[-1].update(_family_go(s.get("id")))
+            elif k == "combine" and len(s.get("from") or ()) == 1 \
+                    and _encyclo_has(s["from"][0][0]):
+                # what it is combined from
+                rows[-1]["go"] = s["from"][0][0]
             if k == "unit" and _bestiary_pic(s.get("id")):
                 rows[-1]["mob"] = s["id"]
             elif k == "family" and _family_pic(s.get("id")):
@@ -1831,18 +1855,26 @@ def _pet_families(pets):
 
 
 def _shared_name(names):
-    """The words a family's names share with the first's, at the start or,
-    in English, the end (Grenouflage, Mobêle réduit); the first name whole
-    when they share none."""
+    """The words most of a family's names share, at the start or, in
+    English, the end (Grenouflage, Mobêle réduit), case aside, as the name
+    sharing its first or last word with the most writes them ("Premier
+    bélier-parapentiste" among the Bélier-parapentiste …); the first name
+    whole when they share none."""
     names = [n.split() for n in names]
-    first = names[0]
+    low = [[x.lower() for x in w] for w in names]
+
+    def kin(i):
+        return max(sum(1 for w in low if w[:1] == low[i][:1]),
+                   sum(1 for w in low if w[-1:] == low[i][-1:]))
+    ref = max(range(len(names)), key=lambda i: (kin(i), -i))
+    first = names[ref]
 
     def shared(cut):
         best = []
         for n in range(1, len(first) + 1):
-            part = cut(first, n)
-            if 2 * sum(1 for w in names if cut(w, n) == part) > len(names):
-                best = part
+            part = cut(low[ref], n)
+            if 2 * sum(1 for w in low if cut(w, n) == part) > len(names):
+                best = cut(first, n)
         return best
     words = max(shared(lambda w, n: w[:n]), shared(lambda w, n: w[-n:]),
                 key=len)
@@ -1862,15 +1894,21 @@ def _name_families(groups, name_of):
     return out
 
 
+# a family whose members share no word: named from the game's own text
+# (the achievement FindAllPigeons: "Trouvez tous les planeurs pigeons")
+RIDE_FAMILY_NAMES = {"Pigeon": "Pigeons"}
+
+
 def _mount_families(ids):
-    """{mount: (family key, family name, its first member)}: a family the
-    mounts of one species, as their ids name it (Mount_Wolf_…,
-    Mount_Aries_…); a variant of one (YoungWarg, VeteranWarg) with it, a
-    lone mount named as a family's members are (Mount_Dragon, a Béliqueux)
-    with them."""
+    """{mount or glider: (family key, family name, its first member)}: a
+    family the ones of one species, as their ids name it (Mount_Wolf_…,
+    Glider_Falcon_…, Glider_Crimson07); a variant of one (YoungWarg,
+    VeteranWarg) with it, a lone one named as a family's members are
+    (Mount_Dragon, a Béliqueux) with them."""
     def species(i):
         p = i.split("_")
-        return p[1] if p[0] == "Mount" and len(p) > 1 else p[0]
+        tok = p[1] if p[0] in ("Mount", "Glider") and len(p) > 1 else p[0]
+        return re.sub(r"\d+$", "", tok) or tok
     groups = {}
     for i in sorted(ids):
         groups.setdefault(species(i), []).append(i)
@@ -1891,9 +1929,31 @@ def _mount_families(ids):
     # the species' own first (Mount_Warg_01 before the young one)
     for k, v in groups.items():
         v.sort(key=lambda i: (species(i) != k, i))
-    return _name_families(groups, item_label)
+    out = _name_families(groups, item_label)
+    for i, (k, label, base) in out.items():
+        if k in RIDE_FAMILY_NAMES:
+            out[i] = (k, tr(RIDE_FAMILY_NAMES[k]), base)
+    return out
 
 
+# bosses the Encyclopedia files with another family than their unit type's
+# (the reader's choice, not the game's data: Blob l'éponge is a Golem of the
+# Nepsides' faction, the Inquisitor and Robin des Cornes Humans of the
+# Écarlates')
+BESTIARY_FAMILY = {"SpongeBlob": "WaterGolems", "Phrixes": "Crimson",
+                   "RobinHoof": "Crimson"}
+
+
+# a weapon's own skills, as its sheet lists them (its basic attacks aside)
+WEAPON_SKILL_KINDS = (("WeaponSkill", "Compétence d'arme"),
+                      ("AttackCombo", "Combo"), ("WeaponPassive", "Passif"))
+
+
+# a Bestiary family's filter: the monster whose picture stands for it
+BESTIARY_FACES = {"Bee": "Bee_Z1W", "Golem": "Golem_Z1W_Earth1",
+                  "WaterGolems": "Elemental_Z1W_Underwater",
+                  "Kobold": "Kobold_Z1W_Mace", "Skunk": "Skunk_Z1W",
+                  "Boar": "Boar_Z1W"}
 # each subject's tile: the entry whose picture stands for it
 ENCYCLO_FACES = {
     "bestiary": "u:Slime_Demonic_Z3W", "weapons": "Sword_Start",
@@ -2022,8 +2082,12 @@ def encyclopedia_view():
                       # a weapon or armour drops at many levels: none shown
                       "lvl": None if t in WEAPON_TYPES + ARMOR_TYPES
                       + JEWEL_TYPES else e.get("l")})
-    # the mounts, by family
-    fams = _mount_families([it["id"] for it in items if it["c"] == "mounts"])
+    # the mounts and the gliders, by family
+    # (each its own: a mount and a glider may share a species' name)
+    fams = {}
+    for cat_key in ("mounts", "gliders"):
+        fams.update(_mount_families([it["id"] for it in items
+                                     if it["c"] == cat_key]))
     for it in items:
         if it["id"] in fams:
             it["tk"], it["tf"], base = fams[it["id"]]
@@ -2032,10 +2096,13 @@ def encyclopedia_view():
     best = bestiary_view({})
     fam_pic = {f["id"]: f.get("img") for f in best.get("families") or ()}
     for m in best.get("items") or ():
+        fam = BESTIARY_FAMILY.get(m["id"]) or m.get("famId") or ""
         items.append({"id": "u:" + m["id"], "c": "bestiary",
                       "pic": ["best", m["id"]], "name": m["name"],
-                      "type": m.get("fam") or "", "tk": m.get("famId") or "",
-                      "tpic": ["best", fam_pic.get(m.get("famId")) or m["id"]],
+                      "type": _family_label(fam) if fam != m.get("famId")
+                      else m.get("fam") or "", "tk": fam,
+                      "tpic": ["best", BESTIARY_FACES.get(fam)
+                               or fam_pic.get(fam) or m["id"]],
                       "rk": "", "rar": "", "lvl": None})
     # the companions, by family; a sparkling one (rare) apart
     fams = _pet_families(cat.get("pets") or ())
@@ -2188,10 +2255,10 @@ def _world_recipe_rows(world, meta_out):
                                   for x, y, z in w["at"]]})
             meta_out["meta"] = world_map().get("meta")
         for f in w.get("families") or ():
-            rows.append({"k": tr("Butin"),
-                         "t": tr("Butin des ennemis : {name}",
-                                 name=_family_label(f)) + pct + lvl,
-                         "mob": _family_pic(f)})
+            rows.append(dict({"k": tr("Butin"),
+                              "t": tr("Butin des ennemis : {name}",
+                                      name=_family_label(f)) + pct + lvl,
+                              "mob": _family_pic(f)}, **_family_go(f)))
     if rows:
         rows.append({"k": tr("Tirage"),
                      "t": tr("La recette tirée est d'un de tes métiers, pas "
@@ -2281,7 +2348,8 @@ def _monster_sheet(uid):
            "art": item_art(uid, unit=True),
            "name": d["name"], "rk": "",
            "type": " · ".join(x for x in (
-               d.get("fam"), d.get("tier"),
+               _family_label(BESTIARY_FAMILY[uid]) if uid in BESTIARY_FAMILY
+               else d.get("fam"), d.get("tier"),
                tr("niv. {n}", n=d["lvl"]) if d.get("lvl") else "") if x),
            "desc": d.get("desc") or "", "fac": d.get("faction") or ""}
     rows = []
@@ -2468,5 +2536,14 @@ def encyclopedia_item(iid):
                             key=lambda x: x["name"]),
             "rar": rarity_label(gives["rar"]) if gives.get("rar") else "",
             "lvl": gives.get("lvl")}
+    # a weapon: its skill, its combo and its passive, each with its tooltip
+    # (the Build's: by rank, R2 and R3 after so many kills)
+    wb = (build_data().get("items") or {}).get(iid) or {}
+    if wb.get("slot") == "Weapon":
+        skills = wb.get("skills") or ()
+        out["skills"] = [{"id": sk["id"], "name": _skill_label(sk["id"]),
+                          "kind": tr(label), "tip": skill_tip(sk["id"])}
+                         for kind, label in WEAPON_SKILL_KINDS
+                         for sk in skills if sk.get("type") == kind]
     return out
 

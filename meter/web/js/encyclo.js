@@ -4,12 +4,13 @@
    views.encyclopedia_item). A trail at the top leads back. The list is
    filtered here; the sheet comes from the meter. */
 
-const ENC = { topic: null, q: '', type: '', rar: '', top: 0, listKey: '' };
+const ENC = { topic: null, q: '', type: '', rar: '', top: 0, listKey: '',
+  hist: [], here: null, back: null, backTries: 0 };
 let ENC_NODE = null;
 let ENC_ICONS = false;
 const ENC_BATCH = 60;          // cards made at a time
 // the subjects where a rarity tells something
-const ENC_RARITY = new Set(['equipment', 'gliders', 'augments', 'resources']);
+const ENC_RARITY = new Set(['equipment', 'augments', 'resources']);
 // the character sheet's slots, in its order
 const ENC_SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
   'GearNeck', 'GearFinger', 'GearTrinket'];
@@ -47,7 +48,8 @@ function buildEncyclo(n) {
   // the tab clicked again: back on its subjects, filters off
   if (n.reset !== ENC.reset) {
     ENC.reset = n.reset;
-    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0 });
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0,
+      hist: [], here: null, back: null });
   }
   // an entry opened from a sheet: its subject, filters off, its card in view
   if (n.jump !== ENC.jump) {
@@ -110,6 +112,53 @@ async function encSnapRows() {
     }
   } finally { ENC_SNAPS.busy = false; }
   if (got) rerenderEncyclo();
+}
+
+/* The way back: each place shown (subject, filters, entry) kept as the
+   reader moves on, the last one a click away. A step that only leads to
+   the next (a subject opened before its first entry shows) is not one. */
+function encPlace(n) {
+  const items = n.items || [];
+  const id = n.sel ? n.sel.id : '';
+  // the entry counts only where its list shows it
+  const it = id && items.find((x) => x.id === id);
+  const shown = it && (!ENC.topic || (it.c === ENC.topic && (!ENC.type || it.tk === ENC.type)));
+  return { topic: ENC.topic, type: ENC.type, rar: ENC.rar, sel: shown ? id : '' };
+}
+const encPlaceKey = (h) => [h.topic, h.type, h.rar, h.sel].join('|');
+
+function encHistory(n) {
+  const here = encPlace(n);
+  if (ENC.back) {
+    // going back: until the place aimed at shows
+    if (encPlaceKey(here) === encPlaceKey(ENC.back) || ++ENC.backTries > 4) {
+      ENC.back = null;
+      ENC.here = here;
+    }
+    return;
+  }
+  const was = ENC.here;
+  if (was && encPlaceKey(was) !== encPlaceKey(here)
+      && !(was.sel === '' && was.topic === here.topic && was.topic)) {
+    ENC.hist.push(was);
+    if (ENC.hist.length > 50) ENC.hist.shift();
+  }
+  ENC.here = here;
+}
+
+function encGoBack() {
+  const prev = ENC.hist.pop();
+  if (!prev) return;
+  const cur = ENC_NODE && ENC_NODE.sel ? ENC_NODE.sel.id : '';
+  Object.assign(ENC, { topic: prev.topic, type: prev.type, rar: prev.rar, q: '', top: 0 });
+  if (prev.sel && prev.sel !== cur) {
+    ENC.back = prev;
+    ENC.backTries = 0;
+    encOpen(prev.sel);
+  } else {
+    ENC.here = prev;
+  }
+  rerenderEncyclo();
 }
 
 function rerenderEncyclo() {
@@ -186,6 +235,13 @@ function renderEncyclo(box, n) {
   const topic = cats.find((c) => c.v === ENC.topic) || null;
   if (!topic) ENC.topic = null;
   const needle = ENC.q.trim().toLowerCase();
+  encHistory(n);
+  if (ENC.hist.length) {
+    const prev = el('button', 'encprev', tr('‹ Précédent'));
+    prev.type = 'button';
+    prev.addEventListener('click', encGoBack);
+    box.appendChild(prev);
+  }
 
   // a subject's kinds, for its aside: label and picture
   const pool = needle ? items : items.filter((it) => topic && it.c === topic.v);
@@ -492,6 +548,22 @@ function encSheet(s) {
     body.appendChild(el('p', 'desc encfx', s.fx));
   }
   if (s.desc) body.appendChild(el('p', 'desc it', s.desc));
+  if ((s.skills || []).length) {
+    // a weapon's skill, combo and passive: what they do on hover
+    body.appendChild(el('div', 'sub2', tr('Compétences')));
+    const box = el('div', 'encskills');
+    s.skills.forEach((sk) => {
+      const row = el('div', 'encsk');
+      row.appendChild(skillIcon({ id: sk.id, name: sk.name }));
+      const t = el('div', 'encskt');
+      t.appendChild(el('b', null, sk.name));
+      t.appendChild(el('small', null, sk.kind));
+      row.appendChild(t);
+      attachTip(row, sk.tip, sk.id);
+      box.appendChild(row);
+    });
+    body.appendChild(box);
+  }
   if (s.makes) {
     // a recipe: what it makes, from what
     body.appendChild(el('div', 'sub2', tr('Fabrique')));
