@@ -108,6 +108,11 @@ CODEX_FILE = _WRITABLE / ".meter_codex.json"
 ITEM_CODEX_FILE = _WRITABLE / ".meter_itemcodex.json"
 
 
+# Each character's Steam account (the one signed in when it was seen in
+# game), the accounts' names, the last one seen.
+ACCOUNTS_FILE = _WRITABLE / ".meter_accounts.json"
+
+
 # The achievements: the account's (id -> completion time) and each
 # character's (completed ids, counters), last read.
 ACH_FILE = _WRITABLE / ".meter_achievements.json"

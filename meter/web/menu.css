@@ -1445,20 +1445,34 @@ select:focus, input[type=text]:focus { outline: none; border-color: var(--accent
 
 /* ---- the game's state in the title band ------------------------------------- */
 #link { display: flex; align-items: center; }
+/* the game's state in the middle of the band, the Steam account under it;
+   its own line when the band is too narrow (core.js headerWrap) */
+#top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
+       column-gap: 16px; row-gap: 10px; }
+#topleft { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#linkcol { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#top #topright { justify-self: end; margin-left: 0; }
+#top.wrapped { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+#top.wrapped #topright { justify-self: center; }
+#account { font-size: 11px; color: var(--dim); white-space: nowrap; text-align: center; }
+#account b { color: #F1EEFB; font-weight: 600; }
+#account.acct-none { color: var(--faint); font-style: italic; }
 .playbtn {
   display: inline-flex; align-items: center; gap: 9px;
-  padding: 8px 20px 8px 16px; border-radius: 8px; cursor: pointer;
+  padding: 10px 26px 10px 21px; border-radius: 9px; cursor: pointer;
   /* gold: the main action */
   background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, var(--accent-2));
   border: 1px solid #FBE08A; color: #3A2A06;
-  font-family: var(--font-head); font-size: 14px; font-weight: 700;
-  letter-spacing: 1.6px; text-transform: uppercase;
+  font-family: var(--font-head); font-size: 16px; font-weight: 700;
+  letter-spacing: 1.8px; text-transform: uppercase;
   text-shadow: 0 1px 0 rgba(255, 255, 255, .3);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 6px rgba(0, 0, 0, .4);
 }
 .playbtn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 12px rgba(242, 201, 76, .5); }
-.playbtn .tri { width: 0; height: 0; border-style: solid; border-width: 7px 0 7px 11px;
+.playbtn .tri { width: 0; height: 0; border-style: solid; border-width: 8px 0 8px 13px;
                 border-color: transparent transparent transparent #3A2A06; }
+/* the word on the triangle's middle: capitals only, no descender below */
+.playbtn span { line-height: 1; position: relative; top: 1px; }
 .playbtn.retry { background: linear-gradient(180deg, #F08A6E, #C0503A); border-color: #F5A08A;
                  color: #2E0E06; }
 .gamestate {

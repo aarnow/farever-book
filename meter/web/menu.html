@@ -20,9 +20,18 @@
     </div>
   </div>
   <header id="top">
-    <span class="brand">Farever <b>Book</b></span>
-    <span id="version"></span>
-    <span class="spacer"></span>
+    <!-- Three columns: the name, the game's state in the middle, the
+         right-hand group; one under the other when they don't fit. -->
+    <div id="topleft">
+      <span class="brand">Farever <b>Book</b></span>
+      <span id="version"></span>
+    </div>
+    <!-- The game's state in the middle of the band: a Play button, or "En
+         jeu" over the server; the Steam account under it. -->
+    <div id="linkcol">
+      <div id="link"></div>
+      <div id="account"></div>
+    </div>
     <!-- The rift countdown, always in view whatever the page. -->
     <!-- The right-hand group: it goes under the name, whole, when the
          window is too narrow for one line. -->
@@ -30,8 +39,6 @@
       <div id="riftclock" class="card">
         <div class="t"></div><div class="v"></div><div class="s"></div><div class="w"></div>
       </div>
-      <!-- The game's state: a Play button, or "En jeu" over the server. -->
-      <div id="link"></div>
       <!-- Réglages and Aide, as icons next to the game's state. -->
       <div id="appcol">
         <div id="appbtns"></div>

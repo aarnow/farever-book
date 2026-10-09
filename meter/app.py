@@ -17,11 +17,12 @@ import report
 from contributors import CONTRIBUTORS
 from riftspot import RIFT_ACT, rift_zone
 import themes
+import steamacct
 from i18n import tr
 from buildtab import BuildTab
 
 from common import (
-    ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
+    ACCOUNTS_FILE, ACH_FILE, ANALYSIS, APP_TABS, APP_TABS_APP_FIRST, APP_TAB_DEFAULT,
     SETTINGS_TOPICS, THIRD_PARTY_FILE, month_name,
     APP_TAB_LABELS,
     BEST_TIMES_CACHE, CODEX_FILE, COLLECTION_FILE, DATA_HOME, DUNGEONS_DIR,
@@ -976,6 +977,7 @@ class App:
             "lang": self._lang,
             "shard": self.ui_state.server() or "",
             "link": self._link_spec(),
+            "account": self._account_view(),
             "linksteps": (self.link.steps_view() if self.link is not None
                           else []),
             "rift": self._rift_clock(),
@@ -1543,6 +1545,7 @@ class App:
 
         def done():
             self.me.set_hero(name)
+            self._tag_hero(name)
             if name != self._me_name:
                 self._me_name = name
                 self._me_auto_next = 0.0    # a new character: read it now
@@ -1788,6 +1791,7 @@ class App:
             data.setdefault("heroes", {})[hero] = {"items": items,
                                                    "at": time.time()}
             data["last"] = hero
+            self._tag_hero(hero)
             try:
                 ITEM_CODEX_FILE.write_text(json.dumps(data), encoding="utf-8")
             except OSError as e:
@@ -1816,6 +1820,7 @@ class App:
             first = hero not in data.setdefault("heroes", {})
             data["heroes"][hero] = {"ranks": ranks, "at": time.time()}
             data["last"] = hero
+            self._tag_hero(hero)
             try:
                 CODEX_FILE.write_text(json.dumps(data), encoding="utf-8")
             except OSError as e:
@@ -1867,6 +1872,86 @@ class App:
                 self._elements_data = {}
         return self._elements_data
 
+    # ---- the Steam account
+    def _steam_account(self):
+        """The Steam account signed in now ({id, name}) or None, read again
+        every 15 s (Steam's files, steamacct)."""
+        now = time.time()
+        if now - getattr(self, "_steam_at", 0.0) > 15:
+            self._steam_at = now
+            try:
+                self._steam_now = steamacct.active_account()
+            except Exception as e:      # never the app's fault
+                print(f"[meter] couldn't read the Steam account: {e}",
+                      file=sys.stderr)
+                self._steam_now = None
+        return getattr(self, "_steam_now", None)
+
+    def _accounts(self):
+        """{"heroes": {character: steamid}, "names": {steamid: name},
+        "last": steamid} (ACCOUNTS_FILE)."""
+        if getattr(self, "_accounts_data", None) is None:
+            try:
+                self._accounts_data = json.loads(
+                    ACCOUNTS_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._accounts_data = {}
+        return self._accounts_data
+
+    def _tag_hero(self, hero):
+        """A character seen in game: tied to the Steam account signed in."""
+        acct = self._steam_account()
+        if not acct or not hero or hero == "?":
+            return
+        data = self._accounts()
+        sid = acct["id"]
+        before = json.dumps(data, sort_keys=True)
+        data.setdefault("heroes", {})[hero] = sid
+        if acct.get("name"):
+            data.setdefault("names", {})[sid] = acct["name"]
+        data["last"] = sid
+        if json.dumps(data, sort_keys=True) != before:
+            try:
+                ACCOUNTS_FILE.write_text(json.dumps(data), encoding="utf-8")
+            except OSError as e:
+                print(f"[meter] couldn't save the accounts: {e}",
+                      file=sys.stderr)
+
+    def _account_id(self):
+        """The account the app shows: the one signed in, else the last one
+        seen."""
+        acct = self._steam_account()
+        return acct["id"] if acct else self._accounts().get("last")
+
+    def _account_name(self):
+        acct = self._steam_account()
+        if acct and acct.get("name"):
+            return acct["name"]
+        return (self._accounts().get("names") or {}).get(self._account_id())
+
+    def _account_heroes(self, heroes):
+        """The characters among `heroes` (names) of the account shown: those
+        tied to it, and those seen before any account was (while no other
+        account has been seen on this PC). [] when no account is known."""
+        sid = self._account_id()
+        if not sid:
+            return []
+        tied = self._accounts().get("heroes") or {}
+        alone = set(tied.values()) <= {sid}
+        return [h for h in heroes if h != "?" and (
+            tied.get(h) == sid or (h not in tied and alone))]
+
+    def _account_view(self):
+        """The header's line under Play: the account signed in, else the
+        last one seen, else none."""
+        acct = self._steam_account()
+        if acct:
+            return {"state": "on", "name": acct.get("name") or ""}
+        name = self._account_name()
+        if name:
+            return {"state": "last", "name": name}
+        return {"state": "none"}
+
     def _codex(self):
         if self._codex_data is None:
             try:
@@ -1878,16 +1963,41 @@ class App:
 
     def _page_hunt(self):
         data = self._codex()
-        hero = data.get("last")
-        entry = (data.get("heroes") or {}).get(hero) or {}
+        heroes = data.get("heroes") or {}
+        mine = self._account_heroes(heroes)
+        if mine:
+            # the account's characters: their kills added up, each
+            # monster's rank the best one of them reached (the game ranks
+            # each character's codex by rules of its own)
+            ranks = {}
+            for h in mine:
+                for uid, (k, r) in (heroes[h].get("ranks") or {}).items():
+                    kk, rr = ranks.get(uid, (0, 0))
+                    ranks[uid] = [kk + int(k or 0), max(rr, int(r or 0))]
+            entry = {"ranks": ranks,
+                     "at": max(heroes[h].get("at") or 0 for h in mine)}
+        else:
+            entry = heroes.get(data.get("last")) or {}
         at = entry.get("at")
-        sync = (tr("Kills de {hero}, lus en jeu le {date}. Le compte est "
-                   "celui du jeu (son Codex) : il inclut tout ce que tu as "
-                   "tué avant Farever Book, et se met à jour tout seul quand "
-                   "le jeu est ouvert.", hero=hero,
-                   date=date_fr(time.localtime(at))) if at else
-                tr("Pas encore lu : lance le jeu avec Farever Book ouvert, "
-                   "tes kills se rempliront tout seuls."))
+        if mine and at:
+            sync = tr("Kills de tous tes personnages du compte {acct} ({heroes}), "
+                      "additionnés, lus en jeu le {date}. Le rang d'un monstre "
+                      "est le meilleur qu'un de tes personnages a atteint. Le "
+                      "compte est celui du jeu (son Codex) : il inclut tout ce "
+                      "que tu as tué avant Farever Book, et se met à jour tout "
+                      "seul quand le jeu est ouvert.",
+                      acct=self._account_name() or "",
+                      heroes=", ".join(sorted(mine)),
+                      date=date_fr(time.localtime(at)))
+        elif at:
+            sync = tr("Kills de {hero}, lus en jeu le {date}. Le compte est "
+                      "celui du jeu (son Codex) : il inclut tout ce que tu as "
+                      "tué avant Farever Book, et se met à jour tout seul quand "
+                      "le jeu est ouvert.", hero=data.get("last"),
+                      date=date_fr(time.localtime(at)))
+        else:
+            sync = tr("Pas encore lu : lance le jeu avec Farever Book ouvert, "
+                      "tes kills se rempliront tout seuls.")
         if self._hunt_sel:
             return [{"k": "toolbar", "id": "hunt_tools", "btns": [
                         {"id": "hunt_close",
@@ -2184,7 +2294,23 @@ class App:
                               "Book ouvert, ta collection se remplira toute "
                               "seule."))
         codex = self._item_codex()
-        entry = (codex.get("heroes") or {}).get(codex.get("last")) or {}
+        heroes = codex.get("heroes") or {}
+        mine = self._account_heroes(heroes)
+        if mine:
+            # the account's characters: their counts added up, the rank
+            # the game's steps give the total (its own rule: 1, 5, 25, 50),
+            # never below one of theirs
+            steps = gamedata._codex_thresholds().get("item") or []
+            items = {}
+            for h in mine:
+                for iid, (n, r) in (heroes[h].get("items") or {}).items():
+                    nn, rr = items.get(iid, (0, 0))
+                    items[iid] = [nn + int(n or 0), max(rr, int(r or 0))]
+            for iid, (n, r) in items.items():
+                items[iid] = [n, max(r, sum(1 for t in steps if n >= t))]
+            entry = {"items": items}
+        else:
+            entry = heroes.get(codex.get("last")) or {}
         # the item picked: the Encyclopedia's sheet (computed per pick)
         sel = None
         if self._coll_sel and self._coll_sel[1]:

@@ -162,11 +162,15 @@ function headerWrap() {
   cancelAnimationFrame(HEADER_WRAP);
   HEADER_WRAP = requestAnimationFrame(() => {
     const top = $('#top'), right = $('#topright'), brand = $('#top .brand');
-    if (!top || !right || !brand) return;
+    const mid = $('#linkcol'), ver = $('#version');
+    if (!top || !right || !brand || !mid) return;
     top.classList.remove('wrapped');
-    // on two lines: the group starts below the name's bottom
-    top.classList.toggle('wrapped',
-      right.offsetTop >= brand.offsetTop + brand.offsetHeight - 2);
+    // one under the other when the name or the right-hand group would run
+    // into the game's state, centred between them
+    const m = mid.getBoundingClientRect(), r = right.getBoundingClientRect();
+    const left = ver && ver.offsetWidth ? ver.getBoundingClientRect().right
+      : brand.getBoundingClientRect().right;
+    top.classList.toggle('wrapped', left > m.left - 12 || r.left < m.right + 12);
   });
 }
 window.addEventListener('resize', headerWrap);
@@ -188,6 +192,7 @@ function initToTop() {
     const ro = new ResizeObserver(headerWrap);
     ro.observe($('#topright'));
     if ($('#top .brand')) ro.observe($('#top .brand'));
+    if ($('#linkcol')) ro.observe($('#linkcol'));
   }
   headerWrap();
   const sync = () => b.classList.toggle('on', page.scrollTop > 400);
@@ -601,6 +606,7 @@ window.applyState = function (json) {
   if (JSON.stringify([s.link, s.shard]) !== JSON.stringify([prev.link, prev.shard])) {
     renderLink(s.link || {}, s.shard);
   }
+  if (JSON.stringify(s.account) !== JSON.stringify(prev.account)) renderAccount(s.account || {});
   if (JSON.stringify(s.rift) !== JSON.stringify(prev.rift) && s.rift) {
     const r = $('#riftclock');
     r.className = 'card' + (s.rift.tone ? ' ' + s.rift.tone : '');

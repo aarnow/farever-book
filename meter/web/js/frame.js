@@ -275,6 +275,23 @@ function renderLink(l, shard) {
   box.appendChild(st);
 }
 
+/* The Steam account under the game's state: the one signed in, else the
+   last one seen, else none (app.py _account_view). */
+function renderAccount(a) {
+  const box = $('#account');
+  if (!box) return;
+  box.textContent = '';
+  box.className = 'acct-' + (a.state || 'none');
+  if (a.state === 'on' || a.state === 'last') {
+    box.appendChild(document.createTextNode(a.state === 'on'
+      ? tr('Connecté en tant que') + ' ' : tr('Dernier compte Steam :') + ' '));
+    box.appendChild(el('b', null, a.name || '?'));
+  } else {
+    box.textContent = tr('Aucun compte Steam n’est synchronisé avec l’application.');
+  }
+  headerWrap();
+}
+
 /* The frameless window's drag, resize and caption buttons, all through the
    host (menu_host.Api.win). */
 function winCall(action, arg) {
