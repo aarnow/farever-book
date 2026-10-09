@@ -2830,11 +2830,20 @@ html.lt-760 .sheet.card > .shero { height: 420px; }
 .hplate .pchips .blvlbtn span { padding: 0; border: 0; border-radius: 0; background: none; color: inherit;
                                 font-size: inherit; }
 .bacts { display: flex; gap: 8px; }
-.btn.bren { background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, var(--accent-2)); color: #3A2A06;
-            border-color: #FBE08A; font-weight: 700; }
-.btn.bshare { background: linear-gradient(180deg, #F1F3F8, #C3C8D4 55%, #9DA3B2); color: #1E2230;
-              border-color: #F6F7FB; font-weight: 700; }
-.btn.bren:hover, .btn.bshare:hover { filter: brightness(1.08); }
+/* Renommer and Partager: the builds list's buttons (glossy, uppercase);
+   Renommer gold, Partager as Comparer (the wordmark's gradient) */
+.bacts .btn { display: inline-flex; align-items: center; gap: 8px; width: auto; max-width: none; margin: 0;
+              padding: 8px 18px; border-radius: 8px; cursor: pointer;
+              font-family: var(--font-head); font-size: 13px; font-weight: 700; letter-spacing: 1.4px;
+              text-transform: uppercase;
+              box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 2px 6px rgba(0, 0, 0, .4); }
+.bacts .btn:hover { filter: brightness(1.1); }
+.bdialog .btn.bren { background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, var(--accent-2));
+                     border-color: #FBE08A; color: #3A2A06; font-weight: 700; }
+.bacts .btn.bren { background: linear-gradient(180deg, #F8D96E, var(--accent) 45%, var(--accent-2));
+                   border: 1px solid #FBE08A; color: #3A2A06; text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+.bacts .btn.bshare { background: linear-gradient(180deg, #C9BEEA, #FFFFFF 40%, #E2E4F2 62%, #8FD3EC);
+                     border: 1px solid #FFFFFF; color: #2B2550; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
 .bhead { padding: 16px 18px 0; margin-bottom: 16px; border-radius: 14px; border: 1px solid var(--line);
          background: linear-gradient(180deg, #34305E, #26234A); }
 .bwho { display: flex; align-items: center; gap: 14px; }
@@ -2861,9 +2870,11 @@ html.lt-760 .sheet.card > .shero { height: 420px; }
 /* Sorts et passifs: the passives in a line under the bar */
 .bbarbox { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
 /* the class's skills, its own mechanic over them (prayers, conduits) */
-.bclassgrp { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; }
+.bclassgrp { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
 .bclassrow { display: flex; align-items: flex-end; gap: 5px; }
-.bclassrow .barcell { flex: 0 1 46px; }
+/* its cells the size of the others, empty or not (an empty one has no
+   picture to give it a width) */
+.bclassrow .barcell { flex: 0 0 46px; width: 46px; }
 .bmech { display: flex; justify-content: center; gap: 6px; }
 .bmechcell { width: 30px; height: 30px; }
 .bmechcell .skill { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #8F86C9;
