@@ -668,9 +668,27 @@ def prefab_models(game_dir, prefab, depth=0):
 
 
 
+# a station of the hub, by its gameplay prefab (the model it places)
+STATIONS = {"station_Scrap": "Gameplay/Prefabs/HUB/Crafting/ScrapStation.prefab"}
+
+
+def station_prefab(game_dir, key):
+    """The model prefab a hub station places (the first .prefab its
+    gameplay prefab references: ScrapStation, ScrapingDevice_01), or None."""
+    raw = _read(Path(game_dir) / "res.pak", STATIONS.get(key, ""))
+    if not raw:
+        return None
+    found = []
+    _walk(hbson.loads(raw), lambda o: found.append(o["source"])
+          if str(o.get("source", "")).endswith(".prefab") else None)
+    return found[0] if found else None
+
+
 def item_prefab(game_dir, item_id):
     """The prefab an item's (or a companion's) model comes from, through
-    the model sheet."""
+    the model sheet; a hub station's (station_…) its own."""
+    if item_id in STATIONS:
+        return station_prefab(game_dir, item_id)
     sh = _sheets(game_dir)
     it = sh["item"].get(item_id) or {}
     vis = it.get("visuals") or {}

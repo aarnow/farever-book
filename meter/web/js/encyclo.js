@@ -91,6 +91,27 @@ async function encFaces(n) {
   rerenderEncyclo();
 }
 
+/* A hub station named in a sheet (the scrap station of a salvage): its
+   model photographed once, whole, kept with the portraits, then its icon. */
+const ENC_SNAPS = { busy: false, done: {}, todo: [] };
+const ENC_OBJECT_FRAME = [0.5, 0.62];
+async function encSnapRows() {
+  if (ENC_SNAPS.busy || !m3dSupported() || !ENC_SNAPS.todo.length) return;
+  ENC_SNAPS.busy = true;
+  let got = false;
+  try {
+    while (ENC_SNAPS.todo.length) {
+      const [model, key] = ENC_SNAPS.todo.shift();
+      const url = await m3dPortrait(model, 128, 0.7, ENC_OBJECT_FRAME);
+      if (!url) continue;
+      (window.__PORTRAITS__ = window.__PORTRAITS__ || {})[key] = url;
+      notify('npc_portrait', { key: key, data: url });
+      got = true;
+    }
+  } finally { ENC_SNAPS.busy = false; }
+  if (got) rerenderEncyclo();
+}
+
 function rerenderEncyclo() {
   const box = document.querySelector('.coll.enc');
   if (box && ENC_NODE) renderEncyclo(box, ENC_NODE);
@@ -668,6 +689,17 @@ function encWhereRow(r, meta, rar) {
     } else if (mk) {
       const ic = el('span', 'encmk');
       const im = el('img'); im.src = mk; im.alt = ''; ic.appendChild(im);
+      line.appendChild(ic);
+    } else if (r.snap) {
+      // a station: its photo, taken once
+      const src = (window.__PORTRAITS__ || {})[r.snap[1]];
+      const ic = el('span', 'encpic sm');
+      if (src) { const im = el('img'); im.src = src; im.alt = ''; ic.appendChild(im); }
+      else if (!ENC_SNAPS.done[r.snap[1]]) {
+        ENC_SNAPS.done[r.snap[1]] = true;
+        ENC_SNAPS.todo.push(r.snap);
+        setTimeout(encSnapRows, 0);
+      }
       line.appendChild(ic);
     } else if (r.img) {
       const ic = el('span', 'encpic sm');

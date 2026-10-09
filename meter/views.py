@@ -572,6 +572,11 @@ def item_where(iid, rar=None, rows_only=False):
                 rows[-1]["mob"] = s["id"]
             elif k == "family" and _family_pic(s.get("id")):
                 rows[-1]["mob"] = _family_pic(s.get("id"))
+            elif k in ("salvage", "scrap"):
+                # the scrap station (ent.interactible.ScrapStation) does
+                # both: its model's photo for an icon
+                rows[-1]["snap"] = ["station_Scrap",
+                                    f"stn_m{MODEL_FORMAT}_Scrap"]
             elif k == "gather" and s.get("tool"):
                 # a lode, a bush: no picture of its own, the tool the
                 # hero works it with (a pickaxe, a sickle)
@@ -2227,7 +2232,8 @@ def collection_sheet(key, iid, owned):
                                    for i, n in r.get("input") or ()]}}
         out["where"] = [{k: x.get(k) for k in (
             "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc", "who",
-            "place", "cost", "costs", "mob", "ach", "mapIcon", "go", "goType") if x.get(k)}
+            "place", "cost", "costs", "mob", "ach", "mapIcon", "go", "goType",
+            "snap") if x.get(k)}
             for x in rows]
         if r.get("world"):
             out["where"] += _world_recipe_rows(
@@ -2252,7 +2258,7 @@ def collection_sheet(key, iid, owned):
                "where": [{k: x.get(k) for k in (
                    "k", "t", "sub", "img", "boss", "pins", "pinCls", "npc",
                    "who", "place", "cost", "costs", "mob", "ach", "mapIcon",
-                   "pet", "title", "go", "goType") if x.get(k)} for x in rows]}
+                   "pet", "title", "go", "goType", "snap") if x.get(k)} for x in rows]}
         if any(x.get("pins") for x in out["where"]):
             out["meta"] = world_map().get("meta")
         return out
@@ -2413,7 +2419,7 @@ def encyclopedia_item(iid):
                                             "npc", "who", "place", "cost",
                                             "mapIcon", "dungeon", "where",
                                             "diffs", "costs", "mob", "ach",
-                                            "rep", "go", "goType")
+                                            "rep", "go", "goType", "snap")
                      if r.get(k)} for r in rows]
     rars = sorted({x for r in rows for x in r.get("rars") or () if x},
                   key=lambda x: RARITY_ORDER.get(x, 9))

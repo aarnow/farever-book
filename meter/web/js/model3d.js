@@ -541,7 +541,9 @@ function m3dWait(test, ms) {
   });
 }
 
-async function m3dPortrait(id, px, yaw) {
+// `frame`: [how far below the top its middle stands, its radius], in
+// heights (a face by default, M3D_FACE: [0.5, 0.62] frames a whole object)
+async function m3dPortrait(id, px, yaw, frame) {
   if (!m3dSupported()) return null;
   // its model, asked if need be
   if (!(id in M3D.models)) {
@@ -568,7 +570,7 @@ async function m3dPortrait(id, px, yaw) {
     // hero's body faces yaw = π/2)
     const [mn, mx] = M3D.box;
     const hgt = mx[1] - mn[1];
-    const k = M3D_FACE;
+    const k = frame || M3D_FACE;
     M3D.center = [(mn[0] + mx[0]) / 2, mx[1] - hgt * k[0], (mn[2] + mx[2]) / 2];
     M3D.radius = hgt * k[1];
     M3D.yaw = yaw === undefined ? Math.PI / 2 : yaw;

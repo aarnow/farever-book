@@ -2137,8 +2137,9 @@ class App:
         (one in the hero's body has no portrait in the game): kept with the
         portraits, the Encyclopedia's list then showing it."""
         import base64
-        if not isinstance(key, str) or not re.fullmatch(r"npc_[A-Za-z0-9_]+",
-                                                         key):
+        # a character's face (npc_…), a station's photo (stn_…)
+        if not isinstance(key, str) or not re.fullmatch(
+                r"(npc|stn)_[A-Za-z0-9_]+", key):
             return
         head = "data:image/png;base64,"
         if not isinstance(data, str) or not data.startswith(head) \
@@ -2156,8 +2157,9 @@ class App:
             (folder / f"{key}.png").write_bytes(raw)
             # the faces taken off an older model: gone
             from gamedata import MODEL_FORMAT
-            for old in folder.glob("npc_*.png"):
-                if not old.stem.startswith(f"npc_m{MODEL_FORMAT}_"):
+            kind = key.split("_", 1)[0]
+            for old in folder.glob(f"{kind}_*.png"):
+                if not old.stem.startswith(f"{kind}_m{MODEL_FORMAT}_"):
                     old.unlink(missing_ok=True)
         except OSError as e:
             print(f"[meter] couldn't save {key}: {e}", file=sys.stderr)
