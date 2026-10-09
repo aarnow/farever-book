@@ -1004,7 +1004,7 @@ def _merchant_units(coll):
     # every character of the open world too (the Encyclopedia's PNJ), but
     # those wearing the hero's generic body
     units |= {n["unit"] for n in (coll or {}).get("npcs") or ()
-              if n.get("unit") not in ("BaseHero", "TODO_BaseNPC_01")}
+              if n.get("unit") != "BaseHero"}
     return sorted(units)
 
 

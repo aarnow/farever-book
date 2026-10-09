@@ -1777,7 +1777,7 @@ ENCYCLO_TOPICS = (
     ("npcs", "PNJ", "PNJ"),
 )
 # an NPC whose unit is the hero's generic body: its portrait is not its own
-GENERIC_NPC_UNITS = {"BaseHero", "TODO_BaseNPC_01"}
+GENERIC_NPC_UNITS = {"BaseHero"}
 
 
 FILTER_AS = {"Ore": "CraftingComponent", "Leather": "CraftingComponent",
