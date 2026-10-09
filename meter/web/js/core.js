@@ -511,6 +511,7 @@ function buildNode(n) {
     case 'bosssheet': return buildBossSheet(n);
     case 'welcome': return buildWelcome(n);
     case 'setnav': return buildSetNav(n);
+    case 'accounts': return buildAccounts(n);
     case 'themes': return buildThemes(n);
     case 'langs': return buildLangs(n);
     case 'linkcards': return buildLinkCards(n);

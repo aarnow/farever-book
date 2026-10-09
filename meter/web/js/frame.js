@@ -352,10 +352,15 @@ function renderAccount(a) {
   if (!box) return;
   box.textContent = '';
   box.className = 'acct-' + (a.state || 'none');
-  if (a.state === 'on' || a.state === 'last') {
+  if (a.state === 'on' || a.state === 'sync') {
     box.appendChild(document.createTextNode(a.state === 'on'
-      ? tr('Connecté en tant que') + ' ' : tr('Dernier compte Steam :') + ' '));
-    box.appendChild(el('b', null, a.name || '?'));
+      ? tr('Connecté en tant que') + ' ' : tr('Compte synchronisé :') + ' '));
+    // its name: Réglages › Compte (its characters, the one synced)
+    const b = el('button', 'acctlink', a.name || '?');
+    b.type = 'button';
+    b.title = tr('Voir le compte et ses personnages');
+    b.addEventListener('click', () => notify('open_account', {}));
+    box.appendChild(b);
   } else {
     box.textContent = tr('Aucun compte Steam n’est synchronisé avec l’application.');
   }
@@ -609,6 +614,8 @@ function buildWelcome(n) {
 
 /* Réglages: the subjects, a menu down the page's left. */
 const SETNAV_ICONS = {
+  account: '<svg viewBox="0 0 24 24"><path d="M12 3a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 11c4.4 0 8 2.2 8 5v2H4v-2c0-2.8 '
+    + '3.6-5 8-5z"/></svg>',
   meter: '<svg viewBox="0 0 24 24"><path d="M3 20h18v2H3zM5 11h3v8H5zm5.5-5h3v13h-3zM16 14h3v5h-3z"/></svg>',
   overlay: '<svg viewBox="0 0 24 24"><path d="M3 4h18v12H3zm2 2v8h14V6zm3 12h8v2H8z"/>'
     + '<path d="M12 7h5v4h-5z"/></svg>',
@@ -635,6 +642,106 @@ function buildSetNav(n) {
   return nav;
 }
 
+
+/* Réglages › Compte: each Steam account seen on this PC, the one synced
+   (a button to sync another, not in game), then its characters: portrait
+   (head and shoulders), name, class and level, counted or not. */
+function buildAccounts(n) {
+  const box = el('div', 'accts');
+  (n.items || []).forEach((a) => {
+    const card = el('div', 'acct' + (a.sync ? ' sync' : ''));
+    const head = el('div', 'accthead');
+    const nm = el('div', 'acctname');
+    nm.appendChild(el('b', null, a.name));
+    if (a.steam) nm.appendChild(el('span', 'accttag on', tr('Connecté à Steam')));
+    if (a.sync) nm.appendChild(el('span', 'accttag', tr('Synchronisé')));
+    head.appendChild(nm);
+    if (!a.sync) {
+      const b = el('button', 'btn', tr('Synchroniser ce compte'));
+      b.type = 'button';
+      if (a.locked) {
+        b.disabled = true;
+        b.title = tr('En jeu, le compte synchronisé est celui qui joue.');
+      }
+      b.addEventListener('click', () => notify('acct_sync', { sid: a.sid }));
+      head.appendChild(b);
+    }
+    card.appendChild(head);
+    if (!(a.chars || []).length) {
+      card.appendChild(el('p', 'note', tr('Aucun personnage vu en jeu pour ce compte.')));
+    }
+    const grid = el('div', 'chars');
+    (a.chars || []).forEach((c) => grid.appendChild(charCard(a, c)));
+    card.appendChild(grid);
+    box.appendChild(card);
+  });
+  return box;
+}
+
+function charCard(a, c) {
+  const card = el('div', 'charcard' + (c.on ? '' : ' off'));
+  const pic = el('div', 'charpic');
+  const src = c.port && (window.__PORTRAITS__ || {})[c.port];
+  const im = el('img');
+  im.alt = '';
+  if (src) im.src = src;
+  else if (c.snap) charSnap(c.snap, im);
+  // no portrait yet: its class's crest
+  const cls = (window.__ICONS__ || {})[c.cls];
+  if (!src && cls) { im.src = cls; im.className = 'cls'; }
+  if (im.src || c.snap) pic.appendChild(im);
+  card.appendChild(pic);
+  const t = el('div', 'chart');
+  t.appendChild(el('b', null, c.n));
+  t.appendChild(el('small', null, [c.clsT, c.lvl ? tr('niv. {n}', { n: c.lvl }) : '']
+    .filter(Boolean).join(' · ')));
+  card.appendChild(t);
+  const sw = buildControl({ k: 'toggle', id: 'acct_hero', on: c.on, p: { sid: a.sid, key: c.key } });
+  sw.title = c.on ? tr('Compté dans la progression du compte') : tr('Pas compté dans la progression du compte');
+  card.appendChild(sw);
+  // a character deleted in game: removed here too (a second click to confirm)
+  const del = el('button', 'chardel');
+  del.type = 'button';
+  del.title = tr('Retirer ce personnage de l’application');
+  del.appendChild(svgIcon('M6 7h12l-1 13H7zm3-3h6l1 2H8z'));
+  del.addEventListener('click', () => {
+    if (!del.classList.contains('confirm')) {
+      del.classList.add('confirm');
+      del.title = tr('Cliquer encore pour retirer {name} et sa progression', { name: c.n });
+      setTimeout(() => { del.classList.remove('confirm'); }, 4000);
+      return;
+    }
+    notify('acct_forget', { key: c.key });
+  });
+  card.appendChild(del);
+  return card;
+}
+
+/* A character's portrait off its model, head and shoulders, taken once and
+   kept by the meter with the others. */
+const CHAR_SNAPS = { busy: false, todo: [], done: {} };
+const CHAR_FRAME = [0.15, 0.21];
+function charSnap(snap, im) {
+  if (CHAR_SNAPS.done[snap[1]] || typeof m3dPortrait !== 'function') return;
+  CHAR_SNAPS.done[snap[1]] = true;
+  CHAR_SNAPS.todo.push([snap, im]);
+  charSnapNext();
+}
+async function charSnapNext() {
+  if (CHAR_SNAPS.busy || !m3dSupported()) return;
+  CHAR_SNAPS.busy = true;
+  try {
+    while (CHAR_SNAPS.todo.length) {
+      const [[model, key], im] = CHAR_SNAPS.todo.shift();
+      const url = await m3dPortrait(model, 192, Math.PI / 2, CHAR_FRAME);
+      if (!url) continue;
+      (window.__PORTRAITS__ = window.__PORTRAITS__ || {})[key] = url;
+      im.className = '';
+      im.src = url;
+      notify('npc_portrait', { key: key, data: url });
+    }
+  } finally { CHAR_SNAPS.busy = false; }
+}
 
 /* Réglages › Affichage: each colour theme as a small window in its colours
    (the header band, the tabs), its name under it. */

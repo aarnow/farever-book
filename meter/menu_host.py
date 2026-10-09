@@ -1292,6 +1292,23 @@ def _ui_cursor_file(name):
         return ""
 
 
+def _tab_icons():
+    """{tab or group: data URI} of the game's glyphs in front of the tabs
+    (gamedata.ensure_ui_frame: analysis_out/ui_tab_<tab>.png)."""
+    folder = Path(os.environ.get("FAREVER_ANALYSIS")
+                  or HERE.parent / "analysis_out")
+    out = {}
+    try:
+        files = sorted(folder.glob("ui_tab_*.png"))
+    except OSError:
+        return out
+    for path in files:
+        uri = _ui_cursor_file(path.name)
+        if uri:
+            out[path.stem[len("ui_tab_"):]] = uri
+    return out
+
+
 def _ui_cursor(name):
     """One of the game's cursors (gamedata.ensure_ui_frame) as a data URI,
     or ""."""
@@ -1387,6 +1404,8 @@ def _document(theme, lang):
                      + "window.__SHEET__ = " + json.dumps(_sheet_art())
                      + ";window.__LOGO__ = " + json.dumps(_asset_uri("wordmark.png"))
                      + ";window.__CREST__ = " + json.dumps(_asset_uri("grimoire.png"))
+                     # the tabs' glyphs, the game's (a few KB)
+                     + ";window.__TAB_ICONS__ = " + json.dumps(_tab_icons())
                      + ";"))
     # WebView2 refuses the HTML string past 1.5 MiB of UTF-8 (2 MiB once
     # base64-encoded; measured 2026-10-08: 1 560 061 bytes shown, 1 580 061

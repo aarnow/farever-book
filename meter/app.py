@@ -40,7 +40,7 @@ from winsys import (
 import goals as G
 from me import MeStore
 from gamedata import (
-    REGENERATING, _boss_label, _element_done, _fr_names, bestiary_catalogue,
+    MODEL_FORMAT, REGENERATING, _boss_label, char_look, _element_done, _fr_names, bestiary_catalogue,
     build_data, collection_catalogue, dungeon_catalogue,
     item_rarity,
     dungeon_name, item_icon, item_label, item_type,
@@ -55,7 +55,7 @@ from bosssheet import _icon_ok, boss_sheet_view
 from views import (
     collection_sheet,
     encyclopedia_item, encyclopedia_view,
-    LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
+    CLASS_LABELS, LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
     hunt_detail_view, map_view, rift_rewards_view, soulwell_name)
 from reports import (
@@ -239,6 +239,7 @@ class App:
         self._codex_data = None             # .meter_codex.json, loaded
         self._elements_logged = False
         self._item_codex_logged = False
+        self._hero_ids = {}                 # character -> its id in the game's database
         self._ach_logged = False
         self._ach_data = None
         self._item_codex_cache = (None, {})
@@ -855,6 +856,11 @@ class App:
             "update_page": self._open_releases,
             "open_licences": self._open_licences,
             "open_link": lambda p: self._open_link(p.get("id")),
+            "open_account": self._open_account,
+            "acct_sync": lambda p: self._account_sync(p.get("sid")),
+            "acct_hero": lambda p: self._account_count(
+                p.get("sid"), p.get("key"), bool(p.get("value"))),
+            "acct_forget": lambda p: self._account_forget(p.get("key")),
             "settings_topic": lambda p: setattr(
                 self, "_settings_topic",
                 p.get("id") if p.get("id") in SETTINGS_TOPICS
@@ -1537,11 +1543,14 @@ class App:
         self.goals.add(p.get("kind"), p.get("ref"), p.get("n"),
                        p.get("rar"), p.get("istat"))
 
-    def on_hero_seen(self, name):
-        """The hook saw our hero (every 3 s in the world). Hook thread."""
+    def on_hero_seen(self, name, hid=None):
+        """The hook saw our hero (every 3 s in the world), with its id in
+        the game's database when the client is sent it. Hook thread."""
         self._hero_at = time.time()
 
         def done():
+            if hid:
+                self._hero_ids[name] = hid
             self.me.set_hero(name)
             self._tag_hero(name)
             if name != self._me_name:
@@ -1786,9 +1795,11 @@ class App:
                 data = json.loads(ITEM_CODEX_FILE.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 data = {}
-            data.setdefault("heroes", {})[hero] = {"items": items,
-                                                   "at": time.time()}
-            data["last"] = hero
+            key = self._hero_key(hero)
+            data.setdefault("heroes", {})[key] = {"items": items,
+                                                  "at": time.time(),
+                                                  "name": hero}
+            data["last"] = key
             self._tag_hero(hero)
             try:
                 ITEM_CODEX_FILE.write_text(json.dumps(data), encoding="utf-8")
@@ -1815,9 +1826,11 @@ class App:
 
         def done():
             data = self._codex()
-            first = hero not in data.setdefault("heroes", {})
-            data["heroes"][hero] = {"ranks": ranks, "at": time.time()}
-            data["last"] = hero
+            key = self._hero_key(hero)
+            first = key not in data.setdefault("heroes", {})
+            data["heroes"][key] = {"ranks": ranks, "at": time.time(),
+                                   "name": hero}
+            data["last"] = key
             self._tag_hero(hero)
             try:
                 CODEX_FILE.write_text(json.dumps(data), encoding="utf-8")
@@ -1886,58 +1899,102 @@ class App:
         return getattr(self, "_steam_now", None)
 
     def _accounts(self):
-        """{"heroes": {character: steamid}, "names": {steamid: name},
-        "last": steamid} (ACCOUNTS_FILE)."""
+        """{"chars": {key: {name, id, sid, seen}}, "names": {steamid: name},
+        "last": steamid, "synced": steamid, "excluded": {steamid: [key]}}
+        (ACCOUNTS_FILE). A character's key: "name#id" (its id in the game's
+        database), or its name alone when the game didn't send its id."""
         if getattr(self, "_accounts_data", None) is None:
             try:
-                self._accounts_data = json.loads(
-                    ACCOUNTS_FILE.read_text(encoding="utf-8"))
+                data = json.loads(ACCOUNTS_FILE.read_text(encoding="utf-8"))
             except (OSError, ValueError):
-                self._accounts_data = {}
+                data = {}
+            # the first shape: {name: steamid}, no ids
+            for name, sid in (data.pop("heroes", None) or {}).items():
+                data.setdefault("chars", {}).setdefault(
+                    name, {"name": name, "id": None, "sid": sid, "seen": 0})
+            self._accounts_data = data
         return self._accounts_data
 
+    def _hero_key(self, name):
+        """A character's key: its name and its id in the game's database
+        (two characters may share a name), its name alone without one."""
+        hid = getattr(self, "_hero_ids", {}).get(name)
+        return f"{name}#{hid}" if hid else name
+
     def _tag_hero(self, hero):
-        """A character seen in game: tied to the Steam account signed in."""
+        """Our character seen in game (only ever the one playing): tied to
+        the Steam account signed in. One known by its name alone takes its
+        id when the game sends it (its codex follows)."""
         acct = self._steam_account()
         if not acct or not hero or hero == "?":
             return
         data = self._accounts()
         sid = acct["id"]
         before = json.dumps(data, sort_keys=True)
-        data.setdefault("heroes", {})[hero] = sid
+        chars = data.setdefault("chars", {})
+        key = self._hero_key(hero)
+        if key != hero and hero in chars and chars[hero].get("sid") == sid:
+            chars.pop(hero)
+            self._rekey_codex(hero, key)
+        old = chars.get(key) or {}
+        chars[key] = {"name": hero, "id": self._hero_ids.get(hero),
+                      "sid": sid, "seen": old.get("seen") or time.time()}
         if acct.get("name"):
             data.setdefault("names", {})[sid] = acct["name"]
         data["last"] = sid
         if json.dumps(data, sort_keys=True) != before:
+            self._save_accounts()
+
+    def _rekey_codex(self, old, new):
+        """A character's codex entries moved to its new key."""
+        for path in (CODEX_FILE, ITEM_CODEX_FILE):
             try:
-                ACCOUNTS_FILE.write_text(json.dumps(data), encoding="utf-8")
-            except OSError as e:
-                print(f"[meter] couldn't save the accounts: {e}",
-                      file=sys.stderr)
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            heroes = data.get("heroes") or {}
+            if old in heroes and new not in heroes:
+                heroes[new] = dict(heroes.pop(old), name=old.split("#")[0])
+                if data.get("last") == old:
+                    data["last"] = new
+                try:
+                    path.write_text(json.dumps(data), encoding="utf-8")
+                except OSError:
+                    pass
+        self._codex_data = None
 
     def _account_id(self):
-        """The account the app shows: the one signed in, else the last one
-        seen."""
+        """The account synced with the app: the one playing while the game
+        runs, else the one picked in Réglages › Compte, else the one signed
+        in to Steam, else the last one seen."""
         acct = self._steam_account()
-        return acct["id"] if acct else self._accounts().get("last")
+        if acct and self.game_connected():
+            return acct["id"]
+        data = self._accounts()
+        known = set(data.get("names") or {}) | {
+            c.get("sid") for c in (data.get("chars") or {}).values()}
+        if data.get("synced") in known:
+            return data["synced"]
+        return acct["id"] if acct else data.get("last")
 
     def _account_name(self):
+        sid = self._account_id()
         acct = self._steam_account()
-        if acct and acct.get("name"):
+        if acct and acct["id"] == sid and acct.get("name"):
             return acct["name"]
-        return (self._accounts().get("names") or {}).get(self._account_id())
+        return (self._accounts().get("names") or {}).get(sid)
 
     def _account_heroes(self, heroes):
-        """The characters among `heroes` (names) of the account shown: those
-        tied to it, and those seen before any account was (while no other
-        account has been seen on this PC). [] when no account is known."""
+        """The characters among `heroes` (codex keys) of the account synced:
+        those seen playing under it, less the ones left out of its progress
+        (Réglages › Compte). [] when no account is known."""
         sid = self._account_id()
         if not sid:
             return []
-        tied = self._accounts().get("heroes") or {}
-        alone = set(tied.values()) <= {sid}
-        return [h for h in heroes if h != "?" and (
-            tied.get(h) == sid or (h not in tied and alone))]
+        chars = self._accounts().get("chars") or {}
+        out = set((self._accounts().get("excluded") or {}).get(sid) or ())
+        return [h for h in heroes if h not in out
+                and (chars.get(h) or {}).get("sid") == sid]
 
     def _tabs_spec(self):
         """The tabs in their band's order: the account's together (in
@@ -1957,15 +2014,14 @@ class App:
         return out
 
     def _account_view(self):
-        """The header's line under Play: the account signed in, else the
-        last one seen, else none."""
+        """The header's line under Play: the account synced, signed in to
+        Steam ("on") or not ("sync"), else none."""
+        sid = self._account_id()
+        if not sid:
+            return {"state": "none"}
         acct = self._steam_account()
-        if acct:
-            return {"state": "on", "name": acct.get("name") or ""}
-        name = self._account_name()
-        if name:
-            return {"state": "last", "name": name}
-        return {"state": "none"}
+        return {"state": "on" if acct and acct["id"] == sid else "sync",
+                "name": self._account_name() or ""}
 
     def _codex(self):
         if self._codex_data is None:
@@ -2002,13 +2058,16 @@ class App:
                       "que tu as tué avant Farever Book, et se met à jour tout "
                       "seul quand le jeu est ouvert.",
                       acct=self._account_name() or "",
-                      heroes=", ".join(sorted(mine)),
+                      heroes=", ".join(sorted(
+                          heroes[h].get("name") or h for h in mine)),
                       date=date_fr(time.localtime(at)))
         elif at:
             sync = tr("Kills de {hero}, lus en jeu le {date}. Le compte est "
                       "celui du jeu (son Codex) : il inclut tout ce que tu as "
                       "tué avant Farever Book, et se met à jour tout seul quand "
-                      "le jeu est ouvert.", hero=data.get("last"),
+                      "le jeu est ouvert.",
+                      hero=(heroes.get(data.get("last")) or {}).get("name")
+                      or data.get("last"),
                       date=date_fr(time.localtime(at)))
         else:
             sync = tr("Pas encore lu : lance le jeu avec Farever Book ouvert, "
@@ -2262,9 +2321,10 @@ class App:
         (one in the hero's body has no portrait in the game): kept with the
         portraits, the Encyclopedia's list then showing it."""
         import base64
-        # a character's face (npc_…), a station's photo (stn_…)
+        # a character's face (npc_…), a station's photo (stn_…), one's own
+        # character's (chr_…)
         if not isinstance(key, str) or not re.fullmatch(
-                r"(npc|stn)_[A-Za-z0-9_]+", key):
+                r"(npc|stn|chr)_[A-Za-z0-9_]+", key):
             return
         head = "data:image/png;base64,"
         if not isinstance(data, str) or not data.startswith(head) \
@@ -2281,7 +2341,6 @@ class App:
             folder.mkdir(parents=True, exist_ok=True)
             (folder / f"{key}.png").write_bytes(raw)
             # the faces taken off an older model: gone
-            from gamedata import MODEL_FORMAT
             kind = key.split("_", 1)[0]
             for old in folder.glob(f"{kind}_*.png"):
                 if not old.stem.startswith(f"{kind}_m{MODEL_FORMAT}_"):
@@ -2748,10 +2807,128 @@ class App:
                "items": [{"id": k, "t": tr(t),
                           "tag": "alpha" if k == "overlay" else None}
                          for k, t in SETTINGS_TOPICS.items()]}
-        return [nav] + {"meter": self._settings_meter,
+        return [nav] + {"account": self._settings_account,
+                        "meter": self._settings_meter,
                         "overlay": self._settings_overlay,
                         "display": self._settings_display,
                         "config": self._settings_config}[topic]()
+
+    def _settings_account(self):
+        """Réglages › Compte: each Steam account seen on this PC, its
+        characters (portrait, class, level), the one synced with the app
+        (the one playing, while the game runs) and the characters counted."""
+        data = self._accounts()
+        names = data.get("names") or {}
+        acct = self._steam_account()
+        sync = self._account_id()
+        ingame = bool(acct) and self.game_connected()
+        chars_all = data.get("chars") or {}
+        sids = list(dict.fromkeys(
+            ([acct["id"]] if acct else []) + list(names)
+            + [c.get("sid") for c in chars_all.values() if c.get("sid")]))
+        profiles = self.me.profiles()
+        out = [{"k": "section", "t": tr("Compte Steam")}]
+        if not sids:
+            out.append({"k": "note", "t": tr(
+                "Aucun compte Steam n’est synchronisé avec l’application. "
+                "Ouvre Steam, puis lance le jeu avec Farever Book ouvert : "
+                "ton compte et tes personnages apparaîtront ici.")})
+            return out
+        out.append({"k": "note", "t": tr(
+            "Le compte synchronisé est celui dont l’application additionne "
+            "la progression (le Codex de la Chasse). En jeu, c’est forcément "
+            "celui qui joue.") if not ingame else tr(
+            "Tu es en jeu : le compte synchronisé est celui qui joue.")})
+        accounts = []
+        for sid in sids:
+            mine = [k for k, c in chars_all.items() if c.get("sid") == sid]
+            excluded = set((data.get("excluded") or {}).get(sid) or ())
+            chars = []
+            for k in sorted(mine, key=lambda k: (chars_all[k].get("name")
+                                                 or k).lower()):
+                h = chars_all[k].get("name") or k
+                prof = profiles.get(h) or {}
+                cls = str(prof.get("k") or "").lower()
+                key = char_look(prof)
+                port = f"chr_m{MODEL_FORMAT}_{key}" if key else None
+                chars.append({
+                    "key": k, "n": h, "cls": cls,
+                    "clsT": tr(CLASS_LABELS[cls]) if cls in CLASS_LABELS else "",
+                    "lvl": prof.get("lvl"),
+                    "on": k not in excluded,
+                    # its portrait: kept with the others, else taken by the
+                    # window off its model
+                    "port": port if port and (ANALYSIS / "boss_portraits"
+                                              / f"{port}.png").exists()
+                    else None,
+                    "snap": ["char:" + key, port] if port else None})
+            accounts.append({
+                "sid": sid,
+                "name": names.get(sid) or (acct or {}).get("name") or sid,
+                "steam": bool(acct) and acct["id"] == sid,
+                "sync": sid == sync, "locked": ingame,
+                "chars": chars})
+        out.append({"k": "accounts", "id": "accounts", "items": accounts})
+        return out
+
+    def _account_sync(self, sid):
+        """The account picked as the synced one (not while the game runs:
+        the one playing is)."""
+        data = self._accounts()
+        if not isinstance(sid, str) or self.game_connected():
+            return
+        data["synced"] = sid
+        self._save_accounts()
+
+    def _account_count(self, sid, hero, on):
+        """A character counted, or not, in its account's progress."""
+        data = self._accounts()
+        if not isinstance(sid, str) or not isinstance(hero, str):
+            return
+        ex = set((data.setdefault("excluded", {})).get(sid) or ())
+        (ex.discard if on else ex.add)(hero)
+        data["excluded"][sid] = sorted(ex)
+        self._codex_data = None
+        self._save_accounts()
+
+    def _account_forget(self, key):
+        """A character removed from the app (deleted in game): out of its
+        account, its codex entries gone. Seen playing again, it comes back."""
+        data = self._accounts()
+        if not isinstance(key, str) or key not in (data.get("chars") or {}):
+            return
+        sid = data["chars"].pop(key).get("sid")
+        ex = (data.get("excluded") or {}).get(sid)
+        if ex and key in ex:
+            ex.remove(key)
+        for path in (CODEX_FILE, ITEM_CODEX_FILE):
+            try:
+                cx = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if key in (cx.get("heroes") or {}):
+                cx["heroes"].pop(key)
+                if cx.get("last") == key:
+                    cx["last"] = next(iter(cx["heroes"]), None)
+                try:
+                    path.write_text(json.dumps(cx), encoding="utf-8")
+                except OSError:
+                    pass
+        self._codex_data = None
+        self._save_accounts()
+
+    def _save_accounts(self):
+        try:
+            ACCOUNTS_FILE.write_text(json.dumps(self._accounts()),
+                                     encoding="utf-8")
+        except OSError as e:
+            print(f"[meter] couldn't save the accounts: {e}", file=sys.stderr)
+
+    def _open_account(self):
+        """The header's account name clicked: Réglages › Compte."""
+        self._settings_topic = "account"
+        self._set_tab("Settings")
+        self._menu_tab = "Settings"
 
     def _settings_meter(self):
         return [

@@ -509,8 +509,9 @@ APP_TAB_DEFAULT = "Live"
 
 
 # Réglages: its subjects, in the menu on its left
-SETTINGS_TOPICS = {"meter": "DPS Meter", "overlay": "Overlay",
-                   "display": "Affichage", "config": "Configuration"}
+SETTINGS_TOPICS = {"account": "Compte", "meter": "DPS Meter",
+                   "overlay": "Overlay", "display": "Affichage",
+                   "config": "Configuration"}
 
 
 EVENTS_MAX = 40             # lines kept in the live page's event feed

@@ -86,6 +86,7 @@ def hook_layout(code):
     bosses = offs("ui.hud.BossesInfo")
     bossinfo = offs("ui.hud.BossInfo")
     loadout = offs("st.Loadout")
+    herodata = offs("st.player.HeroData")
     inv = offs("st.Inventory")
     equip = offs("st.Equipment")
     item = offs("st.Item")
@@ -172,7 +173,10 @@ def hook_layout(code):
                     # the bank's tabs (hxbit.ArrayProxyData)
                     "banks": loadout["banks"][0],
                     # the currencies held, apart from the bag (same)
-                    "currencies": loadout["currencies"][0]},
+                    "currencies": loadout["currencies"][0],
+                    # the looks worn over the gear, by equipment slot
+                    # (client.UnitView.getSlotItemDisplayed)
+                    "appearance": loadout["appearance"][0]},
         "CurrencyProxy": {"amount": cproxy["amount"][0],
                           "kind": cproxy["kind"][0]},
         # content holds slot virtuals {count, item}, not items (see readSlot()
@@ -214,7 +218,10 @@ def hook_layout(code):
                  # only tells "did it die", never a percentage.
                  "attr": unit["attr"][0],
                  # an hxbit proxy array of st.skill.Status
-                 "statuses": unit["statuses"][0]},
+                 "statuses": unit["statuses"][0],
+                 # its looks (a virtual of body parts and colours: hair,
+                 # eyes, skinColor..., client.UnitView.get_skinData)
+                 "skinData": unit["skinData"][0]},
         # Measured: stopTime is always -1; a status ends at startTime +
         # duration, and duration grows on every refresh.
         "Status": {"kind": status["kind"][0],
@@ -239,7 +246,13 @@ def hook_layout(code):
                    "accountProgress": player["accountProgress"][0],
                    # where a dungeon's DungeonContext lives on the client
                    # (Activity.globalCtx reads null there)
-                   "activityCtx": player["activityCtx"][0]},
+                   "activityCtx": player["activityCtx"][0],
+                   # the character's lasting record (st.player.HeroData)
+                   "heroData": player["heroData"][0]},
+        # a character's id in the game's database (two may share a name)
+        # and the game account it belongs to
+        "HeroData": {"databaseID": herodata["databaseID"][0],
+                     "accountID": herodata["accountID"][0]},
         # Collection.pets holds UNIT kinds ("Turtle_Grey"), not item ids
         # (measured 2026-08-07).
         "AccountProgress": {"collection": acct["collection"][0],

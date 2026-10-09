@@ -1349,7 +1349,10 @@ function profileOf(h) {
     try {
         const lo = h.add(H.loadout).readPointer();
         r.equip = (lo && !lo.isNull()) ? equipSlots(lo) : [];
+        // what it wears over that gear, and its looks: its portrait
+        r.look = (lo && !lo.isNull()) ? appearanceSlots(lo) : [];
     } catch (e) { r.equip = []; }
+    r.skin = skinOf(h);
     try {
         const sp = h.add(D.specialization).readPointer();
         if (sp && !sp.isNull()) {
@@ -1513,8 +1516,50 @@ function setupNameApi() {
 function getField(obj, name) {
     try {
         if (!obj || obj.isNull()) return null;
+        if (!(name in fieldHash)) fieldHash[name] = hl_hashUtf8(Memory.allocUtf8String(name));
         return hl_getField(obj, fieldHash[name]);
     } catch (e) { return null; }
+}
+
+// A hero's looks, as the game dresses it (ent.Unit.skinData, a virtual of
+// strings: the body parts and their colours), or null.
+const SKIN_FIELDS = ["skinColor", "hairColor", "hairColorSecondary", "eyeColor",
+                     "eyes", "hair", "facialHair", "eyebrows", "face", "beard"];
+function skinOf(h) {
+    if (OFF.Unit.skinData == null || !hl_getField) return null;
+    try {
+        const sk = h.add(OFF.Unit.skinData).readPointer();
+        if (!sk || sk.isNull()) return null;
+        const out = {};
+        SKIN_FIELDS.forEach(function (f) {
+            const v = getField(sk, f);
+            const s = (v && !v.isNull()) ? hlStr(v) : null;
+            if (s) out[f] = s;
+        });
+        return out;
+    } catch (e) { return null; }
+}
+
+// The looks worn over the gear (Loadout.appearance), slot by slot as the
+// equipment's: an item kind, or null where the gear itself shows.
+function appearanceSlots(lo) {
+    const out = [];
+    if (OFF.Loadout.appearance == null) return out;
+    try {
+        const inv = lo.add(OFF.Loadout.appearance).readPointer();
+        if (!inv || inv.isNull()) return out;
+        const arr = inv.add(OFF.Inventory.content).readPointer();
+        if (!arr || arr.isNull()) return out;
+        const n = arr.add(OFF.ArrayObj.length).readS32();
+        const data = arr.add(OFF.ArrayObj.array).readPointer();
+        for (let i = 0; i < n && i < 64; i++) {
+            const raw = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+            const slot = (raw && !raw.isNull()) ? slotItem(raw) : null;
+            const inf = slot ? itemInfo(slot.item) : null;
+            out.push(inf ? inf.kind : null);
+        }
+    } catch (e) {}
+    return out;
 }
 
 function skillDisplayName(baseSkill, id) {
@@ -1617,6 +1662,31 @@ function sweepShard() {
 // never run from a timer (see the game-thread tick).
 let heroRefreshDue = false;
 
+// The local hero's lasting identity: its id in the game's database
+// (HeroData.databaseID; two characters may share a name) and the game
+// account it belongs to (HeroData.accountID). {} where unread.
+let identityLogged = false;
+function heroIdentity(h) {
+    const out = {};
+    if (!OFF.HeroData || OFF.Player.heroData == null) return out;
+    try {
+        const pl = h.add(OFF.Hero.player).readPointer();
+        if (!pl || pl.isNull()) return out;
+        const hd = pl.add(OFF.Player.heroData).readPointer();
+        if (!hd || hd.isNull()) return out;
+        const id = hd.add(OFF.HeroData.databaseID).readS64().toString();
+        if (id !== "0") out.id = id;
+        const ac = hlStr(hd.add(OFF.HeroData.accountID).readPointer());
+        if (ac) out.acct = ac;
+    } catch (e) {}
+    if (!identityLogged) {
+        identityLogged = true;
+        log("hero identity: database id " + (out.id ? "read" : "not sent")
+            + ", account " + (out.acct ? "read" : "not sent"));
+    }
+    return out;
+}
+
 function refreshLocalHero() {
     for (const f of getHeroFns) {
         try {
@@ -1629,7 +1699,9 @@ function refreshLocalHero() {
                 const nm = hlStr(h.add(OFF.Hero.name).readPointer());
                 if (nm) partyNames[nm] = 1;   // always include self
                 localName = nm;
-                send({ kind: "hero", name: localName });
+                const ident = heroIdentity(h);
+                send({ kind: "hero", name: localName, id: ident.id || null,
+                       acct: ident.acct || null });
                 return;
             }
         } catch (e) {}

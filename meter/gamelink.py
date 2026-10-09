@@ -530,7 +530,9 @@ class GameSession:
         name = p.get("name")
         app = _app()
         if app is not None and name:
-            app.on_hero_seen(name)
+            # its id in the game's database, when the client is sent it
+            hid = p.get("id")
+            app.on_hero_seen(name, str(hid) if hid else None)
         if name and name != self.hero_name:
             first = self.hero_name is None
             self.link.step("hero", "ok", name)

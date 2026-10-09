@@ -475,7 +475,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 21
+DATA_FORMAT = 22
 
 
 def _hook_needs():
@@ -1036,6 +1036,42 @@ def item_art(kind, unit=False):
     return uri
 
 
+# one's own characters' looks, by the key of their model (char_look)
+CHAR_LOOKS = {}
+# an equipment slot (gearstats.EQUIP_SLOTS) -> the NPC gear key
+# (hmd_model.NPC_GEAR_SLOTS) the hero's body is dressed by
+_CHAR_GEAR = {"Head": "helmet", "Shoulders": "shoulders", "Chest": "bodyArmor",
+              "Hands": "gloves", "Waist": "belt", "Legs": "pants",
+              "Feet": "boots", "Back": "back", "Weapon1": "weapon",
+              "OffhandWeapon": "offhandWeapon", "Weapon2": "weapon2"}
+
+
+def char_look(profile):
+    """One's own character dressed as the game shows it, from its profile
+    (its looks, skin; what it wears, the appearance over each slot else its
+    gear, client.UnitView.getSlotItemDisplayed): its model's key, kept for
+    item_model_json ("char:<key>"), or None (its looks not read yet)."""
+    from gearstats import EQUIP_SLOTS
+    skin = (profile or {}).get("skin")
+    if not isinstance(skin, dict) or not skin:
+        return None
+    equip = profile.get("equip") or []
+    look = profile.get("look") or []
+    gear = {}
+    for i, slot in enumerate(EQUIP_SLOTS):
+        if slot not in _CHAR_GEAR:
+            continue
+        shown = look[i] if i < len(look) and look[i] else None
+        if not shown and i < len(equip) and equip[i]:
+            shown = equip[i][0]
+        if shown:
+            gear[_CHAR_GEAR[slot]] = shown
+    key = hashlib.sha1(json.dumps([skin, gear], sort_keys=True).encode()
+                       ).hexdigest()[:12]
+    CHAR_LOOKS[key] = {"skin": skin, "gear": gear}
+    return key
+
+
 def item_model_json(item_id):
     """One collectible's model for the viewer, as JSON text, cached and keyed
     to res.pak (a patch rebuilds it). None when there is no readable model or
@@ -1043,10 +1079,20 @@ def item_model_json(item_id):
     "<id>@anim" asks for a monster's idle animation with it;
     "hero:<slot>=<id>.<slot>=<id>…" the hero wearing those pieces (a
     build's), in its idle; "npc:<element>" a character of the open world in
-    the hero's body, its looks and clothes, in its idle."""
+    the hero's body, its looks and clothes, in its idle; "char:<key>" one's
+    own character (char_look)."""
     hero = npc = None
     m_ = re.fullmatch(r"npc:([A-Za-z0-9_]+)(@anim)?", str(item_id or ""))
-    if m_:
+    c_ = re.fullmatch(r"char:([0-9a-f]{12})(@anim)?", str(item_id or ""))
+    if c_:
+        # one's own character (char_look): dressed like a character of the
+        # open world in the hero's body
+        npc = CHAR_LOOKS.get(c_.group(1))
+        if not npc:
+            return None
+        anim = False
+        item_id = "char_" + c_.group(1)
+    elif m_:
         npc = next((n for n in collection_catalogue().get("npcs") or ()
                     if n.get("el") == m_.group(1)), None)
         if not npc or not npc.get("skin"):
