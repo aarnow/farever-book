@@ -475,7 +475,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 17
+DATA_FORMAT = 18
 
 
 def _hook_needs():
@@ -796,7 +796,7 @@ def locate_hlboot(pid):
 # 3D models, for the Collection's viewer
 # ---------------------------------------------------------------------------
 MODELS_DIR = ANALYSIS / "models"
-MODEL_FORMAT = 15
+MODEL_FORMAT = 16
 _model_lock = threading.Lock()
 
 
@@ -1016,9 +1016,18 @@ def item_model_json(item_id):
     no game.
     "<id>@anim" asks for a monster's idle animation with it;
     "hero:<slot>=<id>.<slot>=<id>…" the hero wearing those pieces (a
-    build's), in its idle."""
-    hero = None
-    if str(item_id or "").startswith("hero:"):
+    build's), in its idle; "npc:<element>" a character of the open world in
+    the hero's body, its looks and clothes, in its idle."""
+    hero = npc = None
+    m_ = re.fullmatch(r"npc:([A-Za-z0-9_]+)(@anim)?", str(item_id or ""))
+    if m_:
+        npc = next((n for n in collection_catalogue().get("npcs") or ()
+                    if n.get("el") == m_.group(1)), None)
+        if not npc or not npc.get("skin"):
+            return None
+        anim = False
+        item_id = "npc_" + m_.group(1)
+    elif str(item_id or "").startswith("hero:"):
         hero = dict(p.split("=", 1) for p in str(item_id)[5:].split(".")
                     if re.fullmatch(r"[A-Za-z0-9_]+=[A-Za-z0-9_]+", p))
         anim = False
@@ -1049,6 +1058,9 @@ def item_model_json(item_id):
         try:
             import hmd_model
             m = (hmd_model.hero_model(game, hero) if hero is not None
+                 else hmd_model.npc_model(game, npc.get("skin"),
+                                          npc.get("gear") or {})
+                 if npc is not None
                  else hmd_model.item_model(game, item_id, anim=anim))
         except Exception as e:
             # not cached: a fix to the reader should get its chance

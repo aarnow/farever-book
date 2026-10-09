@@ -259,7 +259,7 @@ function buildCollView(it, cat) {
   stage.appendChild(pic);
   if (COLL_3D.has(it.c) && view3d()) {
     const wait = el('div', 'cvwait', tr('Chargement du modèle 3D…'));
-    const hint = el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer'));
+    const hint = el('div', 'cvhint', tr('Glisser pour tourner · clic droit pour déplacer · molette pour zoomer'));
     stage.classList.add('is3d');
     // a glider's wings read best from above
     stage.appendChild(m3dCanvas(it.id, (st) => {

@@ -1001,6 +1001,10 @@ def _merchant_units(coll):
         for s in e.get("src") or ():
             if s.get("k") == "shop" and s.get("npc"):
                 units.add(s["npc"])
+    # every character of the open world too (the Encyclopedia's PNJ), but
+    # those wearing the hero's generic body
+    units |= {n["unit"] for n in (coll or {}).get("npcs") or ()
+              if n.get("unit") not in ("BaseHero", "TODO_BaseNPC_01")}
     return sorted(units)
 
 

@@ -61,7 +61,8 @@ def _sheets(game_dir):
         sh = {s["name"]: s for s in cdb["sheets"]}
         _CDB[key] = {n: {r["id"]: r for r in sh[n].get("lines") or ()
                          if isinstance(r.get("id"), str)}
-                     for n in ("item", "model", "gradient", "unit", "itemType")}
+                     for n in ("item", "model", "gradient", "unit", "itemType",
+                               "bodyPart")}
     return _CDB[key]
 
 
@@ -887,7 +888,7 @@ HERO_BARE = {"Chest": "Chest_Naked", "Legs": "Legs_Naked",
 HERO_FACE = ("MainHead_Naked", "Eyes/Eyes_01_A", "Eyebrows/Eyebrows_01_A")
 
 
-def hero_models(game_dir, gear):
+def hero_models(game_dir, gear, face=HERO_FACE):
     """The models of a hero wearing `gear` ({slot: item id}), for item_model:
     the armour on the body, the weapons holstered, the set in use (Weapon1,
     OffhandWeapon) and the other (Weapon2); the jewels are not seen."""
@@ -905,7 +906,7 @@ def hero_models(game_dir, gear):
             if path.endswith(".prefab"):
                 prefabs.append(path)
                 covered.add(it.get("type"))
-    prefabs += [HERO_BODY + p + ".prefab" for p in HERO_FACE]
+    prefabs += [HERO_BODY + p + ".prefab" for p in face]
     prefabs += [HERO_BODY + bare + ".prefab" for t, bare in HERO_BARE.items()
                 if t not in covered]
     out = [m for p in prefabs for m in prefab_models(game_dir, p)]
@@ -1034,6 +1035,108 @@ def hero_model(game_dir, gear, anim=True):
         # (the body's 117 joints make a palette as heavy as its mesh)
         idle = (idle[0][::2], idle[1] / 2)
     return item_model(game_dir, "hero", models=hero_models(game_dir, gear), idle=idle)
+
+
+# a character's clothes (Element.props.npc.npcGear) to the hero's slots;
+# "Gold" fills a slot left empty
+NPC_GEAR_SLOTS = {"helmet": "Head", "shoulders": "Shoulders",
+                  "bodyArmor": "Chest", "gloves": "Hands", "belt": "Waist",
+                  "pants": "Legs", "boots": "Feet", "back": "Back",
+                  "weapon": "Weapon1", "offhandWeapon": "OffhandWeapon",
+                  "weapon2": "Weapon2"}
+
+
+def _recolor(models, slots):
+    """The models' gradients with some slots replaced ({index: gradient id}):
+    the hero's colours as client.UnitView sets them (setGradSlot)."""
+    out = []
+    for m in models:
+        mats = {}
+        for k, gm in (m.get("mats") or {}).items():
+            gm = dict(gm)
+            if gm.get("slots"):
+                sl = list(gm["slots"])
+                for i, gid in slots.items():
+                    if gid and i < len(sl):
+                        sl[i] = gid
+                gm["slots"] = sl
+            mats[k] = gm
+        out.append(dict(m, mats=mats))
+    return out
+
+
+def npc_models(game_dir, skin, gear):
+    """A character built on the hero's body (BaseHero), as the game dresses
+    it (client.UnitView): its head, eyes, eyebrows, hair and beard (the
+    bodyPart sheet's prefabs), its clothes and weapons, each coloured: skin
+    in slot 0 everywhere, hair colours in 1 and 2 of the hair, beard and
+    eyebrows, eye colour in 1 and 2 of the eyes, a piece's own gradients
+    (visuals.gradMat)."""
+    sh = _sheets(game_dir)
+    parts, items = sh["bodyPart"], sh["item"]
+    skin = skin or {}
+    worn = {slot: gear.get(k) for k, slot in NPC_GEAR_SLOTS.items()
+            if gear.get(k) and gear.get(k) != "Gold" and gear.get(k) in items}
+    skin0 = {0: skin.get("skinColor")}
+    hair = {0: skin.get("skinColor"), 1: skin.get("hairColor"),
+            2: skin.get("hairColorSecondary") or skin.get("hairColor")}
+    eyes = {0: skin.get("skinColor"), 1: skin.get("eyeColor"),
+            2: skin.get("eyeColor")}
+
+    def part(pid, kind):
+        """A body part's prefab, if it is of the kind its place takes (the
+        bodyPart sheet's type: 0 hair, 1 eyes, 2 eyebrows, 3 beard)."""
+        row = parts.get(pid) or {}
+        return row.get("prefab") if row.get("type") == kind and str(
+            row.get("prefab", "")).endswith(".prefab") else None
+    out = []
+    # the clothes, each with the skin and its own gradients (gradMat:
+    # {gradient, index}); a long robe hides the legs
+    pieces = [items[i] for i in worn.values()]
+    covered = set()
+    if any((it.get("visuals") or {}).get("hideLegs") for it in pieces):
+        covered.add("Legs")
+    for slot, iid in worn.items():
+        it = items[iid]
+        if slot in covered or slot.startswith(("Weapon", "Offhand")):
+            continue
+        path = (it.get("visuals") or {}).get("modelPath") or ""
+        if not path.endswith(".prefab"):
+            continue
+        own = dict(skin0)
+        for g in (it.get("visuals") or {}).get("gradMat") or ():
+            if isinstance(g, dict) and g.get("gradient") and                     isinstance(g.get("index"), int):
+                own[g["index"]] = g["gradient"]
+        out += _recolor(prefab_models(game_dir, path), own)
+        covered.add(slot)
+    # the bare body where nothing covers it
+    for t, bare in HERO_BARE.items():
+        if t not in covered:
+            out += _recolor(prefab_models(game_dir, HERO_BODY + bare + ".prefab"),
+                            skin0)
+    # the weapons, holstered: the set in use, the other
+    for slot, which in (("Weapon1", "primary"), ("OffhandWeapon", "primary"),
+                        ("Weapon2", "secondary")):
+        if worn.get(slot):
+            out += _holstered_models(game_dir, items[worn[slot]], which)
+    # the face
+    head = HERO_BODY + "MainHead_Naked.prefab"
+    out += _recolor(prefab_models(game_dir, head), skin0)
+    for key, kind, colours in (("eyes", 1, eyes), ("eyebrows", 2, hair),
+                               ("hair", 0, hair), ("facialHair", 3, hair)):
+        pf = part(skin.get(key), kind)
+        if pf:
+            out += _recolor(prefab_models(game_dir, pf), colours)
+    return out
+
+
+def npc_model(game_dir, skin, gear, anim=True):
+    """The viewer's payload for such a character, in the hero's idle."""
+    idle = anim_file_frames(game_dir, HERO_IDLE) if anim else None
+    if idle:
+        idle = (idle[0][::2], idle[1] / 2)
+    return item_model(game_dir, "npc", models=npc_models(game_dir, skin, gear),
+                      idle=idle)
 
 
 def item_model(game_dir, item_id, anim=False, models=None, idle=None):

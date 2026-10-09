@@ -17,6 +17,7 @@ const M3D = {
   gl: null, canvas: null, prog: null, loc: null,
   mesh: null,          // GPU buffers of the shown model
   yaw: 0.65, pitch: 0.18, dist: 1, dist0: 1, lift: 0, center: [0, 0, 0], radius: 1,
+  pan: [0, 0],                    // the right button's move: along the screen, in the model's units
   spin: true, drag: null, raf: 0, onState: null,
 };
 
@@ -65,6 +66,7 @@ function m3dCanvas(id, onState, opts) {
     M3D.spin = M3D.spin0;
     M3D.yaw = M3D.yaw0;
     M3D.pitch = M3D.pitch0;
+    M3D.pan = [0, 0];
     if (id in M3D.models) m3dLoad(id);
     else {
       m3dFree();
@@ -201,23 +203,36 @@ function m3dInit() {
   ['uMVP', 'uG', 'uLines', 'uSlots', 'uMax', 'uOffs', 'uPat', 'uAlpha', 'uUse', 'uL', 'uV', 'uCX', 'uCY', 'uA', 'uB', 'uC', 'uD', 'uGlass']
     .forEach((k) => { M3D.loc[k] = gl.getUniformLocation(p, k); });
 
-  // turn it by dragging, closer and further with the wheel
+  // turn it by dragging (left button), move it (right button), closer and
+  // further with the wheel
+  c.addEventListener('contextmenu', (e) => e.preventDefault());
   c.addEventListener('pointerdown', (e) => {
-    M3D.drag = { x: e.clientX, y: e.clientY };
+    M3D.drag = { x: e.clientX, y: e.clientY, pan: e.button === 2 };
     M3D.spin = false;
     c.setPointerCapture(e.pointerId);
   });
   c.addEventListener('pointermove', (e) => {
     if (!M3D.drag) return;
-    M3D.yaw -= (e.clientX - M3D.drag.x) * 0.01;
-    M3D.pitch = Math.max(-0.4, Math.min(1.2, M3D.pitch + (e.clientY - M3D.drag.y) * 0.01));
-    M3D.drag = { x: e.clientX, y: e.clientY };
+    const dx = e.clientX - M3D.drag.x, dy = e.clientY - M3D.drag.y;
+    if (M3D.drag.pan) {
+      // the picture slid along the screen, a pixel as far as the view spans
+      // at the model's distance; the model still turns on its own middle
+      const k = (M3D.viewSpan || 1) / Math.max(1, c.clientHeight);
+      const lim = M3D.radius * 2;          // never lost off the screen
+      M3D.pan = [Math.max(-lim, Math.min(lim, M3D.pan[0] + dx * k)),
+        Math.max(-lim, Math.min(lim, M3D.pan[1] - dy * k))];
+    } else {
+      M3D.yaw -= dx * 0.01;
+      M3D.pitch = Math.max(-0.4, Math.min(1.2, M3D.pitch + dy * 0.01));
+    }
+    M3D.drag = { x: e.clientX, y: e.clientY, pan: M3D.drag.pan };
   });
   const up = () => { M3D.drag = null; };
   c.addEventListener('pointerup', up);
   c.addEventListener('pointercancel', up);
   c.addEventListener('dblclick', () => {
     M3D.spin = M3D.spin0; M3D.yaw = M3D.yaw0; M3D.pitch = M3D.pitch0; M3D.dist = M3D.dist0;
+    M3D.pan = [0, 0];
   });
   c.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -344,15 +359,16 @@ function m3dLoad(id) {
 }
 
 /* Column-major 4x4: perspective times look-at. */
-function m3dMatrix(eye, at, aspect) {
+function m3dMatrix(eye, at, aspect, pan) {
   const f = 1 / Math.tan(0.6 / 2), near = M3D.radius * 0.05, far = M3D.radius * 20;
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const nrm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const z = nrm(sub(eye, at)), x = nrm(cross([0, 1, 0], z)), y = cross(z, x);
+  // `pan`: the picture slid in the camera's plane (the right button's)
   const v = [x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
-    -dot(x, eye), -dot(y, eye), -dot(z, eye), 1];
+    -dot(x, eye) + (pan ? pan[0] : 0), -dot(y, eye) + (pan ? pan[1] : 0), -dot(z, eye), 1];
   const p = [f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) / (near - far), -1,
     0, 0, 2 * far * near / (near - far), 0];
   const o = new Array(16);
@@ -404,7 +420,10 @@ function m3dDraw() {
   const eye = [M3D.center[0] + d * Math.sin(M3D.yaw) * cp,
     M3D.center[1] + d * Math.sin(M3D.pitch),
     M3D.center[2] + d * Math.cos(M3D.yaw) * cp];
-  const mat = m3dMatrix(eye, M3D.center, w / h);
+  // the height the view spans at that distance (a 0.6 rad field), for the
+  // right button
+  M3D.viewSpan = 2 * d * Math.tan(0.3);
+  const mat = m3dMatrix(eye, M3D.center, w / h, M3D.pan);
   // the light follows the camera: from above, a little to its left
   const l = [0, 1, 2].map((k) => mat.z[k] * 0.7 + mat.y[k] * 0.9 - mat.x[k] * 0.45);
   const ll = Math.hypot(l[0], l[1], l[2]);

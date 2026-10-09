@@ -1,11 +1,18 @@
-/* The Encyclopedia: every item of the game, by category, and the sheet of
-   the one picked (app.py _page_encyclopedia, views.encyclopedia_item). The
-   list is filtered here; the sheet comes from the meter. */
+/* The Encyclopedia: its subjects first (tiles), then a subject's entries
+   (items, monsters, companions, characters) with their filters in the
+   aside, and the sheet of the one picked (app.py _page_encyclopedia,
+   views.encyclopedia_item). A trail at the top leads back. The list is
+   filtered here; the sheet comes from the meter. */
 
-const ENC = { cat: 'weapons', q: '', type: '', rar: '', top: 0, listKey: '' };
+const ENC = { topic: null, q: '', type: '', rar: '', top: 0, listKey: '' };
 let ENC_NODE = null;
 let ENC_ICONS = false;
 const ENC_BATCH = 60;          // cards made at a time
+// the subjects where a rarity tells something
+const ENC_RARITY = new Set(['equipment', 'mounts', 'gliders', 'augments', 'resources']);
+// the character sheet's slots, in its order
+const ENC_SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
+  'GearNeck', 'GearFinger', 'GearTrinket'];
 
 // an item's icon: sent once the page is opened (menu_host "icons")
 function encIcon(id, cls) {
@@ -18,19 +25,36 @@ function encIcon(id, cls) {
   return im;
 }
 
+/* An entry's picture, by where the window keeps it: [namespace, key] —
+   item (icons, sent on demand), best (the Codex's), coll (the
+   Collection's), port (portraits). */
+function encPic(pic, cls) {
+  if (!pic) return el('span', 'noimg', '?');
+  const [ns, k] = pic;
+  if (ns === 'item') return encIcon(k, cls);
+  const src = ((ns === 'best' ? window.__BEST__ : ns === 'coll' ? window.__COLL__
+    : window.__PORTRAITS__) || {})[k];
+  if (!src) return el('span', 'noimg', '?');
+  const im = el('img', cls || null);
+  im.src = src;
+  im.alt = '';
+  im.loading = 'lazy';
+  return im;
+}
+
 function buildEncyclo(n) {
   ENC_NODE = n;
-  // the tab clicked again: back on its first category, filters off
+  // the tab clicked again: back on its subjects, filters off
   if (n.reset !== ENC.reset) {
     ENC.reset = n.reset;
-    Object.assign(ENC, { cat: (n.cats || [{}])[0].v || 'weapons', q: '', type: '', rar: '', top: 0 });
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0 });
   }
-  // an item opened from a sheet: its category, filters off, its card in view
+  // an entry opened from a sheet: its subject, filters off, its card in view
   if (n.jump !== ENC.jump) {
     ENC.jump = n.jump;
     const it = n.jump && n.sel && (n.items || []).find((x) => x.id === n.sel.id);
     if (it) {
-      Object.assign(ENC, { cat: it.c, q: '', type: '', rar: '', top: 0 });
+      Object.assign(ENC, { topic: it.c, q: '', type: '', rar: '', top: 0 });
       ENC.reveal = it.id;
     }
   }
@@ -50,121 +74,179 @@ function encOpen(id, go) {
   notify('encyclo_open', { id: id, go: !!go });
 }
 
+// a subject opened: its first entry shown at once
+function encTopic(v, items) {
+  Object.assign(ENC, { topic: v, q: '', type: '', rar: '', top: 0 });
+  rerenderEncyclo();
+  const first = items.find((it) => it.c === v);
+  if (first) encOpen(first.id);
+}
+
+/* The trail at the top: Encyclopédie › subject › filter › entry, each but
+   the last leading back. */
+function encTrail(n, topic, typeLabel) {
+  const bar = el('nav', 'enctrail');
+  const step = (t, go) => {
+    if (bar.children.length) bar.appendChild(el('span', 'sep', '›'));
+    const b = el(go ? 'button' : 'span', go ? 'step' : 'step cur', t);
+    if (go) { b.type = 'button'; b.addEventListener('click', go); }
+    bar.appendChild(b);
+  };
+  const sel = topic && n.sel && (n.items || []).some((x) => x.id === n.sel.id && x.c === topic.v)
+    ? n.sel : null;
+  step(tr('Encyclopédie'), topic || ENC.q ? () => {
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0 });
+    rerenderEncyclo();
+  } : null);
+  if (topic) {
+    step(topic.t, (ENC.type || ENC.rar || sel) ? () => {
+      Object.assign(ENC, { type: '', rar: '' });
+      rerenderEncyclo();
+    } : null);
+  }
+  if (topic && typeLabel) step(typeLabel, sel ? () => {} : null);
+  if (sel) step(sel.name, null);
+  return bar;
+}
+
+/* The first page: a tile per subject, its picture and name. */
+function encHome(box, n) {
+  const home = el('div', 'enchome');
+  const grid = el('div', 'enctiles');
+  (n.cats || []).forEach((c) => {
+    const t = el('button', 'enctile');
+    t.type = 'button';
+    const pic = el('span', 'tpic');
+    pic.appendChild(encPic(c.pic));
+    t.appendChild(pic);
+    t.appendChild(el('b', null, c.t));
+    t.appendChild(el('span', 'n', fmtN(c.n)));
+    t.addEventListener('click', () => encTopic(c.v, n.items || []));
+    grid.appendChild(t);
+  });
+  home.appendChild(grid);
+  box.appendChild(home);
+}
+
 function renderEncyclo(box, n) {
-  const listKey = [ENC.cat, ENC.q, ENC.type, ENC.rar].join('|');
+  const listKey = [ENC.topic, ENC.q, ENC.type, ENC.rar].join('|');
   if (ENC.listKey !== listKey) { ENC.listKey = listKey; ENC.top = 0; }
   const keepQ = document.activeElement && document.activeElement.classList.contains('collq');
   const caret = keepQ ? document.activeElement.selectionStart : null;
   box.textContent = '';
   const cats = n.cats || [];
-  if (!cats.some((c) => c.v === ENC.cat) && cats.length) ENC.cat = cats[0].v;
   const items = n.items || [];
+  const topic = cats.find((c) => c.v === ENC.topic) || null;
+  if (!topic) ENC.topic = null;
+  const needle = ENC.q.trim().toLowerCase();
 
-  // the categories, each shown by one of its items
-  const side = el('aside', 'collside');
-  side.appendChild(el('div', 'section', tr('Encyclopédie')));
-  side.appendChild(el('p', 'note', tr('Tous les objets du jeu, d’après ses données : '
-    + 'ce qu’ils sont et comment les obtenir.')));
-  const list_ = el('div', 'collcats');
-  cats.forEach((c) => {
-    const card = el('button', 'collcat enccat' + (ENC.cat === c.v ? ' on' : ''));
-    card.type = 'button';
-    const first = items.find((it) => it.c === c.v && it.rk === 'legendary')
-      || items.find((it) => it.c === c.v);
-    const th = el('span', 'encth');
-    if (first) th.appendChild(encIcon(first.id));
-    card.appendChild(th);
-    const t = el('div', 'tx');
-    t.appendChild(el('b', null, c.t));
-    t.appendChild(el('span', null, fmtN(c.n)));
-    card.appendChild(t);
-    card.addEventListener('click', () => {
-      if (ENC.cat === c.v) return;
-      ENC.cat = c.v; ENC.type = ''; ENC.rar = '';
-      rerenderEncyclo();
-      // the category's first item, shown at once
-      const first = items.find((it) => it.c === c.v);
-      if (first) encOpen(first.id);
+  // a subject's kinds, for its aside: label and picture
+  const pool = needle ? items : items.filter((it) => topic && it.c === topic.v);
+  const types = [];
+  if (topic && !needle && topic.v !== 'weapons') {
+    pool.forEach((it) => {
+      if (it.tk && !types.some((x) => x.v === it.tk)) {
+        types.push({ v: it.tk, t: it.tf || it.type, pic: it.tpic || it.pic });
+      }
     });
-    list_.appendChild(card);
-  });
-  side.appendChild(list_);
+    if (types.every((x) => ENC_SLOTS.includes(x.v))) {
+      types.sort((a, b) => ENC_SLOTS.indexOf(a.v) - ENC_SLOTS.indexOf(b.v));
+    } else {
+      types.sort((a, b) => a.t.localeCompare(b.t));
+    }
+  }
+  const typeLabel = (types.find((x) => x.v === ENC.type) || {}).t || '';
+  box.appendChild(encTrail(n, topic, typeLabel));
 
-  // the list: search, the category's types, the rarities
-  const list = el('div', 'colllist');
+  // the search: through every subject
   const tools = el('div', 'colltools');
   const q = el('input', 'collq');
   q.type = 'text';
-  q.placeholder = tr('Rechercher un objet');
+  q.placeholder = tr('Rechercher dans l’encyclopédie');
   q.value = ENC.q;
   q.addEventListener('input', () => { ENC.q = q.value; rerenderEncyclo(); });
   tools.appendChild(q);
-  list.appendChild(tools);
-  const needle = ENC.q.trim().toLowerCase();
-  // a search looks through every category
-  const pool = needle ? items : items.filter((it) => it.c === ENC.cat);
-  const chips = (opts, cur, set) => {
-    const row = el('div', 'collfilters');
-    row.addEventListener('wheel', (e) => {
-      if (row.scrollWidth <= row.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-      e.preventDefault();
-      row.scrollLeft += e.deltaY;
-    }, { passive: false });
-    opts.forEach((o) => {
-      const b = el('button', 'cfchip' + (o.cls ? ' ' + o.cls : '') + (cur === o.v ? ' on' : ''));
+
+  if (!topic && !needle) {
+    box.appendChild(tools);
+    encHome(box, n);
+    if (keepQ) {
+      const qi = box.querySelector('.collq');
+      qi.focus();
+      try { qi.setSelectionRange(caret, caret); } catch (e) { /* ignore */ }
+    }
+    return;
+  }
+
+  // the aside: back to the subjects, the subject's kinds, its rarities
+  const side = el('aside', 'collside encside');
+  const back = el('button', 'encback', tr('‹ Tous les sujets'));
+  back.type = 'button';
+  back.addEventListener('click', () => {
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0 });
+    rerenderEncyclo();
+  });
+  side.appendChild(back);
+  side.appendChild(el('div', 'section', needle ? tr('Recherche') : topic.t));
+  const filter = (label, list, cur, set) => {
+    if (list.length < 2) return;
+    side.appendChild(el('div', 'encsideh', label));
+    const box_ = el('div', 'encfilter');
+    list.forEach((o) => {
+      const b = el('button', 'encf' + (o.cls ? ' ' + o.cls : '') + (cur === o.v ? ' on' : ''));
       b.type = 'button';
       if (o.icon) b.appendChild(o.icon);
       b.appendChild(el('span', null, o.t));
+      if (o.n !== undefined) b.appendChild(el('small', null, fmtN(o.n)));
       b.addEventListener('click', () => { set(o.v); rerenderEncyclo(); });
-      row.appendChild(b);
+      box_.appendChild(b);
     });
-    return row;
+    side.appendChild(box_);
   };
-  // the weapons, the tools and bags: few of each kind, no filter
-  const bare = !needle && (ENC.cat === 'weapons' || ENC.cat === 'tools');
-  if (bare) { ENC.type = ''; ENC.rar = ''; }
-  const types = [];
-  pool.forEach((it) => { if (it.tk && !types.some((x) => x.v === it.tk)) types.push({ v: it.tk, t: it.tf || it.type, id: it.id }); });
-  // the slots in the character sheet's order
-  const SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
-    'GearNeck', 'GearFinger', 'GearTrinket'];
-  if (types.every((x) => SLOTS.includes(x.v))) types.sort((a, b) => SLOTS.indexOf(a.v) - SLOTS.indexOf(b.v));
-  if (types.length > 1 && !bare) {
-    // an armour slot: the build's empty slot art, neutral; another kind:
-    // one of its items
+  if (needle) {
+    // a search: its results by subject
+    filter(tr('Sujets'), [{ v: '', t: tr('Tous'), n: items.filter((it) => it.name.toLowerCase().includes(needle)).length }]
+      .concat(cats.map((c) => ({ v: c.v, t: c.t,
+        n: items.filter((it) => it.c === c.v && it.name.toLowerCase().includes(needle)).length }))
+        .filter((o) => o.n)), ENC.type, (v) => { ENC.type = v; });
+  } else {
     const slotArt = (k) => {
-      const src = (window.__SHEET__ || {})['slot_' + k];
+      const src = (window.__SHEET__ || {})['slot_' + k.replace(/^Gear/, '')];
       if (!src) return null;
-      const im = el('img', 'cfic');
+      const im = el('img', 'encfic');
       im.src = src;
       im.alt = '';
       return im;
     };
-    list.appendChild(chips([{ v: '', t: tr('Tous') }].concat(types.map((x) => (
-      { v: x.v, t: x.t, icon: ((ENC.cat === 'armor' || ENC.cat === 'jewels') && slotArt(x.v.replace(/^Gear/, ''))) || encIcon(x.id, 'cfic') }))),
-    ENC.type, (v) => { ENC.type = v; }));
+    filter(tr('Type'), [{ v: '', t: tr('Tous'), n: pool.length }].concat(types.map((x) => ({
+      v: x.v, t: x.t, n: pool.filter((it) => it.tk === x.v).length,
+      icon: (topic.v === 'equipment' && slotArt(x.v)) || (x.pic ? encPic(x.pic, 'encfic') : null) }))),
+    ENC.type, (v) => { ENC.type = v; });
+    if (ENC_RARITY.has(topic.v)) {
+      const rars = [];
+      pool.forEach((it) => { if (it.rk && !rars.some((x) => x.v === it.rk)) rars.push({ v: it.rk, t: it.rar }); });
+      const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+      rars.sort((a, b) => order.indexOf(a.v) - order.indexOf(b.v));
+      filter(tr('Rareté'), [{ v: '', t: tr('Toutes') }].concat(rars.map((x) => (
+        { v: x.v, t: x.t, cls: 'r-' + x.v }))), ENC.rar, (v) => { ENC.rar = v; });
+    }
   }
-  const rars = [];
-  pool.forEach((it) => { if (it.rk && !rars.some((x) => x.v === it.rk)) rars.push({ v: it.rk, t: it.rar }); });
-  const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-  rars.sort((a, b) => order.indexOf(a.v) - order.indexOf(b.v));
-  // a consumable's rarity tells nothing: no filter
-  if (rars.length > 1 && !bare && !(ENC.cat === 'consumables' && !needle)) {
-    list.appendChild(chips([{ v: '', t: tr('Toutes les raretés') }].concat(rars.map((x) => (
-      { v: x.v, t: x.t, cls: 'r-' + x.v }))), ENC.rar, (v) => { ENC.rar = v; }));
-  }
-  const shown = pool.filter((it) => (!ENC.type || it.tk === ENC.type)
+
+  // the list
+  const list = el('div', 'colllist');
+  list.appendChild(tools);
+  const shown = pool.filter((it) => (!ENC.type || (needle ? it.c === ENC.type : it.tk === ENC.type))
     && (!ENC.rar || it.rk === ENC.rar)
     && (!needle || it.name.toLowerCase().includes(needle)));
-  list.appendChild(el('div', 'collcount', tr(shown.length > 1 ? '{n} objets' : '{n} objet',
-    { n: fmtN(shown.length) })));
+  const one = topic && !needle ? topic.one : tr('résultat');
+  list.appendChild(el('div', 'collcount', fmtN(shown.length) + ' ' + one + (shown.length > 1 && !/s$/.test(one) ? 's' : '')));
   const sel = n.sel ? n.sel.id : null;
   const grid = el('div', 'collgrid encgrid');
   const card = (it) => {
     const row = el('button', 'encitem' + (it.rk ? ' r-' + it.rk : '') + (it.id === sel ? ' sel' : ''));
     row.type = 'button';
-    const pic = el('span', 'encpic');
-    pic.appendChild(encIcon(it.id));
+    const pic = el('span', 'encpic' + (it.pic && it.pic[0] !== 'item' ? ' face' : ''));
+    pic.appendChild(encPic(it.pic));
     row.appendChild(pic);
     const t = el('span', 'enct');
     t.appendChild(el('b', 'nm', it.name));
@@ -212,7 +294,9 @@ function renderEncyclo(box, n) {
   const main = el('div', 'collmain');
   main.appendChild(side);
   main.appendChild(list);
-  main.appendChild(n.sel ? encSheet(n.sel) : el('div', 'collview empty'));
+  // the sheet: the picked entry's, when it is among the subject's
+  const showSel = n.sel && (needle || items.some((x) => x.id === n.sel.id && x.c === ENC.topic));
+  main.appendChild(showSel ? encSheet(n.sel) : el('div', 'collview empty'));
   box.appendChild(main);
   // the next batch once the list's end is near the window's bottom, the
   // list scrolling on its own or with the page (a narrow window)
@@ -266,7 +350,9 @@ function encLink(x, extra) {
 // a sheet's picture: its icon, else the Collection's (a companion); `big`:
 // the Collection's first, larger than the icon
 function encSheetImg(s, big) {
-  const coll = s.coll && (window.__COLL__ || {})[s.coll];
+  const coll = (s.coll && (window.__COLL__ || {})[s.coll])
+    || (s.best && (window.__BEST__ || {})[s.best])
+    || (s.port && (window.__PORTRAITS__ || {})[s.port]);
   // large: the game's own size first (never blown up past it)
   const src = big ? (s.art || coll || s.img) : (s.img || coll);
   if (!src) return null;
@@ -301,12 +387,13 @@ function encSheet(s) {
     const pic = el('div', 'cvpic own');
     const si = encSheetImg(s, true);
     if (si) pic.appendChild(si);
+    else if (!on) pic.appendChild(el('span', 'encnopic', tr('Pas d’image : aperçu en 3D seulement.')));
     stage.appendChild(pic);
     if (on) {
       stage.appendChild(m3dCanvas(s.model || s.id, (st) => { stage.dataset.st = st; },
         Object.assign({ pitch: 0.18 }, s.m3dView || {})));
       stage.appendChild(el('div', 'cvwait', tr('Chargement du modèle 3D…')));
-      stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · molette pour zoomer')));
+      stage.appendChild(el('div', 'cvhint', tr('Glisser pour tourner · clic droit pour déplacer · molette pour zoomer')));
     }
     stage.appendChild(view3dToggle());
     body.appendChild(stage);
@@ -376,6 +463,7 @@ function encSheet(s) {
       if (levels) part.appendChild(encLevel(levels.length, paint));
       part.appendChild(holder);
     }
+    if (s.spawn) return;            // a monster, a character: below
     part.appendChild(el('div', 'sub2', tr("Comment l'obtenir")));
     if (tabs.length && !piece) part.appendChild(encTabs(tabs, cur, draw));
     const rows = (s.where || []).filter((r) => !tabs.length || (r.rars || []).includes(cur));
@@ -391,6 +479,24 @@ function encSheet(s) {
   };
   draw();
 
+  // a monster, a character: where they stand, what they drop or sell
+  if (s.spawn) {
+    body.appendChild(el('div', 'sub2', tr('Où le trouver')));
+    if (s.spawn.length) {
+      const ul = el('div', 'encwhere');
+      s.spawn.forEach((r) => ul.appendChild(encWhereRow(r, s.meta)));
+      body.appendChild(ul);
+    } else {
+      body.appendChild(el('p', 'none', tr('Source inconnue. Peut-être indisponible pour le moment.')));
+    }
+  }
+  [['loot', tr('Butin')], ['sells', tr('Vend')]].forEach(([k, t]) => {
+    if (!(s[k] || []).length) return;
+    body.appendChild(el('div', 'sub2', t));
+    const box = el('div', 'enclinks');
+    s[k].forEach((x) => box.appendChild(encLink(x, x.sub)));
+    body.appendChild(box);
+  });
   if ((s.uses || []).length) {
     body.appendChild(el('div', 'sub2', tr('Utilisé dans')));
     const box = el('div', 'enclinks');

@@ -177,6 +177,7 @@ def build(game_dir, img_dir=None):
     # the world level's are on the map
     in_world = [False]
     prefab_npcs = {}
+    npcs = {}                           # (name, unit) -> the open world's NPC
     zones = rows("zone")
 
     def region(z):
@@ -223,6 +224,7 @@ def build(game_dir, img_dir=None):
                         found = {"el": o.get("id"),
                                  "eln": (o.get("texts") or {}).get("name"),
                                  "npc": o["props"]["npc"].get("unit"),
+                                 "title": o["props"]["npc"].get("npcTitle"),
                                  # what it sells, when the prefab says
                                  "shop": o["props"].get("shop")}
                     stack.extend(o.values())
@@ -269,6 +271,45 @@ def build(game_dir, img_dir=None):
             # ("Mira, Demon Huntress"), not its unit's
             el_name = (o.get("texts") or {}).get("name") \
                 if isinstance(o.get("texts"), dict) else None
+            # a character of the open world, for the Encyclopedia's PNJ: its
+            # name (its own, else its prefab's), unit, title, where it
+            # stands, what it sells
+            if o.get("$cdbtype") == "element" and in_world[0]:
+                p = prefab_npc(ref) if ref else None
+                unit = ((props.get("npc") or {}).get("unit")
+                        if isinstance(props.get("npc"), dict) else None) \
+                    or (p or {}).get("npc")
+                if unit:
+                    own = bool(el_name)
+                    name = el_name or (p or {}).get("eln")
+                    if name and "(debug)" not in name:
+                        key = (name, unit)
+                        n = npcs.setdefault(key, {
+                            "el": o.get("id") if own else (p or {}).get("el"),
+                            "name": name, "unit": unit,
+                            "title": ((props.get("npc") or {}).get("npcTitle")
+                                      if isinstance(props.get("npc"), dict)
+                                      else None) or (p or {}).get("title"),
+                            "places": [], "sells": []})
+                        # a character in the hero's body: its looks and
+                        # clothes (UnitView.displaySkin / displayGear)
+                        nd = props.get("npc") if isinstance(
+                            props.get("npc"), dict) else {}
+                        if nd.get("npcSkin") and "skin" not in n:
+                            n["skin"] = {k: v for k, v in nd["npcSkin"].items()
+                                         if k in ("skinColor", "hairColor",
+                                                  "hairColorSecondary",
+                                                  "eyeColor", "eyes", "hair",
+                                                  "facialHair", "eyebrows")}
+                        if nd.get("npcGear") and "gear" not in n:
+                            n["gear"] = dict(nd["npcGear"])
+                        n["places"].append([round(wx, 1), round(wy, 1),
+                                            zone or ""])
+                        for sh in (props.get("shop") or (p or {}).get("shop")
+                                   or ()):
+                            it = sh.get("item") if isinstance(sh, dict) else None
+                            if it and it not in n["sells"]:
+                                n["sells"].append(it)
             # the developers' preview merchants ("Major Update Preview
             # Merchant (debug)") sell what no player can buy
             if isinstance(props.get("shop"), list) \
@@ -510,6 +551,7 @@ def build(game_dir, img_dir=None):
                           "minLvl": ln.get("minLvl"), "families": fams,
                           "chests": chests, "at": [list(a) for a in at]})
     out["recipes"] = {"list": recipes, "world": world}
+    out["npcs"] = sorted(npcs.values(), key=lambda n: n["name"])
     # the game's durations in a text (HText.timerVerbosePrec): hours,
     # minutes, seconds, French (res.pak lang) and English (data.cdb)
     durs = {"en": {}, "fr": {}}

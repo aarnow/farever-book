@@ -828,7 +828,7 @@ def hunt_detail_view(uid, ranks):
             loot[i] = [p, src, need]
     for i, (p, src, need) in loot.items():
         rk = (item_rarity(i) or "").lower()
-        rows.append({"img": item_icon(i), "name": item_label(i), "rk": rk,
+        rows.append({"img": item_icon(i), "name": item_label(i), "rk": rk, "id": i,
                      "type": item_type_label(item_type(i)) if item_type(i)
                      else "",
                      "src": tr(src_label.get(src, src))
@@ -1749,8 +1749,8 @@ JEWEL_TYPES = ("GearNeck", "GearFinger", "GearTrinket")
 MODEL_VIEWS = {"Mount": {"anim": True}, "GearGlider": {"pitch": 0.6}}
 ENCYCLO_CATS = (
     ("weapons", "Armes", "arme", WEAPON_TYPES),
-    ("armor", "Armures", "armure", ARMOR_TYPES),
-    ("jewels", "Bijoux", "bijou", JEWEL_TYPES),
+    # armour and jewels: the slots of the character sheet
+    ("equipment", "Équipements", "équipement", ARMOR_TYPES + JEWEL_TYPES),
     ("mounts", "Montures", "monture", ("Mount",)),
     ("gliders", "Planeurs", "planeur", ("GearGlider",)),
     ("consumables", "Consommables", "consommable",
@@ -1759,14 +1759,25 @@ ENCYCLO_CATS = (
      ("AugmentBlacksmith", "AugmentJeweller", "AugmentOutfitter",
       "AugmentEnchantFeet", "AugmentEnchantHands", "AugmentEnchantWeapon",
       "AugmentDemon", "AugmentDemonSigil")),
-    ("recipes", "Recettes", "recette", ("Recipe",)),
     ("resources", "Ressources", "ressource",
      ("CraftingComponent", "UpgradeComponent", "Ore", "Leather", "Cloth")),
-    ("containers", "Coffrets", "coffret", ("LootableContainer",)),
-    ("tools", "Outils et sacs", "objet",
-     ("GearPickaxe", "GearSickle", "ToolBlacksmith", "ToolAlchemist",
-      "ToolOutfitter", "ToolJeweller", "ToolCook", "ToolEnchanter", "Bag")),
 )
+# the Encyclopedia's subjects, as its first page lists them: the item
+# categories, the monsters (the Codex's), the companions, the characters
+ENCYCLO_TOPICS = (
+    ("bestiary", "Bestiaire", "monstre"),
+    ("weapons", "Armes", "arme"),
+    ("equipment", "Équipements", "équipement"),
+    ("pets", "Familiers", "familier"),
+    ("mounts", "Montures", "monture"),
+    ("gliders", "Planeurs", "planeur"),
+    ("consumables", "Consommables", "consommable"),
+    ("augments", "Améliorations", "amélioration"),
+    ("resources", "Ressources", "ressource"),
+    ("npcs", "PNJ", "PNJ"),
+)
+# an NPC whose unit is the hero's generic body: its portrait is not its own
+GENERIC_NPC_UNITS = {"BaseHero", "TODO_BaseNPC_01"}
 
 
 FILTER_AS = {"Ore": "CraftingComponent", "Leather": "CraftingComponent",
@@ -1779,10 +1790,21 @@ def _encyclo_cat(t):
     return next((k for k, _l, _o, ts in ENCYCLO_CATS if t in ts), None)
 
 
+def _npc_name(n):
+    """An NPC's name in the interface's language (its element's), else the
+    game's English one."""
+    return (_fr_names("element").get(n.get("el")) if n.get("el") else None) \
+        or n.get("name") or ""
+
+
 def encyclopedia_view():
-    """The Encyclopedia's list: every item the game names, by category,
-    with its type, rarity and level (its sheet: encyclopedia_item)."""
-    enc = collection_catalogue().get("encyclo") or {}
+    """The Encyclopedia: its subjects (counted, each shown by one of its
+    entries' pictures) and every entry — the game's named items by
+    category, the monsters, the companions, the NPCs —, each with its kind,
+    filter key and picture (pic: the namespace of the window's pictures and
+    its key). The sheets: encyclopedia_item."""
+    cat = collection_catalogue()
+    enc = cat.get("encyclo") or {}
     items = []
     for iid, e in enc.items():
         rar = e.get("r") or ""
@@ -1790,6 +1812,7 @@ def encyclopedia_view():
         if _encyclo_cat(t) is None:
             continue
         items.append({"id": iid, "c": _encyclo_cat(t),
+                      "pic": ["item", iid],
                       "name": item_label(iid),
                       "type": item_type_label(t) if t else "",
                       # its filter: ores, leathers and cloths are crafting
@@ -1805,14 +1828,51 @@ def encyclopedia_view():
                       # a weapon or armour drops at many levels: none shown
                       "lvl": None if t in WEAPON_TYPES + ARMOR_TYPES
                       + JEWEL_TYPES else e.get("l")})
-    order = {k: i for i, (k, _l, _o, _t) in enumerate(ENCYCLO_CATS)}
-    items.sort(key=lambda it: (order[it["c"]], it["type"],
+    # the monsters, by family (the Codex's)
+    best = bestiary_view({})
+    fam_pic = {f["id"]: f.get("img") for f in best.get("families") or ()}
+    for m in best.get("items") or ():
+        items.append({"id": "u:" + m["id"], "c": "bestiary",
+                      "pic": ["best", m["id"]], "name": m["name"],
+                      "type": m.get("fam") or "", "tk": m.get("famId") or "",
+                      "tpic": ["best", fam_pic.get(m.get("famId")) or m["id"]],
+                      "rk": "", "rar": "", "lvl": None})
+    # the companions
+    for e in cat.get("pets") or ():
+        items.append({"id": "p:" + e["id"], "c": "pets",
+                      "pic": ["coll", e["id"]], "name": _unit_label(e["id"]),
+                      "type": tr("Familier"), "tk": "", "rk": "", "rar": "",
+                      "lvl": None})
+    # the characters of the open world: merchants, the others
+    for n in cat.get("npcs") or ():
+        sells = bool(n.get("sells"))
+        items.append({"id": "n:" + (n.get("el") or n["name"]), "c": "npcs",
+                      "pic": ["port", n["unit"]]
+                      if n["unit"] not in GENERIC_NPC_UNITS else None,
+                      "name": _npc_name(n),
+                      "type": tr("Marchand") if sells else tr("Personnage"),
+                      "tk": "shop" if sells else "other",
+                      "tf": tr("Marchands") if sells else tr("Personnages"),
+                      "rk": "", "rar": "", "lvl": None})
+    order = {k: i for i, (k, _l, _o) in enumerate(ENCYCLO_TOPICS)}
+    # equipment in the character sheet's order of slots
+    slots = {t: i for i, t in enumerate(ARMOR_TYPES + JEWEL_TYPES)}
+    items.sort(key=lambda it: (order.get(it["c"], 99),
+                               slots.get(it["tk"], 0) if it["c"] == "equipment"
+                               else 0, it["type"],
                                RARITY_ORDER.get(it["rk"].capitalize(), 9),
                                it["lvl"] or 0, it["name"]))
-    cats = [{"v": k, "t": tr(label), "one": tr(one),
-             "n": sum(1 for it in items if it["c"] == k)}
-            for k, label, one, _t in ENCYCLO_CATS]
-    return {"cats": [c for c in cats if c["n"]], "items": items}
+    topics = []
+    for k, label, one in ENCYCLO_TOPICS:
+        mine = [it for it in items if it["c"] == k]
+        if not mine:
+            continue
+        face = next((it for it in mine if it["rk"] == "legendary"
+                     and it.get("pic")), None) \
+            or next((it for it in mine if it.get("pic")), None)
+        topics.append({"v": k, "t": tr(label), "one": tr(one),
+                       "n": len(mine), "pic": face["pic"] if face else None})
+    return {"cats": topics, "items": items}
 
 
 def _duration_text(sec):
@@ -1972,10 +2032,92 @@ def collection_sheet(key, iid, owned):
     return out
 
 
+def _monster_sheet(uid):
+    """A monster's sheet (the Codex's page, the Encyclopedia's look): what
+    it is, where it spawns (a pin each), what it drops."""
+    d = hunt_detail_view(uid, {})
+    if not d or not d.get("name"):
+        return None
+    out = {"id": "u:" + uid, "model": uid, "m3d": True,
+           "m3dView": {"anim": True}, "best": uid,
+           "art": item_art(uid, unit=True),
+           "name": d["name"], "rk": "",
+           "type": " · ".join(x for x in (
+               d.get("fam"), d.get("tier"),
+               tr("niv. {n}", n=d["lvl"]) if d.get("lvl") else "") if x),
+           "desc": d.get("desc") or "", "fac": d.get("faction") or ""}
+    rows = []
+    if d.get("spawns"):
+        rows.append({"k": tr("Monde"), "t": ", ".join(d.get("zones") or ())
+                     or tr("Monde ouvert"), "mob": uid, "pinCls": "",
+                     "pins": [{"x": p["x"], "y": p["y"], "t": p.get("z", "")}
+                              for p in d["spawns"]]})
+    for i in d.get("insts") or ():
+        rows.append({"k": tr(i.get("kind") or "Donjon"), "t": i.get("t") or "",
+                     "pinCls": i.get("cls") or (
+                         "rift" if i.get("kind") == "Faille" else "dungeon"),
+                     "pins": [{"x": p["x"], "y": p["y"], "t": i.get("t") or ""}
+                              for p in i.get("doors") or ()]})
+    for b in d.get("by") or ():
+        rows.append({"k": tr("Invoqué"), "t": tr("Invoqué par {name}",
+                                                 name=b.get("name") or ""),
+                     "mob": b.get("id")})
+    out["spawn"] = rows
+    if any(r.get("pins") for r in rows):
+        out["meta"] = d.get("meta") or world_map().get("meta")
+    out["loot"] = [{"id": r.get("id"), "name": r["name"], "img": r.get("img"),
+                    "rk": r.get("rk") or "",
+                    "sub": " · ".join(x for x in (r.get("chance"),
+                                                   r.get("src")) if x)}
+                   for r in d.get("loot") or ()]
+    return out
+
+
+def _npc_sheet(key):
+    """A character of the open world: who, where (a pin per place), what
+    it sells."""
+    n = next((x for x in collection_catalogue().get("npcs") or ()
+              if (x.get("el") or x["name"]) == key), None)
+    if n is None:
+        return None
+    generic = n["unit"] in GENERIC_NPC_UNITS
+    # in the hero's body: built from its looks and clothes (npc:<element>)
+    dressed = generic and bool(n.get("skin")) and bool(n.get("el"))
+    towns = list(dict.fromkeys(_zone_label(z) for _x, _y, z in n["places"]
+                               if z))
+    out = {"id": "n:" + key, "name": _npc_name(n), "rk": "",
+           "type": tr("Marchand") if n.get("sells") else tr("Personnage"),
+           "port": None if generic else n["unit"],
+           "art": "" if generic else item_art(n["unit"], unit=True),
+           "m3d": not generic or dressed,
+           "model": "npc:" + n["el"] if dressed else n["unit"],
+           # in its idle, as the Codex's monsters
+           "m3dView": {"anim": True},
+           "spawn": [{"k": tr("Lieu"), "t": ", ".join(towns)
+                      or tr("Monde ouvert"), "pinCls": "merchant",
+                      "pins": [{"x": x, "y": y, "t": _zone_label(z) if z
+                                else ""} for x, y, z in n["places"]]}],
+           "meta": world_map().get("meta"),
+           "sells": [{"id": i, "name": item_label(i), "img": item_icon(i),
+                      "rk": (item_rarity(i) or "").lower()}
+                     for i in n.get("sells") or ()]}
+    return out
+
+
 def encyclopedia_item(iid):
     """One item's sheet: what it is, its description, its attributes (a
     piece of gear, at its level), how to get it, what it is used for and
     what it holds. None when the game has no such item."""
+    # a monster, a companion, a character: their own sheets
+    if iid.startswith("u:"):
+        return _monster_sheet(iid[2:])
+    if iid.startswith("p:"):
+        out = collection_sheet("pets", iid[2:], {})
+        if out:
+            out.update(id=iid, owned=False)
+        return out
+    if iid.startswith("n:"):
+        return _npc_sheet(iid[2:])
     enc = collection_catalogue().get("encyclo") or {}
     e = enc.get(iid)
     if e is None:
