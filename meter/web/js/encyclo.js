@@ -25,6 +25,15 @@ function buildEncyclo(n) {
     ENC.reset = n.reset;
     Object.assign(ENC, { cat: (n.cats || [{}])[0].v || 'weapons', q: '', type: '', rar: '', top: 0 });
   }
+  // an item opened from a sheet: its category, filters off, its card in view
+  if (n.jump !== ENC.jump) {
+    ENC.jump = n.jump;
+    const it = n.jump && n.sel && (n.items || []).find((x) => x.id === n.sel.id);
+    if (it) {
+      Object.assign(ENC, { cat: it.c, q: '', type: '', rar: '', top: 0 });
+      ENC.reveal = it.id;
+    }
+  }
   if (!ENC_ICONS) { ENC_ICONS = true; notify('encyclo_icons', {}); }
   const box = el('div', 'coll enc');
   renderEncyclo(box, n);
@@ -36,8 +45,9 @@ function rerenderEncyclo() {
   if (box && ENC_NODE) renderEncyclo(box, ENC_NODE);
 }
 
-function encOpen(id) {
-  notify('encyclo_open', { id: id });
+// `go`: an item named in a sheet, the Encyclopedia opened on it
+function encOpen(id, go) {
+  notify('encyclo_open', { id: id, go: !!go });
 }
 
 function renderEncyclo(box, n) {
@@ -184,6 +194,18 @@ function renderEncyclo(box, n) {
   grid.appendChild(end);
   more(Math.max(ENC_BATCH, ENC.listKeyMade === listKey ? ENC.made || 0 : 0));
   ENC.listKeyMade = listKey;
+  // the item opened from a sheet: its card made, then brought into view
+  if (ENC.reveal) {
+    const i = shown.findIndex((it) => it.id === ENC.reveal);
+    ENC.reveal = null;
+    if (i >= made) more(i + 1);
+    if (i >= 0) {
+      requestAnimationFrame(() => {
+        const c = grid.querySelector('.encitem.sel');
+        if (c) c.scrollIntoView({ block: 'center' });
+      });
+    }
+  }
   if (!shown.length) grid.appendChild(el('div', 'empty', tr('Rien à afficher.')));
   list.appendChild(grid);
 
@@ -235,7 +257,7 @@ function encLink(x, extra) {
   t.appendChild(el('b', 'nm', (x.n > 1 ? x.n + ' × ' : '') + x.name));
   if (extra) t.appendChild(el('span', null, extra));
   b.appendChild(t);
-  if (x.id) b.addEventListener('click', () => encOpen(x.id));
+  if (x.id) b.addEventListener('click', () => encOpen(x.id, true));
   return b;
 }
 

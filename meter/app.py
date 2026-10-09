@@ -227,6 +227,7 @@ class App:
         self._dungeon_tab = "info"          # its page's tab: info, runs, help
         self._encyclo_sel = None            # the Encyclopedia's item shown
         self._encyclo_reset = 0             # bumped: the page on its first category
+        self._encyclo_jump = 0              # bumped: the page on the item opened
         self._encyclo_list = (None, None)   # (data, its list), computed once
         self._encyclo_sheets = {}           # item -> its sheet, for that data
         self._icons_sent = False
@@ -786,8 +787,8 @@ class App:
             "set_rift_keep": lambda p: self._set_rift_keep(p.get("value")),
             # dungeons
             # the Encyclopedia: the item shown, its icons (sent once asked)
-            "encyclo_open": lambda p: setattr(
-                self, "_encyclo_sel", str(p.get("id") or "") or None),
+            "encyclo_open": lambda p: self._encyclo_open(
+                str(p.get("id") or ""), bool(p.get("go"))),
             "encyclo_icons": self._send_item_icons,
             "open_dungeon_kind": lambda p: self._open_dungeon_kind(
                 p.get("kind")),
@@ -2109,8 +2110,25 @@ class App:
         if sel not in self._encyclo_sheets:
             self._encyclo_sheets[sel] = encyclopedia_item(sel)
         return [{"k": "encyclo", "id": "encyclo", **view,
-                 "reset": self._encyclo_reset,
+                 "reset": self._encyclo_reset, "jump": self._encyclo_jump,
                  "sel": self._encyclo_sheets[sel]}]
+
+    def _encyclo_open(self, iid, go=False):
+        """An item shown in the Encyclopedia. `go` (an item named in a
+        sheet, from any tab): the tab opens on it, its category with it —
+        if the Encyclopedia lists it."""
+        if not iid:
+            return
+        if go:
+            cat = collection_catalogue()
+            if self._encyclo_list[0] is not cat:
+                self._encyclo_list = (cat, encyclopedia_view())
+                self._encyclo_sheets = {}
+            if not any(it["id"] == iid for it in self._encyclo_list[1]["items"]):
+                return                  # not in it (a recipe, a currency)
+            self._encyclo_jump += 1
+            self._menu_tab = "Encyclopedia"
+        self._encyclo_sel = iid
 
     def _send_item_icons(self):
         """The items' icons, to the window (asked by the Encyclopedia)."""
