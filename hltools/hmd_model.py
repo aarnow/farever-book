@@ -795,11 +795,15 @@ def _model_parts(game_dir, raw, gradmats, matrix, frames=None):
     m["pos"], m["nor"] = list(m["pos"]), list(m["nor"])
     sub_mats = [model["mats"][k] if k < len(model["mats"]) else 0
                 for k in range(len(m["subs"]))]
-    if not model.get("skin") and not frames:
-        # a rigid object in several pieces (a sword's blade, guard and
-        # handle): every geometry, each placed by its node, relative to the
-        # first's
-        _merge_geoms(raw, d, model, m, sub_mats)
+    if not model.get("skin"):
+        # a rigid object: placed by its node as Heaps places it (its
+        # transform and its parents': the Nibsham daggers are modelled ten
+        # times too big and scaled down there)
+        _place(m, _node_abs(d, d["models"].index(model)))
+        if not frames:
+            # in several pieces (a sword's blade, guard and handle): every
+            # geometry, each by its own node
+            _merge_geoms(raw, d, model, m, sub_mats)
     sub_of = [0] * m["n"]
     for k, tris in enumerate(m["subs"]):
         for t in tris:
@@ -849,16 +853,28 @@ def _node_abs(d, i):
     return M
 
 
+def _place(m, M):
+    """A mesh's positions and normals moved by M (in place)."""
+    pos, nor = m["pos"], m["nor"]
+    for j in range(0, len(pos), 3):
+        px, py, pz = pos[j:j + 3]
+        nx, ny, nz = nor[j:j + 3]
+        pos[j:j + 3] = [px * M[0][c] + py * M[1][c] + pz * M[2][c] + M[3][c]
+                        for c in range(3)]
+        v = [nx * M[0][c] + ny * M[1][c] + nz * M[2][c] for c in range(3)]
+        ln = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) ** 0.5 or 1.0
+        nor[j:j + 3] = [v[0] / ln, v[1] / ln, v[2] / ln]
+
+
 def _merge_geoms(raw, d, first, m, sub_mats):
-    """The file's other unskinned geometries into `m` (in place), each moved
-    from its node into the first's: the first stays as it was drawn."""
+    """The file's other unskinned geometries into `m` (in place), each
+    placed by its own node, as the first."""
     i0 = d["models"].index(first)
-    back = _inv(_node_abs(d, i0))
     for i, node in enumerate(d["models"]):
         if i == i0 or node["geom"] < 0 or node.get("skin"):
             continue
         g = mesh(raw, d, node["geom"])
-        M = _mul(_node_abs(d, i), back)
+        M = _node_abs(d, i)
         base = m["n"]
         pos, nor = list(g["pos"]), list(g["nor"])
         for j in range(0, len(pos), 3):
