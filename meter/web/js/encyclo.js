@@ -145,7 +145,6 @@ function encHome(box, n) {
     pic.appendChild(encPic(c.pic));
     t.appendChild(pic);
     t.appendChild(el('b', null, c.t));
-    t.appendChild(el('span', 'n', fmtN(c.n)));
     t.addEventListener('click', () => encTopic(c.v, n.items || []));
     grid.appendChild(t);
   });
@@ -181,7 +180,9 @@ function renderEncyclo(box, n) {
     }
   }
   const typeLabel = (types.find((x) => x.v === ENC.type) || {}).t || '';
-  box.appendChild(encTrail(n, topic, typeLabel));
+  // the subjects: the page's title, as on the others; within one, the trail
+  if (!topic && !needle) box.appendChild(el('div', 'section enctitle', tr('Encyclopédie')));
+  else box.appendChild(encTrail(n, topic, typeLabel));
 
   // the search: through every subject
   const tools = el('div', 'colltools');
@@ -192,14 +193,9 @@ function renderEncyclo(box, n) {
   q.addEventListener('input', () => { ENC.q = q.value; rerenderEncyclo(); });
   tools.appendChild(q);
 
+  // the subjects alone: no search there
   if (!topic && !needle) {
-    box.appendChild(tools);
     encHome(box, n);
-    if (keepQ) {
-      const qi = box.querySelector('.collq');
-      qi.focus();
-      try { qi.setSelectionRange(caret, caret); } catch (e) { /* ignore */ }
-    }
     return;
   }
 

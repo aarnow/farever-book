@@ -1764,6 +1764,13 @@ ENCYCLO_CATS = (
 )
 # the Encyclopedia's subjects, as its first page lists them: the item
 # categories, the monsters (the Codex's), the companions, the characters
+# each subject's tile: the entry whose picture stands for it
+ENCYCLO_FACES = {
+    "bestiary": "u:Slime_Demonic_Z3W", "weapons": "Sword_Start",
+    "equipment": "Head_RCrimson_FigAss", "pets": "p:Squirrel_Blue",
+    "mounts": "Mount_Goat_03", "gliders": "Glider_FlyingFish_Orange",
+    "consumables": "RefillableFlask", "augments": "FormulaHandsMinorVitality",
+    "resources": "Wing_Z1", "npcs": "n:Glory_Merchant"}
 ENCYCLO_TOPICS = (
     ("bestiary", "Bestiaire", "monstre"),
     ("weapons", "Armes", "arme"),
@@ -1888,7 +1895,9 @@ def encyclopedia_view():
         mine = [it for it in items if it["c"] == k]
         if not mine:
             continue
-        face = next((it for it in mine if it["rk"] == "legendary"
+        face = next((it for it in mine if it["id"] == ENCYCLO_FACES.get(k)
+                     and it.get("pic")), None) \
+            or next((it for it in mine if it["rk"] == "legendary"
                      and it.get("pic")), None) \
             or next((it for it in mine if it.get("pic")), None)
         topics.append({"v": k, "t": tr(label), "one": tr(one),
@@ -2033,7 +2042,8 @@ def collection_sheet(key, iid, owned):
         if e is None:
             return None
         rows, _b = item_where(iid, rows_only=True)
-        out = {"id": iid, "name": _unit_label(iid), "coll": iid,
+        # its model by its unit (the Encyclopedia's id is "p:<unit>")
+        out = {"id": iid, "model": iid, "name": _unit_label(iid), "coll": iid,
                "art": item_art(iid, unit=True),
                "type": tr("Compagnon"), "rk": "", "m3d": True,
                "m3dView": {"anim": True},
