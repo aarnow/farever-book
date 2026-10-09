@@ -191,7 +191,14 @@ WHERE_TAGS = {"dungeon": "Donjon", "rift": "Faille", "unit": "Butin",
               "faction": "Faction", "world": "Monde", "ach": "Succès",
               "starter": "Départ", "cache": "Coffret", "gather": "Récolte",
               "salvage": "Démontage", "scrap": "Recyclage",
-              "combine": "Combinaison"}
+              "combine": "Combinaison", "store": "Boutique"}
+
+# the free pack the in-game shop gives the early access players: a mount, a
+# glider, a companion, a head and a back (as the shop shows it, its offers
+# being the server's; the game's shop scene, UI/Scene/
+# Shop_CritterGliderMount.prefab, stages the first three)
+EARLY_ACCESS_PACK = {"SparkHorse_01", "Glider_Butterfly_EA_Spark",
+                     "Rabbit_EarlyAccess_Spark", "Head_Shop", "Back_Shop"}
 
 
 def _bestiary_pic(key):
@@ -301,6 +308,9 @@ def item_where(iid, rar=None, rows_only=False):
         bosses)."""
         return [r] + (["Legendary"] if weapon and r != "Legendary" else [])
 
+    if iid in EARLY_ACCESS_PACK:
+        add("store", tr("Boutique en jeu : lot gratuit offert aux joueurs "
+                        "de l'accès anticipé"), [base] if base else [])
     diffs = {d: tr(t) for d, t in DUNGEON_DIFFICULTIES.items()}
     bosses, listed = {}, set()
     rift_bosses = {b.get("id") for b in rift_rewards_data().get("bosses") or ()}
@@ -1785,24 +1795,71 @@ def _pet_families(pets):
     groups = {}
     for e in pets:
         groups.setdefault(e["id"].split("_")[0], []).append(e["id"])
+    return _name_families(groups, _unit_label)
+
+
+def _shared_name(names):
+    """The words a family's names share with the first's, at the start or,
+    in English, the end (Grenouflage, Mobêle réduit); the first name whole
+    when they share none."""
+    names = [n.split() for n in names]
+    first = names[0]
+
+    def shared(cut):
+        best = []
+        for n in range(1, len(first) + 1):
+            part = cut(first, n)
+            if 2 * sum(1 for w in names if cut(w, n) == part) > len(names):
+                best = part
+        return best
+    words = max(shared(lambda w, n: w[:n]), shared(lambda w, n: w[-n:]),
+                key=len)
+    # not ending on a link word ("Coccipatte de" Nescente, d'Alandal…)
+    while len(words) > 1 and words[-1].lower() in ("de", "du", "des", "d'"):
+        words = words[:-1]
+    return " ".join(words or first)
+
+
+def _name_families(groups, name_of):
+    """{id: (family key, family name, its first member)} of {key: [ids]}."""
     out = {}
     for key, ids in groups.items():
-        names = [_unit_label(i).split() for i in ids]
-        first = names[0]
-
-        def shared(cut):
-            best = []
-            for n in range(1, len(first) + 1):
-                part = cut(first, n)
-                if 2 * sum(1 for w in names if cut(w, n) == part) > len(names):
-                    best = part
-            return best
-        words = max(shared(lambda w, n: w[:n]), shared(lambda w, n: w[-n:]),
-                    key=len)
-        label = " ".join(words or first)
+        label = _shared_name([name_of(i) for i in ids])
         for i in ids:
             out[i] = (key, label, ids[0])
     return out
+
+
+def _mount_families(ids):
+    """{mount: (family key, family name, its first member)}: a family the
+    mounts of one species, as their ids name it (Mount_Wolf_…,
+    Mount_Aries_…); a variant of one (YoungWarg, VeteranWarg) with it, a
+    lone mount named as a family's members are (Mount_Dragon, a Béliqueux)
+    with them."""
+    def species(i):
+        p = i.split("_")
+        return p[1] if p[0] == "Mount" and len(p) > 1 else p[0]
+    groups = {}
+    for i in sorted(ids):
+        groups.setdefault(species(i), []).append(i)
+    for k in sorted(groups, key=len, reverse=True):
+        base = next((b for b in groups if b != k and k.endswith(b)), None)
+        if base:
+            groups[base] += groups.pop(k)
+    for k in [k for k, v in groups.items() if len(v) == 1]:
+        name = " " + item_label(groups[k][0]).lower() + " "
+
+        def named(v):
+            fam = " " + _shared_name([item_label(i) for i in v]).lower() + " "
+            return name.startswith(fam) or name.endswith(fam)
+        home = next((b for b, v in groups.items() if len(v) > 1 and named(v)),
+                    None)
+        if home:
+            groups[home] += groups.pop(k)
+    # the species' own first (Mount_Warg_01 before the young one)
+    for k, v in groups.items():
+        v.sort(key=lambda i: (species(i) != k, i))
+    return _name_families(groups, item_label)
 
 
 # each subject's tile: the entry whose picture stands for it
@@ -1890,6 +1947,12 @@ def encyclopedia_view():
                       # a weapon or armour drops at many levels: none shown
                       "lvl": None if t in WEAPON_TYPES + ARMOR_TYPES
                       + JEWEL_TYPES else e.get("l")})
+    # the mounts, by family
+    fams = _mount_families([it["id"] for it in items if it["c"] == "mounts"])
+    for it in items:
+        if it["id"] in fams:
+            it["tk"], it["tf"], base = fams[it["id"]]
+            it["tpic"] = ["item", base]
     # the monsters, by family (the Codex's)
     best = bestiary_view({})
     fam_pic = {f["id"]: f.get("img") for f in best.get("families") or ()}
@@ -2033,7 +2096,7 @@ def _world_recipe_rows(world, meta_out):
         for f in w.get("families") or ():
             rows.append({"k": tr("Butin"),
                          "t": tr("Butin des ennemis : {name}",
-                                 name=_family_label(f)) + pct + lvl,
+                                 name=_shared_name(f)) + pct + lvl,
                          "mob": _family_pic(f)})
     if rows:
         rows.append({"k": tr("Tirage"),

@@ -9,7 +9,7 @@ let ENC_NODE = null;
 let ENC_ICONS = false;
 const ENC_BATCH = 60;          // cards made at a time
 // the subjects where a rarity tells something
-const ENC_RARITY = new Set(['equipment', 'mounts', 'gliders', 'augments', 'resources']);
+const ENC_RARITY = new Set(['equipment', 'gliders', 'augments', 'resources']);
 // the character sheet's slots, in its order
 const ENC_SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
   'GearNeck', 'GearFinger', 'GearTrinket'];
