@@ -369,7 +369,9 @@ function huntMiniMap(n) {
   const pins = (n.spawns || []).map((p) => {
     const d = el('div', 'hpin');
     d.title = p.z;
-    d.appendChild(huntImg(n.uid));
+    // a picture of its own (an NPC's portrait), else the Codex's
+    if (n.pinImg) { const im = el('img'); im.src = n.pinImg; im.alt = ''; d.appendChild(im); }
+    else d.appendChild(huntImg(n.uid));
     const [px, py] = mapPx(n, p.x, p.y);
     d.dataset.px = px;
     d.dataset.py = py;

@@ -2097,6 +2097,9 @@ def _npc_sheet(key):
            "m3dView": {"anim": True},
            "spawn": [{"k": tr("Lieu"), "t": ", ".join(towns)
                       or tr("Monde ouvert"), "pinCls": "merchant",
+                      # its map: its name, its portrait on each place
+                      "title": _npc_name(n),
+                      "face": None if generic else n["unit"],
                       "pins": [{"x": x, "y": y, "t": _zone_label(z) if z
                                 else ""} for x, y, z in n["places"]]}],
            "meta": world_map().get("meta"),
