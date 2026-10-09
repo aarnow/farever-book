@@ -925,7 +925,8 @@ def hero_models(game_dir, gear, face=HERO_FACE):
     prefabs += [HERO_BODY + p + ".prefab" for p in face]
     prefabs += [HERO_BODY + bare + ".prefab" for t, bare in HERO_BARE.items()
                 if t not in covered]
-    out = [m for p in prefabs for m in prefab_models(game_dir, p)]
+    out = _on_body(game_dir, [m for p in prefabs
+                              for m in prefab_models(game_dir, p)])
     for slot, which in (("Weapon1", "primary"), ("OffhandWeapon", "primary"),
                         ("Weapon2", "secondary")):
         if gear.get(slot):
@@ -1062,6 +1063,64 @@ NPC_GEAR_SLOTS = {"helmet": "Head", "shoulders": "Shoulders",
                   "weapon2": "Weapon2"}
 
 
+def _on_body(game_dir, models):
+    """Pieces worn on the hero's body as client.UnitView links them
+    (linkSubSkin): a skinned one moved by the body's skeleton, turned as the
+    body is (HERO_ROOT), its own node's turn dropped. The eyebrows' prefabs
+    don't turn theirs: kept, it put them on the side of the face."""
+    out = []
+    for m in models:
+        raw = _read(Path(game_dir) / "res.pak", m["source"])
+        skinned = bool(raw) and raw[:3] == b"HMD" and any(
+            x.get("skin") for x in read_hmd(raw)["models"] if x["geom"] >= 0)
+        out.append(dict(m, matrix=HERO_ROOT) if skinned else m)
+    return out
+
+
+def _gear_props(game_dir, it):
+    """The prefab.GearProps of a piece's model (client.UnitView.
+    loadGearProps): {hairMode, facialHairMode, ...}, or None."""
+    vis = it.get("visuals") or {}
+    path = vis.get("modelPath") or next(
+        (str((x or {}).get("prefab") or "") for x in vis.get("models") or ()), "")
+    raw = _read(Path(game_dir) / "res.pak", path) if path.endswith(".prefab") \
+        else None
+    if not raw:
+        return None
+    found = []
+    _walk(hbson.loads(raw), lambda o: found.append(o)
+          if str(o.get("type", "")) == "gearProps" else None)
+    return found[0] if found else None
+
+
+def npc_hair(game_dir, skin, gear):
+    """(hair, beard) body parts a character shows under its head piece, as
+    the game picks them (client.UnitView.applyItemGearProps, getCurrentHair,
+    getCurrentFacialHair): with something on the head (an item, even the
+    "Gold" filling an empty slot, but not Hide_Gear), the hair "LowHair"
+    unless the piece's GearProps says otherwise, the beard as GearProps says
+    ("AllHair" by default). LowHair: the hair's hairUnderGear, else the
+    UnderGear hair of its length."""
+    sh = _sheets(game_dir)
+    parts, items = sh["bodyPart"], sh["item"]
+    head = items.get((gear or {}).get("helmet") or "")
+    hair_mode = facial_mode = "AllHair"
+    if head and head.get("id") != "Hide_Gear":
+        hair_mode = "LowHair"
+        props = _gear_props(game_dir, head) or {}
+        hair_mode = props.get("hairMode") or hair_mode
+        facial_mode = props.get("facialHairMode") or facial_mode
+    hair = skin.get("hair")
+    if hair_mode != "AllHair":
+        row = (parts.get(hair) or {}) if hair_mode == "LowHair" and hair else {}
+        p = row.get("props") or {}
+        hair = p.get("hairUnderGear") or {
+            1: "Hair_Medium_UnderGear", 2: "Hair_Long_UnderGear"}.get(
+            p.get("hairLength"), "Hair_Short_UnderGear")
+    beard = skin.get("facialHair") if facial_mode == "AllHair" else "Beard_None"
+    return hair, beard
+
+
 def _recolor(models, slots):
     """The models' gradients with some slots replaced ({index: gradient id}):
     the hero's colours as client.UnitView sets them (setGradSlot)."""
@@ -1105,6 +1164,8 @@ def npc_models(game_dir, skin, gear):
         row = parts.get(pid) or {}
         return row.get("prefab") if row.get("type") == kind and str(
             row.get("prefab", "")).endswith(".prefab") else None
+    def body(pf):
+        return _on_body(game_dir, prefab_models(game_dir, pf))
     out = []
     # the clothes, each with the skin and its own gradients (gradMat:
     # {gradient, index}); a long robe hides the legs
@@ -1123,26 +1184,26 @@ def npc_models(game_dir, skin, gear):
         for g in (it.get("visuals") or {}).get("gradMat") or ():
             if isinstance(g, dict) and g.get("gradient") and                     isinstance(g.get("index"), int):
                 own[g["index"]] = g["gradient"]
-        out += _recolor(prefab_models(game_dir, path), own)
+        out += _recolor(body(path), own)
         covered.add(slot)
     # the bare body where nothing covers it
     for t, bare in HERO_BARE.items():
         if t not in covered:
-            out += _recolor(prefab_models(game_dir, HERO_BODY + bare + ".prefab"),
-                            skin0)
+            out += _recolor(body(HERO_BODY + bare + ".prefab"), skin0)
     # the weapons, holstered: the set in use, the other
     for slot, which in (("Weapon1", "primary"), ("OffhandWeapon", "primary"),
                         ("Weapon2", "secondary")):
         if worn.get(slot):
             out += _holstered_models(game_dir, items[worn[slot]], which)
     # the face
-    head = HERO_BODY + "MainHead_Naked.prefab"
-    out += _recolor(prefab_models(game_dir, head), skin0)
+    out += _recolor(body(HERO_BODY + "MainHead_Naked.prefab"), skin0)
+    shown = dict(skin)
+    shown["hair"], shown["facialHair"] = npc_hair(game_dir, skin, gear)
     for key, kind, colours in (("eyes", 1, eyes), ("eyebrows", 2, hair),
                                ("hair", 0, hair), ("facialHair", 3, hair)):
-        pf = part(skin.get(key), kind)
+        pf = part(shown.get(key), kind)
         if pf:
-            out += _recolor(prefab_models(game_dir, pf), colours)
+            out += _recolor(body(pf), colours)
     return out
 
 

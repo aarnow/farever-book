@@ -244,6 +244,7 @@ function m3dFree() {
   const gl = M3D.gl;
   if (gl && M3D.mesh) {
     const m = M3D.mesh;
+    m.dead = true;
     [m.pos, m.nor, m.uv, m.uv2, m.aj, m.aw].forEach((b) => b && gl.deleteBuffer(b));
     if (m.pal) gl.deleteTexture(m.pal);
     gl.deleteTexture(m.lines);
@@ -273,6 +274,7 @@ function m3dLoad(id) {
   if (box) {
     for (let k = 0; k < 3; k++) { mn[k] = box[k]; mx[k] = box[k + 3]; }
   }
+  M3D.box = [mn, mx];
   M3D.center = [0, 1, 2].map((k) => (mn[k] + mx[k]) / 2);
   M3D.radius = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2 || 1;
   M3D.center[1] -= M3D.lift * M3D.radius;
@@ -288,7 +290,7 @@ function m3dLoad(id) {
     const t = gl.createTexture();
     const im = new Image();
     im.onload = () => {
-      if (M3D.mesh !== mesh) return;
+      if (mesh.dead) return;
       gl.bindTexture(gl.TEXTURE_2D, t);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
@@ -302,8 +304,10 @@ function m3dLoad(id) {
     if (src) im.src = src; else setTimeout(done);
     return t;
   };
+  // the panel that asked: told once all is on the GPU
+  const onState = M3D.onState;
   const loaded = () => {
-    if (--mesh.pending === 0 && M3D.onState) M3D.onState('ready');
+    if (--mesh.pending === 0 && onState) onState('ready');
   };
   const mesh = {
     pos: buf(gl.ARRAY_BUFFER, pos),
@@ -403,8 +407,8 @@ function m3dDraw() {
   if (!gl) return;
   const zoom = parseFloat(document.documentElement.style.zoom) || 1;
   const dpr = (window.devicePixelRatio || 1) * zoom;
-  const w = Math.max(1, Math.round(c.clientWidth * dpr));
-  const h = Math.max(1, Math.round(c.clientHeight * dpr));
+  const w = M3D.size ? M3D.size[0] : Math.max(1, Math.round(c.clientWidth * dpr));
+  const h = M3D.size ? M3D.size[1] : Math.max(1, Math.round(c.clientHeight * dpr));
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
   gl.viewport(0, 0, w, h);
   gl.clearColor(0, 0, 0, 0);
@@ -509,3 +513,74 @@ function m3dDraw() {
     }
   });
 }
+
+/* ---- portraits: a face photographed off the page -----------------------
+   For the characters the game gives no portrait (those in the hero's body):
+   their model, drawn by the viewer's own shader in a second context, framed
+   on the head, seen from the front, as a PNG data URI. */
+// the face's framing: its middle under the top, its radius, in heights
+const M3D_FACE = [0.12, 0.14];
+const M3D_SNAP = { canvas: null, gl: null, gl2: false, prog: null, loc: null, mesh: null };
+const M3D_SWAP = ['canvas', 'gl', 'gl2', 'prog', 'loc', 'mesh', 'center', 'radius', 'box',
+  'yaw', 'pitch', 'dist', 'dist0', 'lift', 'pan', 'onState', 'size'];
+
+// the portraits' context in place of the viewer's, and back
+function m3dSwap() {
+  M3D_SWAP.forEach((k) => { const v = M3D[k]; M3D[k] = M3D_SNAP[k]; M3D_SNAP[k] = v; });
+}
+
+function m3dWait(test, ms) {
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    const tick = () => {
+      if (test()) resolve(true);
+      else if (performance.now() - t0 > ms) resolve(false);
+      else setTimeout(tick, 150);
+    };
+    tick();
+  });
+}
+
+async function m3dPortrait(id, px, yaw) {
+  if (!m3dSupported()) return null;
+  // its model, asked if need be
+  if (!(id in M3D.models)) {
+    if (!M3D.asked[id]) { M3D.asked[id] = true; notify('coll_model', { id }); }
+    if (!(await m3dWait(() => id in M3D.models, 90000))) return null;
+  }
+  if (!M3D.models[id]) return null;
+  let ready = false;
+  m3dSwap();
+  try {
+    if (!M3D.gl) {
+      m3dInit();
+      if (!M3D.gl) return null;
+    }
+    M3D.lift = 0;
+    M3D.dist0 = 1;
+    M3D.onState = (st) => { if (st === 'ready') ready = true; };
+    m3dLoad(id);
+  } finally { m3dSwap(); }
+  if (!(await m3dWait(() => ready, 20000))) return null;
+  m3dSwap();
+  try {
+    // the head and shoulders: the top of the figure, from the front (the
+    // hero's body faces yaw = π/2)
+    const [mn, mx] = M3D.box;
+    const hgt = mx[1] - mn[1];
+    const k = M3D_FACE;
+    M3D.center = [(mn[0] + mx[0]) / 2, mx[1] - hgt * k[0], (mn[2] + mx[2]) / 2];
+    M3D.radius = hgt * k[1];
+    M3D.yaw = yaw === undefined ? Math.PI / 2 : yaw;
+    M3D.pitch = 0.05;
+    M3D.dist = 1;
+    M3D.pan = [0, 0];
+    M3D.size = [px, px];
+    m3dDraw();
+    const out = document.createElement('canvas');
+    out.width = px; out.height = px;
+    out.getContext('2d').drawImage(M3D.canvas, 0, 0);
+    return out.toDataURL('image/png');
+  } finally { m3dSwap(); }
+}
+

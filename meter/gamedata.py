@@ -796,7 +796,7 @@ def locate_hlboot(pid):
 # 3D models, for the Collection's viewer
 # ---------------------------------------------------------------------------
 MODELS_DIR = ANALYSIS / "models"
-MODEL_FORMAT = 17
+MODEL_FORMAT = 18
 _model_lock = threading.Lock()
 
 

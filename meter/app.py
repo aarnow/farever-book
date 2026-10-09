@@ -790,6 +790,8 @@ class App:
             "encyclo_open": lambda p: self._encyclo_open(
                 str(p.get("id") or ""), bool(p.get("go"))),
             "encyclo_icons": self._send_item_icons,
+            "npc_portrait": lambda p: self._save_npc_portrait(
+                p.get("key"), p.get("data")),
             "open_dungeon_kind": lambda p: self._open_dungeon_kind(
                 p.get("kind")),
             "dungeon_tab": lambda p: setattr(
@@ -2129,6 +2131,40 @@ class App:
             self._encyclo_jump += 1
             self._menu_tab = "Encyclopedia"
         self._encyclo_sel = iid
+
+    def _save_npc_portrait(self, key, data):
+        """A character's face, photographed by the window off its model
+        (one in the hero's body has no portrait in the game): kept with the
+        portraits, the Encyclopedia's list then showing it."""
+        import base64
+        if not isinstance(key, str) or not re.fullmatch(r"npc_[A-Za-z0-9_]+",
+                                                         key):
+            return
+        head = "data:image/png;base64,"
+        if not isinstance(data, str) or not data.startswith(head) \
+                or len(data) > 400_000:
+            return
+        try:
+            raw = base64.b64decode(data[len(head):], validate=True)
+        except ValueError:
+            return
+        if raw[:8] != b"\x89PNG\r\n\x1a\n":
+            return
+        try:
+            folder = ANALYSIS / "boss_portraits"
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / f"{key}.png").write_bytes(raw)
+            # the faces taken off an older model: gone
+            from gamedata import MODEL_FORMAT
+            for old in folder.glob("npc_*.png"):
+                if not old.stem.startswith(f"npc_m{MODEL_FORMAT}_"):
+                    old.unlink(missing_ok=True)
+        except OSError as e:
+            print(f"[meter] couldn't save {key}: {e}", file=sys.stderr)
+            return
+        # the list built again: its picture is the face now
+        self._encyclo_list = (None, None)
+        self._encyclo_sheets = {}
 
     def _send_item_icons(self):
         """The items' icons, to the window (asked by the Encyclopedia)."""

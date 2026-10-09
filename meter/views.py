@@ -16,7 +16,7 @@ from gamedata import (
     bestiary_catalogue, codex_items_catalogue, collection_catalogue,
     dungeon_catalogue, dungeon_name, faction_label, item_icon, item_label,
     gear_stats_data, item_art, item_rarity, item_type, item_type_label,
-    luck_data,
+    luck_data, MODEL_FORMAT,
     rarity_label,
     rift_rewards_data, skill_tip, talent_data, world_map)
 from gearstats import (
@@ -1780,6 +1780,20 @@ ENCYCLO_TOPICS = (
 GENERIC_NPC_UNITS = {"BaseHero"}
 
 
+def _npc_face_key(n):
+    """The key a character's photographed face goes under: its model's
+    format in it, a face taken off an older model taken again."""
+    return f"npc_m{MODEL_FORMAT}_" + str(n.get("el") or "")
+
+
+def _npc_face(n):
+    """The portrait key of a character in the hero's body: its face as the
+    window photographed it (boss_portraits/<key>.png), or None."""
+    key = _npc_face_key(n)
+    return key if (ANALYSIS / "boss_portraits" / f"{key}.png").exists() \
+        else None
+
+
 FILTER_AS = {"Ore": "CraftingComponent", "Leather": "CraftingComponent",
              "Cloth": "CraftingComponent"}
 
@@ -1846,9 +1860,16 @@ def encyclopedia_view():
     # the characters of the open world: merchants, the others
     for n in cat.get("npcs") or ():
         sells = bool(n.get("sells"))
+        generic = n["unit"] in GENERIC_NPC_UNITS
+        face = _npc_face(n) if generic else None
+        dressed = generic and bool(n.get("skin")) and bool(n.get("el"))
         items.append({"id": "n:" + (n.get("el") or n["name"]), "c": "npcs",
-                      "pic": ["port", n["unit"]]
-                      if n["unit"] not in GENERIC_NPC_UNITS else None,
+                      "pic": ["port", n["unit"]] if not generic
+                      else ["port", face] if face else None,
+                      # in the hero's body, no face yet: the window takes
+                      # its photo (its model, the key it goes under)
+                      "snap": ["npc:" + n["el"] + "@anim", _npc_face_key(n)]
+                      if dressed and not face else None,
                       "name": _npc_name(n),
                       "type": tr("Marchand") if sells else tr("Personnage"),
                       "tk": "shop" if sells else "other",
@@ -2106,7 +2127,7 @@ def _npc_sheet(key):
                                if z))
     out = {"id": "n:" + key, "name": _npc_name(n), "rk": "",
            "type": tr("Marchand") if n.get("sells") else tr("Personnage"),
-           "port": None if generic else n["unit"],
+           "port": _npc_face(n) if generic else n["unit"],
            "art": "" if generic else item_art(n["unit"], unit=True),
            "m3d": not generic or dressed,
            "model": "npc:" + n["el"] if dressed else n["unit"],
@@ -2116,7 +2137,7 @@ def _npc_sheet(key):
                       or tr("Monde ouvert"), "pinCls": "merchant",
                       # its map: its name, its portrait on each place
                       "title": _npc_name(n),
-                      "face": None if generic else n["unit"],
+                      "face": _npc_face(n) if generic else n["unit"],
                       "pins": [{"x": x, "y": y, "t": _zone_label(z) if z
                                 else ""} for x, y, z in n["places"]]}],
            "meta": world_map().get("meta"),

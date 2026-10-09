@@ -59,9 +59,34 @@ function buildEncyclo(n) {
     }
   }
   if (!ENC_ICONS) { ENC_ICONS = true; notify('encyclo_icons', {}); }
+  encFaces(n);
   const box = el('div', 'coll enc');
   renderEncyclo(box, n);
   return box;
+}
+
+/* The characters the game gives no portrait (those in the hero's body):
+   their face photographed off their model, once, in the background, then
+   kept by the meter with the portraits (and shown at once here). */
+const ENC_FACES = { busy: false, done: {} };
+async function encFaces(n) {
+  if (ENC_FACES.busy || !m3dSupported()) return;
+  const todo = (n.items || []).filter((it) => it.snap && !ENC_FACES.done[it.snap[1]]
+    && !(window.__PORTRAITS__ || {})[it.snap[1]]);
+  if (!todo.length) return;
+  ENC_FACES.busy = true;
+  try {
+    for (const it of todo) {
+      const [model, key] = it.snap;
+      ENC_FACES.done[key] = true;
+      const url = await m3dPortrait(model, 192);
+      if (!url) continue;
+      (window.__PORTRAITS__ = window.__PORTRAITS__ || {})[key] = url;
+      it.pic = ['port', key];
+      notify('npc_portrait', { key: key, data: url });
+    }
+  } finally { ENC_FACES.busy = false; }
+  rerenderEncyclo();
 }
 
 function rerenderEncyclo() {
