@@ -15,6 +15,7 @@ import re
 import struct
 from pathlib import Path
 
+import hbson
 import imgcache
 import pak_extract
 from collection_data import _levels
@@ -64,6 +65,29 @@ def build(game_dir, tile_dir=None):
         return None
 
     points = []
+    prefab_ids = {}
+
+    def prefab_id(source):
+        """The element id a prefab sets itself (res.pak), or None."""
+        if source not in prefab_ids:
+            prefab_ids[source] = None
+            try:
+                raw = pak_extract.read_entry(game_dir / "res.pak", source)
+                stack = [hbson.loads(raw)] if raw and raw[:5] == b"HBSON" else []
+            except Exception:  # noqa: BLE001
+                stack = []
+            while stack:
+                o = stack.pop()
+                if isinstance(o, dict):
+                    pr = o.get("props")
+                    if (isinstance(pr, dict) and pr.get("$cdbtype") == "element"
+                            and pr.get("id")):
+                        prefab_ids[source] = pr["id"]
+                        break
+                    stack.extend(o.values())
+                elif isinstance(o, list):
+                    stack.extend(o)
+        return prefab_ids[source]
 
     def walk(o, zone, px, py, rot):
         if isinstance(o, dict):
@@ -76,8 +100,11 @@ def build(game_dir, tile_dir=None):
                 wx, wy = px + x * c - y * s, py + x * s + y * c
                 wr = rot + float(o.get("rotationZ") or 0)
             cat = CATEGORIES.get(str(o.get("source") or "").split("/")[-1])
-            if cat:
-                points.append({"c": cat, "id": props.get("id") or o.get("name"),
+            # its element's id, else its prefab's own (two respawn points
+            # set no id: they are the prefab's LEVEL_RespawnPoint)
+            eid = props.get("id") or prefab_id(o.get("source")) if cat else None
+            if cat and eid:
+                points.append({"c": cat, "id": eid,
                                "x": round(wx, 1), "y": round(wy, 1),
                                "zone": zone or "", "region": region(zone) or ""})
             for k, v in o.items():

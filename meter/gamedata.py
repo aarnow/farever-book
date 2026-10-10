@@ -332,11 +332,13 @@ def world_map():
 def _element_done(states, eid):
     """Whether a world element has been completed (chest opened, orb picked
     up, obelisk discovered): Progress.elements has it, with a time (or a
-    [byte, time] pair)."""
+    [byte, time] pair). As the game decides (st.player.Progress.
+    hasElementCompleted): a time >= 0, so a time of 0 counts too (some
+    characters' elements carry one)."""
     v = (states or {}).get(eid)
     if isinstance(v, list):
         v = v[-1] if v else None
-    return isinstance(v, (int, float)) and v > 0
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0
 
 
 
