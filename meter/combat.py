@@ -50,6 +50,59 @@ def _overheal_pct(total, landed):
     return max(0.0, (total - landed) / total * 100.0)
 
 
+def journal_keeps(kind, ev, party):
+    """A journal follows the player and their group: what they do, what they
+    take, the heals they get (`party`: the group's names seen so far, grown
+    here)."""
+    if ev.get("is_me") or ev.get("in_party"):
+        if ev.get("player"):
+            party.add(ev["player"])
+        return True
+    return kind in ("heal", "status") and ev.get("to") in party
+
+
+def journal_rows(entries, start):
+    """A journal's lines (a boss fight's, a parse's) from `start` (the
+    pull, the parse's start), each a small dict: t (ms since `start`), k
+    (kind), p (the player), then what the kind has. Names are the game's,
+    read by the hook; a unit's kind (src, tk, pet) is named when shown."""
+    rows = []
+    for ts, kind, ev in entries:
+        if ts < start:
+            continue
+        r = {"t": int(round((ts - start) * 1000)), "k": kind}
+        if kind == "mark":
+            r["m"] = ev.get("m")
+            rows.append(r)
+            continue
+        r["p"] = ev.get("player") or "?"
+        r["s"] = ev.get("skill") or "?"
+        if ev.get("name"):
+            r["n"] = ev["name"]
+        r["a"] = round(float(ev.get("amount") or 0.0), 1)
+        if ev.get("crit"):
+            r["c"] = 1
+        for key, out in (("pet", "pet"), ("to", "to"), ("tk", "tk"),
+                         ("src", "src"), ("element", "el")):
+            if ev.get(key) and ev.get(key) != "?":
+                r[out] = ev[key]
+        if kind in ("hit", "taken") and ev.get("kill"):
+            r["x"] = 1
+        if kind == "status":
+            r["st"] = ev.get("st") or "?"
+            if ev.get("cc"):
+                r["cc"] = ev["cc"]
+        if kind == "heal":
+            # what the bar moved, and how the counted size was had
+            r["l"] = round(float(ev.get("landed") or 0.0), 1)
+            r["z"] = ev.get("sized") or ("regen" if not ev.get("est")
+                                         else "")
+            if ev.get("self"):
+                r["self"] = 1
+        rows.append(r)
+    return rows
+
+
 class HealSizeEstimator:
     """How big was that heal? The client is never told, so this estimates it.
 
@@ -137,6 +190,14 @@ class HealSizeEstimator:
         leaves as the estimated size of the heal, which consumers read."""
         landed = float(ev.get("landed", ev.get("amount", 0.0)) or 0.0)
         ev["landed"] = landed
+        # the game's own number (rpcDisplayHeal, what it shows over the
+        # target): the heal's size, overheal included
+        size = float(ev.get("size") or 0.0)
+        if size > 0:
+            ev["sized"] = "game"
+            ev["amount"] = max(landed, size)
+            self._computed += 1
+            return
         if not ev.get("est"):
             ev["amount"] = landed          # regen: observed AS the rise
             return
@@ -271,6 +332,11 @@ class PartySession:
         # (timestamp, "hit"|"heal", event) recorded lately, replayed by a
         # boss-pull reset
         self._recent: deque = deque(maxlen=RECENT_EVENT_MAX)
+        # a parse's journal (when the player turned it on): every hit, heal
+        # and hit taken inside the capture window
+        self.journal_on = False
+        self._journal: deque = deque(maxlen=RiftRecorder.JOURNAL_MAX)
+        self._journal_party: set = set()
 
     def set_capture_window(self, seconds):
         """Parse mode: take data for exactly `seconds` from now, then stop.
@@ -280,6 +346,26 @@ class PartySession:
             now = time.time()
             self.capture_start = None if seconds is None else now
             self.capture_until = None if seconds is None else now + seconds
+            self._journal.clear()
+
+    def _journal_add(self, now, kind, ev):
+        if (self.journal_on and self.capture_start is not None
+                and now <= self.capture_until
+                and journal_keeps(kind, ev, self._journal_party)):
+            self._journal.append((now, kind, ev))
+
+    def record_taken(self, ev: dict, kind="taken"):
+        """A mob's hit on a player, or a crowd control ("status"): a
+        parse's journal only."""
+        with self.lock:
+            self._journal_add(time.time(), kind, ev)
+
+    def journal(self):
+        """The parse's journal lines (combat.journal_rows), or []."""
+        with self.lock:
+            if self.capture_start is None:
+                return []
+            return journal_rows(list(self._journal), self.capture_start)
 
     def _capturing(self, now):
         return self.capture_until is None or now <= self.capture_until
@@ -332,6 +418,7 @@ class PartySession:
                 self.enc_start = now
             self.last_hit = now
             self._recent.append((now, "hit", ev))
+            self._journal_add(now, "hit", ev)
             self._apply_hit(self._player_for(ev), ev, now)
 
     def _apply_hit(self, p, ev, ts):
@@ -348,6 +435,7 @@ class PartySession:
             if not self._capturing(now):
                 return
             self._recent.append((now, "heal", ev))
+            self._journal_add(now, "heal", ev)
             p = self._player_for(ev)
             p.record_heal(self._skill_of(ev),
                           float(ev.get("amount", 0.0)), int(ev.get("crit", 0)),
@@ -380,6 +468,7 @@ class PartySession:
             # back to live capture, and so to in-combat DPS
             self.capture_until = self.capture_start = None
             self._recent.clear()
+            self._journal.clear()
             self.epoch += 1
 
     def reset_keeping_recent(self, backlag=BOSS_PULL_BACKLAG_SECS):
@@ -397,6 +486,7 @@ class PartySession:
             self.in_combat = False
             self.capture_until = self.capture_start = None
             self._recent.clear()
+            self._journal.clear()
             self.epoch += 1
             for ts, kind, ev in keep:
                 self._recent.append((ts, kind, ev))
@@ -452,6 +542,10 @@ class RiftRecorder:
     party/all mode, which can change mid-rift."""
 
     PHASE_LABELS = ("Phase de faille", "Phase du boss")
+    # Each hit, heal and hit taken of the boss fight kept in the report
+    # ("journal"): the dungeons' (their fights are short)
+    JOURNAL = False
+    JOURNAL_MAX = 60000
     # The rift flag (read every 0.4 s) can drop before the boss bar (2/s,
     # up through the death). Once the boss is pulled, the rift's end waits
     # this long for the kill, then reports anyway as unconfirmed.
@@ -468,6 +562,10 @@ class RiftRecorder:
         self._recent: deque = deque(maxlen=RECENT_EVENT_MAX)
         # skill key -> display name, across the whole rift
         self.skill_names: dict[str, str] = {}
+        # (timestamp, "hit"|"heal"|"taken"|"mark", event): the journal's
+        # lines, cut at the boss's pull once the fight is over
+        self._journal: deque = deque(maxlen=self.JOURNAL_MAX)
+        self._journal_party: set = set()
 
     @staticmethod
     def _new_phase():
@@ -530,6 +628,7 @@ class RiftRecorder:
                 self._phases = [self._new_phase(), self._new_phase()]
                 self._phases[0]["start"] = time.time()
                 self._recent.clear()
+                self._journal.clear()
                 return "start"
             if not self.active:
                 return None
@@ -566,13 +665,25 @@ class RiftRecorder:
         return report
 
     def record(self, kind, ev: dict):
-        """kind is "hit" or "heal" (nullified hits already filtered out)."""
+        """kind is "hit" or "heal" (nullified hits already filtered out), or
+        "taken" (a mob's hit on a player: the journal's only)."""
         with self.lock:
             if not self.active or self._closing_at is not None:
                 return              # nothing recording, or the rift is over
             now = time.time()
+            if self.JOURNAL and journal_keeps(kind, ev, self._journal_party):
+                self._journal.append((now, kind, ev))
+            if kind in ("taken", "status"):
+                return
             self._recent.append((now, self.phase, kind, ev))
             self._apply(self._phases[self.phase], kind, ev, 1)
+
+    def mark(self, what):
+        """A moment of the fight in the journal: "pull", "wipe", "kill"."""
+        with self.lock:
+            if self.active and self.JOURNAL:
+                self._journal.append((time.time(), "mark", {"m": what}))
+
 
     def on_boss_pull(self, backlag=BOSS_PULL_BACKLAG_SECS):
         """The boss healthbar lags the pull (fetchBosses is a 2/s timer), so
@@ -637,10 +748,15 @@ class RiftRecorder:
                                "heal": heal, "heal_landed": heal_landed,
                                "elements": elements})
             # `skill_names` outlives one rift: only this report's names
-            return {"at": now, "phases": phases,
-                    "skill_names": {sid: nm for sid, nm
-                                    in self.skill_names.items()
-                                    if sid in used_skills}}
+            out = {"at": now, "phases": phases,
+                   "skill_names": {sid: nm for sid, nm
+                                   in self.skill_names.items()
+                                   if sid in used_skills}}
+            if self.JOURNAL and self.phase == 1:
+                out["journal"] = journal_rows(
+                    self._journal, self._phases[1]["start"] or now)
+            self._journal.clear()
+            return out
 
 
 class DungeonRecorder(RiftRecorder):
@@ -649,6 +765,7 @@ class DungeonRecorder(RiftRecorder):
 
     PHASE_LABELS = ("Exploration", "Phase du boss")
     CLOSE_GRACE = 0             # its end comes from the dungeon's own state
+    JOURNAL = True
 
 
 # The dungeon difficulty as the instance lobby stores it (measured: the value
@@ -720,13 +837,17 @@ class DungeonTracker:
             return
         print(f"[dungeon] state {run['state']} -> {state} at "
               f"{run['clock']:.1f}s", file=sys.stderr)
-        run["state"] = state
+        prev, run["state"] = run["state"], state
         if state in ("BossStart", "BossPhase") and not run["boss_seen"]:
             run["boss_seen"] = True
             self.rec.on_boss_pull(backlag=1.0)
+        elif state in ("BossStart", "BossPhase") and prev == "BossLoose":
+            self.rec.mark("pull")           # the boss again, after a wipe
         elif state == "BossLoose":
             run["wipes"] += 1
+            self.rec.mark("wipe")
         elif state == "BossWin" and not run["done"]:
+            self.rec.mark("kill")
             end = ctx.get("end")
             self._finish("victoire",
                          end if isinstance(end, (int, float)) and end > 0

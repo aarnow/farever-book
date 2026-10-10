@@ -142,7 +142,7 @@ def hook_layout(code):
         # immunity phase) is not settled yet.
         "DamageResult": {k: dr[k][0] for k in
             ["_amount", "affinity", "_critical", "_kill", "_block",
-             "blocker", "effect", "baseSkill"]},
+             "blocker", "effect", "baseSkill", "target"]},
         # dynVal1-3 (hxbit-replicated) carry most heals' server-computed
         # amount: the only place a client learns what a heal was worth.
         "BaseSkill": {"kind": base["kind"][0], "inf": base["inf"][0],
@@ -228,7 +228,11 @@ def hook_layout(code):
                    "startTime": status["startTime"][0],
                    "stopTime": status["stopTime"][0],
                    "duration": status["duration"][0],
-                   "removed": status["removed"][0]},
+                   "removed": status["removed"][0],
+                   # who put it there, with which skill (the journals'
+                   # crowd controls; its unit is BaseSkill.owner)
+                   "instigator": status["instigator"][0],
+                   "instigatorSkill": status["instigatorSkill"][0]},
         # a foe with a summonOwner is a pet (same class as a mob)
         "Foe": {"summonOwner": foe["summonOwner"][0]},
         # the hl_varray's elements start at +24, past its (t, at, size, pad)

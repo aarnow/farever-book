@@ -3757,3 +3757,49 @@ html.lt-760 .enc .collmain { grid-template-columns: minmax(0, 1fr); }
 .encnopic { color: var(--faint); font-size: 12px; font-style: italic; text-align: center; }
 .encrep { color: #E8C17A; font-size: 12px; }
 .enclink .enccost, .enclink .encrep { display: flex; }
+
+/* a boss fight's journal */
+.journal { display: flex; flex-direction: column; gap: 12px; }
+.jbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.jbar .jwho { width: auto; min-width: 220px; max-width: 320px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+              background: var(--bg-2); color: #fff; font: inherit; }
+.jkind { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel);
+         color: var(--dim); font: inherit; font-size: 12px; cursor: pointer; }
+.jkind.on { color: #fff; }
+.jkind.on.k-hit { border-color: var(--dmg); }
+.jkind.on.k-taken { border-color: var(--warn); }
+.jkind.on.k-heal { border-color: var(--heal); }
+.jbar .jcount { margin-left: auto; color: var(--dim); font-size: 12px; }
+.jsum { display: flex; flex-direction: column; gap: 10px; }
+.jtables { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.jtable { padding: 10px 12px; }
+.jtable .jtt { font-family: var(--font-head); font-size: 13px; color: #fff; margin-bottom: 6px; }
+.jtable table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.jtable th, .jtable td { padding: 3px 6px; text-align: right; font-weight: 400; }
+.jtable tr > th:first-child { text-align: left; color: #fff; }
+.jtable tr:first-child th { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+.jlines { padding: 8px 0; max-height: 70vh; overflow-y: auto; font-size: 12.5px; }
+.jline { display: flex; gap: 12px; padding: 2px 14px; line-height: 1.5; }
+.jline:hover { background: rgba(255, 255, 255, .04); }
+.jline .jt { flex: 0 0 auto; font-family: Consolas, monospace; color: var(--dim); }
+.jline { align-items: center; }
+.jline .jx { display: inline-flex; flex-wrap: wrap; align-items: center; white-space: pre-wrap; }
+/* damage dealt yellow, taken red, heals green, heals received blue,
+   events white */
+.jline.dealt .jx { color: #F5D76E; }
+.jline.taken .jx { color: #F2827B; }
+.jline.heal .jx { color: #6FD39A; }
+.jline.healin .jx { color: #7FB6F7; }
+.jline.event { padding: 6px 14px; }
+.jline.event .jx { color: #FFFFFF; }
+.jname { display: inline-flex; align-items: center; gap: 5px; }
+.jname b, b.jname { font-weight: 700; }
+.jname .jski { width: 20px; height: 20px; border-radius: 4px; }
+.jname .jmob { width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+               background: rgba(255, 255, 255, .06); }
+.jname .jcls { width: 18px; height: 18px; }
+.jskull { display: inline-flex; align-items: center; margin: 0 4px; }
+.jskull .tabic { width: 16px; height: 16px; background: currentColor;
+                 -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
+.jkind.on.k-status { border-color: #FFFFFF; }
+.jmore { align-self: center; }

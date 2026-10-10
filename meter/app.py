@@ -52,6 +52,7 @@ from gamedata import (
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot)
 from bosssheet import _icon_ok, boss_sheet_view
+from journal import JOURNAL_PAGE, journal_view
 from views import (
     collection_sheet,
     encyclopedia_item, encyclopedia_view,
@@ -201,6 +202,7 @@ class App:
         # ---- what the player chose (saved) ----
         self.mode = "party"                 # "party" (group only) or "all"
         self._show_heal = True
+        self._parse_journal = False         # a parse keeps its journal
         self._auto_reset_boss = True        # on unless the player turns it off
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
@@ -226,6 +228,12 @@ class App:
         self._rift_gates_for = None
         self._dungeon_kind = None           # the dungeon whose runs are listed
         self._dungeon_tab = "info"          # its page's tab: info, runs, help
+        self._run_tab = "report"            # a run's page: report, journal
+        self._journal = (None, [])          # (run file, its journal's lines)
+        # the journal's filters: a player, the kinds shown, lines shown
+        self._journal_f = {"who": "",
+                           "kinds": {"hit", "taken", "heal", "status"},
+                           "limit": JOURNAL_PAGE}
         self._encyclo_sel = None            # the Encyclopedia's item shown
         self._encyclo_reset = 0             # bumped: the page on its first category
         self._encyclo_jump = 0              # bumped: the page on the item opened
@@ -289,6 +297,8 @@ class App:
             self.mode = data["mode"]
         if isinstance(data.get("show_heal"), bool):
             self._show_heal = data["show_heal"]
+        if isinstance(data.get("parse_journal"), bool):
+            self._parse_journal = data["parse_journal"]
         # settings saved before revision 1 had the boss pull reset off by
         # default: turned on once for everyone, then the player's choice
         if isinstance(data.get("auto_reset_boss"), bool) and                 int(data.get("settings_rev") or 0) >= SETTINGS_REV:
@@ -350,6 +360,7 @@ class App:
             SETTINGS_CACHE.write_text(json.dumps({
                 "mode": self.mode,
                 "show_heal": bool(self._show_heal),
+                "parse_journal": bool(self._parse_journal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
@@ -502,6 +513,12 @@ class App:
     # ------------------------------------------------------------------ actions
     def _toggle_heal(self):
         self._show_heal = not self._show_heal
+        self._save_settings()
+
+    def _toggle_parse_journal(self):
+        """A parse journals its hits, heals and hits taken, or not (from
+        the next parse on)."""
+        self._parse_journal = not self._parse_journal
         self._save_settings()
 
     def _focus(self, name):
@@ -774,6 +791,7 @@ class App:
             "toggle_mode": self._toggle_mode,
             "reset_data": self._manual_reset,
             "toggle_parse": self._toggle_parse,
+            "toggle_parse_journal": self._toggle_parse_journal,
             "focus_player": lambda p: self._focus(p.get("name")),
             "open_last_rift": self._open_report_card,
             "clear_events": self._events.clear,
@@ -807,6 +825,10 @@ class App:
             "open_dungeon_run": lambda p: self._open_dungeon_run(
                 p.get("file", "")),
             "close_dungeon_run": lambda: setattr(self, "_dungeon_view", None),
+            "dungeon_run_tab": lambda p: setattr(
+                self, "_run_tab", "journal" if p.get("id") == "journal"
+                else "report"),
+            "journal_filter": self._journal_filter,
             # collection
             "coll_model": lambda p: self._coll_model(p.get("id")),
             # hunting log
@@ -1054,6 +1076,10 @@ class App:
             stats = [[tr("Soins"), _n(total)],
                      ["HPS", _n(total / duration) if duration > 0 else "—"]]
             if total > 0.5:
+                # on self and on the others (the hook tells a self-heal)
+                mine = p.heal_self / total * 100
+                stats.append([tr("Sur soi"), f"{mine:.0f}%"])
+                stats.append([tr("Sur les autres"), f"{100 - mine:.0f}%"])
                 stats.append([tr("Soin en excès"), f"{p.overheal_pct:.0f}%"])
             table = p.heals
         else:
@@ -1106,6 +1132,8 @@ class App:
              "tone": None if parsing or online else "disabled",
              "t": (tr("Arrêter le parse") if parsing
                    else tr("Parse {n} s", n=PARSE_LENGTH_SECS))},
+            {"id": "toggle_parse_journal", "on": self._parse_journal,
+             "t": self._tick(self._parse_journal, tr("Journal du parse"))},
         ]
         party_total = sum(p.total for p in rows)
         heal_total = sum(p.heal_total for p in rows)
@@ -1159,6 +1187,20 @@ class App:
         if stats:
             out.append({"k": "statcards", "id": "live_stats",
                         "items": stats})
+        # the parse's journal, while it runs and once it is over
+        if parsing and self.session.journal_on:
+            rows = self.session.journal()
+            out.append({"k": "section", "t": tr("Journal du parse")})
+            if self._parse_state != "done":
+                # drawn once the parse is over: not a page of lines a tick
+                out.append({"k": "note", "t": tr(
+                    "{n} lignes enregistrées. Le journal s'affiche à la fin "
+                    "du parse.", n=len(rows))})
+            else:
+                f = self._journal_f
+                out.append(journal_view(rows, f["who"], f["kinds"],
+                                        f["limit"], node_id="parse_journal",
+                                        cls=self._journal_classes(rows)))
         return out
 
     def _detail_node(self, rows, duration, focus):
@@ -2432,8 +2474,19 @@ class App:
     def _save_dungeon_run(self, report):
         name = (report.get("file")
                 or f"run-{time.strftime('%Y%m%d-%H%M%S')}.json")
+        # the boss fight's journal in a file of its own (journal-run-….json):
+        # the runs' list reads every run, never their journals
+        journal = report.pop("journal", None)
+        if journal:
+            report["journal"] = len(journal)
         try:
             DUNGEONS_DIR.mkdir(parents=True, exist_ok=True)
+            if journal:
+                # with its players' classes: the shard forgets them
+                (DUNGEONS_DIR / ("journal-" + name)).write_text(
+                    json.dumps({"rows": journal,
+                                "cls": self._journal_classes(journal)},
+                               separators=(",", ":")), encoding="utf-8")
             (DUNGEONS_DIR / name).write_text(json.dumps(report),
                                              encoding="utf-8")
             print(f"[meter] dungeon run saved to {DUNGEONS_DIR / name}",
@@ -2468,6 +2521,7 @@ class App:
                 continue
             try:
                 (DUNGEONS_DIR / n).unlink()
+                (DUNGEONS_DIR / ("journal-" + n)).unlink(missing_ok=True)
                 self._dungeon_cache.pop(n, None)
                 extra -= 1
                 print(f"[meter] old dungeon run removed: {n}", file=sys.stderr)
@@ -2546,7 +2600,42 @@ class App:
             return
         self._dungeon_kind = data.get("kind")
         self._dungeon_view = data
+        self._run_tab = "report"
+        self._journal_f.update(who="", limit=JOURNAL_PAGE)
         self._menu_tab = "Dungeons"
+
+    def _journal_filter(self, p):
+        """The journal's player, kinds shown, or one more page of lines."""
+        f = self._journal_f
+        if "who" in p:
+            f["who"] = str(p.get("who") or "")
+            f["limit"] = JOURNAL_PAGE
+        if p.get("kind") in ("hit", "taken", "heal", "status"):
+            f["kinds"] ^= {p["kind"]}
+            f["limit"] = JOURNAL_PAGE
+        if p.get("more"):
+            f["limit"] += JOURNAL_PAGE
+
+    def _journal_rows(self, name):
+        """A run's journal (its own file: its lines and its players'
+        classes), read once while it is shown. -> (lines, classes)"""
+        if self._journal[0] != name:
+            try:
+                data = json.loads((DUNGEONS_DIR / ("journal-" + name))
+                                  .read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                data = []
+            if isinstance(data, list):          # the first runs: lines only
+                data = {"rows": data}
+            self._journal = (name, (data.get("rows") or [],
+                                    data.get("cls") or {}))
+        return self._journal[1]
+
+    def _journal_classes(self, rows):
+        """Each player of a journal's class key, as the shard knows it."""
+        names = {r.get(k) for r in rows for k in ("p", "to") if r.get(k)}
+        return {n: class_key(self.world.class_of(n)) for n in names
+                if class_key(self.world.class_of(n))}
 
     def _dungeon_sub(self, d):
         diff = tr(DUNGEON_DIFFICULTIES.get(d.get("difficulty"),
@@ -2575,13 +2664,26 @@ class App:
             d = self._dungeon_view
             node = report_view(dict(d, title=dungeon_name(d.get("kind"))))
             node["sub"] = self._dungeon_sub(d)
-            return [{"k": "toolbar", "id": "dungeon_tools", "btns": [
-                        {"id": "close_dungeon_run",
-                         "t": tr("‹  Runs de {dungeon}",
-                                 dungeon=dungeon_name(d.get("kind")))},
-                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
-                    self._dungeon_backdrop_node(d.get("kind")),
-                    node]
+            out = [{"k": "toolbar", "id": "dungeon_tools", "btns": [
+                       {"id": "close_dungeon_run",
+                        "t": tr("‹  Runs de {dungeon}",
+                                dungeon=dungeon_name(d.get("kind")))},
+                       {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
+                   self._dungeon_backdrop_node(d.get("kind"))]
+            # the boss fight's journal: runs recorded since it exists
+            if not d.get("journal"):
+                return out + [node]
+            tab = self._run_tab
+            out.append({"k": "tabs", "id": "run_tabs",
+                        "act": "dungeon_run_tab", "on": tab, "items": [
+                            {"id": "report", "t": tr("Résumé")},
+                            {"id": "journal", "t": tr("Journal du boss")}]})
+            if tab != "journal":
+                return out + [node]
+            f = self._journal_f
+            rows, cls = self._journal_rows(d.get("file") or "")
+            return out + [journal_view(rows, f["who"], f["kinds"],
+                                       f["limit"], cls=cls)]
         if self._dungeon_kind is not None:
             kind = self._dungeon_kind
             mine = [(n, d) for n, d in runs if d.get("kind") == kind]
@@ -3268,6 +3370,8 @@ class App:
     def _begin_parse(self, now):
         """Pre-roll over: clear the meter and start the fixed-length sample."""
         self.session.reset()
+        self.session.journal_on = self._parse_journal
+        self._journal_f.update(who="", limit=JOURNAL_PAGE)
         self.session.set_capture_window(PARSE_LENGTH_SECS)
         # our own reset: not the player leaving parse mode
         self._last_epoch = self.session.epoch

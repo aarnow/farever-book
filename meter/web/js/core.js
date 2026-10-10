@@ -506,6 +506,7 @@ function buildNode(n) {
     case 'report': return buildReport(n);
     case 'droptable': return buildDropTable(n);
     case 'tabs': return buildTabs(n);
+    case 'journal': return buildJournal(n);
     case 'dungeonhead': return buildDungeonHead(n);
     case 'dvideo': return buildDungeonVideo(n);
     case 'bosssheet': return buildBossSheet(n);

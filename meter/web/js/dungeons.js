@@ -361,3 +361,110 @@ function buildDungeonVideo(n) {
   box.appendChild(row);
   return box;
 }
+
+/* One piece of a journal line: text, or a name led by its picture (a
+   player's class, a monster's portrait, a skill's icon), or the skull. */
+function journalPiece(p) {
+  if (p.t != null && p.pl == null && p.mob == null && p.sk == null) {
+    return document.createTextNode(p.t);
+  }
+  if (p.skull) {
+    const ic = tabIcon('Hunt');                 // the Codex's skull
+    const box = el('span', 'jskull');
+    if (ic) box.appendChild(ic); else box.textContent = '☠';
+    return box;
+  }
+  const box = el('span', 'jname');
+  let src = null;
+  if (p.pl != null) {
+    if (p.ck && CLASS_ICONS[p.ck]) box.appendChild(classEl('', p.ck, 'jcls'));
+    box.appendChild(el('b', null, p.pl));
+    return box;
+  }
+  if (p.mob != null) src = (window.__BEST__ || {})[p.mob] || (window.__PORTRAITS__ || {})[p.mob];
+  else src = (p.sk && (window.__SKILL__ || {})[p.sk])
+    || (p.alt && (window.__SKILL__ || {})[p.alt]);
+  if (src) {
+    const im = el('img', p.mob != null ? 'jmob' : 'jski');
+    im.src = src;
+    im.alt = '';
+    box.appendChild(im);
+  }
+  box.appendChild(el('b', null, p.t));
+  return box;
+}
+
+/* A boss fight's journal (meter/journal.py): a player to follow, the kinds
+   of lines shown, that player's sums, then the lines, the time since the
+   pull first. */
+function buildJournal(n) {
+  const box = el('div', 'journal');
+  const bar = el('div', 'jbar');
+  const who = el('select', 'jwho');
+  (n.players || []).forEach((p) => {
+    const o = el('option', null, p.t);
+    o.value = p.v;
+    who.appendChild(o);
+  });
+  who.value = n.who || '';
+  who.addEventListener('change', () => notify('journal_filter', { who: who.value }));
+  bar.appendChild(who);
+  (n.kinds || []).forEach((k) => {
+    const b = el('button', 'jkind k-' + k.id + (k.on ? ' on' : ''), k.t);
+    b.type = 'button';
+    b.addEventListener('click', () => notify('journal_filter', { kind: k.id }));
+    bar.appendChild(b);
+  });
+  bar.appendChild(el('span', 'jcount', tr('{n} lignes', { n: n.count })));
+  box.appendChild(bar);
+  if (n.summary) {
+    const sum = el('div', 'jsum');
+    const cards = el('div', 'cards');
+    n.summary.cards.forEach((c) => {
+      const card = el('div', 'card');
+      card.appendChild(el('div', 't', c.title));
+      card.appendChild(el('div', 'v', c.value));
+      card.appendChild(el('div', 's', c.sub || ''));
+      cards.appendChild(card);
+    });
+    sum.appendChild(cards);
+    const grid = el('div', 'jtables');
+    n.summary.tables.forEach((t) => {
+      const tb = el('div', 'jtable panel');
+      tb.appendChild(el('div', 'jtt', t.t));
+      const table = el('table');
+      const head = el('tr');
+      head.appendChild(el('th'));
+      t.cols.forEach((c) => head.appendChild(el('th', null, c)));
+      table.appendChild(head);
+      t.rows.forEach((r) => {
+        const tr_ = el('tr');
+        r.forEach((v, i) => tr_.appendChild(el(i ? 'td' : 'th', null, v)));
+        table.appendChild(tr_);
+      });
+      tb.appendChild(table);
+      grid.appendChild(tb);
+    });
+    sum.appendChild(grid);
+    box.appendChild(sum);
+  }
+  if (n.note) box.appendChild(el('p', 'note', n.note));
+  const list = el('div', 'jlines panel');
+  if (!(n.lines || []).length) list.appendChild(el('div', 'empty', tr('Aucune ligne.')));
+  (n.lines || []).forEach((l) => {
+    const row = el('div', 'jline ' + l.tone);
+    row.appendChild(el('span', 'jt', l.t));
+    const x = el('span', 'jx');
+    (l.pieces || []).forEach((p) => x.appendChild(journalPiece(p)));
+    row.appendChild(x);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+  if (n.more) {
+    const more = el('button', 'rowbtn jmore', tr('Afficher plus'));
+    more.type = 'button';
+    more.addEventListener('click', () => notify('journal_filter', { more: 1 }));
+    box.appendChild(more);
+  }
+  return box;
+}

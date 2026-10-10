@@ -113,6 +113,10 @@ class GameSession:
         self.pet_seen = set()
         self.handlers = {
             "hit": self._on_hit, "heal": self._on_heal,
+            # a mob's hit on a player: the dungeon journal's only
+            "taken": self._on_taken,
+            # a crowd control between a player and anything: the journals'
+            "status": self._on_status,
             "combat": self._on_combat, "rift": self._on_rift,
             "bossbar": self._on_bossbar, "bossgone": self._on_bossgone,
             "zone": self._on_zone, "server": self._on_server,
@@ -361,6 +365,16 @@ class GameSession:
             self.session.record(p)
             self.rift_rec.record("hit", p)
             self.dungeon.record("hit", p)
+
+    def _on_taken(self, p):
+        # a mob's hit on a player: the journals' only (a dungeon boss's, a
+        # parse's)
+        self.session.record_taken(p)
+        self.dungeon.record("taken", p)
+
+    def _on_status(self, p):
+        self.session.record_taken(p, "status")
+        self.dungeon.record("status", p)
 
     def _tally_nullified(self, p):
         """A mitigated hit (immunity phase, block): dropped when its blocker

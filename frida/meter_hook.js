@@ -1778,6 +1778,9 @@ function main() {
     const fi = DATA.combat_targets["ent.Unit.onInflictDamage"];
     const daddr = base.add(fi * 8).readPointer();
     const DR = OFF.DamageResult, BS = OFF.BaseSkill;
+    // the unit a hit landed on (st.skill.DamageResult.target): the dungeon
+    // journal's "on whom"; absent from older offsets
+    const DR_TARGET = OFF.DamageResult.target;
 
     // the common hit fields of a st.skill.DamageResult*
     function readResult(dr) {
@@ -1878,22 +1881,46 @@ function main() {
         } catch (e) { return null; }
     }
 
+    // the unit a hit landed on, or null
+    function hitTarget(dr) {
+        if (DR_TARGET == null) return null;
+        try {
+            const t = dr.add(DR_TARGET).readPointer();
+            return (t && !t.isNull()) ? t : null;
+        } catch (e) { return null; }
+    }
+
     Interceptor.attach(daddr, {
         onEnter() {
             try {
                 const dealer = this.context.rcx;
-                // players and their summons only (not mobs or a mob's pet)
+                const dr = this.context.rdx;
+                // players and their summons; a mob's hit only when it lands
+                // on a player (sent apart: "taken", the dungeon journal's)
                 let attributeTo = dealer, pet = "";
                 if (typeName(dealer) !== "ent.Hero") {
                     const owner = summonOwnerOf(dealer);
-                    if (!owner) return;
+                    if (!owner) {
+                        const victim = hitTarget(dr);
+                        if (!victim || typeName(victim) !== "ent.Hero") return;
+                        const t = readResult(dr);
+                        if (!(t.amount > 0)) return;
+                        t.src = petKind(dealer);
+                        send(Object.assign({ kind: "taken" }, heroIdent(victim), t));
+                        return;
+                    }
                     attributeTo = owner;
                     pet = petKind(dealer);
                 }
-                const dr = this.context.rdx;
                 const r = readResult(dr);
                 if (!(r.amount > 0)) return;
                 if (pet) r.pet = pet;
+                // on whom: a player's name, else the unit's kind
+                const tg = hitTarget(dr);
+                if (tg) {
+                    if (typeName(tg) === "ent.Hero") r.to = heroIdent(tg).player;
+                    else r.tk = petKind(tg);
+                }
                 // hero-dealt hits only; summons are already resolved
                 if (!pet) {
                     const holder = statusHolderOf(dr);
@@ -1914,6 +1941,60 @@ function main() {
             } catch (e) {}
         }
     });
+
+    // ---- crowd controls ----
+    // A status coming to life on a unit (st.skill.Status.init, the client's
+    // copy of the server's): the crowd controls only (data.cdb's
+    // CrowdControl flag, listed by build_targets), between a player (or
+    // their summon) and anything, for the journals.
+    const stFi = (DATA.status_fns || {})["st.skill.Status.init"];
+    const CC_STATUSES = {};
+    Object.keys(DATA.cc_statuses || {}).forEach(function (k) {
+        CC_STATUSES[k] = DATA.cc_statuses[k];
+    });
+    const STO = OFF.Status;
+    // a unit as the journal names it: a player (or the player behind a
+    // summon), else the unit's kind
+    function unitIdent(u) {
+        if (!u || u.isNull()) return null;
+        if (typeName(u) === "ent.Hero") return { hero: heroIdent(u) };
+        const owner = summonOwnerOf(u);
+        if (owner) return { hero: heroIdent(owner), pet: petKind(u) };
+        return { kind: petKind(u) };
+    }
+    if (stFi != null && STO && OFF.Status.instigator != null) {
+        Interceptor.attach(base.add(stFi * 8).readPointer(), {
+            onEnter() {
+                try {
+                    const s = this.context.rcx;
+                    const kind = hlStr(s.add(BS.kind).readPointer());
+                    if (!kind || !CC_STATUSES[kind]) return;
+                    const on = unitIdent(s.add(OFF.BaseSkill.owner).readPointer());
+                    const by = unitIdent(s.add(STO.instigator).readPointer());
+                    if (!on || !by) return;
+                    const ev = { kind: "status", st: kind, cc: CC_STATUSES[kind] };
+                    const sk = s.add(STO.instigatorSkill).readPointer();
+                    if (sk && !sk.isNull()) {
+                        const sid = hlStr(sk.add(BS.kind).readPointer());
+                        if (sid) { ev.skill = sid; ev.name = skillDisplayName(sk, sid); }
+                    }
+                    if (by.hero) {
+                        // a player's: on a unit, or on another player
+                        if (by.pet) ev.pet = by.pet;
+                        if (on.hero) ev.to = on.hero.player; else ev.tk = on.kind;
+                        send(Object.assign(ev, by.hero));
+                    } else if (on.hero) {
+                        // a mob's, on a player
+                        ev.src = by.kind;
+                        send(Object.assign(ev, on.hero));
+                    }
+                } catch (e) {}
+            }
+        });
+    } else {
+        log("status data missing (st.skill.Status.init / Status offsets): "
+            + "the journals show no crowd control");
+    }
 
     // ---- healing ----
     // A client never sees heal amounts: measured 2026-08-03, only
@@ -1941,6 +2022,10 @@ function main() {
     }
 
     const fxFi = DATA.combat_targets["ent.Unit.playHitHealFX"];
+    // the heal's own number, shown over the target (measured in the code:
+    // the server's rpcDisplayHeal carries the heal's DamageResult, its
+    // _amount the heal's size, overheal included)
+    const dhFi = DATA.combat_targets["ent.Unit.rpcDisplayHeal__impl"];
     const shFi = DATA.combat_targets["ent.UnitAttributes.set_health"];
     const UA = OFF.UnitAttributes, HD = OFF.HitData;
     if (fxFi == null || shFi == null || !UA || !HD || OFF.BaseSkill.owner == null) {
@@ -1957,11 +2042,14 @@ function main() {
         // `est`: the host may estimate the size (FX heals, where `landed` may
         // be capped). Regen is not estimable: it is only ever the rise itself.
         function emitHeal(fx, landed, estimable) {
-            send(Object.assign({ kind: "heal", skill: fx.skill, name: fx.name,
-                                 amount: landed, landed: landed,
-                                 est: estimable ? 1 : 0, self: fx.slf ? 1 : 0,
-                                 step: fx.step, dyn: fx.dyn, atb: fx.atb },
-                               fx.who));
+            const ev = { kind: "heal", skill: fx.skill, name: fx.name,
+                         amount: landed, landed: landed,
+                         est: estimable ? 1 : 0, self: fx.slf ? 1 : 0,
+                         to: fx.to || "",
+                         step: fx.step, dyn: fx.dyn, atb: fx.atb };
+            if (fx.size != null) ev.size = fx.size;
+            if (fx.crit) ev.crit = 1;
+            send(Object.assign(ev, fx.who));
         }
 
         // The heal formula's inputs (replicated dynVal1-3, caster attributes);
@@ -2008,9 +2096,38 @@ function main() {
             } catch (e) { return 0; }
         }
 
+        // The heals' shown numbers (rpcDisplayHeal), per target, waiting for
+        // their FX; and the heals matched to their rise, held a moment for
+        // their number (the RPC and the FX come in either order).
+        const shownHeals = {};
+        const readyHeals = [];
+        const SHOWN_MS = 2000, READY_MS = 200;
+
+        function takeShown(key, skill) {
+            const q = shownHeals[key];
+            if (!q) return null;
+            const now = Date.now();
+            for (let i = 0; i < q.length; i++) {
+                if (now - q[i].t > SHOWN_MS) continue;
+                if (skill == null || q[i].skill === skill) return q.splice(i, 1)[0];
+            }
+            return null;
+        }
+
+        function claimShown(fx) {
+            if (fx.size != null) return;
+            const sh = takeShown(fx.key, fx.skill);
+            if (sh) { fx.size = sh.amount; fx.crit = sh.crit; }
+        }
+
+        function finish(fx, landed) {
+            claimShown(fx);
+            readyHeals.push({ fx: fx, landed: landed, at: Date.now() });
+        }
+
         function flushExpired(q, now) {
-            // no rise within the window: emit with landed 0
-            while (q.length && now - q[0].t > HEAL_MATCH_MS) emitHeal(q.shift(), 0, true);
+            // no rise within the window: landed 0
+            while (q.length && now - q[0].t > HEAL_MATCH_MS) finish(q.shift(), 0);
         }
 
         every(function () {
@@ -2019,7 +2136,65 @@ function main() {
                 flushExpired(pendingHealFx[k], now);
                 if (!pendingHealFx[k].length) delete pendingHealFx[k];
             }
-        }, 250);
+            while (readyHeals.length && now - readyHeals[0].at > READY_MS) {
+                const r = readyHeals.shift();
+                claimShown(r.fx);
+                emitHeal(r.fx, r.landed, true);
+            }
+            // a number no FX claimed: a heal of its own (on a full target)
+            for (const k in shownHeals) {
+                const q = shownHeals[k];
+                while (q.length && now - q[0].t > SHOWN_MS) {
+                    const sh = q.shift();
+                    emitHeal({ who: sh.who, skill: sh.skill, name: sh.name,
+                               slf: sh.slf, to: sh.to, size: sh.amount,
+                               crit: sh.crit }, 0, true);
+                }
+                if (!q.length) delete shownHeals[k];
+            }
+        }, 100);
+
+        if (dhFi != null) {
+            Interceptor.attach(base.add(dhFi * 8).readPointer(), {
+                onEnter() {
+                    try {
+                        const dr = this.context.rdx;
+                        const target = hitTarget(dr) || this.context.rcx;
+                        if (typeName(target) !== "ent.Hero") return;
+                        const r = readResult(dr);
+                        if (!(r.amount > 0)) return;
+                        const bs = dr.add(DR.baseSkill).readPointer();
+                        if (!bs || bs.isNull()) return;
+                        const who = skillOwnerIdent(bs);
+                        if (!who) return;
+                        const key = target.toString();
+                        // its FX first: waiting for its rise, or held
+                        const q = pendingHealFx[key] || [];
+                        for (let i = 0; i < q.length; i++) {
+                            if (q[i].skill === r.skill && q[i].size == null) {
+                                q[i].size = r.amount; q[i].crit = r.crit;
+                                return;
+                            }
+                        }
+                        for (let i = 0; i < readyHeals.length; i++) {
+                            const f = readyHeals[i].fx;
+                            if (f.key === key && f.skill === r.skill && f.size == null) {
+                                f.size = r.amount; f.crit = r.crit;
+                                return;
+                            }
+                        }
+                        (shownHeals[key] || (shownHeals[key] = [])).push({
+                            t: Date.now(), skill: r.skill, name: r.name,
+                            amount: r.amount, crit: r.crit, who: who,
+                            slf: isSelfHeal(bs, target, who),
+                            to: heroIdent(target).player });
+                    } catch (e) {}
+                }
+            });
+        } else {
+            log("rpcDisplayHeal missing from the targets: heal sizes stay "
+                + "estimated (re-run hltools/build_targets.py)");
+        }
 
         Interceptor.attach(base.add(fxFi * 8).readPointer(), {
             onEnter() {
@@ -2036,8 +2211,9 @@ function main() {
                     const key = target.toString();
                     const q = pendingHealFx[key] || (pendingHealFx[key] = []);
                     if (q.length >= HEAL_QUEUE_MAX) emitHeal(q.shift(), 0, true);
-                    const fx = { t: Date.now(), who: who, skill: skill,
+                    const fx = { t: Date.now(), who: who, skill: skill, key: key,
                                  slf: isSelfHeal(bs, target, who),
+                                 to: heroIdent(target).player,
                                  name: skill !== "?" ? skillDisplayName(bs, skill) : "" };
                     // read now: by flush time the skill may be re-cast or freed
                     healInputs(bs, c.rdx, fx);
@@ -2070,11 +2246,20 @@ function main() {
                         if (q.length) fx = q.shift();
                         if (!q.length) delete pendingHealFx[key];
                     }
-                    if (fx) { emitHeal(fx, delta, true); return; }
+                    if (fx) { finish(fx, delta); return; }
+                    // FX-less rise with a heal's number shown: that heal
+                    const sh = takeShown(key, null);
+                    if (sh) {
+                        finish({ who: sh.who, skill: sh.skill, name: sh.name,
+                                 slf: sh.slf, to: sh.to, size: sh.amount,
+                                 crit: sh.crit, key: key }, delta);
+                        return;
+                    }
                     // FX-less rise: regen, counted in combat only, as a self-heal
                     if (!unit.add(OFF.Hero.isInCombat).readU8()) return;
-                    emitHeal({ who: heroIdent(unit), skill: "Regen",
-                               name: "Regen", slf: 1 }, delta, false);
+                    const me = heroIdent(unit);
+                    emitHeal({ who: me, skill: "Regen", name: "Regen", slf: 1,
+                               to: me.player }, delta, false);
                 } catch (e) {}
             }
         });

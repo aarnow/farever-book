@@ -24,7 +24,9 @@ TARGETS = (
     # hits and heals: the heal itself runs server-side; the client sees its
     # effect (skill, owner) and the health attribute (amount)
     ("combat_targets", ("ent.Unit.onInflictDamage", "ent.Unit.playHitHealFX",
-                        "ent.UnitAttributes.set_health"), "combat target"),
+                        "ent.UnitAttributes.set_health",
+                        # the heal's number, sent by the server
+                        "ent.Unit.rpcDisplayHeal__impl"), "combat target"),
     # the boss bar's own refresh (twice a second): `this` holds the bars
     ("boss_targets", ("ui.hud.BossesInfo.fetchBosses",), "boss target"),
     # elites get a bar too: this tells a boss (Foe.shouldShowBossInfo throws
@@ -34,6 +36,10 @@ TARGETS = (
     # the player's own FreeCursor key (GameApp.playerRequestedFreeCursor)
     ("cursor_fns", ("GameApp.shouldFreeCursor",), "cursor target",
      "the overlays tell a game window from Alt by the cursor alone"),
+    # a status coming to life on a unit (the client's copy of the server's):
+    # the journals' crowd controls (stun, root, slow...)
+    ("status_fns", ("st.skill.Status.init",), "status target",
+     "the journals show no crowd control"),
 )
 # The local player, through the game's singletons.
 SINGLETON_FNS = ("GameApp.getCameraHero", "ui.Console.getMyHero",
@@ -77,10 +83,47 @@ def report(payload):
                 print(f"    {nm:<45} findex={payload[key][nm]}")
 
 
+def cc_statuses(game_dir):
+    """{status: its crowd-control type}: the statuses a status type of
+    which (or a parent of it) carries the CrowdControl flag (data.cdb's
+    statusType, as $HSkill.hasStatusFlag reads it). The type names the ones
+    with no name of their own (it is a status too: Slow, Root, Stun...)."""
+    try:
+        import pak_extract
+        cdb = json.loads(pak_extract.read_entry(Path(game_dir)
+                                                / "res.light.pak", "data.cdb"))
+    except Exception as e:  # noqa: BLE001
+        print(f"    [!] data.cdb unreadable ({e}): no crowd control listed")
+        return {}
+    sh = {s["name"]: s for s in cdb["sheets"]}
+    st = sh["statusType"]
+    bits = next(c for c in st["columns"]
+                if c["name"] == "flags")["typeStr"].split(":")[1].split(",")
+    cc_bit = 1 << bits.index("CrowdControl")
+    types = {t["id"]: t for t in st["lines"]}
+
+    def flags(tid):
+        f, seen = 0, set()
+        while tid in types and tid not in seen:
+            seen.add(tid)
+            f |= types[tid].get("flags") or 0
+            tid = types[tid].get("parent")
+        return f
+    out = {}
+    for s in sh["skill"]["lines"]:
+        for t in ((s.get("props") or {}).get("status") or {}).get("types") or ():
+            if flags(t.get("type")) & cc_bit:
+                out[s["id"]] = t["type"]
+                break
+    return out
+
+
 def main():
     hlboot = find_hlboot()
     print(f"[*] parsing {hlboot}")
     payload = resolve(HLCode(hlboot).parse())
+    payload["cc_statuses"] = cc_statuses(Path(hlboot).parent)
+    print(f"    crowd-control statuses: {len(payload['cc_statuses'])}")
     OUT.mkdir(parents=True, exist_ok=True)
     out = OUT / "resolver_data.json"
     out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
