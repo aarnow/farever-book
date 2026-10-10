@@ -52,7 +52,9 @@ from gamedata import (
 from combat import (
     DUNGEON_DIFFICULTIES, GameUIState, PartySession, WorldSnapshot)
 from bosssheet import _icon_ok, boss_sheet_view
-from journal import JOURNAL_PAGE, journal_view
+from journal import (
+    JOURNAL_PAGE, RIFT_JOURNALS_KEPT, journal_view, load_journal,
+    prune_journals, remove_journal, save_journal)
 from views import (
     collection_sheet,
     encyclopedia_item, encyclopedia_view,
@@ -436,6 +438,8 @@ class App:
         """Show _report_data — as a page of the window now, not a card over
         the game."""
         self._rift_view = self._report_data
+        self._run_tab = "report"
+        self._journal_f.update(who="", limit=JOURNAL_PAGE)
         self._menu_tab = "Rifts"
         self.menubridge.invalidate()
 
@@ -540,7 +544,10 @@ class App:
         if data is None:
             self._toast_msg(tr("Ce rapport de faille est illisible."))
             return
+        data["file"] = Path(str(name)).name
         self._rift_view = data
+        self._run_tab = "report"
+        self._journal_f.update(who="", limit=JOURNAL_PAGE)
 
     def _shown_report(self):
         if self._menu_tab == "Dungeons" and self._dungeon_view is not None:
@@ -1338,6 +1345,7 @@ class App:
             if not (name.startswith("rift-") and name.endswith(".json")):
                 continue                    # never anything else
             stem = name[:-len(".json")]
+            remove_journal(RIFTS_DIR, name)
             for ext in (".json", ".txt", ".png"):
                 try:
                     (RIFTS_DIR / (stem + ext)).unlink()
@@ -1405,10 +1413,16 @@ class App:
 
     def _page_rifts(self):
         if self._rift_view is not None:
-            return [{"k": "toolbar", "id": "rift_tools", "btns": [
-                        {"id": "close_rift", "t": tr("‹  Toutes les failles")},
-                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
-                    self._report_node(self._rift_view)]
+            d = self._rift_view
+            out = [{"k": "toolbar", "id": "rift_tools", "btns": [
+                       {"id": "close_rift", "t": tr("‹  Toutes les failles")},
+                       {"id": "copy_rift_image", "t": tr("Copier l'image")}]}]
+            # its boss's journal: rifts recorded since it exists
+            jp = self._journal_page(d, RIFTS_DIR, "rift_journal")
+            if jp is None:
+                return out + [self._report_node(d)]
+            return out + jp + ([self._report_node(d)]
+                               if self._run_tab != "journal" else [])
         # the rifts done, a card each, under the day they were done
         groups = []
         files = self._rift_files()
@@ -2474,8 +2488,8 @@ class App:
     def _save_dungeon_run(self, report):
         name = (report.get("file")
                 or f"run-{time.strftime('%Y%m%d-%H%M%S')}.json")
-        # the boss fight's journal in a file of its own (journal-run-….json):
-        # the runs' list reads every run, never their journals
+        # the boss fight's journal in a file of its own: the runs' list
+        # reads every run, never their journals
         journal = report.pop("journal", None)
         if journal:
             report["journal"] = len(journal)
@@ -2483,10 +2497,8 @@ class App:
             DUNGEONS_DIR.mkdir(parents=True, exist_ok=True)
             if journal:
                 # with its players' classes: the shard forgets them
-                (DUNGEONS_DIR / ("journal-" + name)).write_text(
-                    json.dumps({"rows": journal,
-                                "cls": self._journal_classes(journal)},
-                               separators=(",", ":")), encoding="utf-8")
+                save_journal(DUNGEONS_DIR, name, journal,
+                             self._journal_classes(journal))
             (DUNGEONS_DIR / name).write_text(json.dumps(report),
                                              encoding="utf-8")
             print(f"[meter] dungeon run saved to {DUNGEONS_DIR / name}",
@@ -2521,7 +2533,7 @@ class App:
                 continue
             try:
                 (DUNGEONS_DIR / n).unlink()
-                (DUNGEONS_DIR / ("journal-" + n)).unlink(missing_ok=True)
+                remove_journal(DUNGEONS_DIR, n)
                 self._dungeon_cache.pop(n, None)
                 extra -= 1
                 print(f"[meter] old dungeon run removed: {n}", file=sys.stderr)
@@ -2616,20 +2628,30 @@ class App:
         if p.get("more"):
             f["limit"] += JOURNAL_PAGE
 
-    def _journal_rows(self, name):
-        """A run's journal (its own file: its lines and its players'
+    def _journal_rows(self, folder, name):
+        """A report's journal (its own file: its lines and its players'
         classes), read once while it is shown. -> (lines, classes)"""
-        if self._journal[0] != name:
-            try:
-                data = json.loads((DUNGEONS_DIR / ("journal-" + name))
-                                  .read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                data = []
-            if isinstance(data, list):          # the first runs: lines only
-                data = {"rows": data}
-            self._journal = (name, (data.get("rows") or [],
-                                    data.get("cls") or {}))
+        key = (str(folder), name)
+        if self._journal[0] != key:
+            self._journal = (key, load_journal(folder, name))
         return self._journal[1]
+
+    def _journal_page(self, d, folder, node_id):
+        """A report's two tabs (its summary, its boss's journal) and, on
+        the journal's, the journal. None: the report has no journal."""
+        if not d.get("journal") or not d.get("file"):
+            return None
+        tab = self._run_tab
+        out = [{"k": "tabs", "id": node_id + "_tabs",
+                "act": "dungeon_run_tab", "on": tab, "items": [
+                    {"id": "report", "t": tr("Résumé")},
+                    {"id": "journal", "t": tr("Journal du boss")}]}]
+        if tab == "journal":
+            f = self._journal_f
+            rows, cls = self._journal_rows(folder, d["file"])
+            out.append(journal_view(rows, f["who"], f["kinds"], f["limit"],
+                                    node_id=node_id, cls=cls))
+        return out
 
     def _journal_classes(self, rows):
         """Each player of a journal's class key, as the shard knows it."""
@@ -2671,19 +2693,10 @@ class App:
                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
                    self._dungeon_backdrop_node(d.get("kind"))]
             # the boss fight's journal: runs recorded since it exists
-            if not d.get("journal"):
+            jp = self._journal_page(d, DUNGEONS_DIR, "dungeon_journal")
+            if jp is None:
                 return out + [node]
-            tab = self._run_tab
-            out.append({"k": "tabs", "id": "run_tabs",
-                        "act": "dungeon_run_tab", "on": tab, "items": [
-                            {"id": "report", "t": tr("Résumé")},
-                            {"id": "journal", "t": tr("Journal du boss")}]})
-            if tab != "journal":
-                return out + [node]
-            f = self._journal_f
-            rows, cls = self._journal_rows(d.get("file") or "")
-            return out + [journal_view(rows, f["who"], f["kinds"],
-                                       f["limit"], cls=cls)]
+            return out + jp + ([node] if self._run_tab != "journal" else [])
         if self._dungeon_kind is not None:
             kind = self._dungeon_kind
             mine = [(n, d) for n, d in runs if d.get("kind") == kind]
@@ -3234,6 +3247,15 @@ class App:
         fatal; each format fails alone (no Pillow costs only the picture)."""
         base = f"rift-{time.strftime('%Y%m%d-%H%M%S')}"
         saved = None
+        # its boss's journal in a file of its own (gzip), the last
+        # RIFT_JOURNALS_KEPT kept
+        journal = report.pop("journal", None)
+        if journal:
+            report["journal"] = len(journal)
+            report["file"] = f"{base}.json"
+            if save_journal(RIFTS_DIR, f"{base}.json", journal,
+                            self._journal_classes(journal)):
+                prune_journals(RIFTS_DIR, "rift-", RIFT_JOURNALS_KEPT)
         try:
             RIFTS_DIR.mkdir(parents=True, exist_ok=True)
             (RIFTS_DIR / f"{base}.json").write_text(json.dumps(report),

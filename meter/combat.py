@@ -542,10 +542,14 @@ class RiftRecorder:
     party/all mode, which can change mid-rift."""
 
     PHASE_LABELS = ("Phase de faille", "Phase du boss")
-    # Each hit, heal and hit taken of the boss fight kept in the report
-    # ("journal"): the dungeons' (their fights are short)
-    JOURNAL = False
+    # Each hit, heal, hit taken and crowd control of the boss fight kept in
+    # the report ("journal"). Before the pull only the last seconds are
+    # kept: the pull's rewind may need them.
+    JOURNAL = True
+    # a rift is played by everyone around, grouped or not: all of them
+    JOURNAL_EVERYONE = True
     JOURNAL_MAX = 60000
+    JOURNAL_BEFORE_PULL = BOSS_PULL_BACKLAG_SECS + 2.0
     # The rift flag (read every 0.4 s) can drop before the boss bar (2/s,
     # up through the death). Once the boss is pulled, the rift's end waits
     # this long for the kill, then reports anyway as unconfirmed.
@@ -671,8 +675,13 @@ class RiftRecorder:
             if not self.active or self._closing_at is not None:
                 return              # nothing recording, or the rift is over
             now = time.time()
-            if self.JOURNAL and journal_keeps(kind, ev, self._journal_party):
+            if self.JOURNAL and (self.JOURNAL_EVERYONE or journal_keeps(
+                    kind, ev, self._journal_party)):
                 self._journal.append((now, kind, ev))
+                if self.phase == 0:
+                    cut = now - self.JOURNAL_BEFORE_PULL
+                    while self._journal and self._journal[0][0] < cut:
+                        self._journal.popleft()
             if kind in ("taken", "status"):
                 return
             self._recent.append((now, self.phase, kind, ev))
@@ -765,7 +774,7 @@ class DungeonRecorder(RiftRecorder):
 
     PHASE_LABELS = ("Exploration", "Phase du boss")
     CLOSE_GRACE = 0             # its end comes from the dungeon's own state
-    JOURNAL = True
+    JOURNAL_EVERYONE = False    # the player and their group
 
 
 # The dungeon difficulty as the instance lobby stores it (measured: the value

@@ -1237,5 +1237,9 @@
  "{p} : subit {status} de {mob}": "{p}: suffers {status} from {mob}",
  "{p} : applique {status} sur {on} avec {skill}": "{p}: applies {status} to {on} with {skill}",
  "{p} : applique {status} sur {on}": "{p}: applies {status} to {on}",
- "Contrôles": "Crowd control"
+ "Contrôles": "Crowd control",
+ "{p} : inflige {a} points de dégâts avec {skill} en {n} coups sur {on}": "{p}: deals {a} damage with {skill} in {n} hits to {on}",
+ "{p} : inflige {a} points de dégâts avec {skill} en {n} coups": "{p}: deals {a} damage with {skill} in {n} hits",
+ " ({n} critiques)": " ({n} critical)",
+ " (1 critique)": " (1 critical)"
 }

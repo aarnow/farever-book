@@ -7,7 +7,11 @@ The lines come from the hook (combat.RiftRecorder._journal_rows): names are
 the game's, a unit's kind is named here."""
 from __future__ import annotations
 
+import gzip
+import json
+import sys
 from collections import defaultdict
+from pathlib import Path
 
 from common import _pretty_id
 from gamedata import _fr_names, _summon_label
@@ -15,6 +19,72 @@ from i18n import tr
 
 # the lines shown at once, then this many more per click
 JOURNAL_PAGE = 500
+
+# the rifts' journals kept (their reports follow the player's own setting)
+RIFT_JOURNALS_KEPT = 50
+
+
+# ---- the files: journal-<report's stem>.json.gz next to the report (its
+# lines and its players' classes), gzip as they repeat a lot (~10x)
+def journal_path(folder, report_name):
+    stem = Path(str(report_name)).name
+    if stem.endswith(".json"):
+        stem = stem[:-len(".json")]
+    return Path(folder) / f"journal-{stem}.json.gz"
+
+
+def save_journal(folder, report_name, rows, cls):
+    try:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        journal_path(folder, report_name).write_bytes(gzip.compress(
+            json.dumps({"rows": rows, "cls": cls},
+                       separators=(",", ":")).encode("utf-8")))
+        return True
+    except OSError as e:
+        print(f"[meter] couldn't save the journal of {report_name}: {e}",
+              file=sys.stderr)
+        return False
+
+
+def load_journal(folder, report_name):
+    """(lines, classes) of a report's journal; the first ones were plain
+    JSON (journal-run-….json), and lines only."""
+    gz = journal_path(folder, report_name)
+    try:
+        data = json.loads(gzip.decompress(gz.read_bytes()).decode("utf-8"))
+    except (OSError, ValueError):
+        try:
+            data = json.loads((Path(folder) / ("journal-" + Path(
+                str(report_name)).name)).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            data = {}
+    if isinstance(data, list):
+        data = {"rows": data}
+    return data.get("rows") or [], data.get("cls") or {}
+
+
+def remove_journal(folder, report_name):
+    for p in (journal_path(folder, report_name),
+              Path(folder) / ("journal-" + Path(str(report_name)).name)):
+        try:
+            p.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def prune_journals(folder, prefix, keep):
+    """At most `keep` journals whose report's name starts with `prefix`,
+    the oldest out first."""
+    try:
+        files = sorted(Path(folder).glob(f"journal-{prefix}*.json.gz"),
+                       reverse=True)
+    except OSError:
+        return
+    for p in files[keep:]:
+        try:
+            p.unlink()
+        except OSError:
+            pass
 
 KINDS = (("hit", "Dégâts infligés"), ("taken", "Dégâts reçus"),
          ("heal", "Soins"), ("status", "Contrôles"))
@@ -169,6 +239,62 @@ def _line(r, cls):
     return L.pieces(txt), tone
 
 
+# hits of one skill, by one player, this close together: one line (an
+# area attack on a pack)
+AOE_MS = 100
+
+
+def _group_aoe(rows):
+    """The rows, an area attack's hits merged: {"k": "aoe", "hits": [...]}
+    in their place (the first hit's time)."""
+    out = []
+    for r in rows:
+        last = out[-1] if out else None
+        if (r.get("k") == "hit" and last is not None
+                and last.get("k") in ("hit", "aoe")):
+            first = last if last["k"] == "hit" else last["hits"][0]
+            if (first.get("p") == r.get("p") and first.get("s") == r.get("s")
+                    and first.get("pet") == r.get("pet")
+                    and r.get("t", 0) - first.get("t", 0) <= AOE_MS):
+                if last["k"] == "hit":
+                    out[-1] = {"k": "aoe", "t": first.get("t"),
+                               "hits": [first, r]}
+                else:
+                    last["hits"].append(r)
+                continue
+        out.append(r)
+    return out
+
+
+def _aoe_line(g, cls):
+    """One line for an area attack: its damage, in how many hits, on whom."""
+    hits = g["hits"]
+    first = hits[0]
+    L = _Line(cls)
+    total = sum(float(h.get("a") or 0) for h in hits)
+    crits = sum(1 for h in hits if h.get("c"))
+    # its targets, by name: a unit's kind does not tell two coyotes from
+    # one hit twice, so "in n hits", not "on n targets"
+    names = []
+    for h in hits:
+        key = h.get("to") or h.get("tk")
+        if key and key not in [k for k, _r in names]:
+            names.append((key, h))
+    on = ", ".join(L.target(h) for _k, h in names[:3])
+    if len(names) > 3:
+        on += "…"
+    txt = (tr("{p} : inflige {a} points de dégâts avec {skill} en {n} coups "
+              "sur {on}", p=L.player(first.get("p") or "?"), a=_pts(total),
+              skill=L.skill(first), n=len(hits), on=on) if on else
+           tr("{p} : inflige {a} points de dégâts avec {skill} en {n} coups",
+              p=L.player(first.get("p") or "?"), a=_pts(total),
+              skill=L.skill(first), n=len(hits)))
+    if crits:
+        txt += tr(" ({n} critiques)", n=crits) if crits > 1 else \
+            tr(" (1 critique)")
+    return L.pieces(txt), "dealt"
+
+
 def _death(r, cls):
     """The line a killing blow adds: who fell (the unit hit, or the player
     a mob's hit killed)."""
@@ -264,10 +390,15 @@ def journal_view(rows, who, kinds, limit, node_id="dungeon_journal",
     shown = [r for r in rows
              if (r.get("k") == "mark" or r.get("k") in kinds)
              and (not who or _concerns(r, who))]
+    shown = _group_aoe(shown)
     lines = []
     for r in shown[:limit]:
-        for pieces, tone in [_line(r, cls)] + (
-                [_death(r, cls)] if r.get("x") else []):
+        if r.get("k") == "aoe":
+            out = [_aoe_line(r, cls)] + [_death(h, cls) for h in r["hits"]
+                                         if h.get("x")]
+        else:
+            out = [_line(r, cls)] + ([_death(r, cls)] if r.get("x") else [])
+        for pieces, tone in out:
             lines.append({"t": _clock(r.get("t")), "tone": tone,
                           "pieces": pieces})
     return {"k": "journal", "id": node_id,

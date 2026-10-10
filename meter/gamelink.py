@@ -370,10 +370,12 @@ class GameSession:
         # a mob's hit on a player: the journals' only (a dungeon boss's, a
         # parse's)
         self.session.record_taken(p)
+        self.rift_rec.record("taken", p)
         self.dungeon.record("taken", p)
 
     def _on_status(self, p):
         self.session.record_taken(p, "status")
+        self.rift_rec.record("status", p)
         self.dungeon.record("status", p)
 
     def _tally_nullified(self, p):
