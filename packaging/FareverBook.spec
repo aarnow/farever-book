@@ -63,9 +63,10 @@ for tool in _tools:
 
 # Pillow is imported inside functions: named so it surely ships.
 hiddenimports = ["PIL.Image", "PIL.ImageDraw", "PIL.ImageFont",
+                 "PIL.ImageChops", "PIL.ImageFilter",
                  # the window's process: the exe re-enters itself with
                  # --menu-host, nothing in the import graph points at it
-                 "menu_host",
+                 "menu_host", "native_overlay",
                  # pywebview imports its backend at runtime; clr is pythonnet's
                  # entry into .NET
                  "webview.platforms.winforms", "clr",

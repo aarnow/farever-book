@@ -53,6 +53,7 @@ os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
 import webview  # noqa: E402  (must follow the environment set-up above)
 
 import i18n  # noqa: E402
+import native_overlay  # noqa: E402
 import themes  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -209,8 +210,18 @@ class AppWindow:
         self.overlays = []
         for oid in OVERLAY_IDS:
             try:
-                self.overlays.append(Overlay(oid, pipe, self._theme,
-                                             self._lang))
+                if oid == "bonus" and oid in NATIVE:
+                    self.overlays.append(native_overlay.NativeBonus(
+                        oid, pipe, self._lang, i18n.catalog, _bonus_art))
+                elif oid in NATIVE:
+                    cls = {"meter": native_overlay.NativeMeter,
+                           "luck": native_overlay.NativeLuck,
+                           "goals": native_overlay.NativeGoals}[oid]
+                    self.overlays.append(cls(oid, pipe, self._lang, i18n.catalog,
+                                             TIP, PICKER))
+                else:
+                    self.overlays.append(Overlay(oid, pipe, self._theme,
+                                                 self._lang))
             except Exception as e:
                 _log(f"overlay {oid} unavailable: {e!r}")
         # the game's own word on its cursor (hook): (window open, FreeCursor
@@ -224,7 +235,9 @@ class AppWindow:
         self.esc = None
         if self.overlays:
             try:
-                self.tip = Tip(pipe, self._lang)
+                self.tip = (native_overlay.NativeTip(
+                    pipe, self._lang, i18n.catalog, _skill_dir)
+                    if "tip" in NATIVE else Tip(pipe, self._lang))
                 TIP[0] = self.tip
             except Exception as e:
                 _log(f"overlay tip unavailable: {e!r}")
@@ -234,7 +247,8 @@ class AppWindow:
             except Exception as e:
                 _log(f"goal chooser unavailable: {e!r}")
             try:
-                self.esc = EscButton(pipe, self._lang)
+                self.esc = (native_overlay.NativeEsc(pipe, self._lang, i18n.catalog)
+                            if "esc" in NATIVE else EscButton(pipe, self._lang))
             except Exception as e:
                 _log(f"menu button unavailable: {e!r}")
 
@@ -508,10 +522,13 @@ class AppWindow:
         i18n.set_lang(lang)
         js = ("window.applyLang && window.applyLang("
               + json.dumps(_i18n_json(lang)) + ")")
-        for w in ([self.window] + [o.window for o in self.overlays]
-                  + ([self.tip.window] if self.tip else [])
-                  + ([self.picker.window] if self.picker else [])
-                  + ([self.esc.window] if self.esc else [])):
+        others = ([self.tip] if self.tip else []) + ([self.esc] if self.esc else [])
+        for o in self.overlays + others:
+            if o.window is None:                # drawn natively
+                o.set_lang(lang)
+        for w in ([self.window] + [o.window for o in self.overlays + others
+                                   if o.window is not None]
+                  + ([self.picker.window] if self.picker else [])):
             try:
                 w.evaluate_js(js)
             except Exception as e:
@@ -645,6 +662,25 @@ CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
 OVERLAY_IDS = ("meter", "goals", "luck", "bonus")
+# the overlays drawn natively (native_overlay: no WebView2, see why there),
+# the meter's tip and the menu's button too; FAREVER_WEBVIEW_OVERLAYS=1
+# keeps them all pages, as before. The goals' chooser stays a page: it
+# takes the keyboard (its search, its count) and shows whole, no part of it
+# see-through.
+NATIVE = (set() if os.environ.get("FAREVER_WEBVIEW_OVERLAYS")
+          else {"meter", "luck", "goals", "bonus", "tip", "esc"})
+
+
+def _bonus_art():
+    """The bonus dungeon's pictures: the bosses' portraits, the heroic
+    mark (data URIs), the game's plus (a file)."""
+    folder = Path(os.environ.get("FAREVER_ANALYSIS") or HERE.parent / "analysis_out")
+    return (_dungeon_boss_portraits(), _sheet_art().get("dungeon_diff_2"),
+            folder / "ui_plus.png")
+
+
+def _skill_dir():
+    return Path(os.environ.get("FAREVER_ANALYSIS") or HERE.parent / "analysis_out") / "skill_img"
 # the overlays drawn as text alone: the window cut to what the page draws
 # (its canvas's opaque pixels, sent as rows of runs); a colour key would not
 # do, WebView2 drawing on a surface of its own
