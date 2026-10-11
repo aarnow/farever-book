@@ -534,6 +534,8 @@ function buildNode(n) {
    their caret and lists their scroll across pushes. */
 function renderPage(nodes) {
   const page = $('#page');
+  const boot = $('#bootload');            // menu.html's, until this first page
+  if (boot) boot.remove();
   const next = new Map();
   let prevEl = null;
   nodes.forEach((n, i) => {

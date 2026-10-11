@@ -94,8 +94,16 @@ function typePie(types) {
 function buildReportHead(n) {
   const head = el('div', 'bhead rhead');
   const who = el('div', 'bwho');
-  const ic = n.ic && tabIcon(n.ic);
-  if (ic) {
+  const port = n.portrait && (window.__PORTRAITS__ || {})[n.portrait];
+  const ic = !port && n.ic && tabIcon(n.ic);
+  if (port) {
+    const pic = el('div', 'portrait rhport');
+    const im = el('img');
+    im.src = port;
+    im.alt = '';
+    pic.appendChild(im);
+    who.appendChild(pic);
+  } else if (ic) {
     const b = el('span', 'rhic');
     b.appendChild(ic);
     who.appendChild(b);

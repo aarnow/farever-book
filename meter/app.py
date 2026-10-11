@@ -2752,13 +2752,27 @@ class App:
             out = [{"k": "toolbar", "id": "dungeon_kind_tools", "btns": [
                        {"id": "close_dungeon_kind",
                         "t": tr("‹  Tous les donjons")}]},
-                   self._dungeon_backdrop_node(kind),
-                   {"k": "tabs", "id": "dungeon_tabs", "act": "dungeon_tab",
-                    "on": tab, "items": [
-                        {"id": "info", "t": tr("Informations")},
-                        {"id": "runs", "t": tr("Historique")
-                         + (f" ({len(mine)})" if mine else "")},
-                        {"id": "help", "t": tr("Aide")}]}]
+                   self._dungeon_backdrop_node(kind)]
+            # a header as a build's: the boss's portrait, the dungeon, its
+            # boss, level and place, the tabs under them
+            boss = (dg or {}).get("boss") or ""
+            zones = _fr_names("zone")
+            ways = (bestiary_catalogue().get("entrances") or {}).get(kind) or []
+            zone = next((z for _x, _y, z in ways if z), "")
+            zone = zones.get(zone) or "" if zone else ""
+            facts = [tr("Boss : {name}", name=_boss_label(boss)) if boss else "",
+                     tr("Niveau {n}", n=dg["level"])
+                     if (dg or {}).get("level") else "",
+                     zone if zone != name else "",
+                     zones.get((dg or {}).get("region") or "") or ""]
+            out.append({"k": "rhead", "id": "dungeon_tabs", "t": name,
+                        "portrait": boss,
+                        "when": " · ".join(f for f in facts if f),
+                        "act": "dungeon_tab", "on": tab, "items": [
+                            {"id": "info", "t": tr("Informations")},
+                            {"id": "runs", "t": tr("Historique")
+                             + (f" ({len(mine)})" if mine else "")},
+                            {"id": "help", "t": tr("Aide")}]})
             if tab == "runs":
                 out += [{"k": "riftcards", "id": "dungeon_runs",
                          "groups": days,
@@ -2770,18 +2784,11 @@ class App:
                     out += [{"k": "section", "t": tr("Fiche du boss")}, sheet]
                 # the fight's video (_dungeon_video_node): hidden for now
                 return out
-            # where it is: its way in, in the open world (the Hunt tab's)
-            ways = (bestiary_catalogue().get("entrances") or {}).get(kind) or []
+            # where it is: its way in, in the open world (the Hunt tab's);
+            # who and what it is are the header's
             doors = [{"x": x, "y": y} for x, y, _z in ways]
-            zone = next((z for _x, _y, z in ways if z), "")
-            boss = (dg or {}).get("boss") or ""
-            zones = _fr_names("zone")
             out += [{"k": "dungeonhead", "id": "dungeon_head", "t": name,
-                     "boss": boss,
-                     "bossName": _boss_label(boss) if boss else "",
-                     "level": (dg or {}).get("level"),
-                     "zone": zones.get(zone) or "" if zone else "",
-                     "region": zones.get((dg or {}).get("region") or "") or "",
+                     "maponly": True,
                      "meta": world_map().get("meta") if doors else None,
                      "doors": doors},
                     {"k": "section", "t": tr("Records")},

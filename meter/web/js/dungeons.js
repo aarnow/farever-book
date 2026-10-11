@@ -299,7 +299,8 @@ function buildTabs(n) {
    and zone, and beside them its way in on the world map (fixed, framed on
    the entrance). */
 function buildDungeonHead(n) {
-  const box = el('div', 'dghead panel');
+  const box = el('div', 'dghead panel' + (n.maponly ? ' maponly' : ''));
+  if (n.maponly && !(n.meta && (n.doors || []).length)) return el('div');
   const who = el('div', 'dhwho');
   const pic = el('div', 'portrait');
   const src = (window.__PORTRAITS__ || {})[n.boss];
@@ -311,7 +312,7 @@ function buildDungeonHead(n) {
   const facts = [n.level ? tr('Niveau {n}', { n: n.level }) : '', n.zone !== n.t ? n.zone : '', n.region].filter(Boolean);
   if (facts.length) t.appendChild(el('div', 'dhfacts', facts.join(' · ')));
   who.appendChild(t);
-  box.appendChild(who);
+  if (!n.maponly) box.appendChild(who);    // else the page's header has it
   if (n.meta && (n.doors || []).length) {
     const map = huntMiniMap({ meta: n.meta,
       insts: [{ t: n.t, kind: 'Donjon', doors: n.doors }] });
