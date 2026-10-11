@@ -89,13 +89,38 @@ function typePie(types) {
   return box;
 }
 
+/* A report's header, as a build's: its tab's glyph, its title, its date
+   and facts, and its tabs under them (summary, the boss's journal). */
+function buildReportHead(n) {
+  const head = el('div', 'bhead rhead');
+  const who = el('div', 'bwho');
+  const ic = n.ic && tabIcon(n.ic);
+  if (ic) {
+    const b = el('span', 'rhic');
+    b.appendChild(ic);
+    who.appendChild(b);
+  }
+  const wt = el('div', 'bwt');
+  wt.appendChild(el('b', 'bwn', n.t));
+  const ws = el('div', 'bws');
+  if (n.when) ws.appendChild(el('span', null, n.when));
+  if (n.sub) ws.appendChild(el('span', null, n.sub));
+  wt.appendChild(ws);
+  who.appendChild(wt);
+  head.appendChild(who);
+  head.appendChild(buildTabs({ items: n.items, on: n.on, act: n.act }));
+  return head;
+}
+
 function buildReport(n) {
   REPORT_SEL.detail = n.detail || null;
   const p = el('div', 'panel report');
-  const t = el('div', 'section rtitle', n.title);
-  t.appendChild(el('span', 'rwhen', n.when));
-  if (n.sub) t.appendChild(el('span', 'rsub', n.sub));
-  p.appendChild(t);
+  if (!n.notitle) {             // else the page's header carries it (rhead)
+    const t = el('div', 'section rtitle', n.title);
+    t.appendChild(el('span', 'rwhen', n.when));
+    if (n.sub) t.appendChild(el('span', 'rsub', n.sub));
+    p.appendChild(t);
+  }
   const cols = el('div', 'phases');
   (n.phases || []).forEach((ph) => {
     const c = el('div', 'phase');

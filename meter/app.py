@@ -1418,11 +1418,8 @@ class App:
                        {"id": "close_rift", "t": tr("‹  Toutes les failles")},
                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]}]
             # its boss's journal: rifts recorded since it exists
-            jp = self._journal_page(d, RIFTS_DIR, "rift_journal")
-            if jp is None:
-                return out + [self._report_node(d)]
-            return out + jp + ([self._report_node(d)]
-                               if self._run_tab != "journal" else [])
+            return out + self._journal_page(d, RIFTS_DIR, "rift_journal",
+                                            self._report_node(d), "Rifts")
         # the rifts done, a card each, under the day they were done
         groups = []
         files = self._rift_files()
@@ -2636,22 +2633,26 @@ class App:
             self._journal = (key, load_journal(folder, name))
         return self._journal[1]
 
-    def _journal_page(self, d, folder, node_id):
-        """A report's two tabs (its summary, its boss's journal) and, on
-        the journal's, the journal. None: the report has no journal."""
+    def _journal_page(self, d, folder, node_id, report, icon):
+        """A report with a journal: a header as a build's (its title, date
+        and facts, the tabs under them: its summary, its boss's journal),
+        then the tab shown. The report alone when it has no journal."""
         if not d.get("journal") or not d.get("file"):
-            return None
+            return [report]
         tab = self._run_tab
-        out = [{"k": "tabs", "id": node_id + "_tabs",
+        head = {"k": "rhead", "id": node_id + "_head", "ic": icon,
+                "t": report.get("title") or "", "when": report.get("when") or "",
+                "sub": report.get("sub") or "",
                 "act": "dungeon_run_tab", "on": tab, "items": [
                     {"id": "report", "t": tr("Résumé")},
-                    {"id": "journal", "t": tr("Journal du boss")}]}]
-        if tab == "journal":
-            f = self._journal_f
-            rows, cls = self._journal_rows(folder, d["file"])
-            out.append(journal_view(rows, f["who"], f["kinds"], f["limit"],
-                                    node_id=node_id, cls=cls))
-        return out
+                    {"id": "journal", "t": tr("Journal du boss")}]}
+        if tab != "journal":
+            # its title is the header's now
+            return [head, dict(report, notitle=True)]
+        f = self._journal_f
+        rows, cls = self._journal_rows(folder, d["file"])
+        return [head, journal_view(rows, f["who"], f["kinds"], f["limit"],
+                                   node_id=node_id, cls=cls)]
 
     def _journal_classes(self, rows):
         """Each player of a journal's class key, as the shard knows it."""
@@ -2693,10 +2694,9 @@ class App:
                        {"id": "copy_rift_image", "t": tr("Copier l'image")}]},
                    self._dungeon_backdrop_node(d.get("kind"))]
             # the boss fight's journal: runs recorded since it exists
-            jp = self._journal_page(d, DUNGEONS_DIR, "dungeon_journal")
-            if jp is None:
-                return out + [node]
-            return out + jp + ([node] if self._run_tab != "journal" else [])
+            return out + self._journal_page(d, DUNGEONS_DIR,
+                                            "dungeon_journal", node,
+                                            "Dungeons")
         if self._dungeon_kind is not None:
             kind = self._dungeon_kind
             mine = [(n, d) for n, d in runs if d.get("kind") == kind]
