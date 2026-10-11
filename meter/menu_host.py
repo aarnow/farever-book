@@ -570,6 +570,35 @@ _U32.SetLayeredWindowAttributes.argtypes = [
     wintypes.HWND, wintypes.DWORD, ctypes.c_ubyte, wintypes.DWORD]
 
 
+_G32 = ctypes.WinDLL("gdi32", use_last_error=True)
+_G32.CreateRectRgn.restype = ctypes.c_void_p
+_G32.CombineRgn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+                            ctypes.c_int]
+_G32.OffsetRgn.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+_G32.DeleteObject.argtypes = [ctypes.c_void_p]
+_U32.SetWindowRgn.argtypes = [wintypes.HWND, ctypes.c_void_p, wintypes.BOOL]
+_U32.GetWindowRgnBox.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+_ENUM_CHILD = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+RGN_COPY = 5
+
+
+def _children(hwnd):
+    """Every window inside an overlay's: the WebView2 control's and the
+    browser's own, which draw the page."""
+    out = []
+
+    def cb(h, _lp):
+        out.append(h)
+        return True
+    _U32.EnumChildWindows(hwnd, _ENUM_CHILD(cb), 0)
+    return out
+
+
+def _has_region(hwnd):
+    r = wintypes.RECT()
+    return _U32.GetWindowRgnBox(hwnd, ctypes.byref(r)) not in (0, 1)  # ERROR, NULLREGION
+
+
 def _ex_style(hwnd):
     return _U32.GetWindowLongW(hwnd, GWL_EXSTYLE) & 0xFFFFFFFF
 
@@ -697,6 +726,57 @@ class Overlay:
         ctypes.windll.user32.SetLayeredWindowAttributes(
             self.hwnd, 0, alpha, LWA_ALPHA)
 
+    def _set_region(self, rgn):
+        """Cut the window to `rgn` (window coordinates; the window owns it
+        from here on), and each window inside it to the same outline, moved
+        to its own corner. Measured on a player's Windows 11 26H2 (build
+        26300): the overlays showed their whole rectangle, the cut of the
+        top window alone no longer clipping the page WebView2 draws in its
+        own child windows. None when the window is not there yet: the next
+        _shape cuts it then."""
+        if not self.hwnd:
+            _G32.DeleteObject(rgn)
+            self._shaped = None
+            return
+        src = _G32.CreateRectRgn(0, 0, 0, 0)
+        _G32.CombineRgn(src, rgn, None, RGN_COPY)
+        _U32.SetWindowRgn(self.hwnd, rgn, True)
+        old = getattr(self, "_rgn_src", None)
+        if old:
+            _G32.DeleteObject(old)
+        self._rgn_src = src
+        self._cut_children()
+
+    def _cut_children(self):
+        """The window's outline on each window inside it (a copy each, at
+        its place). -> how many were cut."""
+        src = getattr(self, "_rgn_src", None)
+        if not src or not self.hwnd:
+            return 0
+        top = wintypes.RECT()
+        _U32.GetWindowRect(self.hwnd, ctypes.byref(top))
+        n = 0
+        refused = self.__dict__.setdefault("_cut_refused", set())
+        for ch in _children(self.hwnd):
+            if ch in refused:
+                continue
+            r = wintypes.RECT()
+            if not _U32.GetWindowRect(ch, ctypes.byref(r)):
+                continue
+            part = _G32.CreateRectRgn(0, 0, 0, 0)
+            _G32.CombineRgn(part, src, None, RGN_COPY)
+            _G32.OffsetRgn(part, top.left - r.left, top.top - r.top)
+            if _U32.SetWindowRgn(ch, part, True):
+                n += 1
+            else:                       # not tried again on every pass
+                _G32.DeleteObject(part)
+                refused.add(ch)
+        if not getattr(self, "_cut_logged", False):
+            self._cut_logged = True
+            _log(f"overlay {self.id}: cut to its outline, with {n} window(s) "
+                 f"inside it")
+        return n
+
     def keep_styles(self):
         """Put back what something took off the window (WinForms rewriting
         its styles, on some Windows 10 at least): WS_EX_LAYERED with the
@@ -704,6 +784,11 @@ class Overlay:
         it on every pass for a shown overlay."""
         if not self.hwnd:
             return
+        # a window inside that came since (WebView2 makes its own): cut too
+        if getattr(self, "_rgn_src", None) and any(
+                not _has_region(ch) for ch in _children(self.hwnd)
+                if ch not in getattr(self, "_cut_refused", ())):
+            self._cut_children()
         ex = _ex_style(self.hwnd)
         want = round(255 * self.opacity / 100)
         lost = []
@@ -852,7 +937,7 @@ class Overlay:
                     part = g.CreateRectRgn(int(x0), y, int(x1), y + 1)
                     g.CombineRgn(rgn, rgn, part, 2)         # RGN_OR
                     g.DeleteObject(part)
-            ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+            self._set_region(rgn)
             return
         mask = _frame_mask() if _ui_frame() else []
         if mask:
@@ -875,7 +960,7 @@ class Overlay:
             rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1,
                                                          d, d)
         # the window owns the region from here on: no DeleteObject
-        ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+        self._set_region(rgn)
 
     # -- what the page asks ------------------------------------------------
     def act(self, action, arg=None):
@@ -1064,7 +1149,7 @@ class Tip(Overlay):
         self._shaped = (w, h)
         d = OVERLAY_RADIUS * 2
         rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)
-        ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+        self._set_region(rgn)
 
     def act(self, action, arg=None):
         if action == "size" and arg and self.hwnd:
@@ -1189,7 +1274,7 @@ class EscButton(Overlay):
         self._shaped = (w, h)
         d = 12
         rgn = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d)
-        ctypes.windll.user32.SetWindowRgn(self.hwnd, rgn, True)
+        self._set_region(rgn)
 
     def act(self, action, arg=None):
         if action == "size" and arg and self.hwnd:
