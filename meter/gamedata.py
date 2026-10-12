@@ -119,8 +119,13 @@ def _unit_label(u):
 
 
 def _spark_units():
-    return _table("unit_traits.json",
-                  shape=lambda d: set(d["spark"]) if d else set())
+    return set(_table("unit_traits.json").get("spark") or ())
+
+
+def summon_of_skill(sid):
+    """The summon unit (Summon_*) whose skill this is, or None: its hits
+    may reach the meter as the summoner's own (unit_traits.json)."""
+    return (_table("unit_traits.json").get("summonSkills") or {}).get(sid)
 
 def bestiary_catalogue():
     """{"placed": [{id, family, tier, zones, regions, lvl}] — every monster

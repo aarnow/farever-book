@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from common import (
     BOSS_PULL_BACKLAG_SECS, COMBAT_TIMEOUT_SECS, RECENT_EVENT_MAX, _APP,
     _class_tag)
-from gamedata import _summon_label, dungeon_name
+from gamedata import _summon_label, dungeon_name, summon_of_skill
 
 
 # ---------------------------------------------------------------------------
@@ -24,7 +24,10 @@ def _skill_ident(ev):
     named after it ("Nightling Terror: Attack")."""
     sid = ev.get("skill", "?")
     nm = ev.get("name")
-    pet = ev.get("pet")
+    # a summon's skill credited to the summoner with no pet (Summon_Bee's
+    # SummonBee_HoneyBolt): still the summon's, apart from the hero's own
+    # basic attack the game names alike
+    pet = ev.get("pet") or summon_of_skill(sid)
     if pet:
         sid = f"{pet}:{sid}"
         label = _summon_label(pet)

@@ -387,7 +387,8 @@ TABLES = (
                      f"elite/boss, {len(d['big'])} big, "
                      f"thresholds {d['thresholds']}"), PLAIN),
     Table("unit_traits.json", lambda g, o, t: extract_unit_traits(g),
-          lambda d: f"{len(d['spark'])} sparkling", PLAIN),
+          lambda d: (f"{len(d['spark'])} sparkling, "
+                     f"{len(d.get('summonSkills') or {})} summon skills"), PLAIN),
     Table("names_fr.json", lambda g, o, t: extract_fr_names(g),
           lambda d: ", ".join(f"{len(v)} {k}" for k, v in d.items()), TEXT),
     Table("names_en.json", lambda g, o, t: extract_en_names(g),
@@ -1216,7 +1217,11 @@ def extract_codex_units(game_dir):
 
 
 def extract_unit_traits(game_dir):
-    """{"spark": [unit ids]}: the "Sparkling ..." variants (`Spark` flag)."""
+    """{"spark": [unit ids]}: the "Sparkling ..." variants (`Spark` flag);
+    "summonSkills": {skill id: summon unit id}: the skills a summon unit
+    (Summon_*) casts. The game can credit their hits to the summoner with no
+    sign of the summon (Summon_Bee's SummonBee_HoneyBolt, named "Attack" like
+    the hero's own basic attack): the meter files them under it."""
     import pak_extract
     data, entries, data_off = pak_extract.load(Path(game_dir) / "res.light.pak")
     e = next(x for x in entries if x.path.endswith("data.cdb"))
@@ -1238,7 +1243,16 @@ def extract_unit_traits(game_dir):
         fl = ln.get("flags")
         if isinstance(uid, str) and isinstance(fl, int) and (fl >> spark_bit) & 1:
             spark.append(uid)
-    return {"spark": sorted(spark)}
+    summon_skills = {}
+    for ln in sheets["unit"]["lines"]:
+        uid = ln.get("id")
+        if not (isinstance(uid, str) and uid.startswith("Summon_")):
+            continue
+        for s in ln.get("skills") or ():
+            sid = (s or {}).get("skill")
+            if isinstance(sid, str) and sid:
+                summon_skills.setdefault(sid, uid)
+    return {"spark": sorted(spark), "summonSkills": summon_skills}
 
 
 if __name__ == "__main__":

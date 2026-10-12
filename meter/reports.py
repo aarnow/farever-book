@@ -10,7 +10,8 @@ from common import (
     CLASS_ICON_DIR, _mmss, _n, _pct1, _pretty_id, class_key, date_fr,
     element_color, element_label)
 from gamedata import (
-    RARITY_ORDER, item_icon, item_label, item_rarity, rarity_label)
+    RARITY_ORDER, _summon_label, item_icon, item_label, item_rarity,
+    rarity_label, summon_of_skill)
 from combat import _overheal_pct
 from i18n import tr
 
@@ -131,7 +132,12 @@ def _report_players(data):
     names = data.get("skill_names") or {}
 
     def label(sid):
-        return names.get(sid) or _pretty_id(str(sid).split(":")[-1])
+        nm = names.get(sid) or _pretty_id(str(sid).split(":")[-1])
+        # a summon's skill recorded as the summoner's own (reports saved
+        # before combat._skill_ident knew it): named after the summon, not
+        # merged with the hero's basic attack of the same name
+        unit = summon_of_skill(str(sid)) if ":" not in str(sid) else None
+        return f"{_summon_label(unit)}: {nm}" if unit else nm
 
     out = {}
     for ph in data.get("phases") or []:
