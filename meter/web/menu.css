@@ -1830,6 +1830,16 @@ html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
              border-top: 1px solid var(--line); font-size: 12px; color: var(--dim); }
 .ptip .ptx b { color: #fff; font-size: 13px; }
 .ptip .ptx.inf { color: #B57BEF; } .ptip .ptx.inf.off { color: var(--faint); }
+/* an augment or the infusion with its picture beside it */
+.ptip .ptx.pic { flex-direction: row; align-items: center; gap: 10px; }
+.ptip .ptxt { display: flex; flex-direction: column; min-width: 0; }
+.ptip .ptxi { width: 34px; height: 34px; flex: none; border-radius: 6px; background: var(--panel-2);
+              border: 1px solid var(--line); object-fit: contain; }
+.ptip .ptx .infic { width: 34px; height: 34px; border-width: 1px; }
+.ptip .ptx.inf b { color: #fff; }
+.ptip .ptx.inf.off b { color: var(--faint); }
+.ptip .ptx.inf span { color: #8EE07A; }
+.ptip .ptx.inf.off span { color: var(--faint); }
 
 /* the piece list's filter rows: a label, then its chips */
 .bfrow { display: flex; align-items: baseline; gap: 10px; }
@@ -2057,6 +2067,47 @@ html.lt-1250 .bedpanel .blist { max-height: 240px; }
 .bchoice .bct .fx { color: #9FE3A8; font-size: 12px; line-height: 1.35; }
 .bchoice.cur .chev { font-style: normal; color: var(--dim); font-size: 20px; }
 .bchoices { display: flex; flex-direction: column; gap: 6px; }
+/* the infusions, as the game's crucible lists them (build.js infusionList):
+   a header per faction, folding its group; a line each, its round icon,
+   its name, n / 6 over three dots (the tiers reached) */
+.infcru { gap: 3px; }
+.infgrp { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 8px;
+          padding: 6px 12px; border: 0; border-radius: 6px; cursor: pointer; text-align: left;
+          background: #3A3348; color: #fff; font-family: var(--font-head); font-size: 15px; font-weight: 700; }
+.infgrp i { font-style: normal; font-size: 18px; line-height: 1; color: var(--dim); }
+/* (over the piece card's own small faint spans: .gear .gt span) */
+.gear .gt .infgrp span { color: #fff; font-size: 15px; }
+.gear .gt .infrow .infnm { color: #fff; font-size: 14px; }
+.infgrp:hover i { color: #fff; }
+.infrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 12px; border-radius: 8px;
+          cursor: pointer; text-align: left; color: #E2DEFF; background: var(--bg); border: 1px solid transparent; }
+.infrow:hover { border-color: var(--accent); }
+.infrow.on { border-color: var(--accent); background: var(--panel-2); }
+.infrow .infnm { flex: 1; min-width: 0; font-size: 14px; color: #fff; }
+.infrow.on .infnm { font-weight: 700; color: #fff; }
+.infrow.none .infnm { color: var(--faint); }
+.infic { width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+         background: var(--panel-2); border: 2px solid #4A4656; }
+.infrow.none .infic { border-style: dashed; background: none; }
+.infic .skill { width: 100%; height: 100%; border: 0; border-radius: 50%; background: none; }
+.infic .skill img { width: 100%; height: 100%; border-radius: 50%; }
+.infcnt { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+.infcnt b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.infdots { display: flex; gap: 3px; }
+.infdots i { width: 6px; height: 6px; border-radius: 50%; background: #5A5468; }
+.infdots i.on { background: var(--ok); }
+/* its tooltip: the crucible's */
+.inftip .infic { width: 46px; height: 46px; }
+.inftip .sktt { flex: 1; min-width: 0; }
+.inftip .sktt span i { color: var(--dim); }
+.inftip .infst { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.inftip .infst b { font-size: 14px; }
+.inftip .infst i { color: var(--dim); font-size: 12px; }
+.inftier { display: grid; grid-template-columns: auto 1fr; gap: 8px; padding: 6px 0; color: var(--dim); }
+.inftier + .inftier { border-top: 1px solid #4A4656; }
+.inftier .inftn { color: var(--dim); font-weight: 700; white-space: nowrap; }
+.inftier.on { color: #EEEAF6; }
+.inftier.on .inftn { color: var(--ok); }
 .bchoices.small .bchoice .gi { display: none; }
 .bsubback { align-self: flex-start; margin-bottom: 4px; }
 .bchoice { align-items: flex-start; }
@@ -2089,6 +2140,7 @@ html.lt-1250 .bedpanel .blist { max-height: 240px; }
             background: none; color: var(--accent); font-weight: 600; font-size: 13px; }
 .bsubback:hover { background: var(--panel-2); }
 .gear.editing .gchoice .gi { width: 32px; height: 32px; grid-row: auto; }
+.gchoice .infic { width: 34px; height: 34px; border-width: 1px; }
 .gear.editing .bchoice .gi { width: 40px; height: 40px; grid-row: auto; }
 .gear.editing .bchoice .bct span { font-size: 12px; }
 .gear.editing .bchoice .bct b { font-size: 13px; }

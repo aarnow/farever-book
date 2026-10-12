@@ -1061,7 +1061,7 @@ def _augment_view(aid, factor=1):
     fx += [sk for sk in (_skill_label(s) for s in a.get("s") or ())
            if sk not in name]
     return {"k": AUGMENT_KIND.get(t, "enchant" if "Enchant" in t else "aug"),
-            "name": name, "fx": " · ".join(fx)}
+            "name": name, "fx": " · ".join(fx), "img": item_icon(aid)}
 
 
 def _talent_tree(cls, ranks, granted=()):

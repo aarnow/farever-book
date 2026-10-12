@@ -495,7 +495,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 25
+DATA_FORMAT = 26
 
 
 def _hook_needs():

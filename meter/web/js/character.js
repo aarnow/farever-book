@@ -311,15 +311,43 @@ function pieceTipEl(g) {
     r.appendChild(el('b', null, '+' + fmtN(x.v)));
     box.appendChild(r);
   });
+  // its augments (a sigil...), each with its picture
   (g.extras || []).forEach((x) => {
-    const r = el('div', 'ptx' + (x.off ? ' off' : ''));
-    r.appendChild(el('b', null, x.name));
-    if (x.fx) r.appendChild(el('span', null, x.fx));
+    const r = el('div', 'ptx' + (x.off ? ' off' : '') + (x.img ? ' pic' : ''));
+    if (x.img) {
+      const im = el('img', 'ptxi');
+      im.src = x.img;
+      im.alt = '';
+      r.appendChild(im);
+    }
+    const t = el('div', 'ptxt');
+    t.appendChild(el('b', null, x.name));
+    if (x.fx) t.appendChild(el('span', null, x.fx));
+    r.appendChild(t);
     box.appendChild(r);
   });
+  // its infusion: its round icon, its name, the stat bonus it gives the
+  // piece (dimmed when the piece's faction keeps it off)
   if (g.inf && g.inf.name) {
-    box.appendChild(el('div', 'ptx inf' + (g.inf.on ? '' : ' off'), tr(g.inf.on
-      ? 'Imprégnation : {name}' : 'Imprégnation : {name} (bonus inactif)', { name: g.inf.name })));
+    const r = el('div', 'ptx inf pic' + (g.inf.on ? '' : ' off'));
+    if (g.inf.id) {
+      const ic = el('span', 'infic');
+      const sk = skillIcon({ id: g.inf.id, name: g.inf.name });
+      sk.title = '';
+      ic.appendChild(sk);
+      r.appendChild(ic);
+    }
+    const t = el('div', 'ptxt');
+    t.appendChild(el('b', null, tr('Imprégnation : {name}', { name: g.inf.name })));
+    if (g.inf.bonus) {
+      t.appendChild(el('span', null, g.inf.val != null
+        ? g.inf.bonus + ' +' + fmtN(g.inf.val) + (g.inf.on ? '' : ' ' + tr('(bonus inactif)'))
+        : g.inf.bonus + (g.inf.on ? '' : ' ' + tr('(bonus inactif)'))));
+    } else if (!g.inf.on) {
+      t.appendChild(el('span', null, tr('(bonus inactif)')));
+    }
+    r.appendChild(t);
+    box.appendChild(r);
   }
   return box;
 }

@@ -52,6 +52,7 @@ class SkillText:
         self.texts = {"fr": {}, "en": {}}
         root = ET.fromstring(pak_extract.read_entry(game_dir / "res.pak",
                                                     "lang/export_fr.xml"))
+        self.fr_root = root                 # the game's French texts, whole
         # the game's terms ([BasicAttack] in a text: sheet gameTerm), each
         # word and its plural
         self.terms = {"fr": {}, "en": {}}

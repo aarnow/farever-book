@@ -14,7 +14,7 @@ from gamedata import (_fr_names, _skill_label, build_data, faction_label,
                       infusion_data, item_icon, item_label, item_type_label,
                       rarity_label, weapon_taken_cut)
 from gearstats import HERO_SLOTS, gear_stats, infusion_tiers
-from i18n import tr
+from i18n import lang as i18n_lang, tr
 from simulate import simulate
 from views import (_augment_view, _talent_tree, character_view, class_keys,
                    item_rarities, item_where)
@@ -1038,7 +1038,8 @@ class BuildTab:
                 "augs": augs, "infusable": B.infusable(p),
                 "inf": p.get("inf") or "", "istat": p.get("istat") or "",
                 "infOptions": [{"v": "", "t": tr("Aucune")}]
-                + _infusion_options(),
+                + _infusion_options(b["gear"], p.get("inf") or ""),
+                "infUi": _infusion_ui(),
                 # only what the piece can roll: not a stat it already has
                 "statOptions": [{"v": "", "t": tr("Aucun")}] + [
                     {"v": s, "t": attr.get(s) or _pretty_id(s)}
@@ -1070,23 +1071,49 @@ ROLE_FR = {"Tank": "Tank", "Support": "Soutien", "DPS": "Dégâts"}
 
 # the pieces the hero model wears (its weapons holstered, both sets)
 
-def _infusion_options():
-    """The infusions, sorted by faction then role."""
-    infs = infusion_data().get("infusions") or {}
+def _infusion_options(gear=None, current=""):
+    """The infusions, sorted by faction then role, as the game's crucible
+    lists them: each with its faction (its group), how many of the build's
+    pieces carry it (n / 6, its tiers reached), the boss whose heroic
+    defeat unlocks it."""
+    data = infusion_data()
+    infs = data.get("infusions") or {}
+    ui = _infusion_ui()
+    bosses = data.get("bosses") or {}
+    lang = "fr" if i18n_lang() == "fr" else "en"
+    count = {}
+    for p in (gear or {}).values():
+        if p and p.get("inf"):
+            count[p["inf"]] = count.get(p["inf"], 0) + 1
     out = []
     for sid in build_data().get("infusions") or ():
         e = infs.get(sid) or {}
         role = e.get("role")
+        n = count.get(sid, 0)
+        boss = (bosses.get(e.get("boss")) or {}).get(lang)
         out.append({"v": sid, "t": e.get("name") or _skill_label(sid),
                     "sub": f"{faction_label(e.get('f'))} · "
                            + (tr(ROLE_FR[role]) if role in ROLE_FR
                               else role or "?"),
                     "img": item_icon(e.get("pattern")) if e.get("pattern")
                     else "",
-                    "tiers": [t["txt"] for t in infusion_tiers(sid)],
+                    # the crucible's: its round icon (the infusion's skill),
+                    # its faction, its count, its tiers lit as reached
+                    "id": sid, "fac": faction_label(e.get("f")),
+                    "n": n, "on": sid == current,
+                    "tiers": infusion_tiers(sid, n),
+                    "unlock": ui["boss"].replace("::unitName::", boss)
+                    if boss and ui.get("boss") else "",
                     "k": (faction_label(e.get("f")), e.get("role") or "")})
     out.sort(key=lambda x: x.pop("k"))
     return out
+
+
+def _infusion_ui():
+    """The crucible's words, the game's own (infusions.json ui), in the
+    interface's language."""
+    ui = infusion_data().get("ui") or {}
+    return ui.get("fr" if i18n_lang() == "fr" else "en") or ui.get("en") or {}
 
 
 def _cmp_spells(ma, mb):

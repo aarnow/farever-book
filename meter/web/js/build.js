@@ -1297,7 +1297,8 @@ function editorPanel(ed) {
       key: 'aug:' + a.kind, t: a.t, v: a.v, options: a.options, none: tr('Aucun'),
     }));
     if (p.infusable) {
-      choices.push({ key: 'inf', t: tr('Imprégnation'), v: p.inf, options: p.infOptions, none: tr('Aucune') });
+      choices.push({ key: 'inf', t: tr('Imprégnation'), v: p.inf, options: p.infOptions, none: tr('Aucune'),
+        ui: p.infUi || {} });
       choices.push({ key: 'istat', t: tr('Bonus d’imprégnation'), v: p.istat, options: p.statOptions,
         none: tr('Aucun'), small: true,
         fx: g.inf && g.inf.bonus
@@ -1466,9 +1467,18 @@ function choiceLine(c) {
   const row = el('button', 'gchoice' + (cur ? '' : ' wait'));
   row.type = 'button';
   if (!c.small) {
-    const ic = el('span', 'gi');
-    if (cur && cur.img) { const im = el('img'); im.src = cur.img; im.alt = ''; ic.appendChild(im); }
-    row.appendChild(ic);
+    // an infusion: its own round icon (its skill's), as the crucible shows
+    if (c.key === 'inf' && cur && cur.id) {
+      const ic = el('span', 'infic');
+      const sk = skillIcon({ id: cur.id, name: cur.t });
+      sk.title = '';
+      ic.appendChild(sk);
+      row.appendChild(ic);
+    } else {
+      const ic = el('span', 'gi');
+      if (cur && cur.img) { const im = el('img'); im.src = cur.img; im.alt = ''; ic.appendChild(im); }
+      row.appendChild(ic);
+    }
   }
   const t = el('div', 'bct');
   t.appendChild(el('span', 'k', c.t));
@@ -1489,6 +1499,7 @@ function choiceLine(c) {
 
 /* Its choices, in the block: pick one, or go back. */
 function choiceList(c) {
+  if (c.key === 'inf') return infusionList(c);
   const box = el('div', 'bchoices' + (c.small ? ' small' : ''));
   const back = el('button', 'bsubback', '‹  ' + c.t);
   back.type = 'button';
@@ -1498,10 +1509,118 @@ function choiceList(c) {
     const row = choiceRow(o, c.none, o.v === (c.v || ''));
     row.addEventListener('click', () => {
       BUILD_SUB = null;
+      if (o.v === (c.v || '')) { refreshEditor(); return; }     // already set
       notify('build_piece', { field: c.key, value: o.v });
     });
     box.appendChild(row);
   });
+  return box;
+}
+
+/* The infusions as the game's crucible lists them: in groups by faction
+   (folded with their header), each a line with its round icon, its name,
+   how many of the build's pieces carry it (n / 6) and its three tiers'
+   dots; its details under the mouse. */
+const INF_FOLDED = new Set();     // the factions folded
+
+function infusionList(c) {
+  const ui = c.ui || {};
+  const box = el('div', 'bchoices infcru');
+  const back = el('button', 'bsubback', '‹  ' + c.t);
+  back.type = 'button';
+  back.addEventListener('click', () => { BUILD_SUB = null; refreshEditor(); });
+  box.appendChild(back);
+  // the one already set: the list closes all the same
+  const pick = (v) => {
+    BUILD_SUB = null;
+    if (v === (c.v || '')) { refreshEditor(); return; }
+    notify('build_piece', { field: c.key, value: v });
+  };
+  const none = (c.options || []).find((o) => !o.v);
+  if (none) {
+    const row = el('button', 'infrow none' + (!c.v ? ' on' : ''));
+    row.type = 'button';
+    row.appendChild(el('span', 'infic'));
+    row.appendChild(el('span', 'infnm', c.none));
+    row.addEventListener('click', () => pick(''));
+    box.appendChild(row);
+  }
+  const groups = [];
+  (c.options || []).filter((o) => o.v).forEach((o) => {
+    let g = groups.find((x) => x.fac === o.fac);
+    if (!g) { g = { fac: o.fac, rows: [] }; groups.push(g); }
+    g.rows.push(o);
+  });
+  groups.forEach((g) => {
+    const folded = INF_FOLDED.has(g.fac);
+    const head = el('button', 'infgrp');
+    head.type = 'button';
+    head.appendChild(el('span', null, g.fac));
+    head.appendChild(el('i', null, folded ? '+' : '−'));
+    head.addEventListener('click', () => {
+      if (INF_FOLDED.has(g.fac)) INF_FOLDED.delete(g.fac); else INF_FOLDED.add(g.fac);
+      refreshEditor();
+    });
+    box.appendChild(head);
+    if (folded) return;
+    g.rows.forEach((o) => {
+      const row = el('button', 'infrow' + (o.v === c.v ? ' on' : ''));
+      row.type = 'button';
+      const ic = el('span', 'infic');
+      const sk = skillIcon({ id: o.id, name: o.t });
+      sk.title = '';
+      ic.appendChild(sk);
+      row.appendChild(ic);
+      row.appendChild(el('span', 'infnm', o.t));
+      const cnt = el('span', 'infcnt');
+      cnt.appendChild(el('b', null, (o.n || 0) + '/6'));
+      const dots = el('span', 'infdots');
+      (o.tiers || []).forEach((t) => dots.appendChild(el('i', t.on ? 'on' : '')));
+      cnt.appendChild(dots);
+      row.appendChild(cnt);
+      row.addEventListener('click', () => pick(o.v));
+      attachFloat(row, () => infusionTipEl(o, ui));
+      box.appendChild(row);
+    });
+  });
+  return box;
+}
+
+/* An infusion's details, as the crucible's tooltip: its icon and name,
+   the crucible and its faction, its count (and "equipped" on this piece),
+   then each tier, "(2:) Définir :" and what it does, lit once reached;
+   last, how it is unlocked. The words are the game's. */
+function infusionTipEl(o, ui) {
+  const box = el('div', 'sktip inftip');
+  const head = el('div', 'skth');
+  const ic = el('span', 'infic');
+  ic.appendChild(skillIcon({ id: o.id, name: o.t }));
+  head.appendChild(ic);
+  const ht = el('div', 'sktt');
+  ht.appendChild(el('b', null, o.t));
+  const sub = el('span', null);
+  if (ui.crucible) sub.appendChild(el('i', null, ui.crucible + ' '));
+  sub.appendChild(document.createTextNode(o.fac || ''));
+  ht.appendChild(sub);
+  head.appendChild(ht);
+  const st = el('div', 'infst');
+  st.appendChild(el('b', null, (o.n || 0) + '/6'));
+  if (o.on && ui.equipped) st.appendChild(el('i', null, ui.equipped));
+  head.appendChild(st);
+  box.appendChild(head);
+  const colon = (document.documentElement.lang || 'fr') === 'fr' ? ' :' : ':';
+  (o.tiers || []).forEach((t) => {
+    const row = el('div', 'inftier' + (t.on ? ' on' : ''));
+    const label = (ui.rank || '(::rank::)').replace('::rank::', t.n) + colon;
+    row.appendChild(el('span', 'inftn', label));
+    row.appendChild(el('span', null, t.txt));
+    box.appendChild(row);
+  });
+  if (o.unlock) {
+    const u = el('div', 'skfoot');
+    u.textContent = (ui.unlock ? ui.unlock + ' ' : '') + o.unlock;
+    box.appendChild(u);
+  }
   return box;
 }
 
