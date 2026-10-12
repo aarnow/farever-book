@@ -4,13 +4,15 @@
    views.encyclopedia_item). A trail at the top leads back. The list is
    filtered here; the sheet comes from the meter. */
 
-const ENC = { topic: null, q: '', type: '', rar: '', top: 0, listKey: '',
+const ENC = { topic: null, q: '', type: '', rar: '', cls: '', top: 0, listKey: '',
   hist: [], here: null, back: null, backTries: 0 };
 let ENC_NODE = null;
 let ENC_ICONS = false;
 const ENC_BATCH = 60;          // cards made at a time
 // the subjects where a rarity tells something
 const ENC_RARITY = new Set(['equipment', 'augments', 'resources']);
+// the subjects that can be filtered by class (who can wear them)
+const ENC_CLASSED = new Set(['weapons', 'equipment']);
 // the character sheet's slots, in its order
 const ENC_SLOTS = ['Head', 'Shoulders', 'Chest', 'Hands', 'Waist', 'Legs', 'Feet', 'Back',
   'GearNeck', 'GearFinger', 'GearTrinket'];
@@ -48,7 +50,7 @@ function buildEncyclo(n) {
   // the tab clicked again: back on its subjects, filters off
   if (n.reset !== ENC.reset) {
     ENC.reset = n.reset;
-    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0,
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', cls: '', top: 0,
       hist: [], here: null, back: null });
   }
   // an entry opened from a sheet: its subject, filters off, its card in view
@@ -58,7 +60,7 @@ function buildEncyclo(n) {
     if (it) {
       // a monster's family named in a sheet: the Bestiary on that family
       const fam = ENC.jumpType && ENC.jumpType.id === it.id ? ENC.jumpType.t : '';
-      Object.assign(ENC, { topic: it.c, q: '', type: fam, rar: '', top: 0, jumpType: null });
+      Object.assign(ENC, { topic: it.c, q: '', type: fam, rar: '', cls: '', top: 0, jumpType: null });
       ENC.reveal = it.id;
     }
   }
@@ -173,7 +175,7 @@ function encOpen(id, go) {
 
 // a subject opened: its first entry shown at once
 function encTopic(v, items) {
-  Object.assign(ENC, { topic: v, q: '', type: '', rar: '', top: 0 });
+  Object.assign(ENC, { topic: v, q: '', type: '', rar: '', cls: '', top: 0 });
   rerenderEncyclo();
   const first = items.find((it) => it.c === v);
   if (first) encOpen(first.id);
@@ -192,12 +194,12 @@ function encTrail(n, topic, typeLabel) {
   const sel = topic && n.sel && (n.items || []).some((x) => x.id === n.sel.id && x.c === topic.v)
     ? n.sel : null;
   step(tr('Encyclopédie'), topic || ENC.q ? () => {
-    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0 });
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', cls: '', top: 0 });
     rerenderEncyclo();
   } : null);
   if (topic) {
     step(topic.t, (ENC.type || ENC.rar || sel) ? () => {
-      Object.assign(ENC, { type: '', rar: '' });
+      Object.assign(ENC, { type: '', rar: '', cls: '' });
       rerenderEncyclo();
     } : null);
   }
@@ -225,7 +227,7 @@ function encHome(box, n) {
 }
 
 function renderEncyclo(box, n) {
-  const listKey = [ENC.topic, ENC.q, ENC.type, ENC.rar].join('|');
+  const listKey = [ENC.topic, ENC.q, ENC.type, ENC.rar, ENC.cls].join('|');
   if (ENC.listKey !== listKey) { ENC.listKey = listKey; ENC.top = 0; }
   const keepQ = document.activeElement && document.activeElement.classList.contains('collq');
   const caret = keepQ ? document.activeElement.selectionStart : null;
@@ -283,7 +285,7 @@ function renderEncyclo(box, n) {
   const back = el('button', 'encback', tr('‹ Tous les sujets'));
   back.type = 'button';
   back.addEventListener('click', () => {
-    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', top: 0 });
+    Object.assign(ENC, { topic: null, q: '', type: '', rar: '', cls: '', top: 0 });
     rerenderEncyclo();
   });
   side.appendChild(back);
@@ -330,6 +332,13 @@ function renderEncyclo(box, n) {
       filter(tr('Rareté'), [{ v: '', t: tr('Toutes') }].concat(rars.map((x) => (
         { v: x.v, t: x.t, cls: 'r-' + x.v }))), ENC.rar, (v) => { ENC.rar = v; });
     }
+    // the weapons and the gear: the classes that can wear them
+    if (ENC_CLASSED.has(topic.v)) {
+      const keys = Object.keys(CLASS_NAMES).filter((k) => pool.some((it) => (it.cls || []).includes(k)));
+      filter(tr('Classe'), [{ v: '', t: tr('Toutes'), n: pool.length }].concat(keys.map((k) => ({
+        v: k, t: tr(CLASS_NAMES[k]), n: pool.filter((it) => (it.cls || []).includes(k)).length,
+        icon: CLASS_ICONS[k] ? classEl('', k, 'encfic') : null }))), ENC.cls, (v) => { ENC.cls = v; });
+    }
   }
 
   // the list
@@ -337,6 +346,7 @@ function renderEncyclo(box, n) {
   list.appendChild(tools);
   const shown = pool.filter((it) => (!ENC.type || (needle ? it.c === ENC.type : it.tk === ENC.type))
     && (!ENC.rar || it.rk === ENC.rar)
+    && (!ENC.cls || needle || (it.cls || []).includes(ENC.cls))
     && (!needle || it.name.toLowerCase().includes(needle)));
   // the jobs' crafts: by level, those known from the start, then those to learn
   const byLevel = topic && topic.v === 'jobs' && !needle;

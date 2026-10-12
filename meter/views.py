@@ -2059,6 +2059,7 @@ def encyclopedia_view():
     its key). The sheets: encyclopedia_item."""
     cat = collection_catalogue()
     enc = cat.get("encyclo") or {}
+    gear = build_data().get("items") or {}
     items = []
     for iid, e in enc.items():
         rar = e.get("r") or ""
@@ -2066,6 +2067,9 @@ def encyclopedia_view():
         if _encyclo_cat(t) is None:
             continue
         items.append({"id": iid, "c": _encyclo_cat(t),
+                      # the classes that can wear it (the game's aptitudes,
+                      # build_data), for the weapons' and gear's filter
+                      "cls": [class_key(c) for c in (gear.get(iid) or {}).get("cls") or ()],
                       "pic": ["item", iid],
                       "name": item_label(iid),
                       "type": item_type_label(t) if t else "",
