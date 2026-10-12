@@ -892,6 +892,9 @@ def _head(p, W, title, dpi_k, ui, hits, extra=None):
     game's font, centred; on the right `extra` (a dim text) then the gear.
     Its whole width drags the window."""
     k = p.k
+    # the title, a bitmap font, at its own pixels; an overlay made smaller
+    # than that makes it smaller too (it would pass its header)
+    dpi_k = min(dpi_k, k)
     t = _title_image(title, dpi_k)
     if t:
         ink, cw, chh = t
@@ -928,7 +931,7 @@ def _settings(p, W, style, ui, hits, tr):
     p.hline(8, y + h - 1, W - 16, OV_LINE, 0.35)
     sy = y + 1 + 10
     for key, label, lo, hi in (("opacity", tr("Opacité"), 30, 100),
-                               ("scale", tr("Taille"), 90, 110)):
+                               ("scale", tr("Taille"), 70, 110)):
         v = int(st.get(key) or 100)
         p.text(label, 20, sy, LH12, 12, 400, "#FFF6E6")
         p.text(f"{v} %", 20, sy, LH12, 12, 700, "#FFF6E6", align="right", w=W - 40)
@@ -1747,7 +1750,7 @@ class NativeOverlay(_NativeWindow):
             self._style = dict(style)
             changed = True
         op = max(30, min(100, int(self._style.get("opacity") or 100)))
-        sc = max(90, min(110, int(self._style.get("scale") or 100)))
+        sc = max(70, min(110, int(self._style.get("scale") or 100)))
         if op != self.opacity or sc != self.scale:
             self.opacity, self.scale = op, sc
             changed = True
@@ -1929,7 +1932,7 @@ class NativeOverlay(_NativeWindow):
             if key == "opacity":
                 self.opacity = max(30, min(100, v))
             else:
-                self.scale = max(90, min(110, v))
+                self.scale = max(70, min(110, v))
             self._redraw()
             now = time.monotonic()
             if final or now - self._last_send > 0.06:

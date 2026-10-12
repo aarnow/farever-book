@@ -926,7 +926,7 @@ class Overlay:
         """The player's opacity (the whole window's alpha) and size (the
         page's zoom, which the frame's cut follows)."""
         op = max(30, min(100, int(style.get("opacity") or 100)))
-        sc = max(90, min(110, int(style.get("scale") or 100)))
+        sc = max(70, min(110, int(style.get("scale") or 100)))
         if op != self.opacity and self.hwnd:
             # wanted first: keep_styles (the lock loop) must not put the
             # old alpha back in between

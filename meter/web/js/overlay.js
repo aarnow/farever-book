@@ -390,7 +390,7 @@ function settingsPanel() {
     const go = () => { due = null; api().notify('ov_style', { id: OV_ID, opacity: st.opacity, scale: st.scale, maxh: st.maxh, save: save }); };
     if (save) { clearTimeout(due); go(); } else if (!due) due = setTimeout(go, 60);
   };
-  [['opacity', tr('Opacité'), 30, 100, 5], ['scale', tr('Taille'), 90, 110, 5]].forEach(([k, t, lo, hi, step]) => {
+  [['opacity', tr('Opacité'), 30, 100, 5], ['scale', tr('Taille'), 70, 110, 5]].forEach(([k, t, lo, hi, step]) => {
     const row = el('label', 'set');
     const top = el('span', 'setl');
     top.appendChild(el('span', null, t));

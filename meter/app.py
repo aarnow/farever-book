@@ -124,7 +124,7 @@ OVERLAY_THEMES = {"farever": "Farever"}
 
 def _ov_style(v):
     """An overlay's settings, kept in bounds: opacity 30-100 %, size
-    90-110 %, its list's greatest height (px, 0: none) 30-900."""
+    70-110 %, its list's greatest height (px, 0: none) 30-900."""
     def num(k, lo, hi):
         try:
             return max(lo, min(hi, int(v.get(k) or 100)))
@@ -134,7 +134,7 @@ def _ov_style(v):
         maxh = int(v.get("maxh") or 0)
     except (TypeError, ValueError):
         maxh = 0
-    return {"opacity": num("opacity", 30, 100), "scale": num("scale", 90, 110),
+    return {"opacity": num("opacity", 30, 100), "scale": num("scale", 70, 110),
             "maxh": max(30, min(900, maxh)) if maxh else 0}
 
 
