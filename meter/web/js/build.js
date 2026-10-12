@@ -184,9 +184,11 @@ function buildSim(s) {
     c.appendChild(r);
   };
   line(tr('Coup reçu'), d.hit);
+  // a shield's upgrade effect: off the hit before the armour
+  if (d.cut) line(tr('Bouclier amélioré'), '−' + d.cut);
   line(tr('Physique'), d.phys, tr('armure −{n}', { n: d.physMit }));
   line(tr('Magique'), d.magic, tr('réduction −{n}', { n: d.magicMit }));
-  line(tr('Dégâts reçus (ferveur)'), d.taken);
+  line(tr('Ferveur'), '−' + d.taken, tr('la moitié en réduction'));
   line(tr('Points de vie'), d.hp);
   line(tr('Coups physiques encaissés'), d.hitsPhys);
   out.appendChild(c);

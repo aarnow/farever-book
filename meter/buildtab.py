@@ -12,7 +12,7 @@ from common import dec_sep, pct_sp, _n, _pretty_id, class_key, element_label
 from gamedata import (_fr_names, _skill_label, build_data, faction_label,
                       skill_tip,
                       infusion_data, item_icon, item_label, item_type_label,
-                      rarity_label)
+                      rarity_label, weapon_taken_cut)
 from gearstats import HERO_SLOTS, gear_stats, infusion_tiers
 from i18n import tr
 from simulate import simulate
@@ -765,6 +765,10 @@ class BuildTab:
         main, off, ars = (weapon("Weapon1"), weapon("OffhandWeapon"),
                           weapon("Weapon2"))
         runes = (b.get("runes") or {}).values()
+        # the weapons' upgrade effects that cut the damage taken (a shield)
+        cut = sum(weapon_taken_cut((B.item(p["id"]) or {}).get("type"),
+                                   p.get("rar"), p.get("up"))
+                  for p in (gear.get("Weapon1"), gear.get("OffhandWeapon")) if p)
         d = build_data()
         base_ids = set()                # the basic attacks' skills
 
@@ -808,7 +812,7 @@ class BuildTab:
                         + [s["id"] for s in cls.get("skills") or ()]]))
         rows = [r for _t, _s, rs in groups for r in rs]
         # the hero alone: critical chances and what an incoming hit leaves
-        out = simulate(raw, b["lvl"], [], armor, enemy, hit, runes)
+        out = simulate(raw, b["lvl"], [], armor, enemy, hit, runes, cut)
         sims = [(t, sub, rs, simulate(raw, b["lvl"], rs, armor, enemy, hit,
                                       runes)) for t, sub, rs in groups if rs]
         fmt = lambda v: f"{v:.0f}"
@@ -833,7 +837,9 @@ class BuildTab:
                 "physMit": pc(out["defense"]["phys"]["mit"]),
                 "magic": fmt(out["defense"]["magic"]["after"]),
                 "magicMit": pc(out["defense"]["magic"]["mit"]),
-                "taken": pc(out["defense"]["taken"]),
+                # the Fervor's cut, as a reduction (100 % − Fervor ÷ 2 taken)
+                "taken": pc(1 - out["defense"]["taken"]),
+                "cut": pc(out["defense"]["cut"]) if out["defense"]["cut"] else None,
                 "hp": fmt(out["defense"]["hp"]),
                 "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", dec_sep())
                              if out["defense"]["phys"]["after"] > 0 else "—")}}

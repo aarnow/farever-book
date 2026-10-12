@@ -129,7 +129,7 @@ def effect_amount(effect, hero, weapon=None):
 
 
 def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
-             runes=()):
+             runes=(), taken_cut=0.0):
     """Every damage / heal / shield the bar's skills do, against a target
     whose armour stops `target_armor_pct` % at this level; and what an
     `incoming` hit of an enemy of `enemy_level` leaves.
@@ -138,7 +138,10 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
     bar:  [(skill id, label, (weapon kind, level) when it is a weapon's
            skill — the main weapon's or the arsenal's — else None)].
     runes: the runes chosen; a step that needs a rune (or excludes one)
-           counts only then. Rows: one per skill, its effects in `lines`."""
+           counts only then. Rows: one per skill, its effects in `lines`.
+    taken_cut: what the worn weapons' upgrade effects take off the hit's
+           damage multiplier (a shield's 0.05 to 0.11: hit.dmgMult -=, in
+           onReceiveDamageEval), the attacker's own bonuses taken as none."""
     runes = set(runes or ())
     info = build_data().get("skillInfo") or {}
     pct = lambda k: (hero.get(k) or 0) / 100.0
@@ -188,12 +191,16 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
         if skill["lines"] or cd:
             rows.append(skill)
     taken = max(0.0, (100 - 0.5 * (hero.get("Fervor") or 0)) / 100)
+    # the hit's multiplier starts at 1: the wearer's cut comes off it
+    # (BaseSkill.evalDamage: onReceiveDamageEval, before computeDamage)
+    cut = max(0.0, 1.0 - (taken_cut or 0.0))
     phys = mitigation(hero.get("Armor") or 0, 0, enemy_level)
     magic = min(1.0, mitigation(hero.get("MagicArmor") or 0, 0, enemy_level)
                 + pct("MagicReduction"))
     defense = {"hit": incoming, "taken": taken,
-               "phys": {"mit": phys, "after": incoming * (1 - phys) * taken},
-               "magic": {"mit": magic, "after": incoming * (1 - magic) * taken},
+               "cut": taken_cut or 0.0,
+               "phys": {"mit": phys, "after": incoming * cut * (1 - phys) * taken},
+               "magic": {"mit": magic, "after": incoming * cut * (1 - magic) * taken},
                "hp": hero.get("MaxHealth") or 0}
     return {"rows": rows, "defense": defense, "critChance": crit_c,
             "critMult": crit_m, "targetResist": target_resist}

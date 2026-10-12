@@ -210,7 +210,7 @@ def build(game_dir):
     # on, at the rank of the weapon's rarity (its row's index, from 0:
     # cdb.Index.initLines); its text at each rarity
     rars = [ln["id"] for ln in st.sheets["rarity"]["lines"]]
-    upgrades = {}
+    upgrades, taken = {}, {}
     for sid in sorted(st.skills):
         if not sid.endswith("_Upgrade") or sid.startswith("Weapon_"):
             continue
@@ -219,6 +219,15 @@ def build(game_dir):
                  for lang in ("fr", "en")}
         if texts["en"][0]:
             upgrades[sid[:-len("_Upgrade")]] = texts
+        # one that cuts the damage its wearer takes (the shields':
+        # "onReceiveDamageEval(hit) { hit.dmgMult -= vars.damage; }"): the
+        # share taken off a hit's multiplier, at each rarity
+        m = re.search(r"onReceiveDamageEval\s*\(\s*(\w+)\s*\)\s*\{\s*\1\.dmgMult\s*-=\s*vars\.(\w+)\s*;\s*\}",
+                      st.skills[sid].get("script") or "")
+        if m:
+            taken[sid[:-len("_Upgrade")]] = [
+                float(st.value(st.skills[sid], m.group(2), rank) or 0)
+                for rank in range(len(rars))]
     unlock = next((g.get("v", {}).get("float")
                    for g in ((st.consts.get("GearUpgrades") or {}).get("v") or {})
                    .get("group") or () if g.get("id") == "SkillUnlockLevel"), 3)
@@ -227,4 +236,4 @@ def build(game_dir):
             "skills": out,
             "terms": st.terms,
             "upgrades": {"at": int(unlock or 3), "rarities": rars,
-                         "types": upgrades}}
+                         "types": upgrades, "taken": taken}}

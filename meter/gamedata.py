@@ -308,6 +308,19 @@ def weapon_upgrade(item_type, rarity):
     return _fr_ref(texts[i]), int(u.get("at") or 3)
 
 
+def weapon_taken_cut(item_type, rarity, upgrade):
+    """What a worn weapon's upgrade effect takes off the hits its wearer
+    receives (the shields': 0.05 to 0.11 off the hit's damage multiplier),
+    once upgraded far enough; 0 otherwise (skill_tips.json "upgrades")."""
+    u = _table("skill_tips.json").get("upgrades") or {}
+    vals = (u.get("taken") or {}).get(item_type) or []
+    rars = u.get("rarities") or []
+    if rarity not in rars or (upgrade or 0) < int(u.get("at") or 3):
+        return 0.0
+    i = rars.index(rarity)
+    return float(vals[i]) if i < len(vals) else 0.0
+
+
 def skill_rank_kills():
     """Kills per weapon skill rank: (main hand, off hand)."""
     k = _table("skill_tips.json").get("kills") or [20, 26]
@@ -477,7 +490,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 24
+DATA_FORMAT = 25
 
 
 def _hook_needs():
