@@ -403,9 +403,13 @@ function buildBar(cells, passives, infusions, mechanic) {
   const bar = el('div', 'skbar gamebar');
   // the class's skills in a column: its own mechanic over them (the
   // priest's prayers, the mage's conduits), as the game's bar has it
-  let into = bar;
+  // the weapons' skills (and the prayer) together: short of room, the bar
+  // wraps between the two groups, never inside one
+  const weap = el('div', 'bclassrow bweaprow');
+  bar.appendChild(weap);
+  let into = weap;
   cells.forEach((c) => {
-    if (c.sep) bar.appendChild(el('span', 'barsep'));
+    if (c.sep && into !== weap) bar.appendChild(el('span', 'barsep'));
     if (c.group === 'class' && c.index === 0) {
       const grp = el('div', 'bclassgrp');
       if (mechanic && (mechanic.cells || []).length) grp.appendChild(mechanicRow(mechanic));

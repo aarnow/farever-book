@@ -1025,10 +1025,13 @@ html.lt-760 .charpage { grid-template-columns: minmax(0, 1fr); }
 
 /* the spell bar as the game draws it (character.js spellBar): square slots,
    the key in the corner, the prayer larger */
-.skbar.gamebar, .bbar .skbar.gamebar { align-items: flex-end; justify-content: center; flex-wrap: nowrap;
-                                       gap: 5px; padding: 12px; }
-.gamebar .barcell { position: relative; flex: 0 1 46px; min-width: 26px; }
-.gamebar .barcell.big { flex-basis: 56px; }
+/* every slot its size, the class's like the weapons'; short of room, the
+   bar wraps (the class's skills, with their mechanic, on a line of their
+   own) rather than squeezing some slots */
+.skbar.gamebar, .bbar .skbar.gamebar { align-items: flex-end; justify-content: center; flex-wrap: wrap;
+                                       gap: 12px 5px; padding: 12px; }
+.gamebar .barcell { position: relative; flex: 0 0 44px; width: 44px; }
+.gamebar .barcell.big { flex-basis: 54px; width: 54px; }
 .gamebar .barcell .skill { width: 100%; height: auto; aspect-ratio: 1; border-radius: 8px; background: #1C1A30;
                            border: 1px solid #3B3858; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35); }
 .gamebar .barcell .skill.empty { opacity: 1; }
@@ -2912,12 +2915,18 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
 .sgear .sgrow .slot { width: 100%; height: auto; aspect-ratio: 1; }
 .sgear .sgrow .slot > img:not(.infic) { width: 86%; height: 86%; }
 .sgear .sgrow .slot > img.ghost { width: 70%; height: 70%; }
-html.lt-1100 .sheet.card { grid-template-columns: 220px minmax(0, 1fr) 230px; }
-html.lt-1100 .sheet.card > :nth-child(3) { grid-column: auto; }
-html.lt-900 .sheet.card { grid-template-columns: 220px minmax(0, 1fr); }
-html.lt-900 .sheet.card > :nth-child(3) { grid-column: 1 / -1; }
-html.lt-760 .sheet.card { grid-template-columns: minmax(0, 1fr); }
-html.lt-760 .sheet.card > .shero { height: 420px; }
+/* narrower: two columns (the attributes under the hero and the gear,
+   across, their rows in columns), then one */
+html.lt-1250 .sheet.card { grid-template-columns: 240px minmax(0, 1fr); }
+html.lt-1250 .sheet.card > :nth-child(3) { grid-column: 1 / -1; }
+html.lt-1250 .sheet.card .sattrs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+                                   column-gap: 10px; align-content: start; }
+html.lt-1250 .sheet.card .sattrs > .sptitle,
+html.lt-1250 .sheet.card .sattrs > .anote { grid-column: 1 / -1; }
+html.lt-900 .sheet.card .sattrs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html.lt-900 .sheet.card { grid-template-columns: minmax(0, 1fr); }
+html.lt-900 .sheet.card > .shero { height: 420px; }
+html.lt-620 .sheet.card .sattrs { grid-template-columns: minmax(0, 1fr); }
 
 /* the card's second titles: a banner fading out, its left edge cut */
 .sheet.card .sgear .sptitle { display: block; width: min(100%, 420px); margin: 0 0 12px -2px;
@@ -3014,7 +3023,7 @@ html.lt-760 .sheet.card > .shero { height: 420px; }
 .bclassrow { display: flex; align-items: flex-end; gap: 5px; }
 /* its cells the size of the others, empty or not (an empty one has no
    picture to give it a width) */
-.bclassrow .barcell { flex: 0 0 46px; width: 46px; }
+.bclassrow .barcell { flex: 0 0 44px; width: 44px; }
 .bmech { display: flex; justify-content: center; gap: 6px; }
 .bmechcell { width: 30px; height: 30px; }
 .bmechcell .skill { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #8F86C9;
@@ -3028,7 +3037,7 @@ html.lt-760 .sheet.card > .shero { height: 420px; }
 /* its infusions: two a row, on the spells' ground */
 .bbar .infulist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .bbar .infucard { background: var(--bg); }
-html.lt-900 .bbar .infulist { grid-template-columns: minmax(0, 1fr); }
+html.lt-620 .bbar .infulist { grid-template-columns: minmax(0, 1fr); }
 .bpassline .bpass1 { cursor: help; }
 .bpassline .bpass1:hover { filter: brightness(1.2); }
 /* Partager's window: a choice each */
