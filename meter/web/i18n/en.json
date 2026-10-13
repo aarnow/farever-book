@@ -1302,5 +1302,12 @@
  "Réinitialiser au premier coup sur un mannequin (après 10 s sans le frapper)": "Reset on the first hit on a training dummy (after 10 s without hitting it)",
  "Toutes les lignes sont masquées.": "All lines are hidden.",
  "Monnaies": "Currencies",
- "Monnaies par ligne": "Currencies per line"
+ "Monnaies par ligne": "Currencies per line",
+ "ID {id}": "ID {id}",
+ "ID inconnu": "Unknown ID",
+ "Identifiant unique du personnage dans le jeu": "The character's unique ID in the game",
+ "Personnage vu avant que son identifiant soit lu. S’il fait doublon avec un autre du même nom, supprime-le. Son identifiant est lu quand tu choisis le personnage dans l’écran de sélection avec Farever Book ouvert.": "Character seen before its ID was read. If it duplicates another of the same name, delete it. Its ID is read when you pick the character on the select screen with Farever Book open.",
+ "Tout le contenu": "All content",
+ "Disponible": "Available",
+ "Disponible : sans ce que les données du jeu ne permettent pas d’obtenir aujourd’hui (aucune source connue), retiré des listes et des totaux": "Available: without what the game's data offers no way to get today (no known source), left out of the lists and totals"
 }

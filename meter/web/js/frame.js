@@ -695,6 +695,12 @@ function charCard(a, c) {
   t.appendChild(el('b', null, c.n));
   t.appendChild(el('small', null, [c.clsT, c.lvl ? tr('niv. {n}', { n: c.lvl }) : '']
     .filter(Boolean).join(' · ')));
+  // its id in the game's database, read on the character select screen
+  const id = el('small', 'charid' + (c.hid ? '' : ' none'),
+    c.hid ? tr('ID {id}', { id: c.hid }) : tr('ID inconnu'));
+  id.title = c.hid ? tr('Identifiant unique du personnage dans le jeu')
+    : tr('Personnage vu avant que son identifiant soit lu. S’il fait doublon avec un autre du même nom, supprime-le. Son identifiant est lu quand tu choisis le personnage dans l’écran de sélection avec Farever Book ouvert.');
+  t.appendChild(id);
   card.appendChild(t);
   const sw = buildControl({ k: 'toggle', id: 'acct_hero', on: c.on, p: { sid: a.sid, key: c.key } });
   sw.title = c.on ? tr('Compté dans la progression du compte') : tr('Pas compté dans la progression du compte');

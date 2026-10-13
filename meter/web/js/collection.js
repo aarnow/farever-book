@@ -116,6 +116,7 @@ function renderCollection(box, n) {
     seg.appendChild(b);
   });
   tools.appendChild(seg);
+  tools.appendChild(naToggle(n));
   list.appendChild(tools);
   const gears = COLL.cat === 'gears';
   // a filter row: big chips, each led by its icon

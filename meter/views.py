@@ -668,21 +668,35 @@ def _world_recipe_lines(world):
     return out
 
 
-def collection_view(owned, item_codex=None):
+def unavailable_ids(owned):
+    """The collectibles out of reach in the game as it is: no way to get
+    them in its data (no loot, shop, recipe, achievement...) and not owned.
+    {list: set of ids} over COLLECTION_CATS."""
+    cat = collection_catalogue()
+    return {key: {e["id"] for e in cat.get(key) or ()
+                  if not e.get("src")
+                  and e["id"] not in set(owned.get(key) or ())}
+            for key, _label, _one in COLLECTION_CATS}
+
+
+def collection_view(owned, item_codex=None, hide_na=False):
     """The Collection page's data: categories with counts, every item with
     its name, rarity, whether it is owned, description and sources — and
     for the "items" category (the game's item codex) each one's count and
-    rank."""
+    rank. hide_na: the unavailable ones (unavailable_ids) left out, of the
+    lists and the counts."""
     cat = dict(collection_catalogue())
     item_codex = item_codex or {}
     cat["items"] = codex_items_catalogue()
     owned = dict(owned, items=[k for k, v in item_codex.items()
                                if v and v[0] > 0])
     bosses = {d.get("boss"): d.get("kind") for d in dungeon_catalogue()}
+    na = unavailable_ids(owned)
     cats, items = [], []
     for key, label, one in COLLECTION_CATS:
         mine = set(owned.get(key) or ())
-        rows = cat.get(key) or []
+        rows = [e for e in cat.get(key) or ()
+                if not (hide_na and e["id"] in na[key])]
         got = sum(1 for e in rows if e["id"] in mine)
         cats.append({"v": key, "t": tr(label), "one": tr(one), "n": len(rows),
                      "got": got})
@@ -760,6 +774,8 @@ def collection_view(owned, item_codex=None):
                                        for i, n in r.get("input") or ())),
             "src": list(dict.fromkeys(srcs))})
     return {"cats": cats, "items": items,
+            # the unavailable ones: left out, and how many
+            "hideNa": bool(hide_na), "na": sum(len(v) for v in na.values()),
             # the jobs, with their tools' icons, for the recipes' filter
             "jobs": [{"v": j, "t": job_names.get(j) or _pretty_id(j),
                       "img": item_icon("job_" + j),
@@ -1494,14 +1510,62 @@ def _ach_text(a, by_id, tier_v):
     return _fr_ref(name or _pretty_id(a["id"])), _fr_ref(desc)
 
 
-def achievements_view(account, counters, owned, states):
+def _ach_out_of_reach(achs, done, owned):
+    """The achievements not done that can't be in the game as it is: one
+    asking for an unavailable collectible (unavailable_ids), more of a
+    list than can be had, or another out of reach; a tier after one out of
+    reach is too. Judged only where the data says (objectives the app
+    can't read stay in)."""
+    na = unavailable_ids(owned)
+    cat = collection_catalogue()
+    every = {key: {e["id"] for e in cat.get(key) or ()} for key in na}
+    reach = {key: every[key] - na[key] for key in na}
+    gone = set().union(*na.values())
+    known = set().union(*every.values())
+    out = set()
+
+    def blocked(a):
+        if a.get("parent") in out:
+            return True
+        for o in a.get("obj") or ():
+            ref, v, ts = o.get("ref"), o.get("v"), o.get("t") or []
+            if ref == "Collect" and ts:
+                t0 = ts[0]
+                if isinstance(t0, list) and t0[0] in (4, 9):
+                    lst = COLLECT_LISTS.get(t0[1])
+                    if lst in reach and isinstance(v, (int, float))                             and len(reach[lst]) < v:
+                        return True
+                else:
+                    ids = [t[1] for t in ts if isinstance(t, list)
+                           and isinstance(t[1], str)]
+                    if any(i in gone for i in ids if i in known):
+                        return True
+            elif ref == "AchievementCompleted" and ts:
+                if any(isinstance(t, list) and t[1] in out for t in ts):
+                    return True
+        return False
+
+    # until nothing changes: one may hang on another listed after it
+    for _ in range(10):
+        more = {a["id"] for a in achs
+                if a["id"] not in done and a["id"] not in out and blocked(a)}
+        if not more:
+            break
+        out |= more
+    return out
+
+
+def achievements_view(account, counters, owned, states, hide_na=False):
     """The Succès tab: categories with points and counts, and every
     achievement chain (an achievement and its tiers) with its current tier,
-    progress where the app can measure it, reward and completion date."""
+    progress where the app can measure it, reward and completion date.
+    hide_na: the tiers out of reach (_ach_out_of_reach) left out, of the
+    chains and the counts."""
     cat = achievements_catalogue()
     achs = cat.get("achievements") or []
     by_id = {a["id"]: a for a in achs}
     done = set(account)
+    na = _ach_out_of_reach(achs, done, owned)
     children = {}
     for a in achs:
         if a.get("parent") in by_id:
@@ -1521,9 +1585,13 @@ def achievements_view(account, counters, owned, states):
             continue
         tiers, cur = [], root
         while cur and len(tiers) < 20:
+            if hide_na and cur["id"] in na:
+                break
             tiers.append(cur)
             nxt = children.get(cur["id"]) or []
             cur = nxt[0] if nxt else None
+        if not tiers:
+            continue
         cur = next((t for t in tiers if t["id"] not in done), None)
         show = cur or tiers[-1]
         v = next((o.get("v") for o in show.get("obj") or ()
@@ -1569,6 +1637,8 @@ def achievements_view(account, counters, owned, states):
     for it in items:
         it["subT"] = subs.get(it["sub"], "")
     return {"cats": out_cats, "items": items,
+            # the tiers out of reach: left out, and how many
+            "hideNa": bool(hide_na), "na": len(na),
             "pts": sum(c["pts"] for c in out_cats),
             "ptsAll": sum(c["ptsAll"] for c in out_cats),
             "got": sum(c["got"] for c in out_cats),

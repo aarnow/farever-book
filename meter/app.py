@@ -219,6 +219,9 @@ class App:
         # the meter afresh on the first hit on a training dummy (gamelink
         # _dummy_hit): on unless the player turns it off
         self._auto_reset_dummy = True
+        # Collection and Succès: the content out of reach in the game as it
+        # is (no way to get it in its data) left out
+        self._hide_na = False
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
@@ -321,6 +324,8 @@ class App:
             self._auto_reset_boss = data["auto_reset_boss"]
         if isinstance(data.get("auto_reset_dummy"), bool):
             self._auto_reset_dummy = data["auto_reset_dummy"]
+        if isinstance(data.get("hide_unavailable"), bool):
+            self._hide_na = data["hide_unavailable"]
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
             self._rift_keep = data["rift_keep"]
         bind = data.get("reset_bind")
@@ -389,6 +394,7 @@ class App:
                 "parse_journal": bool(self._parse_journal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "auto_reset_dummy": bool(self._auto_reset_dummy),
+                "hide_unavailable": bool(self._hide_na),
                 "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
@@ -903,6 +909,7 @@ class App:
             "toggle_heal": self._toggle_heal,
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "toggle_auto_reset_dummy": self._toggle_auto_reset_dummy,
+            "hide_unavailable": self._set_hide_na,
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "set_view3d": lambda p: self._set_view3d(p.get("on")),
@@ -1950,7 +1957,8 @@ class App:
         return [{"k": "achievements", "id": "achievements", "sync": sync,
                  **achievements_view(data.get("account") or {},
                                      entry.get("counters") or {},
-                                     self._collection(), states or {})}]
+                                     self._collection(), states or {},
+                                     self._hide_na)}]
 
     def on_item_codex(self, p):
         """A character's item codex (item -> [count, rank]), read in game.
@@ -2575,7 +2583,8 @@ class App:
             sel = self._coll_sheet[1]
         return [{"k": "collection", "id": "collection",
                  "sync": sync, "sel": sel,
-                 **collection_view(owned, entry.get("items") or {})}]
+                 **collection_view(owned, entry.get("items") or {},
+                                   self._hide_na)}]
 
     def _item_codex(self):
         try:
@@ -3102,6 +3111,9 @@ class App:
                 port = f"chr_m{MODEL_FORMAT}_{key}" if key else None
                 chars.append({
                     "key": k, "n": h, "cls": cls,
+                    # its id in the game's database: none for one seen
+                    # before it was read (a double, once its id is known)
+                    "hid": chars_all[k].get("id"),
                     "clsT": tr(CLASS_LABELS[cls]) if cls in CLASS_LABELS else "",
                     "lvl": prof.get("lvl"),
                     "on": k not in excluded,
@@ -3399,6 +3411,11 @@ class App:
     def auto_reset_dummy(self) -> bool:
         """Read by the hook thread, so it stays a plain attribute read."""
         return bool(self._auto_reset_dummy)
+
+    def _set_hide_na(self, p):
+        """Collection and Succès: the unavailable content shown or not."""
+        self._hide_na = bool(p.get("value"))
+        self._save_settings()
 
     def _toggle_auto_reset_dummy(self):
         self._auto_reset_dummy = not self._auto_reset_dummy

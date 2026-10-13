@@ -1,5 +1,21 @@
 /* The achievements page. */
 
+/* Collection and Succès: the content out of reach in the game as it is (no
+   way to get it in the game's data) shown or left out of lists and counts. */
+function naToggle(n) {
+  // a filter of its own, beside the list's: everything, or what can be had
+  const seg = el('div', 'seg naseg');
+  seg.title = tr('Disponible : sans ce que les données du jeu ne permettent pas d’obtenir aujourd’hui (aucune source connue), retiré des listes et des totaux');
+  [[false, tr('Tout le contenu')],
+   [true, tr('Disponible') + (n.na ? ' (−' + fmtN(n.na) + ')' : '')]].forEach(([v, t]) => {
+    const b = el('button', !!n.hideNa === v ? 'on' : '', t);
+    b.type = 'button';
+    b.addEventListener('click', () => { if (!!n.hideNa !== v) notify('hide_unavailable', { value: v }); });
+    seg.appendChild(b);
+  });
+  return seg;
+}
+
 /* ---- achievements ------------------------------------------------------- */
 const ACH = { cat: '', filter: 'todo', q: '' };
 let ACH_NODE = null;
@@ -20,56 +36,72 @@ function renderAch(box, n) {
   const keepQ = document.activeElement && document.activeElement.classList.contains('achq');
   const caret = keepQ ? document.activeElement.selectionStart : null;
   box.textContent = '';
-  box.appendChild(el('div', 'section', tr('Succès')));
-  box.appendChild(el('p', 'note', n.sync || ''));
-  const stats = el('div', 'cards achstats');
+  // the header, one card like a report's: who and the totals on top, the
+  // categories as its tabs (readable over the page's picture)
+  const head = el('div', 'bhead rhead achhead');
+  box.appendChild(head);
+  const top = el('div', 'achtop');
+  const who = el('div', 'bwho');
+  const ic = tabIcon('Achievements');
+  if (ic) {
+    const b = el('span', 'rhic');
+    b.appendChild(ic);
+    who.appendChild(b);
+  }
+  const wt = el('div', 'bwt');
+  wt.appendChild(el('b', 'bwn', tr('Succès')));
+  const ws = el('div', 'bws');
+  if (n.sync) ws.appendChild(el('span', null, n.sync));
+  wt.appendChild(ws);
+  who.appendChild(wt);
+  // who, and the option under it, beside the totals
+  const left = el('div', 'achleft');
+  left.appendChild(who);
+  top.appendChild(left);
   const pct = n.n ? Math.round(n.got / n.n * 100) : 0;
+  const facts = el('div', 'achfacts');
   const pic = (src, cls) => {
     if (!src) return null;
-    const im = el('img', 'achstat' + (cls ? ' ' + cls : ''));
+    const im = el('img', cls || null);
     im.src = src;
     im.alt = '';
     return im;
   };
-  const ringBox = () => {
-    const r = el('div', 'achstat achring');
-    r.appendChild(ring(pct));
-    return r;
-  };
   [[tr('Points'), fmtN(n.pts || 0) + ' / ' + fmtN(n.ptsAll || 0), pic((window.__COLL__ || {}).achcat_Character)],
    [tr('Succès obtenus'), (n.got || 0) + ' / ' + (n.n || 0), pic((window.__SHEET__ || {}).ach_badge, 'badge')],
-   [tr('Progression'), pctTxt(pct), ringBox()]].forEach(([t, v, icon]) => {
-    const c = el('div', 'card');
-    if (icon) c.appendChild(icon);
+   [tr('Progression'), pctTxt(pct), ring(pct)]].forEach(([t, v, icon]) => {
+    const f = el('div', 'achfact');
+    const ib = el('span', 'achfic');
+    if (icon) ib.appendChild(icon);
+    f.appendChild(ib);
     const tx = el('div', 'achtx');
     tx.appendChild(el('div', 't', t));
     tx.appendChild(el('div', 'v', v));
-    c.appendChild(tx);
-    stats.appendChild(c);
+    f.appendChild(tx);
+    facts.appendChild(f);
   });
-  box.appendChild(stats);
+  top.appendChild(facts);
+  head.appendChild(top);
 
-  const cats = el('div', 'achcats');
+  const cats = el('div', 'btabs achtabs');
   [{ v: '', t: tr('Toutes'), got: n.got, n: n.n }].concat(n.cats || []).forEach((c) => {
-    const b = el('button', 'achcat' + (ACH.cat === c.v ? ' on' : ''));
+    const b = el('button', 'btab' + (ACH.cat === c.v ? ' on' : ''));
     b.type = 'button';
-    if (c.img) {
-      const src = (window.__COLL__ || {})[c.img];
-      if (src) {
-        const im = document.createElement('img');
-        im.src = src;
-        im.alt = '';
-        b.appendChild(im);
-      }
+    const src = c.img && (window.__COLL__ || {})[c.img];
+    if (src) {
+      const im = document.createElement('img');
+      im.src = src;
+      im.alt = '';
+      b.appendChild(im);
     }
     const t = el('span', 'ct');
     t.appendChild(el('b', null, c.t));
-    t.appendChild(el('span', null, c.got + ' / ' + c.n + (c.pts != null ? ' · ' + tr('{n} pts', { n: c.pts }) : '')));
+    t.appendChild(el('small', null, c.got + ' / ' + c.n + (c.pts != null ? ' · ' + tr('{n} pts', { n: c.pts }) : '')));
     b.appendChild(t);
     b.addEventListener('click', () => { ACH.cat = c.v; rerenderAch(); });
     cats.appendChild(b);
   });
-  box.appendChild(cats);
+  head.appendChild(cats);
 
   const tools = el('div', 'colltools');
   const q = el('input', 'collq achq');
@@ -86,6 +118,7 @@ function renderAch(box, n) {
     seg.appendChild(b);
   });
   tools.appendChild(seg);
+  tools.appendChild(naToggle(n));
   box.appendChild(tools);
 
   const needle = ACH.q.trim().toLowerCase();
