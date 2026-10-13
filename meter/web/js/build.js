@@ -4,7 +4,8 @@
    (meter/buildtab.py); this only draws it and sends the changes. */
 
 let BUILD_NODE = null;
-const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'], ['sim', 'Simulation']];
+const BUILD_VIEWS = [['stuff', 'Équipement'], ['talents', 'Talents'], ['runes', 'Runes'],
+  ['sim', 'Simulation dégâts'], ['resist', 'Simulation résistance']];
 let BUILD_VIEW = 'stuff';        // the open build's tab
 let BUILD_FADE = false;         // the next draw follows a tab change
 let BUILD_Q = '';               // the piece editor's search
@@ -88,6 +89,8 @@ function buildBuild(n) {
     buildTalents(o, main);
   } else if (BUILD_VIEW === 'runes') {
     main.appendChild(runesSection((o.sim && o.sim.runes) || []));
+  } else if (o.sim && BUILD_VIEW === 'resist') {
+    main.appendChild(buildResist(o.sim));
   } else if (o.sim) {
     main.appendChild(buildSim(o.sim));
   } else {
@@ -147,8 +150,6 @@ function buildSim(s) {
   arm.appendChild(el('span', null, tr('Réduction cible')));
   arm.appendChild(slider(0, 80, s.armor, (v) => notify('build_sim', { field: 'armor', value: v }), '', ' %'));
   ctl.appendChild(arm);
-  ctl.appendChild(num(tr('Niveau de l’ennemi'), s.enemy, 'enemy', 1, s.maxLvl));
-  ctl.appendChild(num(tr('Coup reçu'), s.hit, 'hit', 0, 100000, 10));
   wrap.appendChild(ctl);
   wrap.appendChild(el('p', 'note', tr('Critique {crit} · bonus critique {mult}'
     + ' (CC : coup critique). La moyenne tient compte des chances de critique. Les effets propres '
@@ -172,27 +173,130 @@ function buildSim(s) {
     t.appendChild(blk);
   });
   out.appendChild(t);
-  const d = s.defense;
-  const c = el('div', 'spanel bsimdef');
-  c.appendChild(el('div', 'sptitle', tr('Ce que tu reçois')));
-  const line = (label, v, sub) => {
-    const r = el('div', 'attr sec');
-    r.appendChild(el('span', 'an', label));
-    const b = el('b', 'av', v);
-    if (sub) b.appendChild(el('small', null, ' (' + sub + ')'));
-    r.appendChild(b);
-    c.appendChild(r);
-  };
-  line(tr('Coup reçu'), d.hit);
-  // a shield's upgrade effect: off the hit before the armour
-  if (d.cut) line(tr('Bouclier amélioré'), '−' + d.cut);
-  line(tr('Physique'), d.phys, tr('armure −{n}', { n: d.physMit }));
-  line(tr('Magique'), d.magic, tr('réduction −{n}', { n: d.magicMit }));
-  line(tr('Ferveur'), '−' + d.taken, tr('la moitié en réduction'));
-  line(tr('Points de vie'), d.hp);
-  line(tr('Coups physiques encaissés'), d.hitsPhys);
-  out.appendChild(c);
   wrap.appendChild(out);
+  return wrap;
+}
+
+/* The resistance, as a hit goes through the game's sums: the character's
+   defences on the left (its defensive buffs to tick under them), the hit
+   on the right going down step by step to what it takes, physical or
+   magic, then the formula. Everything multiplies. */
+let RES_KIND = 'phys';
+
+function buildResist(s) {
+  const r = s.resist;
+  const wrap = el('div', 'bres');
+  if (!r) return wrap;
+  const h = el('div', 'bresh');
+  h.appendChild(el('h2', 'brestitle', tr('Réduction des dégâts')));
+  wrap.appendChild(h);
+  const cols = el('div', 'brescols');
+
+  // the character
+  const left = el('div', 'bresleft');
+  const me = el('div', 'spanel bresme');
+  me.appendChild(el('div', 'bresmet', tr('Ton personnage')));
+  me.appendChild(el('div', 'bresmel', tr('Niveau {n}', { n: r.lvl })));
+  r.me.forEach((x) => {
+    // what counts against the hit shown lit, the rest dimmed
+    const on = x.k === 'magic' ? RES_KIND === 'magic'
+      : x.k === 'armor' ? RES_KIND === 'phys' : !x.off;
+    const row = el('div', 'bresrow k-' + x.k + (on ? '' : ' off'));
+    row.appendChild(el('i', 'bresic'));
+    const t = el('div', 'brest');
+    t.appendChild(el('b', null, x.t));
+    t.appendChild(el('span', null, x.sub));
+    if (x.base) t.appendChild(el('span', 'base', tr('{base} sans les buffs', { base: x.base })));
+    row.appendChild(t);
+    row.appendChild(el('b', 'bresv', x.v));
+    me.appendChild(row);
+  });
+  left.appendChild(me);
+  // the buffs its own skills give
+  const bp = el('div', 'spanel bresbuffs');
+  bp.appendChild(el('div', 'sptitle', tr('Buffs défensifs')));
+  if (!r.buffs.length) {
+    bp.appendChild(el('p', 'anote', tr('Aucune compétence de ce build (armes portées, classe, '
+      + 'imprégnations) ne donne de buff défensif.')));
+  }
+  r.buffs.forEach((x) => {
+    const row = el('button', 'bresbuff' + (x.on ? ' on' : ''));
+    row.type = 'button';
+    row.appendChild(el('span', 'brbox', x.on ? '✓' : ''));
+    const ic = skillIcon({ id: x.id, name: x.name });
+    ic.title = '';
+    row.appendChild(ic);
+    const t = el('div', 'brt');
+    t.appendChild(el('b', null, x.name + (x.status ? ' — ' + x.status : '')));
+    t.appendChild(el('span', 'fx', x.fx));
+    if (x.when) t.appendChild(el('span', 'when', x.when));
+    row.appendChild(t);
+    row.addEventListener('click', () => notify('build_sim', { field: 'buff', value: x.key }));
+    if (x.tip) attachTip(row, x.tip, x.id);
+    bp.appendChild(row);
+  });
+  left.appendChild(bp);
+  cols.appendChild(left);
+
+  // the hit, going down
+  const right = el('div', 'bresright');
+  const k = r[RES_KIND];
+  const hit = el('div', 'bresblow');
+  const ht = el('div', 'bresblowt');
+  const l1 = el('div', 'l1');
+  const lvl = el('input', 'inl');
+  lvl.type = 'number'; lvl.min = 1; lvl.max = s.maxLvl; lvl.value = r.enemy;
+  lvl.addEventListener('change', () => notify('build_sim', { field: 'enemy', value: Number(lvl.value) }));
+  l1.appendChild(document.createTextNode(tr('Un monstre') + ' '));
+  const lb = el('b', null, tr('niveau') + ' ');
+  lb.appendChild(lvl);
+  l1.appendChild(lb);
+  l1.appendChild(document.createTextNode(' ' + tr('te frappe')));
+  ht.appendChild(l1);
+  const kinds = el('div', 'breskinds');
+  [['phys', tr('Dégâts physiques')], ['magic', tr('Dégâts magiques')]].forEach(([v, t]) => {
+    const b = el('button', 'breskind' + (RES_KIND === v ? ' on' : ''), t);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      RES_KIND = v;
+      const page = buildResist(s);
+      wrap.replaceWith(page);
+    });
+    kinds.appendChild(b);
+  });
+  ht.appendChild(kinds);
+  hit.appendChild(ht);
+  const hv = el('input', 'breshit');
+  hv.type = 'number'; hv.min = 0; hv.max = 100000; hv.step = 10; hv.value = s.hit;
+  hv.addEventListener('change', () => notify('build_sim', { field: 'hit', value: Number(hv.value) }));
+  hit.appendChild(hv);
+  right.appendChild(hit);
+  k.steps.forEach((x) => {
+    const row = el('div', 'bresstep' + (x.opt ? ' opt' : ''));
+    row.appendChild(el('i', 'bresarrow'));
+    const c = el('div', 'bresstepc');
+    const t = el('div', 'brst');
+    t.appendChild(el('b', null, x.t));
+    t.appendChild(el('span', 'pct', x.pct));
+    c.appendChild(t);
+    c.appendChild(el('span', 'sub', x.sub));
+    row.appendChild(c);
+    const v = el('div', 'bresres');
+    v.appendChild(el('b', null, x.after));
+    v.appendChild(el('span', null, x.calc));
+    row.appendChild(v);
+    right.appendChild(row);
+  });
+  const tot = el('div', 'brestotal');
+  tot.appendChild(el('span', null, tr('Dégâts reçus')));
+  const tv = el('div', 'v');
+  tv.appendChild(el('b', null, k.after));
+  if (k.blocked) tv.appendChild(el('span', null, ' · ' + tr('{n} en bloquant', { n: k.blocked })));
+  tot.appendChild(tv);
+  right.appendChild(tot);
+  right.appendChild(el('p', 'note', tr('{n} coups encaissés avec {hp} PV.', { n: k.hits, hp: r.hp })));
+  cols.appendChild(right);
+  wrap.appendChild(cols);
   return wrap;
 }
 
@@ -202,7 +306,15 @@ function spellCard(sk) {
   const card = el('div', 'spell');
   const head = el('div', 'sphead');
   head.appendChild(skillIcon({ id: sk.id, name: sk.name }, 'big'));
-  head.appendChild(el('b', null, sk.name));
+  // a summoned unit's card: what summons it under its name
+  if (sk.sub) {
+    const nt = el('div', 'spnm');
+    nt.appendChild(el('b', null, sk.name));
+    nt.appendChild(el('small', null, sk.sub));
+    head.appendChild(nt);
+  } else {
+    head.appendChild(el('b', null, sk.name));
+  }
   card.appendChild(head);
   if (!(sk.lines || []).length) {
     card.appendChild(el('p', 'anote', tr('Pas de dégâts ni de soin chiffrés (effet de script ou de rune).')));
@@ -212,12 +324,27 @@ function spellCard(sk) {
     const left = el('div', 'spk');
     left.appendChild(el('b', null, l.kind));
     if (l.aff) left.appendChild(el('small', null, l.aff));
+    // dealt by another: a summoned unit (its bee), a status put down
+    if (l.via) left.appendChild(el('small', 'via', l.via));
     row.appendChild(left);
     const v = el('div', 'spv');
     v.appendChild(el('b', null, l.normal));
     v.appendChild(el('span', 'cc', tr('{n} CC', { n: l.crit })));
     row.appendChild(v);
     card.appendChild(row);
+    // a summon boosted by a status on it (a bee enraged in an area)
+    if (l.boost) {
+      const br = el('div', 'spline boost k-' + l.k);
+      const bl = el('div', 'spk');
+      bl.appendChild(el('b', null, l.boost.t));
+      bl.appendChild(el('small', null, tr('Dégâts {n}', { n: l.boost.pct })));
+      br.appendChild(bl);
+      const bv = el('div', 'spv');
+      bv.appendChild(el('b', null, l.boost.normal));
+      bv.appendChild(el('span', 'cc', tr('{n} CC', { n: l.boost.crit })));
+      br.appendChild(bv);
+      card.appendChild(br);
+    }
   });
   const foot = el('ul', 'spfoot');
   const item = (t) => foot.appendChild(el('li', null, t));

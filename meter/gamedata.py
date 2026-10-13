@@ -313,6 +313,39 @@ def weapon_upgrade(item_type, rarity):
     return _fr_ref(texts[i]), int(u.get("at") or 3)
 
 
+def defense_effects(skill_ids):
+    """The temporary defences these skills give their user (skill_tips.json
+    "defense", hltools/skilltext._defense): a status raising Armor or
+    MagicArmor by a share, or a cut off the hits received (all of them or
+    magic ones, from a rank, while the skill recharges). One per status or
+    script ("via") whatever skill names it: [{src, k, atb, val, via, rank,
+    magic, cooldown, dur}]."""
+    table = _table("skill_tips.json").get("defense") or {}
+    out, seen = [], set()
+    for sid in skill_ids:
+        for e in table.get(sid) or ():
+            key = (e.get("via"), e.get("k"), e.get("atb"), e.get("magic"))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(dict(e, src=sid))
+    return out
+
+
+def block_mitigation(pieces):
+    """What a block stops for these weapons ([(item, item type)], the
+    off hand first: a shield holds the block), from the game's block skills
+    (skill_tips.json "block": PhysicalBlock, MagicBlock 50 %, ShieldBlock
+    60 %): (skill id, percent), or (None, 0)."""
+    t = _table("skill_tips.json").get("block") or {}
+    skills = t.get("skills") or {}
+    for item, typ in pieces:
+        sid = (t.get("items") or {}).get(item) or (t.get("types") or {}).get(typ)
+        if sid in skills:
+            return sid, float(skills[sid])
+    return None, 0.0
+
+
 def weapon_taken_cut(item_type, rarity, upgrade):
     """What a worn weapon's upgrade effect takes off the hits its wearer
     receives (the shields': 0.05 to 0.11 off the hit's damage multiplier),
@@ -495,7 +528,7 @@ DATA_GENERATION = [0]
 
 # Bumped when the generators' output changes shape: data written by older
 # tools is regenerated once, though the game itself has not changed.
-DATA_FORMAT = 26
+DATA_FORMAT = 28
 
 
 def _hook_needs():

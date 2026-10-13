@@ -131,6 +131,12 @@ def build(game_dir):
                 if stype(s.get("skill")) in ("WeaponSkill", "AttackCombo",
                                              "WeaponPassive", "Attack",
                                              "Attack2", "Attack3", "Attack4")]
+        else:
+            # a jewel's or an armour's own effect (a trinket's bee...)
+            own = [s.get("skill") for s in it.get("skills") or ()
+                   if s.get("skill") in skills]
+            if own:
+                entry["gearSkills"] = own
         items[it["id"]] = entry
 
     # augments: kind -> the types they go on, and the augments themselves
@@ -217,9 +223,12 @@ def build(game_dir):
     eff_kinds = next(c for c in sh["skill@steps@effects"]["columns"]
                      if c["name"] == "effect")["typeStr"].split(":")[1]         .split(",")
     wanted = {s["id"] for e in items.values() for s in e.get("skills") or ()}
+    wanted |= {s for e in items.values() for s in e.get("gearSkills") or ()}
     for c in CLASSES:
         wanted |= {s.get("skill") for s in (unit.get(c) or {}).get("skills")
                    or ()}
+    # and the infusions' (their damage, their heals)
+    wanted |= set(infusions)
     # Steps and scalings can need a rank (minRank / maxRank): skills are shown
     # at their highest (WeaponSkill_MaxRank).
     max_rank = int(num("WeaponSkill_MaxRank") or 3)
@@ -255,7 +264,22 @@ def build(game_dir):
         subs += [m for m in re.findall(r"setStatus\([^,]+,\s*Skill\.(\w+)",
                                        sk.get("script") or "")
                  if m in skills]
+        # or put one on its target (an infusion's poison: addStatus(target,
+        # Skill.<status>))
+        subs += [m for m in re.findall(r"addStatus\([^,]+,\s*Skill\.(\w+)",
+                                       sk.get("script") or "")
+                 if m in skills and m not in subs]
         for st in sk.get("steps") or ():
+            # a unit it summons (a bee): what that unit's skills do
+            summoned = ((st.get("props") or {}).get("summon") or {}).get("unit")
+            for us in (unit.get(summoned) or {}).get("skills") or ():
+                if us.get("skill") in skills:
+                    before = len(out)
+                    reach = collect(us["skill"], rune, no_rune, depth + 1,
+                                    seen, out, reach)
+                    for line in out[before:]:
+                        line["unit"] = summoned
+                        line["by"] = sid    # what summons it (its icon)
             cond = st.get("cond") or {}
             if not ((cond.get("minRank") or 0) <= max_rank
                     <= (cond.get("maxRank") or max_rank)):
@@ -277,6 +301,9 @@ def build(game_dir):
                 line = {"k": kind, "aff": e.get("affinity"),
                         "base": e.get("baseVal") or 0,
                         "rune": r, "noRune": nr,
+                        # the skill it comes from, when another (a status,
+                        # a summon's attack)
+                        "via": sid if depth else None,
                         "sc": [[x.get("atb"), x.get("ratio") or 0]
                                for x in e.get("scaling") or ()
                                if x.get("atb")
@@ -292,10 +319,40 @@ def build(game_dir):
                                 reach)
         return reach
 
+    # what a status put on a summon adds to its damage, from its master's
+    # script: "onProxyDamageEval(dmg) { ... Unit.<unit> ...
+    # hasStatus(Skill.<status>) ... dmgMult += vars.<v> }" (a bee enraged
+    # in the swarm leap's area), and the skill that puts that status on it
+    # (an addStatus(..., Skill.<status>) of its script)
+    adders = {}
+    for xid, x in skills.items():
+        for m in re.findall(r"addStatus\([^,]+,\s*Skill\.(\w+)", x.get("script") or ""):
+            adders.setdefault(m, xid)
+
+    def boosts(sid):
+        out = {}
+        script = (skills.get(sid) or {}).get("script") or ""
+        m = re.search(r"function\s+onProxyDamageEval\s*\(\s*\w+\s*\)\s*\{(.*?)\n\}", script, re.S)
+        if not m:
+            return out
+        body = m.group(1)
+        u = re.search(r"Unit\.(\w+)", body)
+        st = re.search(r"hasStatus\(Skill\.(\w+)\)", body)
+        v = re.search(r"dmgMult\s*\+=\s*vars\.(\w+)", body)
+        val = ((skills.get(sid) or {}).get("vars") or {}).get(v.group(1)) if v else None
+        if u and st and isinstance(val, (int, float)):
+            out[u.group(1)] = {"val": val, "status": st.group(1),
+                               "from": adders.get(st.group(1))}
+        return out
+
     for sid in wanted:
         sk = skills.get(sid) or {}
         out = []
         reach = collect(sid, None, None, 0, set(), out, None)
+        for unit_id, bo in boosts(sid).items():
+            for line in out:
+                if line.get("unit") == unit_id and line["k"] == "Damage":
+                    line["boost"] = bo
         if out:
             effects[sid] = out
         runes = [{"id": m.get("id"),

@@ -365,7 +365,10 @@ def _hero_sheet(prof, gear):
         return out
     return {"primary": [row(k) for k in HERO_PRIMARY],
             "secondary": [row(k) for k in HERO_SECONDARY],
-            "raw": vals}
+            "raw": vals,
+            # each attribute's shares and factors at work ((v + flat) *
+            # (1 + share) * factor): a buff's share adds to them
+            "shares": {k: [e[1], e[2]] for k, e in effects.items()}}
 
 
 def _hero_effects(prof, gear):

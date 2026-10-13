@@ -9,10 +9,12 @@ import copy
 
 import builds as B
 from common import dec_sep, pct_sp, _n, _pretty_id, class_key, element_label
-from gamedata import (_fr_names, _skill_label, build_data, faction_label,
+from gamedata import (_fr_names, _skill_label, _unit_label, build_data, faction_label,
+                      gear_stats_data,
                       skill_tip,
                       infusion_data, item_icon, item_label, item_type_label,
-                      rarity_label, weapon_taken_cut)
+                      rarity_label, weapon_taken_cut, defense_effects,
+                      block_mitigation)
 from gearstats import HERO_SLOTS, gear_stats, infusion_tiers
 from i18n import lang as i18n_lang, tr
 from simulate import simulate
@@ -37,6 +39,17 @@ AUG_LABELS = {"AugmentDemon": "Cadeau corrompu",
               "AugmentEnchantHands": "Enchantement de gants"}
 HANDS_FR = {"1h": "une main", "2h": "deux mains", "dual": "deux armes",
             "long": "arme longue", "off": "main secondaire"}
+
+
+def _class_primary(cls):
+    """A class's main attribute: its aptitude's primary one (its scalings'
+    first group), what "your main attribute" names in the game's texts."""
+    apt = ((build_data().get("classes") or {}).get(cls) or {}).get("apt")
+    gs = gear_stats_data()
+    for x in ((gs.get("aptitudes") or {}).get(apt) or {}).get("scalings") or ():
+        if x.get("g") == 0:
+            return x.get("end")
+    return None
 
 
 def _cls_fr(c):
@@ -289,17 +302,49 @@ class BuildTab:
         self._edit(change)
 
     def _sim(self, field, value):
-        if field not in ("armor", "enemy", "hit"):
+        if field not in ("armor", "enemy", "hit", "buff"):
             return
 
         def change(b):
             sim = dict(b.get("sim") or {})
+            if field == "buff":
+                # a defensive buff on or off (its key: _defense_buffs)
+                on = list(sim.get("buffs") or [])
+                if value in on:
+                    on.remove(value)
+                elif isinstance(value, str):
+                    on.append(value)
+                sim["buffs"] = on
+                b["sim"] = sim
+                return
             try:
                 sim[field] = max(0, float(value))
             except (TypeError, ValueError):
                 return
             b["sim"] = sim
         self._edit(change)
+
+    def _defense_buffs(self, b):
+        """The defences the build's own skills can give it for a while (its
+        weapons', its class's, its infusions'), from the game's data
+        (gamedata.defense_effects): each with its key and whether the
+        simulation counts it."""
+        gear = b.get("gear") or {}
+        ids = []
+        for slot in ("Weapon1", "OffhandWeapon"):
+            p = gear.get(slot)
+            if p:
+                ids += [s["id"] for s in (B.item(p["id"]) or {}).get("skills") or ()]
+        cls = (build_data().get("classes") or {}).get(b.get("cls")) or {}
+        ids += [s["id"] for s in (cls.get("skills") or []) + (cls.get("passives") or [])]
+        ids += sorted({p["inf"] for p in gear.values() if p and p.get("inf")})
+        on = set((b.get("sim") or {}).get("buffs") or ())
+        out = []
+        for e in defense_effects(ids):
+            key = ":".join(str(x) for x in (e["via"], e["k"], e.get("atb") or "",
+                                             "m" if e.get("magic") else ""))
+            out.append(dict(e, key=key, on=key in on))
+        return out
 
     def _rune(self, skill, rune):
         """One rune per skill: choosing the chosen one takes it off."""
@@ -744,14 +789,29 @@ class BuildTab:
             "model": "hero:" + ".".join(
                 f"{s}={(b['gear'].get(s) or {}).get('id')}" for s in HERO_SLOTS
                 if (b["gear"].get(s) or {}).get("id")),
-            "sim": self._sim_view(b, (o.get("atbs") or {}).get("raw")),
+            "sim": self._sim_view(b, (o.get("atbs") or {}).get("raw"),
+                                  (o.get("atbs") or {}).get("shares") or {}),
             "editor": self._editor_view(o) if self.slot else None}
 
-    def _sim_view(self, b, raw):
+    def _sim_view(self, b, raw, shares=None):
         """The simulation: the bar's skills and the main weapon's attacks
-        against the target set in the build, and the incoming hit."""
+        against the target set in the build, and the incoming hit (with the
+        defensive buffs ticked; `shares` the sheet's own attribute shares,
+        that a buff's share adds to)."""
         if not raw:
             return None
+        buffs = self._defense_buffs(b) if shares is not None else []
+        bare = raw
+        raw = dict(raw)
+        armor_up = {}
+        for e in buffs:
+            if e["on"] and e["k"] == "armor":
+                armor_up[e["atb"]] = armor_up.get(e["atb"], 0.0) + e["val"]
+        for atb, up in armor_up.items():
+            # (v + flat) * (1 + share) * factor: the buff's share added
+            s, f = (shares or {}).get(atb) or [0.0, 1.0]
+            if (1 + s) * f:
+                raw[atb] = (bare.get(atb) or 0) / ((1 + s) * f) * (1 + s + up) * f
         sim = b.get("sim") or {}
         armor = float(sim.get("armor") if sim.get("armor") is not None
                       else 30)
@@ -766,9 +826,14 @@ class BuildTab:
                           weapon("Weapon2"))
         runes = (b.get("runes") or {}).values()
         # the weapons' upgrade effects that cut the damage taken (a shield)
-        cut = sum(weapon_taken_cut((B.item(p["id"]) or {}).get("type"),
-                                   p.get("rar"), p.get("up"))
-                  for p in (gear.get("Weapon1"), gear.get("OffhandWeapon")) if p)
+        upgrade_cut = sum(weapon_taken_cut((B.item(p["id"]) or {}).get("type"),
+                                           p.get("rar"), p.get("up"))
+                          for p in (gear.get("Weapon1"), gear.get("OffhandWeapon")) if p)
+        # and the buffs ticked: all hits, or magic ones
+        cut = upgrade_cut + sum(e["val"] for e in buffs
+                                if e["on"] and e["k"] == "cut" and not e.get("magic"))
+        magic_cut = sum(e["val"] for e in buffs
+                        if e["on"] and e["k"] == "cut" and e.get("magic"))
         d = build_data()
         base_ids = set()                # the basic attacks' skills
 
@@ -810,9 +875,37 @@ class BuildTab:
                        [(sid, None, None) for sid in
                         [x for x in [B.signature(b)] if x]
                         + [s["id"] for s in cls.get("skills") or ()]]))
+        # what deals or heals besides the spells: the worn weapons'
+        # passives (a bee they summon), the jewels' and armour's own
+        # effects, the infusions worn
+        extra = []
+        for w in (main, off):
+            if w:
+                extra += skills_of(w, B.PASSIVE_TYPES, w is main)
+        for slot, p in gear.items():
+            if p and slot not in ("Weapon1", "OffhandWeapon", "Weapon2"):
+                extra += [(sid, None, None)
+                          for sid in (B.item(p["id"]) or {}).get("gearSkills") or ()]
+        extra += [(sid, None, None) for sid in
+                  sorted({p["inf"] for p in gear.values() if p and p.get("inf")})]
+        seen_x = set()
+        extra = [x for x in extra if not (x[0] in seen_x or seen_x.add(x[0]))]
+        if extra:
+            groups.append((tr("Sources annexes"),
+                           tr("passifs, invocations, équipement et imprégnations"),
+                           extra))
         rows = [r for _t, _s, rs in groups for r in rs]
+        # "AllAttributes" (a share of the main attribute, as the game's
+        # texts say): the class's primary attribute (its aptitude's)
+        main_atb = _class_primary(b.get("cls"))
+        if main_atb:
+            raw["AllAttributes"] = raw.get(main_atb) or 0
+            bare = dict(bare, AllAttributes=bare.get(main_atb) or 0)
         # the hero alone: critical chances and what an incoming hit leaves
-        out = simulate(raw, b["lvl"], [], armor, enemy, hit, runes, cut)
+        # the hero as buffed for what it receives; its attacks as it stands
+        out = simulate(raw, b["lvl"], [], armor, enemy, hit, runes, cut, magic_cut)
+        out_hero = raw
+        raw = bare
         sims = [(t, sub, rs, simulate(raw, b["lvl"], rs, armor, enemy, hit,
                                       runes)) for t, sub, rs in groups if rs]
         fmt = lambda v: f"{v:.0f}"
@@ -823,10 +916,13 @@ class BuildTab:
             "armor": armor, "enemy": enemy, "hit": hit,
             "maxLvl": build_data().get("maxLevel") or 25,
             "crit": pc(out["critChance"]), "critMult": pc(out["critMult"]),
+            # only what deals or heals something: a spell with no number
+            # (its effect a script's, or a rune's) is left out
             "groups": [{
                 "t": t, "sub": sub,
                 "skills": _merge_base_attacks(
-                    [self._card(r, fmt, pc, kinds) for r in g["rows"]],
+                    [c for r in g["rows"] if r["lines"]
+                     for c in self._cards(r, fmt, pc, kinds)],
                     [sid for sid, label, _w in rs
                      if label and sid in base_ids])}
                 for t, sub, rs, g in sims],
@@ -842,8 +938,149 @@ class BuildTab:
                 "cut": pc(out["defense"]["cut"]) if out["defense"]["cut"] else None,
                 "hp": fmt(out["defense"]["hp"]),
                 "hitsPhys": (f"{out['defense']['hp'] / out['defense']['phys']['after']:.1f}".replace(".", dec_sep())
-                             if out["defense"]["phys"]["after"] > 0 else "—")}}
+                             if out["defense"]["phys"]["after"] > 0 else "—")},
+            "resist": self._resist_view(b, out["defense"], buffs, upgrade_cut,
+                                        bare, armor_up, out_hero, fmt, pc)}
         return view
+
+    def _resist_view(self, b, d, buffs, upgrade_cut, bare, armor_up, hero, fmt, pc):
+        """The resistance tab, as a hit goes through the game's sums: the
+        character's defences (armour, the shield's upgrade, Fervor, the
+        block, magic resistance; resilience counts against players only),
+        the buffs to tick, then the hit step by step, physical or magic
+        (BaseSkill.evalDamage, then ent.Unit.computeDamage): its multiplier
+        less the cuts, the resistance's share r / (r + a + b × level), the
+        Fervor's half, a block's. Everything multiplies."""
+        num = lambda v, n=2: f"{v:.{n}f}".replace(".", dec_sep())
+        pct_ = lambda v: f"{v:g}".replace(".", dec_sep()) + pct_sp()
+        names = _fr_names("attribute")
+        gear = b.get("gear") or {}
+        rows = []
+        for e in buffs:
+            if e["k"] == "armor":
+                fx = tr("{atb} +{n}", atb=names.get(e["atb"]) or e["atb"],
+                        n=pc(e["val"]))
+            elif e.get("magic"):
+                fx = tr("Dégâts magiques subis −{n}", n=pc(e["val"]))
+            else:
+                fx = tr("Dégâts subis −{n}", n=pc(e["val"]))
+            when = []
+            if e.get("cooldown"):
+                when.append(tr("pendant sa recharge"))
+            if e.get("dur"):
+                when.append(tr("{n} s", n=f"{e['dur']:g}".replace(".", dec_sep())))
+            if (e.get("rank") or 1) > 1:
+                when.append(tr("rang {n}", n=e["rank"]))
+            rows.append({"key": e["key"], "on": e["on"], "id": e["src"],
+                         "name": _skill_label(e["src"]),
+                         "status": _skill_label(e["via"]) if e["via"] != e["src"] else "",
+                         "fx": fx, "when": " · ".join(when),
+                         "tip": skill_tip(e["src"])})
+        a, bb = d["consts"]
+        lvl = d["level"]
+        # the block: the off hand's (a shield holds it), else the main one's
+        pieces = [(p["id"], (B.item(p["id"]) or {}).get("type"))
+                  for p in (gear.get("OffhandWeapon"), gear.get("Weapon1")) if p]
+        block_id, block = block_mitigation(pieces)
+        # the shield's upgrade (a cut off the hit's multiplier)
+        shield = None
+        if upgrade_cut:
+            p = next((gear.get(s) for s in ("OffhandWeapon", "Weapon1")
+                      if gear.get(s) and weapon_taken_cut(
+                          (B.item(gear[s]["id"]) or {}).get("type"),
+                          gear[s].get("rar"), gear[s].get("up"))), None)
+            if p:
+                # named as the image of the game's sums: its kind and rarity
+                # ("Bouclier légendaire")
+                kind = item_type_label((B.item(p["id"]) or {}).get("type")) or item_label(p["id"])
+                rar = rarity_label(p.get("rar")) if p.get("rar") else ""
+                shield = {"name": f"{kind} {rar.lower()}".strip(), "up": p.get("up") or 0}
+        fervor = (hero.get("Fervor") or 0) / 100
+        # the cuts off the hit's multiplier: the upgrade's, the buffs'
+        cut_rows = ([(tr("Bouclier amélioré") if not shield else shield["name"],
+                      upgrade_cut, False)] if upgrade_cut else [])
+        cut_rows += [(x["status"] or x["name"], e["val"], bool(e.get("magic")))
+                     for x, e in zip(rows, buffs) if e["on"] and e["k"] == "cut"]
+
+        def steps(key):
+            s = d[key]
+            hit = d["hit"]
+            out, m, cur = [], 1.0, hit
+            for t, v, magic in cut_rows:
+                if magic and key != "magic":
+                    continue
+                m -= v
+                after = hit * max(0.0, m)
+                out.append({"t": t, "pct": "−" + pc(v),
+                            "sub": tr("retiré au multiplicateur de dégâts du coup"),
+                            "after": fmt(after), "calc": f"{fmt(hit)} × {num(max(0.0, m))}"})
+                cur = after
+            formula = tr("{r} ÷ ({r} + {a} + {b} × {lvl})", r=fmt(s["res"]), a=fmt(a),
+                         b=fmt(bb), lvl=lvl)
+            if key == "magic" and s.get("red"):
+                formula += " + " + pc(s["red"]) + " " + tr("(réduction magique)")
+            after = cur * (1 - s["mit"])
+            out.append({"t": tr("Armure") if key == "phys" else tr("Résistance magique"),
+                        "pct": "−" + pc(s["mit"]), "sub": formula,
+                        "after": fmt(after), "calc": f"{fmt(cur)} × {num(1 - s['mit'], 3)}"})
+            cur = after
+            after = cur * d["taken"]
+            out.append({"t": tr("Ferveur"), "pct": "−" + pc(1 - d["taken"]),
+                        "sub": tr("{f} ÷ 2", f=pc(fervor)),
+                        "after": fmt(after), "calc": f"{fmt(cur)} × {num(d['taken'], 3)}"})
+            cur = after
+            blocked = cur * (1 - block / 100)
+            if block:
+                out.append({"t": tr("Blocage"), "pct": "−" + pct_(block),
+                            "sub": tr("seulement si tu bloques le coup"), "opt": True,
+                            "after": fmt(blocked), "calc": f"{fmt(cur)} × {num(1 - block / 100)}"})
+            return {"steps": out, "after": fmt(cur),
+                    "blocked": fmt(blocked) if block else "",
+                    "hits": num(d["hp"] / cur, 1) if cur > 0 else "—"}
+        # the character's defences
+        me = [{"k": "armor", "t": tr("Armure"), "v": fmt(d["phys"]["res"]),
+               "sub": tr("−{n} de dégâts physiques", n=pc(d["phys"]["mit"])),
+               "base": fmt(bare.get("Armor") or 0) if armor_up.get("Armor") else ""}]
+        if shield:
+            me.append({"k": "shield", "t": shield["name"], "v": pc(upgrade_cut),
+                       "sub": tr("amélioré +{n} : −{v} de dégâts subis",
+                                 n=shield["up"], v=pc(upgrade_cut))})
+        me.append({"k": "fervor", "t": tr("Ferveur"), "v": pc(fervor),
+                   "sub": tr("la moitié en réduction : −{n}", n=pc(1 - d["taken"]))})
+        if block:
+            me.append({"k": "block", "t": tr("Blocage"), "v": pct_(block),
+                       "sub": tr("uniquement si tu bloques")})
+        mr = d["magic"]
+        me.append({"k": "magic", "t": tr("Résistance et Réduction magiques"),
+                   "v": fmt(mr["res"]) + " · " + pc(mr.get("red") or 0),
+                   "sub": tr("contre les dégâts magiques"),
+                   "base": fmt(bare.get("MagicArmor") or 0) if armor_up.get("MagicArmor") else ""})
+        me.append({"k": "resil", "t": tr("Résilience"), "v": "—",
+                   "sub": tr("contre les joueurs uniquement"), "off": True})
+        return {"buffs": rows, "me": me, "lvl": b.get("lvl"), "enemy": lvl,
+                "hit": fmt(d["hit"]), "a": fmt(a), "b": fmt(bb), "hp": fmt(d["hp"]),
+                "block": bool(block),
+                "phys": steps("phys"), "magic": steps("magic")}
+
+    def _cards(self, r, fmt, pc, kinds):
+        """A simulated skill's cards: its own lines, then each unit it
+        summons in a card of its own (its name, the summoning skill's
+        icon: a bee), with the damage a status on it would add."""
+        own = [x for x in r["lines"] if not x.get("unit")]
+        out = [self._card(dict(r, lines=own), fmt, pc, kinds)] if own else []
+        units = []
+        for x in r["lines"]:
+            key = (x.get("unit"), x.get("by"))
+            if x.get("unit") and key not in units:
+                units.append(key)
+        for unit_id, by in units:
+            lines = [x for x in r["lines"] if (x.get("unit"), x.get("by")) == (unit_id, by)]
+            card = self._card(dict(r, id=by or r["id"], name=_unit_label(unit_id),
+                                   cd=None, range=None, lines=lines),
+                              fmt, pc, kinds)
+            card["sub"] = tr("Invoquée par {name}", name=r["name"])
+            out.append(card)
+        return out
 
     @staticmethod
     def _card(r, fmt, pc, kinds):
@@ -855,12 +1092,25 @@ class BuildTab:
             if r.get("range") else "",
             "lines": [{"kind": kinds.get(x["kind"], x["kind"]), "k": x["kind"],
                        "aff": element_label(x["aff"]) if x["aff"] else "",
+                       # what deals it, when not the skill: a status, a
+                       # summoned unit's attack (its unit named)
+                       # (a summon's card is named after it already)
+                       "via": _skill_label(x["via"]) if x.get("via") and not x.get("unit") else "",
                        "normal": fmt(x["normal"]), "crit": fmt(x["crit"]),
                        "normalv": round(x["normal"], 1),
                        "critv": round(x["crit"], 1),
                        "avg": fmt(x["avg"]), "avgv": round(x["avg"], 1),
                        "affk": x["aff"] or "",
-                       "mit": pc(x["mit"]) if "mit" in x else ""}
+                       "mit": pc(x["mit"]) if "mit" in x else "",
+                       # a summon's damage with the status that boosts it
+                       "boost": ({"t": tr("Folle de rage ({skill})",
+                                         skill=_skill_label(x["boost"]["from"]))
+                                  if x["boost"].get("from") else _skill_label(x["boost"]["status"]),
+                                  "pct": "+" + pc(x["boost"]["val"]),
+                                  "normal": fmt(x["boost"]["normal"]),
+                                  "crit": fmt(x["boost"]["crit"]),
+                                  "avg": fmt(x["boost"]["avg"])}
+                                 if x.get("boost") else None)}
                       for x in r["lines"]]}
 
     def _runes_view(self, b, raw, rows, armor, enemy, hit):

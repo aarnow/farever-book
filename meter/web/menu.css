@@ -1882,8 +1882,77 @@ html.lt-760 .sheet { grid-template-columns: minmax(0, 1fr); }
 .bsimf.wide { flex: 1 1 320px; }
 .bsimf input[type=number] { width: 110px; background: var(--bg-2); color: #fff; border: 1px solid var(--line);
                             border-radius: 8px; padding: 6px 8px; font-size: 14px; }
-.bsimgrid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+.bsimgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 html.lt-1100 .bsimgrid { grid-template-columns: 1fr; }
+/* the resistance (build.js buildResist): the character's defences on the
+   left, the hit going down step by step on the right, the formula under */
+.bres { display: flex; flex-direction: column; gap: 16px; }
+.brestitle { margin: 0; font-family: var(--font-head); font-size: 26px; color: #fff; letter-spacing: .3px; }
+.brescols { display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.4fr); gap: 20px; align-items: start; }
+html.lt-1100 .brescols { grid-template-columns: 1fr; }
+.bresleft { display: flex; flex-direction: column; gap: 12px; }
+.bresme { padding: 18px 16px; }
+.bresmet { font-family: var(--font-head); font-size: 18px; color: #fff; }
+.bresmel { margin: 2px 0 12px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: 1px;
+           text-transform: uppercase; }
+.bresrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; margin-bottom: 8px; border-radius: 8px;
+           background: var(--panel-2); }
+.bresrow .bresic { width: 14px; height: 14px; flex: none; background: var(--accent); transform: rotate(45deg); border-radius: 2px; }
+.bresrow.k-armor .bresic { width: 16px; height: 18px; transform: none; border-radius: 3px 3px 9px 9px; }
+.bresrow .brest { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bresrow .brest b { color: #fff; font-size: 14px; }
+.bresrow .brest span { color: #CFC9EC; font-size: 12px; }
+.bresrow .brest span.base { color: var(--dim); font-size: 11px; }
+.bresrow .bresv { color: #fff; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bresrow.off { opacity: .45; }
+.bresrow.off .bresic { background: var(--dim); }
+.bresbuffs { display: flex; flex-direction: column; gap: 6px; }
+.bresbuff { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 8px;
+            cursor: pointer; text-align: left; color: #E2DEFF; background: var(--bg); border: 1px solid transparent; }
+.bresbuff:hover { border-color: var(--accent); }
+.bresbuff.on { border-color: var(--accent); background: var(--panel-2); }
+.bresbuff .brbox { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border-radius: 4px;
+                   border: 1px solid #5A5694; font-size: 12px; font-weight: 800; color: #1B1A22; }
+.bresbuff.on .brbox { background: var(--accent); border-color: var(--accent); }
+.bresbuff .brt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bresbuff .brt b { color: #fff; font-size: 13px; }
+.bresbuff .brt .fx { color: #9FE3A8; font-size: 12px; }
+.bresbuff .brt .when { color: var(--dim); font-size: 11px; }
+.bresright { display: flex; flex-direction: column; gap: 10px; }
+/* the hit: who strikes, its kind, its damage */
+.bresblow { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 12px;
+            background: linear-gradient(90deg, rgba(150, 50, 50, .55), rgba(120, 40, 50, .35));
+            border: 1px solid rgba(220, 90, 80, .55); }
+.bresblowt { flex: 1; display: flex; flex-direction: column; gap: 6px; color: #F3E9EE; font-size: 15px; }
+.bresblowt .inl { width: 52px; padding: 2px 4px; margin-left: 2px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .25);
+                  background: rgba(0, 0, 0, .25); color: #fff; font: inherit; font-weight: 800; }
+.breskinds { display: flex; gap: 6px; }
+.breskind { padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25); background: none;
+            color: #F3E9EE; font: inherit; font-size: 13px; cursor: pointer; }
+.breskind.on { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .55); color: #fff; font-weight: 700; }
+.breshit { width: 150px; text-align: right; border: 0; background: none; color: #fff; font-family: var(--font-head);
+           font-size: 38px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.breshit:focus { outline: 1px solid rgba(255, 255, 255, .35); border-radius: 6px; }
+/* each step: an arrow, what cuts and how, the damage left */
+.bresstep { display: grid; grid-template-columns: 36px minmax(0, 1fr) 130px; gap: 12px; align-items: center; }
+.bresarrow { width: 0; height: 0; justify-self: center; border-left: 14px solid transparent; border-right: 14px solid transparent;
+             border-top: 22px solid var(--accent); }
+.bresstepc { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: 10px;
+             background: var(--panel); border: 1px solid #4A4778; }
+.bresstep.opt .bresstepc { border-style: dashed; background: none; }
+.bresstepc .brst { display: flex; align-items: baseline; gap: 10px; }
+.bresstepc .brst b { color: #fff; font-size: 16px; }
+.bresstepc .brst .pct { color: #7EE08A; font-size: 16px; font-weight: 700; }
+.bresstepc .sub { color: #CFC9EC; font-size: 13px; overflow-wrap: anywhere; }
+.bresres { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.bresres b { color: #fff; font-family: var(--font-head); font-size: 26px; font-variant-numeric: tabular-nums; }
+.bresres span { color: var(--dim); font-size: 12px; white-space: nowrap; }
+.brestotal { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px;
+             border-radius: 12px; background: linear-gradient(90deg, rgba(110, 90, 40, .55), rgba(70, 60, 40, .35));
+             border: 1px solid rgba(242, 201, 76, .55); }
+.brestotal > span { color: #F4EEDD; font-size: 16px; }
+.brestotal .v b { color: var(--accent); font-family: var(--font-head); font-size: 34px; }
+.brestotal .v span { color: #fff; font-family: var(--font-head); font-size: 18px; font-weight: 700; }
 .bsimdef .attr .av small { color: var(--dim); font-size: 10px; font-weight: 400; }
 .bsimdef .attr { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 4px;
                  border-radius: 6px; background: var(--panel-2); }
@@ -1914,11 +1983,17 @@ html.lt-1100 .bsimgrid { grid-template-columns: 1fr; }
          padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .sphead { display: flex; align-items: center; gap: 10px; }
 .sphead b { color: #fff; font-family: var(--font-head); font-size: 14px; line-height: 1.2; }
+.sphead .spnm { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sphead .spnm small { color: var(--dim); font-size: 11px; }
+/* a summon's damage boosted by a status on it */
+.spline.boost { border: 1px dashed rgba(242, 201, 76, .45); }
+.spline.boost .spk b { color: var(--accent); }
 .spline { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px;
           border-radius: 8px; background: var(--bg-2); }
 .spline .spk { display: flex; flex-direction: column; }
 .spline .spk b { font-size: 12px; }
 .spline .spk small { color: var(--dim); font-size: 11px; }
+.spline .spk small.via { color: #C9BEF2; font-style: italic; }
 .spline.k-Damage .spk b { color: #F08A6E; } .spline.k-Heal .spk b { color: #A6E37A; }
 .spline.k-Shield .spk b { color: #7FE8FF; }
 .spline .spv { display: flex; align-items: baseline; gap: 10px; }

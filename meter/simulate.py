@@ -129,7 +129,7 @@ def effect_amount(effect, hero, weapon=None):
 
 
 def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
-             runes=(), taken_cut=0.0):
+             runes=(), taken_cut=0.0, magic_cut=0.0):
     """Every damage / heal / shield the bar's skills do, against a target
     whose armour stops `target_armor_pct` % at this level; and what an
     `incoming` hit of an enemy of `enemy_level` leaves.
@@ -141,7 +141,10 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
            counts only then. Rows: one per skill, its effects in `lines`.
     taken_cut: what the worn weapons' upgrade effects take off the hit's
            damage multiplier (a shield's 0.05 to 0.11: hit.dmgMult -=, in
-           onReceiveDamageEval), the attacker's own bonuses taken as none."""
+           onReceiveDamageEval), the attacker's own bonuses taken as none;
+           with what the hero's buffs take off it (hit.dmgMult -= too).
+    magic_cut: what more comes off a magic hit's multiplier (a buff's
+           "if (hit.isMagic) hit.dmgMult -= ...")."""
     runes = set(runes or ())
     info = build_data().get("skillInfo") or {}
     pct = lambda k: (hero.get(k) or 0) / 100.0
@@ -172,7 +175,10 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
             if base <= 0:
                 continue
             row = {"kind": e["k"], "rune": e.get("rune"),
-                   "aff": e.get("aff") or ""}
+                   "aff": e.get("aff") or "",
+                   # what deals it, when not the skill itself: a status it
+                   # puts down, a summoned unit's attack
+                   "via": e.get("via"), "unit": e.get("unit"), "by": e.get("by")}
             if e["k"] == "Damage":
                 magic = is_magic(e.get("aff"))
                 mastery = pct("MagicMastery" if magic else "PhysicalMastery")
@@ -183,6 +189,13 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
                 row.update(normal=hit, crit=hit * crit_m,
                            avg=hit * (1 + crit_c * (crit_m - 1)),
                            mit=mit)
+                # a summon's boost from a status on it (its master's
+                # onProxyDamageEval: dmgMult += val)
+                bo = e.get("boost")
+                if bo and bo.get("val"):
+                    hb = hit * (1 + bo["val"])
+                    row["boost"] = dict(bo, normal=hb, crit=hb * crit_m,
+                                        avg=hb * (1 + crit_c * (crit_m - 1)))
             else:                                   # Heal, Shield
                 v = base * heal_mod
                 row.update(normal=v, crit=v * crit_m,
@@ -194,13 +207,20 @@ def simulate(hero, level, bar, target_armor_pct, enemy_level, incoming,
     # the hit's multiplier starts at 1: the wearer's cut comes off it
     # (BaseSkill.evalDamage: onReceiveDamageEval, before computeDamage)
     cut = max(0.0, 1.0 - (taken_cut or 0.0))
+    mcut = max(0.0, cut - (magic_cut or 0.0))
     phys = mitigation(hero.get("Armor") or 0, 0, enemy_level)
     magic = min(1.0, mitigation(hero.get("MagicArmor") or 0, 0, enemy_level)
                 + pct("MagicReduction"))
+    a, b = _resist_consts()
     defense = {"hit": incoming, "taken": taken,
-               "cut": taken_cut or 0.0,
-               "phys": {"mit": phys, "after": incoming * cut * (1 - phys) * taken},
-               "magic": {"mit": magic, "after": incoming * cut * (1 - magic) * taken},
+               "cut": taken_cut or 0.0, "magicCut": magic_cut or 0.0,
+               # the resistance formula's parts: r / (r + a + b * level)
+               "consts": [a, b], "level": enemy_level,
+               "phys": {"res": hero.get("Armor") or 0, "mit": phys, "mult": cut,
+                        "after": incoming * cut * (1 - phys) * taken},
+               "magic": {"res": hero.get("MagicArmor") or 0,
+                         "red": pct("MagicReduction"), "mit": magic, "mult": mcut,
+                         "after": incoming * mcut * (1 - magic) * taken},
                "hp": hero.get("MaxHealth") or 0}
     return {"rows": rows, "defense": defense, "critChance": crit_c,
             "critMult": crit_m, "targetResist": target_resist}

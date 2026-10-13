@@ -237,4 +237,121 @@ def build(game_dir):
             "skills": out,
             "terms": st.terms,
             "upgrades": {"at": int(unlock or 3), "rarities": rars,
-                         "types": upgrades, "taken": taken}}
+                         "types": upgrades, "taken": taken},
+            "defense": _defense(st),
+            "block": _blocks(st)}
+
+
+def _blocks(st):
+    """How much a block stops: the block skills (PhysicalBlock, MagicBlock,
+    ShieldBlock: their BlockMitigation, a flat percent), the one each item
+    type has, and the items that have another. {skills: {id: %}, types:
+    {item type: skill}, items: {item: skill}}."""
+    skills = {}
+    for sid, sk in st.skills.items():
+        for a in sk.get("affixes") or ():
+            if ((a.get("target") or {}).get("attribute") == "BlockMitigation"
+                    and a.get("ref") == "TAttribute_Flat"
+                    and isinstance(a.get("val"), (int, float))):
+                skills[sid] = a["val"]
+
+    def block_of(row):
+        return next((s.get("skill") for s in row.get("skills") or ()
+                     if s.get("skill") in skills), None)
+    types = {ln["id"]: block_of(ln) for ln in st.sheets.get("itemType", {}).get("lines") or ()
+             if isinstance(ln.get("id"), str) and block_of(ln)}
+    items = {ln["id"]: block_of(ln) for ln in st.sheets["item"]["lines"]
+             if isinstance(ln.get("id"), str) and block_of(ln)}
+    return {"skills": skills, "types": types, "items": items}
+
+
+# A condition a damage cut is put under in a script (onReceiveDamageEval),
+# that the simulator can offer: its rank, magic damage only, while the
+# skill recharges. Any other condition leaves the cut out.
+_COND = {"rank": re.compile(r"^rank\s*>=\s*(\d+)$"),
+         "magic": re.compile(r"^\w+\.isMagic$"),
+         "cooldown": re.compile(r"^isInCooldown\(\)$")}
+
+
+def _dmg_cuts(script):
+    """What a script takes off the hits its owner receives: [(var, conds)]
+    for each "<hit>.dmgMult -= vars.<var>" of its onReceiveDamageEval,
+    alone or under an if of conditions the simulator knows."""
+    m = re.search(r"function\s+onReceiveDamageEval\s*\(\s*(\w+)\s*\)\s*\{", script or "")
+    if not m:
+        return []
+    hit, i, depth = m.group(1), m.end(), 1
+    j = i
+    while j < len(script) and depth:
+        depth += {"{": 1, "}": -1}.get(script[j], 0)
+        j += 1
+    body = script[i:j - 1]
+    out = []
+    cut = rf"{hit}\.dmgMult\s*-=\s*vars\.(\w+)\s*;"
+    for c in re.finditer(rf"if\s*\((.*?)\)\s*\{{\s*{cut}\s*\}}", body, re.S):
+        conds = {}
+        for part in (p.strip() for p in c.group(1).split("&&")):
+            for k, rx in _COND.items():
+                mm = rx.match(part)
+                if mm:
+                    conds[k] = int(mm.group(1)) if k == "rank" else True
+                    break
+            else:
+                conds = None
+                break
+        if conds is not None:
+            out.append((c.group(2), conds))
+    # outside any if: always
+    bare = re.sub(rf"if\s*\(.*?\)\s*\{{.*?\}}", "", body, flags=re.S)
+    out += [(v, {}) for v in re.findall(cut, bare)]
+    return out
+
+
+def _defense(st):
+    """The temporary defences a skill gives its user: the statuses its steps
+    apply that raise Armor or MagicArmor (a share, TAttribute_ARatio), and
+    the damage cuts of its script and of those statuses'. {skill: [{k:
+    "armor"|"cut", atb, val, via, rank, magic, cooldown, dur}]}. A passive's
+    own affixes are left out: they are on the sheet already. The weapons'
+    upgrade effects are emitted apart ("upgrades")."""
+    out = {}
+    for sid, sk in st.skills.items():
+        if sid.endswith("_Upgrade"):
+            continue
+        got = []
+        # its statuses: those its steps apply, and those its script names
+        # (Skill.<id>: one it sets on a parry...)
+        sources = [(sid, sk)]
+        named = [e.get("status") for step in sk.get("steps") or ()
+                 for e in step.get("effects") or ()]
+        named += re.findall(r"Skill\.(\w+)", sk.get("script") or "")
+        for sts in named:
+            if (isinstance(sts, str) and sts != sid and sts in st.skills
+                    and sts not in [v for v, _s in sources]):
+                sources.append((sts, st.skills[sts]))
+        for via, src in sources:
+            # a status's raised resistance: a buff's (its user's, its
+            # allies'), not a debuff put on an enemy
+            buff = any(t.get("type") == "Buff" for t in
+                       ((src.get("props") or {}).get("status") or {}).get("types") or ())
+            if via != sid and buff:
+                for a in src.get("affixes") or ():
+                    atb = (a.get("target") or {}).get("attribute")
+                    conds = a.get("conds") or {}
+                    if (atb in ("Armor", "MagicArmor") and a.get("ref") == "TAttribute_ARatio"
+                            and isinstance(a.get("val"), (int, float)) and a["val"] > 0
+                            and not set(conds) - {"minRank"}):
+                        got.append({"k": "armor", "atb": atb, "val": a["val"], "via": via,
+                                    "rank": int(conds.get("minRank") or 1),
+                                    "dur": src.get("duration")})
+            for var, conds in _dmg_cuts(src.get("script")):
+                rank = int(conds.get("rank") or 1)
+                v = st.value(src, var, rank)
+                if isinstance(v, (int, float)) and v:
+                    got.append({"k": "cut", "val": v, "via": via, "rank": rank,
+                                "magic": bool(conds.get("magic")),
+                                "cooldown": bool(conds.get("cooldown")),
+                                "dur": src.get("duration") if via != sid else None})
+        if got:
+            out[sid] = got
+    return out
