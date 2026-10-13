@@ -2161,6 +2161,88 @@ class NativeBonus(NativeOverlay):
         self._present()
 
 
+class CurrencyView:
+    """The currencies held, over the game as the bonus dungeon is (no
+    frame, outlined): each its icon, its name over its amount, so many a
+    line (the player's), each column as wide as its widest."""
+
+    ICON, GAP, COL_GAP, ROW_GAP, PAD = 30, 7, 18, 8, 4
+
+    def draw(self, k, data):
+        items = (data or {}).get("items") or []
+        per = max(1, min(6, int((data or {}).get("perRow") or 4)))
+        probe = Paint(1, 1, k)
+        rows = [items[i:i + per] for i in range(0, len(items), per)]
+        cols = [0.0] * min(per, len(items))
+        for r in rows:
+            for i, c in enumerate(r):
+                w = max(probe.width(str(c.get("t") or ""), 12, 600),
+                        probe.width(str(c.get("q") or "0"), 16, 700))
+                cols[i] = max(cols[i], self.ICON + self.GAP + w)
+        cell_h = max(self.ICON, LH12 + 20)
+        W = self.PAD * 2 + sum(cols) + self.COL_GAP * max(0, len(cols) - 1) + 2
+        H = self.PAD * 2 + cell_h * len(rows) + self.ROW_GAP * max(0, len(rows) - 1)
+        p = Paint(max(1, W), max(1, H), k)
+        y = self.PAD
+        for r in rows:
+            x = self.PAD
+            for i, c in enumerate(r):
+                icon = _currency_icon(c.get("id"))
+                iy = y + (cell_h - self.ICON) / 2
+                if icon is not None:
+                    _outlined(p, icon, x, iy, self.ICON, self.ICON, 0.75, BONUS_INK)
+                tx = x + self.ICON + self.GAP
+                ty = y + (cell_h - (LH12 + 20)) / 2
+                p.text(str(c.get("t") or ""), tx, ty, LH12, 12, 600, "#F3E9DF",
+                       stroke=(1, BONUS_INK))
+                p.text(str(c.get("q") or "0"), tx, ty + LH12, 20, 16, 700, "#FFFFFF",
+                       stroke=(1, BONUS_INK))
+                x += cols[i] + self.COL_GAP
+            y += cell_h + self.ROW_GAP
+        return p, W, H
+
+
+def _currency_icon(cid):
+    """A currency's icon (analysis_out/item_icons), or None."""
+    cid = str(cid or "")
+    if not cid.replace("_", "").isalnum():
+        return None
+    return _piece(f"item_icons/{cid}.png")
+
+
+class NativeCurrencies(NativeOverlay):
+    """The currencies held: a text alone over the game, held to move;
+    shown only with one to show at least (the player picks them)."""
+
+    KEYED = True
+
+    def _default_pos(self, gw, gh, w, h):
+        return {"ax": "r", "dx": 24, "ay": "t", "dy": 70}               # top right
+
+    def update(self, d):
+        # nothing to show (every currency hidden): as an overlay with
+        # nothing to say
+        cur = d.get(self.id)
+        if cur is not None and not cur.get("items"):
+            d = dict(d)
+            d[self.id] = None
+        super().update(d)
+
+    def _redraw(self):
+        if not self._data:
+            return
+        k = self._dpi_k() * self.scale / 100
+        self._k = k
+        p, W, H = CurrencyView().draw(k, self._data)
+        self._hits = [(0, 0, W, H, "drag", None)]
+        self._img = p.img
+        if p.img.size != self.size:
+            self.size = p.img.size
+            if self.game and not self.dragging:
+                self._place(present=False)
+        self._present()
+
+
 class NativeTip(_NativeWindow):
     """A player's details, under the mouse (the meter's rows): never
     focused, the clicks going through it; it follows the mouse

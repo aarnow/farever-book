@@ -1300,5 +1300,7 @@
  "Folle de rage ({skill})": "Enraged ({skill})",
  "Dégâts {n}": "Damage {n}",
  "Réinitialiser au premier coup sur un mannequin (après 10 s sans le frapper)": "Reset on the first hit on a training dummy (after 10 s without hitting it)",
- "Toutes les lignes sont masquées.": "All lines are hidden."
+ "Toutes les lignes sont masquées.": "All lines are hidden.",
+ "Monnaies": "Currencies",
+ "Monnaies par ligne": "Currencies per line"
 }

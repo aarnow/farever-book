@@ -188,7 +188,11 @@ class App:
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
         self._ov_on = {"meter": True, "goals": False, "luck": False,
                        "bonus": True,       # shown, per overlay
-                       "meterheal": True}   # (the heals' meter, split)
+                       "meterheal": True,   # (the heals' meter, split)
+                       "currencies": False}
+        # the currencies overlay: those the player hid, how many a line
+        self._cur_hidden = set()
+        self._cur_per_row = 4
         # the meter split in two overlays, damage ("meter") and heals
         # ("meterheal"), each its own place and settings; else one, tabbed
         self._ov_split = False
@@ -354,6 +358,10 @@ class App:
             self._ov_split = data["overlay_split"]
         if isinstance(data.get("luck_hidden"), list):
             self._luck_hidden = {str(x) for x in data["luck_hidden"]}
+        if isinstance(data.get("cur_hidden"), list):
+            self._cur_hidden = {str(x) for x in data["cur_hidden"]}
+        if isinstance(data.get("cur_per_row"), int) and 1 <= data["cur_per_row"] <= 6:
+            self._cur_per_row = data["cur_per_row"]
         if isinstance(data.get("overlay_lock_always"), bool):
             self._ov_lock_always = data["overlay_lock_always"]
         if isinstance(data.get("overlay_hide_free"), bool):
@@ -392,6 +400,8 @@ class App:
                 "overlay_tab": self._ov_tab,
                 "overlay_split": bool(self._ov_split),
                 "luck_hidden": sorted(self._luck_hidden),
+                "cur_hidden": sorted(self._cur_hidden),
+                "cur_per_row": int(self._cur_per_row),
                 "overlay_lock_always": bool(self._ov_lock_always),
                 "overlay_hide_free": bool(self._ov_hide_free),
                 "overlay_style": self._ov_style,
@@ -880,6 +890,9 @@ class App:
             "ov_split": lambda p: self._ov_set_split(p.get("value")),
             # the loot luck overlay: one of its lines shown or hidden
             "luck_row": self._luck_row,
+            # the currencies overlay: one shown or hidden, how many a line
+            "cur_show": self._cur_show,
+            "cur_per_row": self._cur_set_per_row,
             "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
                                                 self._learnt()),
@@ -1733,6 +1746,39 @@ class App:
             self._ov_tab = tab
             self._save_settings()
 
+    def _currencies(self):
+        """The game's currencies (item type Currency, the experience apart)
+        with what the hero holds (its stock, read with the bag): [{id, t,
+        n, q, hide}]."""
+        types = gamedata._table("item_types.json")
+        stock = (self.me.got("stock")[0] or {}).get("items") or {}
+        out = []
+        for cid in sorted(i for i, t in types.items()
+                          if t == "Currency" and i not in G.NOT_GOALS):
+            n = int(stock.get(cid) or 0)
+            out.append({"id": cid, "t": item_label(cid), "n": n,
+                        "q": f"{n:,}".replace(",", "\u202f"),
+                        "hide": cid in self._cur_hidden})
+        return out
+
+    def _cur_show(self, p):
+        """Réglages › Overlay › Monnaies: one shown or hidden."""
+        cid = str(p.get("id") or "")
+        if not cid:
+            return
+        if p.get("value"):
+            self._cur_hidden.discard(cid)
+        else:
+            self._cur_hidden.add(cid)
+        self._save_settings()
+
+    def _cur_set_per_row(self, p):
+        try:
+            self._cur_per_row = max(1, min(6, int(p.get("value"))))
+        except (TypeError, ValueError):
+            return
+        self._save_settings()
+
     def _luck_row(self, p):
         """The loot luck overlay's gear: one of its lines shown or not."""
         cid = str(p.get("id") or "")
@@ -1835,6 +1881,9 @@ class App:
                         "well": soulwell_name(),
                         # its gear: the bonus dungeon's overlay shown or not
                         "bonusOn": bool(self._ov_on.get("bonus"))}
+        # the currencies the player shows, so many a line
+        spec["currencies"] = {"items": [c for c in self._currencies() if not c["hide"]],
+                              "perRow": int(self._cur_per_row)}
         return spec
 
     def on_achievements(self, p):
@@ -3144,7 +3193,8 @@ class App:
                  if self._ov_split else {"meter": tr("Meter")})
         names.update({"goals": tr("Objectifs"),
                       "luck": tr("Chance de butin"),
-                      "bonus": tr("Donjon héroïque bonus")})
+                      "bonus": tr("Donjon héroïque bonus"),
+                      "currencies": tr("Monnaies")})
         out = [{"k": "section", "t": tr("Afficher / masquer")}]
         # each overlay, a switch at the end of its line
         for oid, t in names.items():
@@ -3167,6 +3217,15 @@ class App:
                      "c": {"k": "slider", "id": "ov_style_set", "min": 70,
                            "max": 110, "step": 5, "v": st["scale"],
                            "unit": " %", "p": {"id": oid, "key": "scale"}}}]
+            if oid == "currencies":
+                out.append({"k": "field", "t": tr("Monnaies par ligne"),
+                            "c": {"k": "slider", "id": "cur_per_row", "min": 1,
+                                  "max": 6, "step": 1, "v": int(self._cur_per_row),
+                                  "unit": ""}})
+                for c in self._currencies():
+                    out.append({"k": "field", "t": c["t"],
+                                "c": {"k": "toggle", "id": "cur_show",
+                                      "on": not c["hide"], "p": {"id": c["id"]}}})
         out += [
             {"k": "section", "t": tr("Thème")},
             {"k": "field", "t": tr("Thème des overlays"),
