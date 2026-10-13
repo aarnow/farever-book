@@ -1233,6 +1233,10 @@ class LuckView:
         bonus = (data or {}).get("bonus") if (data or {}).get("merged") else None
         band = self.BAND_H if bonus else 0
         content = 26 * len(rows) if rows else LH12 + 16
+        frozen = bool(rows) and not any(r.get("on") for r in rows)
+        if frozen:
+            # tall enough for the veil's box, clear of the head and foot
+            content = max(content, self._veil_box(Paint(1, 1, k), W, (data or {}).get("well"))[1] + 14)
         body_h = 1 + 4 + band + content + 6 + 1
         H = 44 + body_h + 22
         p = Paint(W, H, k)
@@ -1277,7 +1281,7 @@ class LuckView:
             p.text(v, right - vw, top, LH115, 11.5, 700, "#FFFFFF", shadow=sh)
             if not on:
                 _lock_icon(p, right - vw - 4 - 9, by + (20 - 11) / 2, 9, 11, "#FFFFFF")
-        if not any(r.get("on") for r in rows):
+        if frozen:
             self._veil(p, W, 45 + band, body_h - 2 - band, (data or {}).get("well"))
         return p, hits, W, H
 
@@ -1315,17 +1319,22 @@ class LuckView:
             _outlined(p, grad, mx + mark - ps + 1, my + mark - ps - 4, ps, ps, 1, "#2A3A1C")
         p.hline(18, y + self.BAND_H - 6, W - 36, OV_LINE, 0.35)
 
+    def _veil_box(self, p, W, well):
+        """The veil's box: (its message's lines, its height)."""
+        bw = W - 16 - 28
+        msg = self.tr("Fais une offrande au {well} pour les activer.").replace(
+            "{well}", well or self.tr("Puits des âmes"))
+        # (its box's width, a little more: Chromium's letters are narrower)
+        lines = p.wrap(msg, 11.5, 400, bw - 28 - 2 + 3)
+        return lines, 8 + LH125 + 3 + LH115 * len(lines) + 8 + 2
+
     def _veil(self, p, W, vy, vh, well):
         """No offering at all: a veil over the counters, what unfreezes them
         (.lveil, .lvbox)."""
         tr = self.tr
         p.fill(8, vy, W - 16, vh, OV_WELL, 0.45, r=3)
         bw = W - 16 - 28
-        msg = tr("Fais une offrande au {well} pour les activer.").replace(
-            "{well}", well or tr("Puits des âmes"))
-        # (its box's width, a little more: Chromium's letters are narrower)
-        lines = p.wrap(msg, 11.5, 400, bw - 28 - 2 + 3)
-        bh = 8 + LH125 + 3 + LH115 * len(lines) + 8 + 2
+        lines, bh = self._veil_box(p, W, well)
         bx, by = 22, vy + (vh - bh) / 2
         _shadow_box(p, bx, by + 2, bw, bh, 10, 0.5, 5)
         p.fill(bx, by, bw, bh, (38, 28, 23), 0.94, r=5)

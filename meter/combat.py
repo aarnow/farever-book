@@ -280,6 +280,8 @@ class PlayerAgg:
     heals: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0, 0.0]))
     # element -> [hits, total]
     elements: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0]))
+    # skill -> element -> total (its bar in its element's colour)
+    skill_el: dict[str, dict] = field(default_factory=lambda: defaultdict(lambda: defaultdict(float)))
 
     def record(self, skill, element, amount, crit, kill):
         self.total += amount
@@ -292,6 +294,7 @@ class PlayerAgg:
         s[0] += 1; s[1] += amount; s[2] += crit
         e = self.elements[element]
         e[0] += 1; e[1] += amount
+        self.skill_el[skill][element] += amount
 
     def record_heal(self, skill, amount, crit, landed=0.0, is_self=False):
         self.heal_total += amount

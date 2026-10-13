@@ -19,27 +19,6 @@ function buildMeter(n) {
   return p;
 }
 
-function skillList(title, rows, kind) {
-  const box = el('div');
-  box.appendChild(el('h3', null, title));
-  if (!rows || !rows.length) {
-    box.appendChild(el('div', 'empty', '—'));
-    return box;
-  }
-  rows.forEach((s) => {
-    const sk = el('div', 'sk');
-    const l = el('div', 'l');
-    l.appendChild(el('span', null, s.t));
-    l.appendChild(el('span', 'num', s.v));
-    l.appendChild(el('span', 'num', s.pct));
-    l.appendChild(el('span', 'num n', s.n + '×'));
-    sk.appendChild(l);
-    sk.appendChild(bar(kind, s.f, s.sf));
-    box.appendChild(sk);
-  });
-  return box;
-}
-
 function buildDetail(n) {
   const p = el('div', 'panel detail');
   if (!n.name) {
@@ -47,33 +26,14 @@ function buildDetail(n) {
     p.appendChild(el('div', 'empty', n.empty));
     return p;
   }
-  const name = el('div', 'dname', n.name);
-  if (n.cls || n.ck) name.appendChild(classEl(n.cls, n.ck, 'cls'));
-  p.appendChild(name);
-  const stats = el('div', 'stats');
-  (n.stats || []).forEach(([c, x]) => {
-    const s = el('div', 'stat');
-    s.appendChild(el('div', 'c', c));
-    s.appendChild(el('div', 'x', x));
-    stats.appendChild(s);
-  });
-  p.appendChild(stats);
-  const cols = el('div', 'skills' + (n.heal ? '' : ' one'));
-  cols.appendChild(skillList(tr('Dégâts par sort'), n.dmg, 'd'));
-  if (n.heal) cols.appendChild(skillList(tr('Soins par sort'), n.heal, 'h'));
-  p.appendChild(cols);
-  if (n.elements && n.elements.length) {
-    const e = el('div', 'elems');
-    n.elements.forEach((x) => {
-      const s = el('span');
-      const dot = el('i');
-      dot.style.background = x.c;
-      s.appendChild(dot);
-      s.appendChild(document.createTextNode(x.t + ' ' + x.pct));
-      e.appendChild(s);
-    });
-    p.appendChild(e);
-  }
+  // as a rift report's player card (report.js playerSources)
+  p.classList.add('pcard');
+  const h = el('div', 'pch');
+  const nm = el('h3', null, n.name + ' ');
+  if (n.cls || n.ck) nm.appendChild(classEl(n.cls, n.ck, 'big'));
+  h.appendChild(nm);
+  p.appendChild(h);
+  playerSources(p, n, n.ck);
   return p;
 }
 

@@ -31,7 +31,7 @@ from common import (
     PARSE_LENGTH_SECS, PARSE_PREROLL_SECS, POSITION_CACHE, REFRESH_MS,
     RIFTS_DIR, RIFT_PORTAL_SECS, RIFT_STYLE_SECS, SETTINGS_CACHE, VERSION,
     _class_tag, _mmss, _n, _pct1, _pretty_id, class_key, date_fr,
-    element_color, element_label, message_box)
+    element_color, element_label, message_box, pct_sp)
 from winsys import (
     HK_RESET, REBIND_TO, RESET_BIND, VK_CONTROL, VK_MENU, VK_MOUSE, VK_SHIFT,
     VK_UNBINDABLE, WM_REBIND, _monitor_containing, bind_label, client_origin,
@@ -1270,39 +1270,60 @@ class App:
             return {"k": "detail", "id": "detail", "name": "",
                     "empty": tr("Clique sur un joueur pour voir son détail.")}
         fdps = fp.total / duration if duration > 0 else 0.0
-        crit = (fp.crits / fp.hits * 100) if fp.hits else 0.0
-        stats = [[tr("Dégâts"), _n(fp.total)], ["DPS", _n(fdps)],
+        # as a rift report's player card (reports.py): its facts, its
+        # damage and heal sources, its damage by type
+        facts = [[tr("Dégâts"), _n(fp.total)],
+                 ["DPS", _n(fdps) if fdps else "—"],
                  [tr("Coups"), _n(fp.hits)],
-                 [tr("Critiques"), f"{crit:.0f}%"]]
+                 [tr("Critiques"), f"{fp.crits / fp.hits * 100:.0f}{pct_sp()}"
+                  if fp.hits else "—"],
+                 ["Kills", _n(fp.kills)]]
         if self._show_heal:
-            stats.append([tr("Soins"), _n(fp.heal_total)])
+            facts.append([tr("Soins"), _n(fp.heal_total)])
             if fp.heal_total > 0.5:
-                stats.append([tr("Soin en excès"), f"{fp.overheal_pct:.0f}%"])
-        if fp.kills:
-            stats.append([tr("Kills"), _n(fp.kills)])
+                facts.append([tr("Soin en excès"),
+                              f"{fp.overheal_pct:.0f}{pct_sp()}"])
 
-        def skills(table, total):
+        def sources(table, total, heal):
+            """By display name (every weapon's "Attaque" one row), the
+            skills behind it for its icon."""
+            merged, ids, els = {}, {}, {}
+            for sid, vals in table.items():
+                label = self.session.skill_names.get(sid) or _pretty_id(sid)
+                m = merged.setdefault(label, [0, 0.0, 0])
+                m[0] += vals[0]; m[1] += vals[1]; m[2] += vals[2]
+                ids.setdefault(label, []).append(str(sid).split(":")[-1])
+                for e, a in (fp.skill_el.get(sid) or {}).items() if not heal else ():
+                    w = els.setdefault(label, {})
+                    w[e] = w.get(e, 0.0) + a
             out = []
-            entries = self._merge_named(table)
-            top = max((e[1] for e in entries), default=0.0) or 1.0
-            for label, amount, hits, _crits, slf in entries:
-                out.append({"t": label, "v": _n(amount),
-                            "pct": f"{(amount / total * 100) if total else 0:.0f}%",
-                            "n": hits, "f": round(amount / top, 4),
-                            "sf": round(slf / top, 4) if amount > 0 else 0})
-            return out
+            for label, (hits, amt, crits) in sorted(merged.items(),
+                                                    key=lambda kv: -kv[1][1]):
+                row = {"n": label, "t": _n(amt), "ids": ids[label],
+                       "f": round(amt / total, 4) if total else 0,
+                       "pct": _pct1(amt / total * 100 if total else 0),
+                       "hits": _n(hits)}
+                if not heal:
+                    el_ = max(els[label], key=els[label].get) if els.get(label) else None
+                    row.update({"c": element_color(el_) if el_ else "",
+                                "crit": f"{crits / hits * 100:.0f}{pct_sp()}"
+                                        if hits else "—",
+                                "avg": _n(amt / hits) if hits else "—"})
+                out.append(row)
+            return out[:MAX_SKILL_ROWS]
 
         el = sorted(fp.elements.items(), key=lambda kv: -kv[1][1])
         return {"k": "detail", "id": "detail", "name": fp.name,
                 "cls": _class_tag(self.world.class_of(fp.name)),
                 "ck": class_key(self.world.class_of(fp.name)),
-                "stats": stats,
-                "dmg": skills(fp.skills, fp.total),
-                "heal": skills(fp.heals, fp.heal_total) if self._show_heal
-                else None,
+                "facts": facts,
+                "skills": sources(fp.skills, fp.total, False),
+                "heals": sources(fp.heals, fp.heal_total, True)
+                if self._show_heal else [],
                 "elements": [{"t": element_label(k),
                               "pct": _pct1(v[1] / fp.total * 100
                                            if fp.total else 0),
+                              "f": round(v[1] / fp.total, 4) if fp.total else 0,
                               "c": element_color(k)} for k, v in el[:8]]}
 
     def _rift_clock(self):
@@ -1831,13 +1852,14 @@ class App:
         yet to hit or heal at nothing). split: "dmg" or "heal" when the
         meter is two overlays (no tabs then), else None."""
         rows, duration, holding, in_combat = self._live
-        ranked = self._ranking(rows, duration, heal, limit=8)
+        # every player (a rift's dozen too): the overlay scrolls past its height
+        ranked = self._ranking(rows, duration, heal, limit=None)
         by_name = {p.name: p for p in rows}
         for r in ranked:
             r["tip"] = self._player_tip(by_name.get(r["name"]), duration, heal)
         shown = {r["name"] for r in ranked}
         for name in self._party:
-            if name in shown or len(ranked) >= 8:
+            if name in shown:
                 continue
             kind = self.world.class_of(name)
             ranked.append({"rank": len(ranked) + 1, "name": name,

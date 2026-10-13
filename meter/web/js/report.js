@@ -165,36 +165,11 @@ function buildReport(n) {
 }
 
 /* A player's card in a report: their damage and healing, skill by skill. */
-function renderPlayerCard() {
-  document.querySelectorAll('.pcshade').forEach((x) => x.remove());
-  const d = REPORT_SEL.detail && REPORT_SEL.detail[REPORT_SEL.name];
-  if (!d) return;
-  const phases = d.phases || [];
-  if (REPORT_SEL.phase >= phases.length) REPORT_SEL.phase = 0;
-  const ph = phases[REPORT_SEL.phase];
-  const shade = el('div', 'collshade pcshade');
-  const close = () => { REPORT_SEL.name = null; shade.remove(); };
-  shade.addEventListener('click', (e) => { if (e.target === shade) close(); });
-  const card = el('div', 'colldetail pcard');
-  const x = el('button', 'x', '×');
-  x.type = 'button';
-  x.addEventListener('click', close);
-  card.appendChild(x);
-  const h = el('div', 'pch');
-  const nm = el('h3', null, d.name + ' ');
-  if (d.cls || d.ck) nm.appendChild(classEl(d.cls, d.ck, 'big'));
-  h.appendChild(nm);
-  if (phases.length > 1) {
-    const seg = el('div', 'seg');
-    phases.forEach((p, i) => {
-      const b = el('button', i === REPORT_SEL.phase ? 'on' : '', p.label);
-      b.type = 'button';
-      b.addEventListener('click', () => { REPORT_SEL.phase = i; renderPlayerCard(); });
-      seg.appendChild(b);
-    });
-    h.appendChild(seg);
-  }
-  card.appendChild(h);
+/* A player's numbers, as a rift report's card draws them (the live tab's
+   detail too): its facts, its damage and heal sources (the rankings' bars,
+   one per skill), its damage by type. ph: {facts, skills, heals, elements};
+   ck: the player's class key (its bars' colour). */
+function playerSources(card, ph, ck) {
   const facts = el('div', 'facts');
   (ph.facts || []).forEach(([k, v]) => {
     const f = el('div', 'fact');
@@ -219,7 +194,7 @@ function renderPlayerCard() {
     t.appendChild(hd);
     const top = Math.max(...rows.map((r) => r.f || 0)) || 1;
     rows.forEach((r) => {
-      const row = el('div', 'rk rkfill' + (d.ck ? ' c-' + d.ck : ''));
+      const row = el('div', 'rk rkfill' + (ck ? ' c-' + ck : ''));
       row.style.setProperty('--fill', (Math.max(0, Math.min(1, (r.f || 0) / top)) * 100) + '%');
       if (r.c) row.style.setProperty('--cc', r.c);
       const ic = el('span', 'rkic');
@@ -252,6 +227,39 @@ function renderPlayerCard() {
     // here each type's f is already its share of the player's damage
     card.appendChild(typePie(ph.elements.map((x2) => Object.assign({}, x2, { s: x2.f }))));
   }
+}
+
+function renderPlayerCard() {
+  document.querySelectorAll('.pcshade').forEach((x) => x.remove());
+  const d = REPORT_SEL.detail && REPORT_SEL.detail[REPORT_SEL.name];
+  if (!d) return;
+  const phases = d.phases || [];
+  if (REPORT_SEL.phase >= phases.length) REPORT_SEL.phase = 0;
+  const ph = phases[REPORT_SEL.phase];
+  const shade = el('div', 'collshade pcshade');
+  const close = () => { REPORT_SEL.name = null; shade.remove(); };
+  shade.addEventListener('click', (e) => { if (e.target === shade) close(); });
+  const card = el('div', 'colldetail pcard');
+  const x = el('button', 'x', '×');
+  x.type = 'button';
+  x.addEventListener('click', close);
+  card.appendChild(x);
+  const h = el('div', 'pch');
+  const nm = el('h3', null, d.name + ' ');
+  if (d.cls || d.ck) nm.appendChild(classEl(d.cls, d.ck, 'big'));
+  h.appendChild(nm);
+  if (phases.length > 1) {
+    const seg = el('div', 'seg');
+    phases.forEach((p, i) => {
+      const b = el('button', i === REPORT_SEL.phase ? 'on' : '', p.label);
+      b.type = 'button';
+      b.addEventListener('click', () => { REPORT_SEL.phase = i; renderPlayerCard(); });
+      seg.appendChild(b);
+    });
+    h.appendChild(seg);
+  }
+  card.appendChild(h);
+  playerSources(card, ph, d.ck);
   shade.appendChild(card);
   document.body.appendChild(shade);
 }
