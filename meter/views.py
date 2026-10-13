@@ -1230,7 +1230,9 @@ def piece_view(slot, cell=None):
 
 def character_view(roster, profiles, sel, waiting, live):
     """The Character tab: the players around (to analyse), the profiles
-    already built, and the open one."""
+    already built (by key: one's own characters by name and id, two may
+    share a name), and the open one."""
+    known = {p.get("n") for p in profiles.values()}
     near = []
     for r in sorted(roster, key=lambda r: (not r.get("me"),
                                            -(r.get("lvl") or 0),
@@ -1238,13 +1240,13 @@ def character_view(roster, profiles, sel, waiting, live):
         near.append({"n": r.get("n"), "lvl": r.get("lvl"),
                      "cls": tr(CLASS_FR.get(r.get("k"), r.get("k") or "")),
                      "ck": class_key(r.get("k")), "me": bool(r.get("me")),
-                     "saved": r.get("n") in profiles,
+                     "saved": r.get("n") in known,
                      "busy": r.get("n") == waiting})
-    saved = [{"n": n, "lvl": p.get("lvl"),
+    saved = [{"key": k, "n": p.get("n") or k, "lvl": p.get("lvl"),
               "cls": tr(CLASS_FR.get(p.get("k"), p.get("k") or "")),
               "ck": class_key(p.get("k")),
               "when": date_fr(time.localtime(p.get("at") or 0))}
-             for n, p in sorted(profiles.items(),
+             for k, p in sorted(profiles.items(),
                                 key=lambda kv: -(kv[1].get("at") or 0))]
     view = {"near": near, "count": len(near), "saved": saved, "live": live,
             "open": None}
@@ -1261,7 +1263,7 @@ def character_view(roster, profiles, sel, waiting, live):
             if t not in NOT_GEAR:
                 cells.append((idx, entry))
         view["open"] = {
-            "n": prof.get("n"), "lvl": prof.get("lvl"),
+            "key": sel, "n": prof.get("n"), "lvl": prof.get("lvl"),
             "cls": tr(CLASS_FR.get(prof.get("k"), prof.get("k") or "")),
             "ck": class_key(prof.get("k")), "me": bool(prof.get("me")),
             "when": date_fr(time.localtime(prof.get("at") or 0)),

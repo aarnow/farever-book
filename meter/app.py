@@ -263,6 +263,7 @@ class App:
         self._elements_logged = False
         self._item_codex_logged = False
         self._hero_ids = {}                 # character -> its id in the game's database
+        self._me_hkey = None                # the hero in game now, its key
         self._ach_logged = False
         self._ach_data = None
         self._item_codex_cache = (None, {})
@@ -612,7 +613,7 @@ class App:
     def _make_report(self):
         """The report on the Desktop, then the Explorer on it. Built off the
         loop: the antivirus query takes a second."""
-        ctx, names = self._report_ctx(), list(self._shown_profiles())
+        ctx, names = self._report_ctx(), self._profile_names()
         self._toast_msg(tr("Création du rapport…"))
 
         def work():
@@ -631,7 +632,7 @@ class App:
         ctx = self._report_ctx()
         text = (f"Farever Book {VERSION}, {report.windows_version()}\n"
                 f"{ctx.get('detail') or ''}\n{ctx.get('error') or ''}").strip()
-        if copy_text_to_clipboard(report.mask(text, list(self._shown_profiles()))):
+        if copy_text_to_clipboard(report.mask(text, self._profile_names())):
             self._toast_msg(tr("Erreur copiée dans le presse-papiers."))
 
     def _open_log_folder(self):
@@ -1603,7 +1604,7 @@ class App:
     def on_stock(self, p):
         """What the hero owns changed (bag, equipment, bank). Hook thread."""
         def done():
-            self.me.put(self._me_name, "stock",
+            self.me.put(self._me_key(), "stock",
                         {"items": p.get("items") or {},
                          "banks": p.get("banks")})
             for g in self.goals.on_stock(p.get("items"), p.get("banks"),
@@ -1641,12 +1642,18 @@ class App:
         def done():
             if hid:
                 self._hero_ids[name] = hid
-            self.me.set_hero(name)
+            key = self._hero_key(name)
+            self.me.set_hero(key, name)
             self._tag_hero(name)
-            if name != self._me_name:
+            if name != self._me_name or key != self._me_hkey:
                 self._me_name = name
+                self._me_hkey = key
                 self._me_auto_next = 0.0    # a new character: read it now
         self._enqueue(done)()
+
+    def _me_key(self):
+        """The key of the hero in game now (its name and id), or None."""
+        return self._hero_key(self._me_name) if self._me_name else None
 
     def _auto_self_profile(self):
         """Read one's own character like Inspecter does, on arrival and then
@@ -2269,7 +2276,7 @@ class App:
                               file=sys.stderr)
                     self._bonus_dungeon = bonus
                 self._rift_gates_seen((p.get("profile") or {}).get("counters"))
-                self.me.put(self._me_name, "counters",
+                self.me.put(self._me_key(), "counters",
                             p.get("profile") or {})
                 return
             if p.get("kind") == "roster":
@@ -2305,13 +2312,17 @@ class App:
                   f"{prof.get('weaponSkills')}; secondary "
                   f"{prof.get('secondary')}; statuses "
                   f"{prof.get('statuses')}", file=sys.stderr)
+            key = name
             if name == self._me_name:
-                # one's own character: kept on disk, for the game closed
-                self.me.put(name, "profile", p.get("profile") or {})
+                # one's own character: kept on disk, for the game closed,
+                # by its key (two characters may share a name)
+                key = self._me_key()
+                self.me.put(key, "profile", p.get("profile") or {})
                 if auto:
                     return              # a quiet refresh, nothing to open
-            # others: kept for this session only, never written to disk
-            self._profiles_data()[name] = prof
+            else:
+                # others: kept for this session only, never written to disk
+                self._profiles_data()[name] = prof
             if mine:
                 # asked from the Build tab: straight into a build, named
                 # after the character
@@ -2319,7 +2330,7 @@ class App:
                 self._set_tab("Build")
                 self.buildtab.import_profile(prof, name)
                 return
-            self._char_sel = name
+            self._char_sel = key
         self._enqueue(done)()
 
     def _profiles_data(self):
@@ -2363,7 +2374,7 @@ class App:
                                    "ouvert."))
                 return
             self._set_tab("Build")
-            self.buildtab.import_profile(prof, self.me.last)
+            self.buildtab.import_profile(prof, self.me.name())
             return
         self._me_build = (me["n"], time.time())
         self._analyze(me["n"])
@@ -2379,7 +2390,7 @@ class App:
             if n.get("k") == "build":
                 n["me"] = ({"n": me["n"], "lvl": me.get("lvl"),
                             "wait": bool(wait)} if me else
-                           {"n": self.me.last, "lvl": saved.get("lvl"),
+                           {"n": self.me.name(), "lvl": saved.get("lvl"),
                             "wait": False,
                             "when": date_fr(time.localtime(saved["at"]))}
                            if saved else None)
@@ -2394,9 +2405,15 @@ class App:
             self.buildtab.import_profile(prof)
 
     def _shown_profiles(self):
-        """The profiles Inspecter lists: one's own characters as last read,
-        under the players analysed this session."""
-        return {**self.me.profiles(), **self._profiles_data()}
+        """The profiles Inspecter lists, by key: one's own characters as
+        last read (their name and id: two may share a name), the players
+        analysed this session (their name)."""
+        return {**self._profiles_data(), **self.me.profiles()}
+
+    def _profile_names(self):
+        """The names of the characters Inspecter lists (masked in reports)."""
+        return list(dict.fromkeys(p.get("n") or k for k, p
+                                  in self._shown_profiles().items()))
 
     def _page_character(self):
         live = self.game_connected() and time.time() - self._roster_at < 30
@@ -3079,7 +3096,7 @@ class App:
             for k in sorted(mine, key=lambda k: (chars_all[k].get("name")
                                                  or k).lower()):
                 h = chars_all[k].get("name") or k
-                prof = profiles.get(h) or {}
+                prof = profiles.get(k) or {}
                 cls = str(prof.get("k") or "").lower()
                 key = char_look(prof)
                 port = f"chr_m{MODEL_FORMAT}_{key}" if key else None

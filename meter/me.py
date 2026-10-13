@@ -2,6 +2,8 @@
 the game closed: per character, the profile (as Inspecter reads it), the
 counters (luck, statistics) and the stock (the goals' counts), plus the last
 character played. Players inspected in Inspecter stay in memory only.
+A character is keyed as the app's accounts key it: its name and its id in
+the game's database (two may share a name), its name alone without one.
 Saved in .meter_me.json, at most every FLUSH_SECS."""
 from __future__ import annotations
 
@@ -28,10 +30,24 @@ class MeStore:
             pass
 
     # -- writing -----------------------------------------------------------
-    def set_hero(self, name):
-        if name and name != self.data.get("last"):
-            self.data["last"] = name
-            self.data["chars"].setdefault(name, {})
+    def set_hero(self, key, name=None):
+        """The character playing, by its key. One known by its name alone
+        takes its key once its id is known."""
+        if not key:
+            return
+        chars = self.data["chars"]
+        name = name or key
+        if key != name and name in chars and key not in chars:
+            chars[key] = chars.pop(name)
+            if self.data.get("last") == name:
+                self.data["last"] = key
+            self._dirty = True
+        entry = chars.setdefault(key, {})
+        if entry.get("name") != name:
+            entry["name"] = name
+            self._dirty = True
+        if key != self.data.get("last"):
+            self.data["last"] = key
             self._dirty = True
 
     def put(self, name, key, value):
@@ -72,8 +88,13 @@ class MeStore:
         e = self.entry(name)
         return e.get(key), e.get(key + "_at") or 0
 
+    def name(self, key=None):
+        """A character's name, by its key."""
+        key = key or self.last
+        return (self.data["chars"].get(key) or {}).get("name") or key
+
     def profiles(self):
-        """{name: profile} of one's characters, each with its read time."""
+        """{key: profile} of one's characters, each with its read time."""
         return {n: dict(e["profile"], at=e.get("profile_at") or 0)
                 for n, e in self.data["chars"].items()
                 if isinstance(e.get("profile"), dict)}

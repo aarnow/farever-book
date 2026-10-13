@@ -211,6 +211,7 @@ let base = null;
 let getHeroFns = [];      // [{addr}]
 let localHero = null;
 let localName = null;
+let pickedHero = null;      // {id, name}: the character picked on the select screen
 let partyNames = {};      // set of names in the local player's group (incl. self)
 const heroByName = {};    // name -> {ptr: ent.Hero*, t: last-seen ms} (from hits)
 
@@ -673,6 +674,40 @@ function virtualFieldIndex(t, want) {
     }
     const idx = map[want];
     return idx === undefined ? -1 : idx;
+}
+
+// A virtual's field storage (its address), by name: the pointer array at
+// v+24, else null (a field the virtual reaches dynamically).
+function virtualSlot(v, name) {
+    try {
+        if (!v || v.isNull()) return null;
+        const t = v.readPointer();
+        if (t.readU32() !== HVIRTUAL) return null;
+        const i = virtualFieldIndex(t, name);
+        if (i < 0) return null;
+        const st = v.add(24 + i * 8).readPointer();
+        return (st && !st.isNull()) ? st : null;
+    } catch (e) { return null; }
+}
+
+// An object field of a virtual (a string, another virtual), or null.
+function virtualPtr(v, name) {
+    const st = virtualSlot(v, name);
+    if (st) {
+        try { return st.readPointer(); } catch (e) { return null; }
+    }
+    return getField(v, name);
+}
+
+// An i64 field of a virtual, as a decimal string, or null. Reached
+// dynamically, the value comes boxed (vdynamic: its value at +8).
+function virtualI64(v, name) {
+    try {
+        const st = virtualSlot(v, name);
+        if (st) return st.readS64().toString();
+        const d = getField(v, name);
+        return (d && !d.isNull()) ? d.add(8).readS64().toString() : null;
+    } catch (e) { return null; }
 }
 
 // { item, count } out of one container slot, or null.
@@ -1703,6 +1738,11 @@ function refreshLocalHero() {
                 if (nm) partyNames[nm] = 1;   // always include self
                 localName = nm;
                 const ident = heroIdentity(h);
+                // HeroData is null client-side: the id seen on the select
+                // screen, for the character of that name
+                if (!ident.id && pickedHero && pickedHero.name === nm) {
+                    ident.id = pickedHero.id;
+                }
                 send({ kind: "hero", name: localName, id: ident.id || null,
                        acct: ident.acct || null });
                 return;
@@ -1994,6 +2034,34 @@ function main() {
     } else {
         log("status data missing (st.skill.Status.init / Status offsets): "
             + "the journals show no crowd control");
+    }
+
+    // ---- the character picked ----
+    // HeroData is null on the client: a character's id in the game's
+    // database is only seen on the character select screen, each slot a
+    // virtual {header: {name, ...}, heroID: i64}. The last one picked is the
+    // one that enters the world (refreshLocalHero matches it by name).
+    const selFi = (DATA.select_fns || {})["ui.win.CharacterSelectScreen.setCurrentCharacter"];
+    if (selFi != null) {
+        Interceptor.attach(base.add(selFi * 8).readPointer(), {
+            onEnter() {
+                try {
+                    const v = this.context.rdx;
+                    if (!v || v.isNull()) return;
+                    const id = virtualI64(v, "heroID");
+                    const name = hlStr(virtualPtr(virtualPtr(v, "header"), "name"));
+                    if (id && id !== "0" && name) {
+                        if (!pickedHero || pickedHero.id !== id) {
+                            log("character picked: database id read");
+                        }
+                        pickedHero = { id: id, name: name };
+                    }
+                } catch (e) {}
+            }
+        });
+    } else {
+        log("select data missing (CharacterSelectScreen.setCurrentCharacter): "
+            + "two characters of the same name are told apart by name only");
     }
 
     // ---- healing ----

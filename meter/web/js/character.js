@@ -68,7 +68,7 @@ function buildCharacter(n) {
     t.appendChild(el('span', 'lv', lv(p)));
     row.appendChild(t);
     row.appendChild(el('span', 'wh', p.when));
-    row.addEventListener('click', () => notify('char_open', { name: p.n }));
+    row.addEventListener('click', () => notify('char_open', { name: p.key }));
     saved.appendChild(row);
   });
   done.appendChild(saved);
@@ -110,13 +110,13 @@ function charOpen(o, main, box) {
   const mk = el('button', 'rowbtn', tr('Créer un build'));
   mk.type = 'button';
   mk.title = tr('Reprendre ce personnage dans un nouveau build modifiable');
-  mk.addEventListener('click', () => notify('char_to_build', { name: o.n }));
+  mk.addEventListener('click', () => notify('char_to_build', { name: o.key }));
   head.appendChild(mk);
   // one's own character stays: it is kept on disk, not in the session's list
   if (!o.me) {
     const x = el('button', 'rowbtn', tr('Retirer de la liste'));
     x.type = 'button';
-    x.addEventListener('click', () => notify('char_forget', { name: o.n }));
+    x.addEventListener('click', () => notify('char_forget', { name: o.key }));
     head.appendChild(x);
   }
   main.appendChild(head);

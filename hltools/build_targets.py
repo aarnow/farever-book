@@ -40,6 +40,10 @@ TARGETS = (
     # the journals' crowd controls (stun, root, slow...)
     ("status_fns", ("st.skill.Status.init",), "status target",
      "the journals show no crowd control"),
+    # the character picked on the select screen: its id in the game's
+    # database (HeroData is null on the client), two may share a name
+    ("select_fns", ("ui.win.CharacterSelectScreen.setCurrentCharacter",),
+     "select target", "characters of the same name are told apart by name only"),
 )
 # The local player, through the game's singletons.
 SINGLETON_FNS = ("GameApp.getCameraHero", "ui.Console.getMyHero",
