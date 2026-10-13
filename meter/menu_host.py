@@ -215,10 +215,13 @@ class AppWindow:
                         oid, pipe, self._lang, i18n.catalog, _bonus_art))
                 elif oid in NATIVE:
                     cls = {"meter": native_overlay.NativeMeter,
+                           "meterheal": native_overlay.NativeMeter,
                            "luck": native_overlay.NativeLuck,
                            "goals": native_overlay.NativeGoals}[oid]
                     self.overlays.append(cls(oid, pipe, self._lang, i18n.catalog,
                                              TIP, PICKER))
+                elif oid == "meterheal":
+                    continue        # split meter: the native overlays only
                 else:
                     self.overlays.append(Overlay(oid, pipe, self._theme,
                                                  self._lang))
@@ -661,14 +664,14 @@ def cursor_captured():
 CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
-OVERLAY_IDS = ("meter", "goals", "luck", "bonus")
+OVERLAY_IDS = ("meter", "meterheal", "goals", "luck", "bonus")
 # the overlays drawn natively (native_overlay: no WebView2, see why there),
 # the meter's tip and the menu's button too; FAREVER_WEBVIEW_OVERLAYS=1
 # keeps them all pages, as before. The goals' chooser stays a page: it
 # takes the keyboard (its search, its count) and shows whole, no part of it
 # see-through.
 NATIVE = (set() if os.environ.get("FAREVER_WEBVIEW_OVERLAYS")
-          else {"meter", "luck", "goals", "bonus", "tip", "esc"})
+          else {"meter", "meterheal", "luck", "goals", "bonus", "tip", "esc"})
 
 
 def _bonus_art():

@@ -920,12 +920,13 @@ def _head(p, W, title, dpi_k, ui, hits, extra=None):
     hits.append((18, 12, W - 36, 32, "drag", None))
 
 
-def _settings(p, W, style, ui, hits, tr):
+def _settings(p, W, style, ui, hits, tr, switch=None):
     """The gear's panel: opacity and size, each a slider, and back to the
-    defaults (overlay.js settingsPanel). -> its bottom."""
+    defaults (overlay.js settingsPanel); `switch` (label, on) a box to tick
+    under them (the meter's: two overlays or one). -> its bottom."""
     st = ui.get("style") or style
     y = 44.0
-    h = 1 + 10 + SET_H + 10 + SET_H + 10 + CHIP_H + 12 + 1
+    h = _settings_height(bool(switch)) - 44.0
     p.fill(8, y, W - 16, h, OV_BG)
     p.hline(8, y, W - 16, OV_LINE, 0.35)
     p.hline(8, y + h - 1, W - 16, OV_LINE, 0.35)
@@ -946,6 +947,19 @@ def _settings(p, W, style, ui, hits, tr):
         p.fill(cx - 7, mid - 7, 14, 14, OV_ACCENT, r=7)
         hits.append((tx, ty, tw, 16, "slider", (key, lo, hi, tx + 8, tw - 16)))
         sy += SET_H + 10
+    if switch:
+        label, on = switch
+        hov = ui.get("hover") == "switch"
+        p.fill(20, sy + (SWITCH_H - 14) / 2, 14, 14, OV_ACCENT if on else OV_WELL, r=3)
+        p.border(20, sy + (SWITCH_H - 14) / 2, 14, 14,
+                 "#FFF6E6" if hov else (237, 216, 208), 1.0 if hov else 0.5, r=3)
+        if on:
+            p.text("✓", 20, sy + (SWITCH_H - LH12) / 2, LH12, 12, 700, OV_TEXT,
+                   align="center", w=14)
+        p.text(label, 42, sy + (SWITCH_H - LH12) / 2, LH12, 12, 400, "#FFF6E6",
+               clip=W - 62)
+        hits.append((18, sy, W - 36, SWITCH_H, "switch", not on))
+        sy += SWITCH_H + 10
     label = tr("Par défaut")
     cw = p.width(label, 11) + 18 + 2
     hov = ui.get("hover") == "reset"
@@ -957,8 +971,12 @@ def _settings(p, W, style, ui, hits, tr):
     return y + h
 
 
-def _settings_height():
-    return 44.0 + 1 + 10 + SET_H + 10 + SET_H + 10 + CHIP_H + 12 + 1
+def _settings_height(switch=False):
+    return (44.0 + 1 + 10 + SET_H + 10 + SET_H + 10 + CHIP_H + 12 + 1
+            + (SWITCH_H + 10 if switch else 0))
+
+
+SWITCH_H = 20                       # the gear's box to tick, its line
 
 
 class MeterView:
@@ -989,12 +1007,17 @@ class MeterView:
         rows = m.get("rows") or []
         heal = (ui.get("tab") or m.get("tab")) == "heal"
         hover = ui.get("hover")
+        # split in two overlays: damage or heals alone, no tabs, its title
+        split = m.get("split")
+        title = tr(self.title) if not split else (
+            tr("Soins") if split == "heal" else tr("Dégâts"))
         if ui.get("settings"):
-            W, H = self.MIN_W, _settings_height() + 22
+            W, H = self.MIN_W, _settings_height(True) + 22
             p = Paint(W, H, k)
             _frame(p, W, H)
-            _head(p, W, tr(self.title), dpi_k, ui, hits)
-            _settings(p, W, style, ui, hits, tr)
+            _head(p, W, title, dpi_k, ui, hits)
+            _settings(p, W, style, ui, hits, tr, switch=(
+                tr("Deux overlays : dégâts et soins"), bool(split)))
             return p, hits, W, H
         W = self.layout_width(Paint(1, 1, k), m)
         # the list: its rows' height, at most the player's (max-height),
@@ -1004,14 +1027,14 @@ class MeterView:
         sized = bool(style.get("maxh"))     # the fit button shown
         mline_h = 18 if sized else LH115
         tabs_y = 49 + mline_h + 5
-        bar_bottom = tabs_y + TAB_H + 2
+        bar_bottom = (tabs_y + TAB_H + 2) if not split else tabs_y
         content_h = 26 * len(rows) if rows else LH12 + 16
         list_h = maxh if gripping else (min(content_h, maxh) if maxh else content_h)
         body_h = 4 + 18 + list_h + 6 + 1
         H = bar_bottom + body_h + 22
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, tr(self.title), dpi_k, ui, hits)
+        _head(p, W, title, dpi_k, ui, hits)
         # -- the duration line and the tabs ---------------------------------
         p.fill(8, 44, W - 16, bar_bottom - 44, OV_BG)
         p.hline(8, 44, W - 16, OV_LINE, 0.35)
@@ -1031,20 +1054,9 @@ class MeterView:
             _icon(p, "fit", fx + 4.5, 49 + 2.5, 11, 13, OV_TEXT if hover == "fit" else "#4A3229")
             hits.append((fx, 49, 20, 18, "fit", None))
         tw = W - 32
-        p.fill(16, tabs_y, tw, TAB_H + 2, (255, 246, 230), 0.18, r=4)
         half = (tw - 2) / 2
-        # the shown tab's background (.mtabs::before), its outer corners
-        # rounded by the tabs' clip, its inner side straight
-        wx = 17 + (half if heal else 0)
-        p.fill(wx, tabs_y + 1, half, TAB_H, OV_WELL, r=3)
-        p.fill(wx if heal else wx + half - 3, tabs_y + 1, 3, TAB_H, OV_WELL)
-        p.border(16, tabs_y, tw, TAB_H + 2, (58, 46, 39), 0.45, r=4)
-        for i, (key, label) in enumerate((("dmg", tr("Dégâts")), ("heal", tr("Soins")))):
-            sel = (key == "heal") == heal
-            col = "#FFFFFF" if sel else (OV_TEXT if hover == "tab:" + key else "#4A3229")
-            p.text(label, 17 + i * half, tabs_y + 1 + 3, LH12, 12, 600,
-                   col, align="center", w=half)
-            hits.append((17 + i * half, tabs_y + 1, half, TAB_H, "tab", key))
+        if not split:
+            self._tabs(p, tabs_y, tw, half, heal, hover, hits)
         # -- the list --------------------------------------------------------
         body_y = bar_bottom
         p.fill(8, body_y, W - 16, body_h, OV_BG)
@@ -1093,6 +1105,24 @@ class MeterView:
             p.border(14, list_y, W - 28, list_h, (74, 50, 41), 0.6)
         hits.append((32, H - 24, W - 64, 16, "grip", list_h))
         return p, hits, W, H
+
+    def _tabs(self, p, tabs_y, tw, half, heal, hover, hits):
+        """Damage and heals, two tabs side by side (.mtabs), the shown
+        one's background a dark well."""
+        tr = self.tr
+        p.fill(16, tabs_y, tw, TAB_H + 2, (255, 246, 230), 0.18, r=4)
+        # the shown tab's background (.mtabs::before), its outer corners
+        # rounded by the tabs' clip, its inner side straight
+        wx = 17 + (half if heal else 0)
+        p.fill(wx, tabs_y + 1, half, TAB_H, OV_WELL, r=3)
+        p.fill(wx if heal else wx + half - 3, tabs_y + 1, 3, TAB_H, OV_WELL)
+        p.border(16, tabs_y, tw, TAB_H + 2, (58, 46, 39), 0.45, r=4)
+        for i, (key, label) in enumerate((("dmg", tr("Dégâts")), ("heal", tr("Soins")))):
+            sel = (key == "heal") == heal
+            col = "#FFFFFF" if sel else (OV_TEXT if hover == "tab:" + key else "#4A3229")
+            p.text(label, 17 + i * half, tabs_y + 1 + 3, LH12, 12, 600,
+                   col, align="center", w=half)
+            hits.append((17 + i * half, tabs_y + 1, half, TAB_H, "tab", key))
 
     @staticmethod
     def _cols(name_w):
@@ -1824,7 +1854,7 @@ class NativeOverlay(_NativeWindow):
         self._topmost()
 
     # -- the mouse (the UI thread) --------------------------------------------
-    HAND = ("gear", "tab", "fit", "slider", "reset", "add", "del")
+    HAND = ("gear", "tab", "fit", "slider", "reset", "add", "del", "switch")
 
     def _hit(self, x, y):
         cx, cy = x / self._k, y / self._k
@@ -1996,7 +2026,19 @@ def _screen_pt():
 
 
 class NativeMeter(NativeOverlay):
+    """The meter: damage and heals in two tabs, or (split in two overlays)
+    damage here, heals in "meterheal", shown only while split."""
+
     VIEW = MeterView
+
+    @property
+    def KEYED(self):
+        return self.id == "meterheal"
+
+    def _default_pos(self, gw, gh, w, h):
+        if self.id == "meterheal":                      # under the damage's
+            return {"ax": "r", "dx": 24, "ay": "t", "dy": gh // 3 + 280}
+        return super()._default_pos(gw, gh, w, h)
 
     def _pushed(self, data):
         if data and self._ui.get("tab") == (data.get("tab") or "dmg"):
@@ -2012,6 +2054,12 @@ class NativeMeter(NativeOverlay):
             self._style["maxh"] = 0
             self._send_style(save=True)
             self._redraw()
+        elif kind == "switch":
+            # two overlays or one: the app's choice, pushed back to both
+            self._ui["settings"] = False
+            self._ui.pop("style", None)
+            self._redraw()
+            self._notify("ov_split", {"value": bool(arg)})
         else:
             super()._click(kind, arg)
 

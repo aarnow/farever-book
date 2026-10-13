@@ -187,7 +187,11 @@ class App:
         self._ov_tab = "dmg"                # the meter overlay's tab
         self._ov_pos = {}                   # overlay -> its anchor (see _ov_moved)
         self._ov_on = {"meter": True, "goals": False, "luck": False,
-                       "bonus": True}       # shown, per overlay
+                       "bonus": True,       # shown, per overlay
+                       "meterheal": True}   # (the heals' meter, split)
+        # the meter split in two overlays, damage ("meter") and heals
+        # ("meterheal"), each its own place and settings; else one, tabbed
+        self._ov_split = False
         self._bonus_dungeon = None          # the hero's bonus heroic dungeon
         # locked (the mouse goes through): in the game's focus mode, or always
         self._ov_lock_always = False
@@ -339,6 +343,8 @@ class App:
                     self._ov_on[k] = on[k]
         if data.get("overlay_tab") in ("dmg", "heal"):
             self._ov_tab = data["overlay_tab"]
+        if isinstance(data.get("overlay_split"), bool):
+            self._ov_split = data["overlay_split"]
         if isinstance(data.get("overlay_lock_always"), bool):
             self._ov_lock_always = data["overlay_lock_always"]
         if isinstance(data.get("overlay_hide_free"), bool):
@@ -374,6 +380,7 @@ class App:
                 "overlay_pos": self._ov_pos,
                 "overlay_on": self._ov_on,
                 "overlay_tab": self._ov_tab,
+                "overlay_split": bool(self._ov_split),
                 "overlay_lock_always": bool(self._ov_lock_always),
                 "overlay_hide_free": bool(self._ov_hide_free),
                 "overlay_style": self._ov_style,
@@ -857,6 +864,9 @@ class App:
             "ov_style_set": self._ov_style_set,
             "ov_show": self._ov_show,
             "ov_theme": self._ov_set_theme,
+            # the meter: one overlay with two tabs, or one for damage and
+            # one for heals (value: True, False, or None to switch)
+            "ov_split": lambda p: self._ov_set_split(p.get("value")),
             "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
                                                 self._learnt()),
@@ -1709,38 +1719,28 @@ class App:
             self._ov_tab = tab
             self._save_settings()
 
-    def _overlay_spec(self):
-        """What the overlays show, and whether: only over the game, while it
-        (or one of our windows) has the focus."""
-        win = game_window(self.target_pid) if self.game_connected() else None
-        fg = foreground_pid()
-        ours = {self.target_pid, self.menubridge.pid()}
-        # on a character in the world: the menus and loading screens never
-        # see the hero, the world sees it every 3 s
-        in_world = time.time() - self._hero_at < OVERLAY_HERO_SECS
-        show = bool(win and not win[2] and fg and fg in ours and in_world
-                    and any(self._ov_on.values()))
-        spec = {"show": show, "game": list(win[1]) if win else None,
-                # the game's drawing area's corner: its own coordinates' 0, 0
-                "client": client_origin(win[0]) if win else None,
-                # the game itself in front (not one of our windows)
-                "gameFront": bool(win and fg == self.target_pid),
-                "pos": {k: dict(v) for k, v in self._ov_pos.items()},
-                "on": dict(self._ov_on),
-                "lock": "always" if self._ov_lock_always else "auto",
-                "hideFree": bool(self._ov_hide_free)}
-        if not show:
-            return spec
-        # the live tab's very rows (its mode, its resets, its last fight):
-        # only a view of them
+    def _ov_set_split(self, value):
+        """The meter as two overlays (damage, heals) or one with two tabs
+        (value None: the other way). Split, the heals' one shows."""
+        split = (not self._ov_split) if value is None else bool(value)
+        if split == self._ov_split:
+            return
+        self._ov_split = split
+        if split:
+            self._ov_on["meterheal"] = True
+        self._save_settings()
+
+    def _meter_spec(self, heal, split):
+        """A meter overlay's state: damage or heals ranked (the live tab's
+        very rows: its mode, its resets, its last fight), each player's
+        details for the tip under the mouse, the group always there (those
+        yet to hit or heal at nothing). split: "dmg" or "heal" when the
+        meter is two overlays (no tabs then), else None."""
         rows, duration, holding, in_combat = self._live
-        heal = self._ov_tab == "heal"
         ranked = self._ranking(rows, duration, heal, limit=8)
-        # each player's details, for the tip under the mouse
         by_name = {p.name: p for p in rows}
         for r in ranked:
             r["tip"] = self._player_tip(by_name.get(r["name"]), duration, heal)
-        # the group always there, those yet to hit (or heal) at nothing
         shown = {r["name"] for r in ranked}
         for name in self._party:
             if name in shown or len(ranked) >= 8:
@@ -1753,12 +1753,45 @@ class App:
                            "zero": True,
                            "tip": self._player_tip(by_name.get(name),
                                                    duration, heal)})
-        spec["meter"] = {
-            "tab": "heal" if heal else "dmg",
-            "held": bool(holding),
-            "time": _mmss(duration) if duration > 0 else "",
-            "fight": bool(in_combat),
-            "rows": ranked}
+        return {"tab": "heal" if heal else "dmg", "split": split,
+                "held": bool(holding),
+                "time": _mmss(duration) if duration > 0 else "",
+                "fight": bool(in_combat),
+                "rows": ranked}
+
+    def _overlay_spec(self):
+        """What the overlays show, and whether: only over the game, while it
+        (or one of our windows) has the focus."""
+        win = game_window(self.target_pid) if self.game_connected() else None
+        fg = foreground_pid()
+        ours = {self.target_pid, self.menubridge.pid()}
+        # on a character in the world: the menus and loading screens never
+        # see the hero, the world sees it every 3 s
+        in_world = time.time() - self._hero_at < OVERLAY_HERO_SECS
+        show = bool(win and not win[2] and fg and fg in ours and in_world
+                    and any(self._ov_on.values()))
+        on = dict(self._ov_on)
+        # the heals' meter only while the meter is split
+        on["meterheal"] = bool(self._ov_split and on.get("meterheal"))
+        spec = {"show": show, "game": list(win[1]) if win else None,
+                # the game's drawing area's corner: its own coordinates' 0, 0
+                "client": client_origin(win[0]) if win else None,
+                # the game itself in front (not one of our windows)
+                "gameFront": bool(win and fg == self.target_pid),
+                "pos": {k: dict(v) for k, v in self._ov_pos.items()},
+                "on": on,
+                "lock": "always" if self._ov_lock_always else "auto",
+                "hideFree": bool(self._ov_hide_free)}
+        if not show:
+            return spec
+        # one meter with its two tabs, or (split) damage here, heals in
+        # the heals' own overlay
+        if self._ov_split:
+            spec["meter"] = self._meter_spec(False, "dmg")
+            spec["meterheal"] = self._meter_spec(True, "heal")
+        else:
+            spec["meter"] = self._meter_spec(self._ov_tab == "heal", None)
+            spec["meterheal"] = None
         # copies: the bridge pushes only a spec unlike the last one, and
         # these dicts change in place
         spec["style"] = {k: dict(v) for k, v in self._ov_style.items()}
@@ -3073,15 +3106,23 @@ class App:
         ]
 
     def _settings_overlay(self):
-        names = {"meter": tr("Meter"), "goals": tr("Objectifs"),
-                 "luck": tr("Chance de butin"),
-                 "bonus": tr("Donjon héroïque bonus")}
+        # the meter: one overlay (two tabs), or split, its damage and its
+        # heals each an overlay with its own settings
+        names = ({"meter": tr("Meter — Dégâts"), "meterheal": tr("Meter — Soins")}
+                 if self._ov_split else {"meter": tr("Meter")})
+        names.update({"goals": tr("Objectifs"),
+                      "luck": tr("Chance de butin"),
+                      "bonus": tr("Donjon héroïque bonus")})
         out = [{"k": "section", "t": tr("Afficher / masquer")}]
         # each overlay, a switch at the end of its line
         for oid, t in names.items():
             out.append({"k": "field", "t": t,
                         "c": {"k": "toggle", "id": "ov_show",
                               "on": bool(self._ov_on.get(oid)), "p": {"id": oid}}})
+        out.append({"k": "button", "id": "ov_split",
+                    "t": self._tick(self._ov_split,
+                                    tr("Meter : deux overlays, un pour les "
+                                       "dégâts et un pour les soins"))})
         # each one's own settings, as its gear has them
         for oid, t in names.items():
             st = self._ov_style.get(oid) or _ov_style({})
@@ -3091,7 +3132,7 @@ class App:
                            "max": 100, "step": 5, "v": st["opacity"],
                            "unit": " %", "p": {"id": oid, "key": "opacity"}}},
                     {"k": "field", "t": tr("Taille"),
-                     "c": {"k": "slider", "id": "ov_style_set", "min": 90,
+                     "c": {"k": "slider", "id": "ov_style_set", "min": 70,
                            "max": 110, "step": 5, "v": st["scale"],
                            "unit": " %", "p": {"id": oid, "key": "scale"}}}]
         out += [
