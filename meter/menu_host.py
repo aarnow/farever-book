@@ -213,6 +213,12 @@ class AppWindow:
                 if oid == "bonus" and oid in NATIVE:
                     self.overlays.append(native_overlay.NativeBonus(
                         oid, pipe, self._lang, i18n.catalog, _bonus_art))
+                elif oid == "minimap" and oid in NATIVE:
+                    # the map's tiles and markers, read from analysis_out
+                    self.overlays.append(native_overlay.NativeMinimap(
+                        oid, pipe, self._lang, i18n.catalog,
+                        os.environ.get("FAREVER_ANALYSIS") or HERE.parent / "analysis_out",
+                        TIP))
                 elif oid == "luck" and oid in NATIVE:
                     # the bonus dungeon may be drawn in it: its pictures too
                     self.overlays.append(native_overlay.NativeLuck(
@@ -226,13 +232,24 @@ class AppWindow:
                            "currencies": native_overlay.NativeCurrencies}[oid]
                     self.overlays.append(cls(oid, pipe, self._lang, i18n.catalog,
                                              TIP, PICKER))
-                elif oid in ("meterheal", "currencies"):
+                elif oid in ("meterheal", "currencies", "minimap"):
                     continue        # the native overlays only
                 else:
                     self.overlays.append(Overlay(oid, pipe, self._theme,
                                                  self._lang))
             except Exception as e:
                 _log(f"overlay {oid} unavailable: {e!r}")
+        # the overlays' settings, one window for them all (their gears open it)
+        if any(isinstance(o, native_overlay.NativeOverlay) for o in self.overlays):
+            try:
+                cfg = native_overlay.NativeConfig(
+                    pipe, self._lang, i18n.catalog,
+                    os.environ.get("FAREVER_ANALYSIS") or HERE.parent / "analysis_out",
+                    lambda: self.overlays)
+                self.overlays.append(cfg)
+                native_overlay.CONFIG[0] = cfg
+            except Exception as e:
+                _log(f"overlay config unavailable: {e!r}")
         # the game's own word on its cursor (hook): (window open, FreeCursor
         # toggle, when)
         self._game_cursor = None
@@ -670,14 +687,14 @@ def cursor_captured():
 CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
-OVERLAY_IDS = ("meter", "meterheal", "goals", "luck", "bonus", "currencies")
+OVERLAY_IDS = ("meter", "meterheal", "goals", "luck", "bonus", "currencies", "minimap")
 # the overlays drawn natively (native_overlay: no WebView2, see why there),
 # the meter's tip and the menu's button too; FAREVER_WEBVIEW_OVERLAYS=1
 # keeps them all pages, as before. The goals' chooser stays a page: it
 # takes the keyboard (its search, its count) and shows whole, no part of it
 # see-through.
 NATIVE = (set() if os.environ.get("FAREVER_WEBVIEW_OVERLAYS")
-          else {"meter", "meterheal", "luck", "goals", "bonus", "currencies", "tip", "esc"})
+          else {"meter", "meterheal", "luck", "goals", "bonus", "currencies", "minimap", "tip", "esc"})
 
 
 def _bonus_art():

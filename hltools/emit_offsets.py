@@ -95,6 +95,7 @@ def hook_layout(code):
     aproxy = offs("hxbit.ArrayProxyData")
     adyn = offs("hl.types.ArrayDyn")
     progress = offs("st.player.Progress")
+    hstats = offs("st.player.HeroStats")
     acct = offs("st.player.AccountProgress")
     coll = offs("st.player.Collection")
     mapdata = offs("hxbit.MapData")
@@ -167,7 +168,11 @@ def hook_layout(code):
                  "layer": hero["layer"][0],
                  "loadout": hero["loadout"][0],
                  # class and level: st.player.HeroData is null on the client
-                 "kind": hero["kind"][0], "level": hero["_level"][0]},
+                 "kind": hero["kind"][0], "level": hero["_level"][0],
+                 # where it stands and faces (ent.Entity's), for the minimap:
+                 # rotationZ in radians (Entity.lookAt: atan2(dy, dx))
+                 "posx": hero["posx"][0], "posy": hero["posy"][0],
+                 "rotationZ": hero["rotationZ"][0]},
         "Loadout": {"inventory": loadout["inventory"][0],
                     "equipment": loadout["equipment"][0],
                     # the bank's tabs (hxbit.ArrayProxyData)
@@ -202,6 +207,9 @@ def hook_layout(code):
                       # world.World.level is the zone (Main.getMapId() returns
                       # the machine name)
                       "world": layer["world"][0],
+                      # the units the client holds around (the minimap's
+                      # companions)
+                      "units": layer["units"][0],
                       # every player on the shard, not only those nearby
                       "players": layer["players"][0]},
         "World": {"level": world["level"][0]},
@@ -234,7 +242,9 @@ def hook_layout(code):
                    "instigator": status["instigator"][0],
                    "instigatorSkill": status["instigatorSkill"][0]},
         # a foe with a summonOwner is a pet (same class as a mob)
-        "Foe": {"summonOwner": foe["summonOwner"][0]},
+        "Foe": {"summonOwner": foe["summonOwner"][0],
+                # a summon that stays (a player's companion): never wild
+                "persistantSummon": foe["persistantSummon"][0]},
         # the hl_varray's elements start at +24, past its (t, at, size, pad)
         # header
         "ArrayObj": {"length": arrobj["length"][0], "array": arrobj["array"][0],
@@ -294,7 +304,14 @@ def hook_layout(code):
                      "elements": progress["elements"][0],
                      # counter id -> value, the Luck_* counters among them
                      "counters": progress["counters"][0],
-                     "achievements": progress["achievements"][0]},
+                     "achievements": progress["achievements"][0],
+                     # the character's HeroStats (st.Player.get_playTime)
+                     "stats": progress["stats"][0]},
+        # its time played in seconds (at the last save), its first and its
+        # current connection (HeroStats.getTotalPlayed: totalPlayed +
+        # now - connectionTime)
+        "HeroStats": {k: hstats[k][0] for k in
+                      ("totalPlayed", "firstConnectionTime", "connectionTime")},
         "MapData": {"map": mapdata["map"][0], "value": 8},
         # Progress.elements' value; a never-completed element has no entry
         # (measured 2026-09-28)

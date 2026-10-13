@@ -1,6 +1,8 @@
 """The world map for the app's Map tab: the game's own minimap tiles, and the
 completion points placed in the world — chests, red orbs, obelisks and
-respawn points — each with its position and zone.
+respawn points — each with its position and zone. For the minimap overlay,
+the rest it places ("extra"): resources (a gatherable, its prefab's),
+companions (a Critter unit's spawner) and merchants.
 
 Tiles: res.map.pak Level/World/<world>.dat/minimap/<tx>_<ty>_1024.png. Tile
 (tx, ty) covers world x in [tx*576, (tx+1)*576), same for y; +y is south.
@@ -65,7 +67,31 @@ def build(game_dir, tile_dir=None):
         return None
 
     points = []
+    extra = []
     prefab_ids = {}
+    prefab_gathers = {}
+    units = {ln["id"]: ln for s in cdb["sheets"] if s["name"] == "unit"
+             for ln in s["lines"] if isinstance(ln.get("id"), str)}
+
+    def prefab_gather(source):
+        """The gatherable a resource's prefab sets (res.pak), or None."""
+        if source not in prefab_gathers:
+            prefab_gathers[source] = None
+            try:
+                raw = pak_extract.read_entry(game_dir / "res.pak", source)
+                stack = [hbson.loads(raw)] if raw and raw[:5] == b"HBSON" else []
+            except Exception:  # noqa: BLE001
+                stack = []
+            while stack:
+                o = stack.pop()
+                if isinstance(o, dict):
+                    if isinstance(o.get("gatherable"), str):
+                        prefab_gathers[source] = o["gatherable"]
+                        break
+                    stack.extend(o.values())
+                elif isinstance(o, list):
+                    stack.extend(o)
+        return prefab_gathers[source]
 
     def prefab_id(source):
         """The element id a prefab sets itself (res.pak), or None."""
@@ -107,6 +133,11 @@ def build(game_dir, tile_dir=None):
                 points.append({"c": cat, "id": eid,
                                "x": round(wx, 1), "y": round(wy, 1),
                                "zone": zone or "", "region": region(zone) or ""})
+            if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+                more = _extra(o, props, prefab_gather, units)
+                if more:
+                    extra.append(dict(more, x=round(wx, 1), y=round(wy, 1),
+                                      zone=zone or "", region=region(zone) or ""))
             for k, v in o.items():
                 if k == "children":
                     walk(v, zone, wx, wy, wr)
@@ -127,7 +158,26 @@ def build(game_dir, tile_dir=None):
             "tile_px": TILE_PX, "tx": [min(xs), max(xs)],
             "ty": [min(ys), max(ys)],
             "tiles": sorted(f"{tx}_{ty}" for tx, ty in tiles)}
-    return {"meta": meta, "points": points}
+    return {"meta": meta, "points": points, "extra": extra}
+
+
+MERCHANTS = {"WanderingMerchant.prefab", "Glory_Merchant.prefab"}
+
+
+def _extra(o, props, prefab_gather, units):
+    """A minimap point the Map tab doesn't count: a resource (its gatherable),
+    a companion's spawner (a Critter unit), a merchant; else None."""
+    source = str(o.get("source") or "")
+    if "/Gatherables/Ores/" in source or "/Gatherables/Plants/" in source:
+        g = prefab_gather(source)
+        if g:
+            return {"c": "ore" if "/Ores/" in source else "plant", "g": g}
+    if source.split("/")[-1] in MERCHANTS:
+        return {"c": "merchant", "id": source.split("/")[-1][:-len(".prefab")]}
+    if props.get("$cdbtype") == "spawner" and props.get("unit"):
+        if (units.get(props["unit"]) or {}).get("type") == "Critter":
+            return {"c": "pet", "u": props["unit"]}
+    return None
 
 
 def _tiles(game_dir, out_dir):

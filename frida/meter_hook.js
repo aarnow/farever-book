@@ -1322,6 +1322,24 @@ function equipSlots(loadout) {
     return out;
 }
 
+// A hero's HeroStats (Progress.stats): {total: time played in seconds at
+// the last save, first: its first connection, conn: this one} (f64s), or
+// null. Only the local hero's progress is replicated. GAME THREAD ONLY.
+function statsOf(h) {
+    try {
+        if (!OFF.HeroStats || OFF.Progress.stats == null) return null;
+        const player = h.add(OFF.Hero.player).readPointer();
+        if (!player || player.isNull()) return null;
+        const prog = player.add(OFF.Player.progress).readPointer();
+        if (!prog || prog.isNull()) return null;
+        const st = prog.add(OFF.Progress.stats).readPointer();
+        if (!st || st.isNull()) return null;
+        return { total: st.add(OFF.HeroStats.totalPlayed).readDouble(),
+                 first: st.add(OFF.HeroStats.firstConnectionTime).readDouble(),
+                 conn: st.add(OFF.HeroStats.connectionTime).readDouble() };
+    } catch (e) { return null; }
+}
+
 // A hero's Progress.counters (StringMap: luck counters, rift and gold
 // totals...) as numbers, or why it couldn't be read. Only the local hero's is
 // replicated (measured 2026-10-01). GAME THREAD ONLY.
@@ -1476,7 +1494,8 @@ function characterTick() {
         selfDue = false;
         try {
             const me = { counters: countersOf(localHero),
-                         luckStatuses: statusesOf(localHero, ["Luck_"]) };
+                         luckStatuses: statusesOf(localHero, ["Luck_"]),
+                         stats: statsOf(localHero) };
             // the heroic dungeon with a bonus, the hero's own
             // (HeroSpecialization.bonusHeroicDungeon: {activity, ...})
             if (OFF.HeroDetail && OFF.Specialization
@@ -1802,6 +1821,106 @@ function main() {
         if (sweepBeat % 12 === 0) checkCollection();
     }, 400);
 
+    // the minimap: where the hero stands and faces (ent.Entity posx, posy,
+    // rotationZ: radians, atan2(dy, dx) as Entity.lookAt sets it), on change
+    // or once a second; plain reads, off the game thread like checkRift's
+    if (OFF.Hero.posx != null && OFF.Hero.rotationZ != null) {
+        let lastPos = null;
+        every(function () {
+            if (!localHero || localHero.isNull()) return;
+            try {
+                const x = localHero.add(OFF.Hero.posx).readDouble();
+                const y = localHero.add(OFF.Hero.posy).readDouble();
+                const r = localHero.add(OFF.Hero.rotationZ).readDouble();
+                if (!isFinite(x) || !isFinite(y) || !isFinite(r)) return;
+                const now = Date.now();
+                if (lastPos && Math.abs(x - lastPos.x) < 0.3 && Math.abs(y - lastPos.y) < 0.3
+                        && Math.abs(r - lastPos.r) < 0.02 && now - lastPos.t < 1000) return;
+                lastPos = { x: x, y: y, r: r, t: now };
+                send({ kind: "pos", x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10,
+                       r: Math.round(r * 1000) / 1000, lv: lastLevel });
+            } catch (e) {}
+        }, 100);
+    } else {
+        log("position offsets missing (Hero.posx/rotationZ): no minimap");
+    }
+
+    // the minimap: the units the client holds around (GameLayer.units)
+    // within MM_REACH of the hero, each second on a change: the wild
+    // companions (a Critter unit not a hero's: a player's own has the hero
+    // for its summonOwner) and the monsters alive (an ent.Foe or a boss,
+    // not a hero's, not a companion)
+    const CRITTERS = {};
+    (DATA.critters || []).forEach(function (k) { CRITTERS[k] = 1; });
+    const MM_REACH = 450;
+    const UA0 = OFF.UnitAttributes && OFF.UnitAttributes.health != null ? OFF.UnitAttributes : null;
+    if (OFF.GameLayer && OFF.GameLayer.units != null && OFF.Hero.posx != null
+            && OFF.Unit && OFF.Unit.kind != null && OFF.Foe && OFF.Foe.summonOwner != null) {
+        let lastUnits = "", lastUnitsT = 0, ownedLogged = false;
+        const seenCrit = {};            // what the log said of each kind
+        every(function () {
+            if (!localHero || localHero.isNull()) return;
+            try {
+                const layer = localHero.add(OFF.Hero.layer).readPointer();
+                if (!layer || layer.isNull()) return;
+                const arr = layer.add(OFF.GameLayer.units).readPointer();
+                if (!arr || arr.isNull()) return;
+                const hx = localHero.add(OFF.Hero.posx).readDouble();
+                const hy = localHero.add(OFF.Hero.posy).readDouble();
+                const n = arr.add(OFF.ArrayObj.length).readS32();
+                const data = arr.add(OFF.ArrayObj.array).readPointer();
+                const pets = [], foes = [];
+                let owned = 0;
+                for (let i = 0; i < n && i < 4000; i++) {
+                    const u = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+                    if (!u || u.isNull()) continue;
+                    const tn = typeName(u);
+                    if (tn !== "ent.Foe" && !(tn && tn.startsWith("ent.boss."))) continue;
+                    const x = u.add(OFF.Hero.posx).readDouble(), y = u.add(OFF.Hero.posy).readDouble();
+                    if (Math.abs(x - hx) > MM_REACH || Math.abs(y - hy) > MM_REACH) continue;
+                    const k = hlStr(u.add(OFF.Unit.kind).readPointer());
+                    if (!k) continue;
+                    // a player's: its owner a hero (a wild one's may be its
+                    // spawner, any other GameObject)
+                    const ow = u.add(OFF.Foe.summonOwner).readPointer();
+                    const owner = (ow && !ow.isNull()) ? typeName(ow) : null;
+                    if (CRITTERS[k] && !seenCrit[k + "|" + owner]) {
+                        seenCrit[k + "|" + owner] = 1;
+                        const keep = OFF.Foe.persistantSummon != null
+                            && u.add(OFF.Foe.persistantSummon).readU8();
+                        log("minimap: companion " + k + ", owner " + (owner || "none")
+                            + ", persistant " + (keep ? 1 : 0));
+                    }
+                    if (owner === "ent.Hero") {
+                        if (CRITTERS[k]) owned++;
+                        continue;
+                    }
+                    if (CRITTERS[k]) {
+                        // a wild companion: its health is not sent to the
+                        // client (reads 0), it is there while it is held
+                        pets.push([k, Math.round(x), Math.round(y)]);
+                        continue;
+                    }
+                    if (UA0 && OFF.Unit.attr != null) {
+                        const at = u.add(OFF.Unit.attr).readPointer();
+                        if (at && !at.isNull() && !(at.add(UA0.health).readDouble() > 0)) continue;
+                    }
+                    // a monster, with its level (Unit._level, the hero's offset)
+                    const lv = OFF.Hero.level != null ? u.add(OFF.Hero.level).readS32() : 0;
+                    foes.push([k, Math.round(x), Math.round(y), lv > 0 && lv < 1000 ? lv : 0]);
+                }
+                if (owned && !ownedLogged) {
+                    ownedLogged = true;
+                    log("minimap: " + owned + " player companion(s) around, left out");
+                }
+                const key = JSON.stringify([pets, foes]), now = Date.now();
+                if (key === lastUnits && now - lastUnitsT < 5000) return;
+                lastUnits = key;
+                lastUnitsT = now;
+                send({ kind: "units", pets: pets, foes: foes, lv: lastLevel });
+            } catch (e) {}
+        }, 1000);
+    }
     // the shard roster, on its own slow clock
     if (OFF.Player && OFF.Player.hero != null
         && OFF.GameLayer && OFF.GameLayer.players != null) {

@@ -79,7 +79,8 @@ class GameSession:
                   "achievements": "on_achievements",
                   "roster": "on_character", "profile": "on_character",
                   "selfprofile": "on_character", "elements": "on_elements",
-                  "cursor": "on_cursor"}
+                  "cursor": "on_cursor", "pos": "on_pos",
+                  "units": "on_units"}
 
     def _on_dungeon(self, p):
         self.dungeon.update(p.get("d") or {})

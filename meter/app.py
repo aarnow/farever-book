@@ -30,7 +30,7 @@ from common import (
     ITEM_CODEX_FILE, LOG_FILE, MAX_PLAYER_ROWS, MAX_SKILL_ROWS,
     PARSE_LENGTH_SECS, PARSE_PREROLL_SECS, POSITION_CACHE, REFRESH_MS,
     RIFTS_DIR, RIFT_PORTAL_SECS, RIFT_STYLE_SECS, SETTINGS_CACHE, VERSION,
-    _class_tag, _mmss, _n, _pct1, _pretty_id, class_key, date_fr,
+    _class_tag, _mmss, _n, _pct1, _pretty_id, class_key, date_fr, date_long,
     element_color, element_label, message_box, pct_sp)
 from winsys import (
     HK_RESET, REBIND_TO, RESET_BIND, VK_CONTROL, VK_MENU, VK_MOUSE, VK_SHIFT,
@@ -41,6 +41,7 @@ import goals as G
 from me import MeStore
 from gamedata import (
     MODEL_FORMAT, REGENERATING, _boss_label, char_look, _element_done, _fr_names, bestiary_catalogue,
+    _spark_units, _unit_label,
     build_data, collection_catalogue, dungeon_catalogue,
     item_rarity,
     dungeon_name, item_icon, item_label, item_type,
@@ -60,7 +61,8 @@ from views import (
     encyclopedia_item, encyclopedia_view,
     CLASS_LABELS, LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
     bestiary_view, character_view, collection_view, droptable_view,
-    hunt_detail_view, map_view, rift_rewards_view, soulwell_name)
+    hunt_detail_view, map_view, rift_rewards_view, soulwell_name,
+    MINIMAP_LAYERS, minimap_points)
 from reports import (
     _overheal_note, _rate_text, _report_name, render_rift_report_image,
     report_view)
@@ -91,6 +93,22 @@ DUNGEON_RUNS_KEPT = 10
 # after the hook last saw our hero they stay up (it reports every 3 s).
 OVERLAY_GRID = 8
 OVERLAY_HERO_SECS = 8.0
+# The minimap: its zoom's steps (map pixels a world unit; the tiles' own
+# is 512 / 576), the one at first, its sizes (CSS px), the open world's
+# level (the only one its tiles draw), a position older than this hides it
+MINIMAP_ZOOMS = (0.2, 0.3, 0.45, 0.65, 0.9, 1.25, 1.7)
+MINIMAP_ZOOM_DEFAULT = 3
+MINIMAP_SIZES = (140, 320, 20)
+MINIMAP_WORLD = "World/W1_Siagarta"
+MINIMAP_POS_SECS = 5.0
+MINIMAP_LAYERS_DEFAULT = ("chest", "orb", "obelisk", "respawn", "dungeon", "rift",
+                          "pet", "foe")
+# an example icon before each layer, in the overlays' settings
+MINIMAP_LAYER_ICONS = {"chest": "mk:chest", "orb": "mk:orb", "obelisk": "mk:obelisk",
+                       "respawn": "mk:respawn", "ore": "item:CopperOre",
+                       "plant": "item:LavendulaPetal", "pet": "coll:Frog_Green",
+                       "dungeon": "mk:dungeon", "rift": "mk:rift", "merchant": "mk:merchant",
+                       "foe": "foe:Skunk_Z1W"}
 
 
 # How often one's own character is re-read while playing (kept on disk).
@@ -122,9 +140,15 @@ def _dungeon_backdrop(kind, boss, region=""):
 OVERLAY_THEMES = {"farever": "Farever"}
 
 
-def _ov_style(v):
+# an overlay's greatest size (%), when not OV_SCALE_MAX
+OV_SCALE_MAX = 110
+OV_SCALE_MAX_OF = {"minimap": 160}
+
+
+def _ov_style(v, oid=None):
     """An overlay's settings, kept in bounds: opacity 30-100 %, size
-    70-110 %, its list's greatest height (px, 0: none) 30-900."""
+    70-110 % (the minimap's to 160), its list's greatest height (px, 0:
+    none) 30-900."""
     def num(k, lo, hi):
         try:
             return max(lo, min(hi, int(v.get(k) or 100)))
@@ -134,7 +158,8 @@ def _ov_style(v):
         maxh = int(v.get("maxh") or 0)
     except (TypeError, ValueError):
         maxh = 0
-    return {"opacity": num("opacity", 30, 100), "scale": num("scale", 70, 110),
+    return {"opacity": num("opacity", 30, 100),
+            "scale": num("scale", 70, OV_SCALE_MAX_OF.get(oid, OV_SCALE_MAX)),
             "maxh": max(30, min(900, maxh)) if maxh else 0}
 
 
@@ -189,7 +214,20 @@ class App:
         self._ov_on = {"meter": True, "goals": False, "luck": False,
                        "bonus": True,       # shown, per overlay
                        "meterheal": True,   # (the heals' meter, split)
-                       "currencies": False}
+                       "currencies": False, "minimap": False}
+        # the minimap: the hero where the hook last saw it (x, y, facing,
+        # level, when), its shape, turned with the hero or north up, its
+        # zoom's step, its size, its layers, the points found left out
+        self._mm_pos = None
+        # the units around (the hook's): wild companions and monsters
+        # alive, [[kind, x, y]], the level, when
+        self._mm_units = ([], [], "", 0.0)
+        self._mm_shape = "round"
+        self._mm_rotate = False
+        self._mm_zoom = MINIMAP_ZOOM_DEFAULT
+        self._mm_size = 200
+        self._mm_layers = set(MINIMAP_LAYERS_DEFAULT)
+        self._mm_hide_found = True
         # the currencies overlay: those the player hid, how many a line
         self._cur_hidden = set()
         self._cur_per_row = 4
@@ -203,7 +241,8 @@ class App:
         self._ov_lock_always = False
         # hidden while the game's cursor is free (one of its windows open)
         self._ov_hide_free = False
-        self._ov_style = {}                 # overlay -> {opacity, scale} (%)
+        # overlay -> {opacity, scale} (%): the minimap at 130 % at first
+        self._ov_style = {"minimap": {"opacity": 100, "scale": 130, "maxh": 0}}
         self._ov_theme = "farever"          # the overlays' look (OVERLAY_THEMES)
         self._hero_at = 0.0                 # last time the hook saw our hero
         self._action_q = []
@@ -243,6 +282,7 @@ class App:
         self._setup = None                  # the welcome screen's state
         self._settings_topic = "meter"      # Réglages: the subject shown
         self._self_prof = None              # own luck counters (hook, 5 s)
+        self._stats_logged = set()          # heroes whose HeroStats were logged
         # a rift's gates: the game's running count when it began, and the
         # report waiting for the count after it (see _rift_gates_seen)
         self._rift_gates0 = None
@@ -329,6 +369,19 @@ class App:
             self._auto_reset_dummy = data["auto_reset_dummy"]
         if isinstance(data.get("hide_unavailable"), bool):
             self._hide_na = data["hide_unavailable"]
+        mm = data.get("minimap") if isinstance(data.get("minimap"), dict) else {}
+        if mm.get("shape") in ("round", "square"):
+            self._mm_shape = mm["shape"]
+        if isinstance(mm.get("rotate"), bool):
+            self._mm_rotate = mm["rotate"]
+        if isinstance(mm.get("zoom"), int) and 0 <= mm["zoom"] < len(MINIMAP_ZOOMS):
+            self._mm_zoom = mm["zoom"]
+        if isinstance(mm.get("size"), int) and MINIMAP_SIZES[0] <= mm["size"] <= MINIMAP_SIZES[1]:
+            self._mm_size = mm["size"]
+        if isinstance(mm.get("layers"), list):
+            self._mm_layers = {str(x) for x in mm["layers"] if x in MINIMAP_LAYERS}
+        if isinstance(mm.get("hideFound"), bool):
+            self._mm_hide_found = mm["hideFound"]
         if isinstance(data.get("luck_merge"), bool):
             self._luck_merge = data["luck_merge"]
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
@@ -388,7 +441,7 @@ class App:
         if isinstance(style, dict):
             for k, v in style.items():
                 if k in self._ov_on and isinstance(v, dict):
-                    self._ov_style[k] = _ov_style(v)
+                    self._ov_style[k] = _ov_style(v, k)
 
     def _save_settings(self):
         try:
@@ -400,6 +453,10 @@ class App:
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "auto_reset_dummy": bool(self._auto_reset_dummy),
                 "hide_unavailable": bool(self._hide_na),
+                "minimap": {"shape": self._mm_shape, "rotate": bool(self._mm_rotate),
+                            "zoom": int(self._mm_zoom), "size": int(self._mm_size),
+                            "layers": sorted(self._mm_layers),
+                            "hideFound": bool(self._mm_hide_found)},
                 "luck_merge": bool(self._luck_merge),
                 "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
@@ -906,6 +963,9 @@ class App:
             # the currencies overlay: one shown or hidden, how many a line
             "cur_show": self._cur_show,
             "cur_per_row": self._cur_set_per_row,
+            # the minimap: its zoom (d: a step in or out), its settings
+            "mm_zoom": self._mm_set_zoom,
+            "mm_set": self._mm_set,
             "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
                                                 self._learnt()),
@@ -1679,6 +1739,13 @@ class App:
         def done():
             if hid:
                 self._hero_ids[name] = hid
+            elif name not in self._hero_ids:
+                # the app started in the world, past the select screen:
+                # the known character of that name (and class), not a
+                # double kept by its name alone
+                guess = self._guess_hero_id(name)
+                if guess:
+                    self._hero_ids[name] = guess
             key = self._hero_key(name)
             self.me.set_hero(key, name)
             self._tag_hero(name)
@@ -1756,9 +1823,9 @@ class App:
         oid, key = p.get("id"), p.get("key")
         if oid not in self._ov_on or key not in ("opacity", "scale"):
             return
-        st = dict(self._ov_style.get(oid) or _ov_style({}))
+        st = dict(self._ov_style.get(oid) or _ov_style({}, oid))
         st[key] = p.get("value")
-        self._ov_style[oid] = _ov_style(st)
+        self._ov_style[oid] = _ov_style(st, oid)
         self._save_settings()
 
     def _ov_set_theme(self, p):
@@ -1772,7 +1839,7 @@ class App:
         oid = p.get("id")
         if oid not in self._ov_on:
             return
-        self._ov_style[oid] = _ov_style(p)
+        self._ov_style[oid] = _ov_style(p, oid)
         if p.get("save", True):
             self._save_settings()
 
@@ -1804,6 +1871,183 @@ class App:
                         "q": f"{n:,}".replace(",", "\u202f"),
                         "hide": cid in self._cur_hidden})
         return out
+
+    def on_pos(self, p):
+        """Where the hero stands and faces (hook, on a change): for the
+        minimap. Hook thread."""
+        try:
+            self._mm_pos = (float(p["x"]), float(p["y"]), float(p.get("r") or 0),
+                            str(p.get("lv") or ""), time.time())
+        except (KeyError, TypeError, ValueError):
+            pass
+
+    def _overlay_config(self, spec):
+        """The in-game "Configuration overlays" window: a tab an overlay,
+        each its rows as the game's options draw them (a section, a range,
+        a choice, a toggle, toggles three a line), each row the app's own
+        action to call with the value."""
+        def sec(t):
+            return {"k": "sec", "t": t}
+
+        def rng(t, lo, hi, v, act, p, step=5, style=None):
+            return {"k": "range", "t": t, "lo": lo, "hi": hi, "v": int(v), "step": step,
+                    "act": act, "p": p, "style": style}
+
+        def tog(t, on, act, p, ic=None, img=None):
+            return {"k": "toggle", "t": t, "on": bool(on), "act": act, "p": p,
+                    "ic": ic, "img": img}
+
+        def cho(t, cur, opts, act, p):
+            return {"k": "choice", "t": t, "v": cur, "opts": opts, "act": act, "p": p}
+
+        names = ({"meter": tr("Meter — Dégâts"), "meterheal": tr("Meter — Soins")}
+                 if self._ov_split else {"meter": tr("Meter")})
+        # (the bonus dungeon's name shortened: the menu's width)
+        names.update({"luck": tr("Chance de butin"), "bonus": tr("Donjon bonus"),
+                      "goals": tr("Objectifs"), "currencies": tr("Monnaies"),
+                      "minimap": tr("Minimap")})
+        if self._luck_merge:
+            names.pop("bonus")
+        tabs = []
+        for oid, title in names.items():
+            st = self._ov_style.get(oid) or _ov_style({}, oid)
+            rows = [tog(tr("Afficher l'overlay"), self._ov_on.get(oid), "ov_show", {"id": oid}),
+                    sec(tr("Affichage")),
+                    rng(tr("Taille"), 70, OV_SCALE_MAX_OF.get(oid, OV_SCALE_MAX), st["scale"],
+                        "ov_style_set", {"id": oid, "key": "scale"}, style="scale"),
+                    rng(tr("Opacité"), 30, 100, st["opacity"],
+                        "ov_style_set", {"id": oid, "key": "opacity"}, style="opacity")]
+            if oid in ("meter", "meterheal"):
+                rows.append(tog(tr("Deux overlays : dégâts et soins"), self._ov_split,
+                                "ov_split", {}))
+            elif oid == "luck":
+                rows.append(tog(tr("Donjon héroïque bonus"), self._luck_merge, "luck_merge", {}))
+                lines = (spec.get("luck") or {}).get("rows") or []
+                if lines:
+                    rows += [sec(tr("Lignes")),
+                             {"k": "grid", "items": [
+                                 tog(r.get("t") or "", not r.get("hide"), "luck_row",
+                                     {"id": r.get("id")}, img=r.get("img"))
+                                 for r in lines if r.get("id")]}]
+            elif oid == "currencies":
+                rows.append(rng(tr("Monnaies par ligne"), 1, 6, self._cur_per_row,
+                                "cur_per_row", {}, step=1))
+                cur = self._currencies()
+                if cur:
+                    rows += [sec(tr("Monnaies")),
+                             {"k": "grid", "items": [
+                                 tog(c["t"], not c["hide"], "cur_show", {"id": c["id"]},
+                                     ic="item:" + c["id"]) for c in cur]}]
+            elif oid == "minimap":
+                rows += [cho(tr("Forme"), self._mm_shape,
+                             [["round", tr("Ronde")], ["square", tr("Carrée")]],
+                             "mm_set", {"key": "shape"}),
+                         cho(tr("Orientation"), "turn" if self._mm_rotate else "north",
+                             [["north", tr("Nord en haut")],
+                              ["turn", tr("Pivoter avec le personnage")]],
+                             "mm_set", {"key": "rotate"}),
+                         sec(tr("Icônes")),
+                         tog(tr("Masquer les éléments trouvés"), self._mm_hide_found,
+                             "mm_set", {"key": "hideFound"}),
+                         {"k": "grid", "items": [
+                             tog(tr(t), lid in self._mm_layers, "mm_set",
+                                 {"key": "layer", "id": lid}, ic=MINIMAP_LAYER_ICONS.get(lid))
+                             for lid, (t, _cs) in MINIMAP_LAYERS.items()]}]
+            tabs.append({"id": oid, "t": title, "rows": rows})
+        return {"tabs": tabs}
+
+    def on_units(self, p):
+        """The units the client holds around the hero (hook, each second on
+        a change): the wild companions, the monsters alive. For the
+        minimap. Hook thread."""
+        def rows(k):
+            return [c[:4] for c in p.get(k) or () if isinstance(c, list) and len(c) >= 3]
+        self._mm_units = (rows("pets"), rows("foes"), str(p.get("lv") or ""), time.time())
+
+    def _mm_pet_info(self, kind):
+        """A companion's hover: its name, owned or not (the Collection),
+        a Spark one (its glow)."""
+        return {"t": _unit_label(kind),
+                "own": kind in set(self._collection().get("pets") or ()),
+                "spark": kind in _spark_units()}
+
+    def _minimap_spec(self):
+        """The minimap's state: the hero (in the open world, seen lately,
+        not in a dungeon), the zoom, the shape, the points of the layers
+        shown around it; None to hide it."""
+        pos = self._mm_pos
+        if (pos is None or time.time() - pos[4] > MINIMAP_POS_SECS
+                or pos[3] != MINIMAP_WORLD or self.ui_state.in_dungeon()):
+            return None
+        x, y, r = pos[:3]
+        ppu = MINIMAP_ZOOMS[self._mm_zoom]
+        reach = self._mm_size / 2 * 1.45 / ppu         # world units, centre to corner
+        # the hero's progress: the points found, left out or greyed
+        els = self._elements()
+        states = ((els.get("heroes") or {}).get(els.get("last")) or {}).get("states")
+        pts = []
+        for px, py, lay, key, eid in minimap_points():
+            if lay not in self._mm_layers or abs(px - x) > reach or abs(py - y) > reach:
+                continue
+            found = bool(eid) and states is not None and _element_done(states, eid)
+            if found and self._mm_hide_found:
+                continue
+            info = self._mm_pet_info(key[5:]) if lay == "pet" else None
+            pts.append([px, py, key, found, info])
+        # the units there now (the hook's): wild companions, monsters
+        pets, foes, lv, at = self._mm_units
+        if lv == MINIMAP_WORLD and time.time() - at < 10:
+            if "foe" in self._mm_layers:
+                for kind, cx, cy, *lv in foes:
+                    if abs(cx - x) <= reach and abs(cy - y) <= reach:
+                        pts.append([cx, cy, f"foe:{kind}", False,
+                                    {"foe": True, "t": _unit_label(kind),
+                                     "lvl": lv[0] if lv else 0}])
+            if "pet" in self._mm_layers:
+                for kind, cx, cy, *_l in pets:
+                    if abs(cx - x) <= reach and abs(cy - y) <= reach:
+                        pts.append([cx, cy, f"coll:{kind}", False, self._mm_pet_info(kind)])
+        meta = world_map().get("meta") or {}
+        return {"x": round(x, 1), "y": round(y, 1), "r": round(r, 3), "ppu": ppu,
+                "tile": meta.get("units_per_tile") or 576.0,
+                "size": int(self._mm_size), "shape": self._mm_shape,
+                "rotate": bool(self._mm_rotate), "pts": pts,
+                # its gear's panel: what it shows
+                "hideFound": bool(self._mm_hide_found),
+                "layers": [[lid, t, lid in self._mm_layers]
+                           for lid, (t, _cs) in MINIMAP_LAYERS.items()]}
+
+    def _mm_set_zoom(self, p):
+        """The minimap's zoom, a step in or out (its buttons, the wheel)."""
+        try:
+            d = int(p.get("d") or 0)
+        except (TypeError, ValueError):
+            return
+        z = max(0, min(len(MINIMAP_ZOOMS) - 1, self._mm_zoom + (1 if d > 0 else -1 if d < 0 else 0)))
+        if z != self._mm_zoom:
+            self._mm_zoom = z
+            self._save_settings()
+
+    def _mm_set(self, p):
+        """Réglages › Overlay › Minimap: one of its settings (key, value)."""
+        key, v = p.get("key"), p.get("value")
+        if key == "shape" and v in ("round", "square"):
+            self._mm_shape = v
+        elif key == "rotate":
+            self._mm_rotate = v == "turn" if isinstance(v, str) else bool(v)
+        elif key == "hideFound":
+            self._mm_hide_found = bool(v)
+        elif key == "size":
+            try:
+                lo, hi, step = MINIMAP_SIZES
+                self._mm_size = max(lo, min(hi, int(v) // step * step))
+            except (TypeError, ValueError):
+                return
+        elif key == "layer" and p.get("id") in MINIMAP_LAYERS:
+            (self._mm_layers.add if v else self._mm_layers.discard)(p["id"])
+        else:
+            return
+        self._save_settings()
 
     def _cur_show(self, p):
         """Réglages › Overlay › Monnaies: one shown or hidden."""
@@ -1932,6 +2176,9 @@ class App:
         # the currencies the player shows, so many a line
         spec["currencies"] = {"items": [c for c in self._currencies() if not c["hide"]],
                               "perRow": int(self._cur_per_row)}
+        spec["minimap"] = self._minimap_spec()
+        # the overlays' settings window (any overlay's gear opens it)
+        spec["config"] = self._overlay_config(spec)
         return spec
 
     def on_achievements(self, p):
@@ -2127,6 +2374,27 @@ class App:
             self._accounts_data = data
         return self._accounts_data
 
+    def _guess_hero_id(self, name):
+        """The database id of our character `name` when the game didn't
+        send it (only read on the character select screen): the only one of
+        that name known on the Steam account signed in, else the one of
+        the class it plays now. None when it can't be told."""
+        acct = self._steam_account()
+        if not acct:
+            return None
+        cands = {k: c for k, c in (self._accounts().get("chars") or {}).items()
+                 if c.get("name") == name and c.get("id")
+                 and c.get("sid") == acct["id"]}
+        if len(cands) == 1:
+            return next(iter(cands.values()))["id"]
+        cls = class_key(self.world.class_of(name))
+        if not cls or not cands:
+            return None
+        profs = self.me.profiles()
+        same = [c for k, c in cands.items()
+                if str((profs.get(k) or {}).get("k") or "").lower() == cls]
+        return same[0]["id"] if len(same) == 1 else None
+
     def _hero_key(self, name):
         """A character's key: its name and its id in the game's database
         (two characters may share a name), its name alone without one."""
@@ -2318,6 +2586,12 @@ class App:
                               file=sys.stderr)
                     self._bonus_dungeon = bonus
                 self._rift_gates_seen((p.get("profile") or {}).get("counters"))
+                st = (p.get("profile") or {}).get("stats")
+                if st and self._me_key() not in self._stats_logged:
+                    self._stats_logged.add(self._me_key())
+                    print(f"[meter] hero stats: played {st.get('total')} s, "
+                          f"first connection {st.get('first')}, this one "
+                          f"{st.get('conn')}", file=sys.stderr)
                 self.me.put(self._me_key(), "counters",
                             p.get("profile") or {})
                 return
@@ -3150,6 +3424,7 @@ class App:
                     "hid": chars_all[k].get("id"),
                     "clsT": tr(CLASS_LABELS[cls]) if cls in CLASS_LABELS else "",
                     "lvl": prof.get("lvl"),
+                    **self._char_time(k),
                     "on": k not in excluded,
                     # its portrait: kept with the others, else taken by the
                     # window off its model
@@ -3164,6 +3439,28 @@ class App:
                 "sync": sid == sync, "locked": ingame,
                 "chars": chars})
         out.append({"k": "accounts", "id": "accounts", "items": accounts})
+        return out
+
+    def _char_time(self, key):
+        """A character's creation date and time played (its HeroStats, read
+        in game: our own characters only), as the account card shows them:
+        {"since": "3 septembre 2026", "played": "74 h"}, each when known."""
+        st = ((self.me.entry(key).get("counters") or {}).get("stats")) or {}
+        out = {}
+        now = time.time()
+        total, first, conn = (st.get(k) for k in ("total", "first", "conn"))
+        # epochs in seconds, from the game's start (2025) to now
+        plausible = lambda t: isinstance(t, (int, float)) and 1.7e9 < t <= now + 86400
+        if plausible(first):
+            out["since"] = date_long(time.localtime(first))
+        if isinstance(total, (int, float)) and total > 0:
+            # the game's own sum (getTotalPlayed): the saved time plus this
+            # connection's, when it is readable
+            if plausible(conn) and conn <= now:
+                total += now - conn
+            h = int(total // 3600)
+            out["played"] = (tr("{n} h", n=h) if h
+                             else tr("{n} min", n=int(total // 60)))
         return out
 
     def _account_sync(self, sid):
@@ -3257,7 +3554,8 @@ class App:
         names.update({"goals": tr("Objectifs"),
                       "luck": tr("Chance de butin"),
                       "bonus": tr("Donjon héroïque bonus"),
-                      "currencies": tr("Monnaies")})
+                      "currencies": tr("Monnaies"),
+                      "minimap": tr("Minimap")})
         if self._luck_merge:
             # the bonus dungeon is in the loot luck overlay
             names.pop("bonus")
@@ -3285,8 +3583,33 @@ class App:
                            "unit": " %", "p": {"id": oid, "key": "opacity"}}},
                     {"k": "field", "t": tr("Taille"),
                      "c": {"k": "slider", "id": "ov_style_set", "min": 70,
-                           "max": 110, "step": 5, "v": st["scale"],
+                           "max": OV_SCALE_MAX_OF.get(oid, OV_SCALE_MAX), "step": 5,
+                           "v": st["scale"],
                            "unit": " %", "p": {"id": oid, "key": "scale"}}}]
+            if oid == "minimap":
+                lo, hi, step = MINIMAP_SIZES
+                out += [{"k": "field", "t": tr("Diamètre"),
+                         "c": {"k": "slider", "id": "mm_set", "min": lo, "max": hi,
+                               "step": step, "v": int(self._mm_size), "unit": " px",
+                               "p": {"key": "size"}}},
+                        {"k": "field", "t": tr("Forme"),
+                         "c": {"k": "select", "id": "mm_set", "v": self._mm_shape,
+                               "p": {"key": "shape"},
+                               "o": [{"v": "round", "t": tr("Ronde")},
+                                     {"v": "square", "t": tr("Carrée")}]}},
+                        {"k": "field", "t": tr("Pivoter avec le personnage"),
+                         "c": {"k": "toggle", "id": "mm_set", "on": bool(self._mm_rotate),
+                               "p": {"key": "rotate"}}},
+                        {"k": "field", "t": tr("Masquer les éléments trouvés"),
+                         "c": {"k": "toggle", "id": "mm_set", "on": bool(self._mm_hide_found),
+                               "p": {"key": "hideFound"}}},
+                        {"k": "note", "t": tr("Zoom : les boutons + et − de la "
+                                              "minimap, ou la molette sur elle.")}]
+                for lid, (t, _cs) in MINIMAP_LAYERS.items():
+                    out.append({"k": "field", "t": tr(t),
+                                "c": {"k": "toggle", "id": "mm_set",
+                                      "on": lid in self._mm_layers,
+                                      "p": {"key": "layer", "id": lid}}})
             if oid == "currencies":
                 out.append({"k": "field", "t": tr("Monnaies par ligne"),
                             "c": {"k": "slider", "id": "cur_per_row", "min": 1,

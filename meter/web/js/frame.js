@@ -695,6 +695,11 @@ function charCard(a, c) {
   t.appendChild(el('b', null, c.n));
   t.appendChild(el('small', null, [c.clsT, c.lvl ? tr('niv. {n}', { n: c.lvl }) : '']
     .filter(Boolean).join(' · ')));
+  // its creation date and time played (read in game: our own characters)
+  if (c.since || c.played) {
+    t.appendChild(el('small', 'chartime', [c.since ? tr('Créé le {d}', { d: c.since }) : '',
+      c.played ? tr('{t} de jeu', { t: c.played }) : ''].filter(Boolean).join(' · ')));
+  }
   // its id in the game's database, read on the character select screen
   const id = el('small', 'charid' + (c.hid ? '' : ' none'),
     c.hid ? tr('ID {id}', { id: c.hid }) : tr('ID inconnu'));

@@ -1768,6 +1768,65 @@ MAP_CATS = {"chest": ("Coffre du monde", "Coffres"),
 MAP_UNRELEASED_REGIONS = {"Bel_Etir_Region"}
 
 
+# The minimap's layers, in Réglages' order: id -> (label, the points' kinds)
+MINIMAP_LAYERS = {"chest": ("Coffres", ("chest", "vault", "recipe")),
+                  "orb": ("Orbes rouges", ("orb",)),
+                  "obelisk": ("Obélisques", ("obelisk",)),
+                  "respawn": ("Points de réapparition", ("respawn",)),
+                  "ore": ("Minerais", ("ore",)),
+                  "plant": ("Plantes", ("plant",)),
+                  "pet": ("Compagnons", ("pet",)),
+                  "dungeon": ("Donjons", ("dungeon",)),
+                  "rift": ("Failles", ("rift",)),
+                  "merchant": ("Marchands", ("merchant",)),
+                  # the hook's, live: the monsters alive around
+                  "foe": ("Ennemis", ("foe",))}
+_MM_POINTS = [None, None]               # (map, bestiary) -> points
+
+
+def minimap_points():
+    """Every point the minimap may draw: (x, y, layer, icon key, element id
+    or None), once per data. The Map tab's points, then what it doesn't
+    count (map.json extra: resources, companions' spawners, merchants), the
+    dungeons' and rifts' world entrances (the Codex's; a rift's spawners
+    carry no position in the level). Icon keys: "mk:"
+    a map marker, "item:" an item's icon (a resource's: what it gives for
+    sure), "coll:" a companion's picture."""
+    wm, best = world_map(), bestiary_catalogue()
+    if _MM_POINTS[0] == (id(wm), id(best)):
+        return _MM_POINTS[1]
+    layer_of = {c: lay for lay, (_t, cs) in MINIMAP_LAYERS.items() for c in cs}
+    # a resource -> the item it always gives (the item codex's sources)
+    gives = {}
+    for it in codex_items_catalogue() or ():
+        for src in it.get("src") or ():
+            if src.get("k") == "gather" and src.get("id"):
+                best_ = gives.get(src["id"])
+                if best_ is None or (src.get("chance") or 0) > best_[1]:
+                    gives[src["id"]] = (it["id"], src.get("chance") or 0)
+    out = []
+    for q in list(wm.get("points") or ()) + list(wm.get("extra") or ()):
+        if q.get("region") in MAP_UNRELEASED_REGIONS or q.get("c") not in layer_of:
+            continue
+        c = q["c"]
+        if c in ("ore", "plant"):
+            item = (gives.get(q.get("g")) or (None,))[0]
+            key = f"item:{item}" if item else ""
+        elif c == "pet":
+            key = f"coll:{q.get('u')}"
+        else:
+            key = "mk:" + c
+        out.append((q["x"], q["y"], layer_of[c], key,
+                    q.get("id") if c in MAP_CATS else None))
+    # the dungeons' and rifts' doors in the world (the Codex's)
+    for act, doors in (best.get("entrances") or {}).items():
+        lay = "rift" if str(act).startswith("POI_Rift_") else "dungeon"
+        for d in doors or ():
+            out.append((d[0], d[1], lay, "mk:" + lay, None))
+    _MM_POINTS[:] = [(id(wm), id(best)), out]
+    return out
+
+
 def map_view(states=None):
     """The Map tab's data: the tile grid, every point with its French zone
     and region (and whether it is done, when the progress has been read),

@@ -87,6 +87,21 @@ def report(payload):
                 print(f"    {nm:<45} findex={payload[key][nm]}")
 
 
+def critter_units(game_dir):
+    """The companions' units (data.cdb unit type Critter: every pet of the
+    Collection is one), for the minimap: the hook lists those around."""
+    try:
+        import pak_extract
+        cdb = json.loads(pak_extract.read_entry(Path(game_dir)
+                                                / "res.light.pak", "data.cdb"))
+    except Exception as e:  # noqa: BLE001
+        print(f"    [!] data.cdb unreadable ({e}): no companion listed")
+        return []
+    return sorted(ln["id"] for s in cdb["sheets"] if s["name"] == "unit"
+                  for ln in s["lines"] if isinstance(ln.get("id"), str)
+                  and ln.get("type") == "Critter")
+
+
 def cc_statuses(game_dir):
     """{status: its crowd-control type}: the statuses a status type of
     which (or a parent of it) carries the CrowdControl flag (data.cdb's
@@ -127,6 +142,8 @@ def main():
     print(f"[*] parsing {hlboot}")
     payload = resolve(HLCode(hlboot).parse())
     payload["cc_statuses"] = cc_statuses(Path(hlboot).parent)
+    payload["critters"] = critter_units(Path(hlboot).parent)
+    print(f"    companions' units: {len(payload['critters'])}")
     print(f"    crowd-control statuses: {len(payload['cc_statuses'])}")
     OUT.mkdir(parents=True, exist_ok=True)
     out = OUT / "resolver_data.json"

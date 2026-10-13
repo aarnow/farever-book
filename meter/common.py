@@ -317,6 +317,14 @@ def date_fr(lt, with_time=True):
     return f"{out} {lt.tm_hour:02d}:{lt.tm_min:02d}" if with_time else out
 
 
+def date_long(lt):
+    """'3 septembre 2026' (French) / 'September 3, 2026' for a
+    time.struct_time."""
+    if _french():
+        return f"{lt.tm_mday} {month_name(lt.tm_mon, True)} {lt.tm_year}"
+    return f"{month_name(lt.tm_mon, True)} {lt.tm_mday}, {lt.tm_year}"
+
+
 def dec_sep():
     """The decimal separator: "," in French, "." in English."""
     return "," if _french() else "."

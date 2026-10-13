@@ -727,11 +727,11 @@ def _frame(p, w, h):
 _TITLE = {}
 
 
-def _title_image(text, dpi_k):
+def _title_image(text, dpi_k, color="#6A4E44"):
     """A window's title as the game writes it (its bitmap font, Platypi Bold,
-    inked #6A4E44, overlay.js titleEl), at the screen's scale; None when
-    the font or one of the letters is missing."""
-    key = (text, round(dpi_k * 100))
+    inked #6A4E44, overlay.js titleEl; or `color`), at the screen's scale;
+    None when the font or one of the letters is missing."""
+    key = (text, round(dpi_k * 100), str(color))
     if key in _TITLE:
         return _TITLE[key]
     out = None
@@ -755,7 +755,7 @@ def _title_image(text, dpi_k):
                 if gw and gh:
                     cv.alpha_composite(atlas.crop((gx, gy, gx + gw, gy + gh)), (x + ox, oy))
                 x += adv
-            ink = Image.new("RGBA", cv.size, _rgba("#6A4E44"))
+            ink = Image.new("RGBA", cv.size, _rgba(color))
             ink.putalpha(cv.getchannel("A"))
             out = (ink, cw, ch_)
     except (OSError, ValueError, KeyError):
@@ -920,7 +920,7 @@ def _head(p, W, title, dpi_k, ui, hits, extra=None):
     hits.append((18, 12, W - 36, 32, "drag", None))
 
 
-def _settings(p, W, style, ui, hits, tr, switches=(), title=None):
+def _settings(p, W, style, ui, hits, tr, switches=(), title=None, scale_max=110):
     """The gear's panel: opacity and size, each a slider, and back to the
     defaults (overlay.js settingsPanel); `switches` [(label, on, key)] boxes
     to tick under them, under `title` (the meter's: two overlays or one;
@@ -933,7 +933,7 @@ def _settings(p, W, style, ui, hits, tr, switches=(), title=None):
     p.hline(8, y + h - 1, W - 16, OV_LINE, 0.35)
     sy = y + 1 + 10
     for key, label, lo, hi in (("opacity", tr("Opacité"), 30, 100),
-                               ("scale", tr("Taille"), 70, 110)):
+                               ("scale", tr("Taille"), 70, scale_max)):
         v = int(st.get(key) or 100)
         p.text(label, 20, sy, LH12, 12, 400, "#FFF6E6")
         p.text(f"{v} %", 20, sy, LH12, 12, 700, "#FFF6E6", align="right", w=W - 40)
@@ -1781,6 +1781,14 @@ class NativeOverlay(_NativeWindow):
     def tr(self, s):
         return self._dict.get(s) or s
 
+    def _topmost(self):
+        """In front, the tip shown over it still (an overlay put forward
+        again while placed would hide it)."""
+        super()._topmost()
+        tip = self._tip[0] if self._tip else None
+        if tip is not None and tip.shown and tip.hwnd:
+            tip._topmost()
+
     def attach(self):
         if self._make():
             _log(f"overlay {self.id}: drawn natively (no WebView2)")
@@ -1842,7 +1850,7 @@ class NativeOverlay(_NativeWindow):
             self._style = dict(style)
             changed = True
         op = max(30, min(100, int(self._style.get("opacity") or 100)))
-        sc = max(70, min(110, int(self._style.get("scale") or 100)))
+        sc = max(70, min(self.SCALE_MAX, int(self._style.get("scale") or 100)))
         if op != self.opacity or sc != self.scale:
             self.opacity, self.scale = op, sc
             changed = True
@@ -1917,6 +1925,9 @@ class NativeOverlay(_NativeWindow):
 
     # -- the mouse (the UI thread) --------------------------------------------
     HAND = ("gear", "tab", "fit", "slider", "reset", "add", "del", "switch")
+    HOVER_ARGS = ("row", "goal", "del", "switch")       # hovers kept with their arg
+    SCALE_MAX = 110                                     # its size's greatest (%)
+    SCALE_DEFAULT = 100                                 # its size, reset (%)
 
     def _hit(self, x, y):
         cx, cy = x / self._k, y / self._k
@@ -1933,7 +1944,7 @@ class NativeOverlay(_NativeWindow):
             kind, arg, _r = self._hit(x, y)
             self._cursor_kind = ("resize" if kind == "grip" else
                                  "hand" if kind in self.HAND else "arrow")
-            hover = ((kind, arg) if kind in ("row", "goal", "del", "switch") else
+            hover = ((kind, arg) if kind in self.HOVER_ARGS else
                      "tab:" + arg if kind == "tab" else kind)
             if hover != self._ui.get("hover"):
                 self._ui["hover"] = hover
@@ -2024,7 +2035,7 @@ class NativeOverlay(_NativeWindow):
             if key == "opacity":
                 self.opacity = max(30, min(100, v))
             else:
-                self.scale = max(70, min(110, v))
+                self.scale = max(70, min(self.SCALE_MAX, v))
             self._redraw()
             now = time.monotonic()
             if final or now - self._last_send > 0.06:
@@ -2042,6 +2053,11 @@ class NativeOverlay(_NativeWindow):
         self.pipe.send({"t": "call", "id": 0, "m": method, "p": params or {}})
 
     def _click(self, kind, arg):
+        cfg = CONFIG[0]
+        if kind == "gear" and cfg is not None and cfg is not self:
+            self._hide_tip()
+            cfg.toggle(self.id)
+            return
         if kind == "gear":
             self._ui["settings"] = not self._ui.get("settings")
             if self._ui["settings"]:
@@ -2051,9 +2067,9 @@ class NativeOverlay(_NativeWindow):
             self._hide_tip()
             self._redraw()
         elif kind == "reset":
-            self._style.update(opacity=100, scale=100)
+            self._style.update(opacity=100, scale=self.SCALE_DEFAULT)
             self._ui["style"] = dict(self._style)
-            self.opacity, self.scale = 100, 100
+            self.opacity, self.scale = 100, self.SCALE_DEFAULT
             self._send_style(save=True)
             self._redraw()
 
@@ -2312,6 +2328,950 @@ class NativeCurrencies(NativeOverlay):
         self._present()
 
 
+class MinimapView:
+    """The minimap: the game's own minimap tiles around the hero (the Map
+    tab's, analysis_out/map_tiles), north up or turned with the hero, round
+    or square, its points (the player's picks), the hero's arrow, the
+    north, the zoom's two buttons. Over the game alone, no frame (as the
+    currencies): held to move.
+
+    Drawn many times a second while the hero moves (NativeMinimap eases
+    from one position to the next): the map comes from a canvas of tiles
+    kept while the hero stays on it (canvas_fn), each frame one affine
+    resample of it; the edge, the buttons and the cut, kept per size.
+    data: {size (CSS px), shape, rotate, ppu (map pixels a world unit),
+    tile (its world units), pts [[x, y, icon key, found]]}; at: (x, y, r)
+    where the hero is drawn (r in radians, atan2(dy, dx))."""
+
+    RING = 3.0                          # the dark edge, CSS px
+    BTN = 18                            # a zoom button
+
+    def __init__(self, tr=None):
+        self.tr = tr or (lambda t: t)
+        self._decor = {}                # (shape, size, k) -> (edge layer, cut, hits)
+        self._badge = {}                # k -> the north's badge
+        self._glows = {}                # px -> a Spark companion's aura
+
+    def draw(self, k, data, at, canvas_fn, icon_fn, hover=None):
+        S = float(data.get("size") or 200)
+        round_ = data.get("shape") != "square"
+        D = math.ceil(S * k)
+        x0, y0, r = at
+        ppu = float(data["ppu"]) * k    # device pixels a world unit
+        rotate = bool(data.get("rotate"))
+        alpha = (r + math.pi / 2) if rotate else 0.0
+        ca, sa = math.cos(alpha), math.sin(alpha)
+        # the map: one resample of the kept canvas (turned with the hero)
+        canvas, wx0, wy0 = canvas_fn(x0, y0, ppu, D * 0.75)
+        cx, cy = (x0 - wx0) * ppu, (y0 - wy0) * ppu
+        h = D / 2
+        coeffs = (ca, -sa, cx - h * ca + h * sa, sa, ca, cy - h * sa - h * ca)
+        world = canvas.transform((D, D), Image.AFFINE, coeffs, resample=Image.BILINEAR,
+                                 fillcolor=(32, 44, 52)).convert("RGBA")
+
+        def screen(wx, wy):
+            dx, dy = (wx - x0) * ppu, (wy - y0) * ppu
+            return h + dx * ca + dy * sa, h - dx * sa + dy * ca
+
+        # the points, over the map, inside its shape: the monsters first,
+        # under the rest; a companion's place kept for its hover
+        inner = h - self.RING * k
+        icon_px = max(8, round(15 * k))
+        dots = ImageDraw.Draw(world)
+        pet_hits = []
+        rows = sorted(data.get("pts") or (), key=lambda q: not str(q[2]).startswith("foe:"))
+        for q in rows:
+            wx, wy, key, found = q[:4]
+            info = q[4] if len(q) > 4 else None
+            sx, sy = screen(wx, wy)
+            if round_:
+                if math.hypot(sx - h, sy - h) > inner - icon_px / 2:
+                    continue
+            elif not (icon_px / 2 <= sx <= D - icon_px / 2 and icon_px / 2 <= sy <= D - icon_px / 2):
+                continue
+            foe = str(key).startswith("foe:")
+            # a companion, bigger: what one comes for
+            size = round(icon_px * 1.1) if foe else round(icon_px * 1.4) if info else icon_px
+            ic = icon_fn(key, size, found)
+            if info and info.get("spark"):
+                g = self._glow(size)
+                world.alpha_composite(g, (round(sx - g.width / 2), round(sy - g.height / 2)))
+            if ic is None:
+                rr = (2.5 if foe else 3) * k
+                dots.ellipse((sx - rr, sy - rr, sx + rr, sy + rr),
+                             fill=(214, 48, 40, 255) if foe else (240, 220, 160, 255),
+                             outline=(30, 24, 20, 255))
+            else:
+                world.alpha_composite(ic, (round(sx - ic.width / 2), round(sy - ic.height / 2)))
+            if info:
+                r_ = size / k / 2 + 3
+                M = self.margin()
+                pet_hits.append((M + sx / k - r_, M + sy / k - r_, 2 * r_, 2 * r_, "pet",
+                                 (round(sx / k, 1), round(sy / k, 1), info.get("t") or "",
+                                  bool(info.get("own")), str(key)[4:] if foe else "",
+                                  int(info.get("lvl") or 0) if foe else 0)))
+        # the hero: a gold arrow, its way (up when the map turns)
+        self._arrow(world, h, h, -math.pi / 2 if rotate else r, 9 * k)
+        edge, cut, buttons, hits = self._decor_for(round_, S, k, D)
+        world.putalpha(ImageChops.multiply(world.getchannel("A"), cut))
+        world.alpha_composite(edge)
+        # the north, on the edge (where it is when the map turns)
+        nx, ny = (-sa, -ca) if rotate else (0.0, -1.0)
+        if round_:
+            t = S / 2 - self.RING - 8
+        else:
+            t = (S / 2 - self.RING - 8) / max(abs(nx), abs(ny), 1e-6)
+        badge = self._badge_for(k)
+        bx, by = (S / 2 + nx * t) * k - badge.width / 2, (S / 2 + ny * t) * k - badge.height / 2
+        world.alpha_composite(badge, (round(bx), round(by)))
+        # in its margin, under its buttons (astride the edge)
+        M = self.margin()
+        p = Paint(S + 2 * M, S + 2 * M, k)
+        p.img.alpha_composite(world, (round(M * k), round(M * k)))
+        p.img.alpha_composite(buttons)
+        return p, pet_hits + hits, S + 2 * M, S + 2 * M
+
+    def margin(self):
+        """Around the map: room for half a button past its edge."""
+        return self.BTN / 2 + 2
+
+    def hover_image(self, k, hov, icon_fn):
+        """What a hovered point says, its own picture (the tip window shows
+        it under the mouse): a monster's, a companion's."""
+        probe = Paint(1, 1, k)
+        if hov[4]:
+            w, h = self._foe_size(probe, hov)
+            p = Paint(w, h, k)
+            self._foe_bubble(p, hov, icon_fn, w, h)
+        else:
+            w, h = self._pet_size(probe, hov)
+            p = Paint(w, h, k)
+            self._bubble(p, hov, w, h)
+        return p.img
+
+    def _foe_size(self, p, hov):
+        name, lvl = hov[2], hov[5]
+        sub = self.tr("Niveau {n}").replace("{n}", str(lvl)) if lvl else ""
+        tw = max(p.width(name, 12, 700), p.width(sub, 11, 600) if sub else 0)
+        return math.ceil(8 + 30 + 8 + tw + 10), 8 + 30 + 8
+
+    def _foe_bubble(self, p, hov, icon_fn, w, bh):
+        """The hover's box for a monster: its picture, its name, its level
+        under it (no frame)."""
+        tr = self.tr
+        _cx, _cy, name, _own, kind, lvl = hov
+        pic = icon_fn("best:" + kind, round(30 * p.k), False)
+        sub = tr("Niveau {n}").replace("{n}", str(lvl)) if lvl else ""
+        bx = by = 0
+        p.fill(bx, by, w, bh, (38, 18, 16), 0.95, r=6)
+        p.fill(bx + 8, by + 8, 30, 30, (64, 10, 10), r=15)
+        if pic is not None:
+            p.image(pic, bx + 8, by + 8, 30, 30, r=15, fit="contain")
+        p.ring(bx + 8, by + 8, 30, 30, 1.5, (232, 58, 46), r=15)
+        tx = bx + 8 + 30 + 8
+        if sub:
+            top = by + (bh - (LH12 + 1 + LH11)) / 2
+            p.text(name, tx, top, LH12, 12, 700, "#FFFFFF")
+            p.text(sub, tx, top + LH12 + 1, LH11, 11, 600, "#F2C94C")
+        else:
+            p.text(name, tx, by + (bh - LH12) / 2, LH12, 12, 700, "#FFFFFF")
+
+    def _pet_size(self, p, hov):
+        name, own = hov[2], hov[3]
+        state = self.tr("Possédé") if own else self.tr("Non possédé")
+        w = max(p.width(name, 12, 700), p.width(state, 11, 600)) + 16
+        return math.ceil(w), math.ceil(6 + LH12 + 1 + LH11 + 6)
+
+    def _bubble(self, p, hov, w, bh):
+        """The hover's box for a companion: its name, owned or not (no
+        frame)."""
+        tr = self.tr
+        name, own = hov[2], hov[3]
+        state = tr("Possédé") if own else tr("Non possédé")
+        bx = by = 0
+        p.fill(bx, by, w, bh, (38, 28, 23), 0.94, r=5)
+        p.text(name, bx, by + 6, LH12, 12, 700, "#FFFFFF", align="center", w=w)
+        p.text(state, bx, by + 6 + LH12 + 1, LH11, 11, 600, OV_OK if own else "#F08A7E",
+               align="center", w=w)
+
+    def _glow(self, px):
+        """A Spark companion's aura: a soft gold halo behind its icon."""
+        if px not in self._glows:
+            n = round(px * 2.4)
+            g = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+            d = ImageDraw.Draw(g)
+            for i in range(16, 0, -1):
+                r_ = n / 2 * i / 16
+                t = 1 - i / 16
+                a = round(40 + 215 * t ** 0.8)
+                col = (255, round(200 + 50 * t), round(80 + 150 * t), a)
+                d.ellipse((n / 2 - r_, n / 2 - r_, n / 2 + r_, n / 2 + r_), fill=col)
+            self._glows = {px: g.filter(ImageFilter.GaussianBlur(px / 8))}
+        return self._glows[px]
+
+    def _decor_for(self, round_, S, k, D):
+        """Its edge and buttons (a layer), its cut (a mask), their hits."""
+        key = (round_, S, k)
+        if key not in self._decor:
+            p = Paint(S, S, k)
+            rr = S / 2 if round_ else 8
+            p.ring(0, 0, S, S, self.RING, (58, 46, 39), 1.0, r=rr)
+            p.ring(self.RING - 0.5, self.RING - 0.5, S - 2 * self.RING + 1, S - 2 * self.RING + 1,
+                   1.25, (206, 183, 170), 0.9, r=max(0, rr - self.RING))
+            # the buttons, centred on the edge (half on the map, half out),
+            # on the margin's whole: the gear top right, the zoom lower
+            M = self.margin()
+            F = S + 2 * M
+            bp = Paint(F, F, k)
+            hits = [(M, M, S, S, "drag", None)]
+            B = self.BTN
+            R = S / 2 - self.RING / 2                   # the edge's middle line
+
+            def place(i, n_from_top):
+                if round_:
+                    ang = math.radians((-45, 30, 52)[i])
+                    return (M + S / 2 + math.cos(ang) * R - B / 2,
+                            M + S / 2 + math.sin(ang) * R - B / 2)
+                x = M + S - self.RING / 2 - B / 2
+                return x, (M + 22 - B / 2 if i == 0 else M + S - 26 - (B + 4) * (2 - i) + 4)
+            for i, (glyph, kind) in enumerate((("", "gear"), ("+", "zin"), ("−", "zout"))):
+                bx, by = place(i, i)
+                bp.fill(bx, by, B, B, (58, 46, 39), 0.95, r=B / 2)
+                bp.ring(bx, by, B, B, 1, (206, 183, 170), 0.9, r=B / 2)
+                if kind == "gear":
+                    _icon(bp, "gear", bx + 3, by + 3, B - 6, B - 6, "#FFFFFF")
+                else:
+                    bp.text(glyph, bx, by + (B - LH13) / 2 - 1, LH13, 13, 700, "#FFFFFF",
+                            align="center", w=B)
+                hits.insert(0, (bx, by, B, B, kind, None))
+            # the cut a little inside the edge: the edge is drawn on CSS
+            # pixels, the map on device ones (D, rounded up): never a row
+            # of map past it
+            m = Image.new("L", (D * SS, D * SS), 0)
+            md = ImageDraw.Draw(m)
+            i = 2 * k * SS
+            if round_:
+                md.ellipse((i, i, D * SS - 1 - i, D * SS - 1 - i), fill=255)
+            else:
+                md.rounded_rectangle((i, i, D * SS - 1 - i, D * SS - 1 - i), 8 * k * SS - i, fill=255)
+            edge = p.img
+            if edge.size != (D, D):
+                edge = edge.resize((D, D))
+            self._decor = {key: (edge, m.resize((D, D), Image.BOX), bp.img, hits)}
+        return self._decor[key]
+
+    def _badge_for(self, k):
+        if k not in self._badge:
+            p = Paint(16, 16, k)
+            p.fill(0, 0, 16, 16, (58, 46, 39), 0.9, r=8)
+            p.text("N", 0, (16 - LH11) / 2, LH11, 11, 700, "#F2C94C", align="center", w=16)
+            self._badge = {k: p.img}
+        return self._badge[k]
+
+    @staticmethod
+    def _arrow(img, cx, cy, ang, size):
+        """A gold arrowhead at (cx, cy) pointing along ang, edged dark
+        (drawn 4 times larger, then reduced)."""
+        n = 4
+        w = math.ceil(size * 3)
+        big = Image.new("RGBA", (w * n, w * n), (0, 0, 0, 0))
+        d = ImageDraw.Draw(big)
+        ca, sa = math.cos(ang), math.sin(ang)
+
+        def shape(f):
+            def pt(a_, b_):
+                return ((w / 2 + (ca * a_ - sa * b_) * size * f) * n,
+                        (w / 2 + (sa * a_ + ca * b_) * size * f) * n)
+            return [pt(1.1, 0), pt(-0.8, -0.75), pt(-0.35, 0), pt(-0.8, 0.75)]
+        d.polygon(shape(1.0), fill=(30, 22, 16, 255))
+        d.polygon(shape(0.7), fill=(242, 201, 76, 255))
+        big = big.resize((w, w), Image.LANCZOS)
+        img.alpha_composite(big, (round(cx - w / 2), round(cy - w / 2)))
+
+
+class NativeMinimap(NativeOverlay):
+    """The minimap over the game, held to move; its zoom by its buttons or
+    the wheel (the app keeps it). Shown only in the open world.
+
+    The app sends where the hero is 4 times a second: drawn in between,
+    the hero glides from where it was drawn to where it is (EASE seconds,
+    the turn the short way round), FPS frames a second; a leap (a
+    teleport) is drawn at once."""
+
+    KEYED = True
+    SCALE_MAX = 160
+    SCALE_DEFAULT = 130
+    TILE_CACHE = 48                     # tiles kept at a size
+    EASE = 0.25
+    FPS = 30
+    LEAP = 300.0                        # world units: farther is a jump
+
+    def __init__(self, oid, pipe, lang, catalog, folder=None, tip_ref=None):
+        super().__init__(oid, pipe, lang, catalog, tip_ref)
+        self._folder = Path(folder) if folder else _analysis()
+        self._hov_tip = None            # the hover the tip window shows
+        self._tiles = {}                # (tx, ty) -> its picture (RGB), or None
+        self._sized = {}                # (tx, ty, w, h) -> resized, oldest first
+        self._icons = {}                # (key, px, found) -> picture
+        self._canvas = None             # (ppu, wx0, wy0, w, h, image)
+        self._view = MinimapView(self.tr)
+        self._from = self._to = None    # (x, y, r): the glide's ends
+        self._t0 = 0.0
+        self._drawn = None              # where the hero was last drawn
+        self._anim = None               # the frames' thread
+        self._frame_due = False
+
+    def _default_pos(self, gw, gh, w, h):
+        return {"ax": "l", "dx": 24, "ay": "t", "dy": 24}               # top left
+
+    # -- the glide ----------------------------------------------------------
+    def _pushed(self, data):
+        if not data:
+            return
+        to = (float(data["x"]), float(data["y"]), float(data.get("r") or 0))
+        cur = self._drawn
+        if cur is None or math.hypot(to[0] - cur[0], to[1] - cur[1]) > self.LEAP:
+            self._from = self._to = to
+        else:
+            self._from = cur
+            self._to = to
+        self._t0 = time.perf_counter()
+        if self._anim is None or not self._anim.is_alive():
+            self._anim = threading.Thread(target=self._frames, daemon=True,
+                                          name="minimap frames")
+            self._anim.start()
+
+    def _now_at(self):
+        f, t = self._from, self._to
+        if f is None:
+            return None, True
+        u = min(1.0, (time.perf_counter() - self._t0) / self.EASE)
+        dr = (t[2] - f[2] + math.pi) % (2 * math.pi) - math.pi
+        return (f[0] + (t[0] - f[0]) * u, f[1] + (t[1] - f[1]) * u, f[2] + dr * u), u >= 1.0
+
+    def _frames(self):
+        """Frames while the hero glides (on the UI thread, one at a time)."""
+        step = 1.0 / self.FPS
+        while True:
+            _at, done = self._now_at()
+            if not self._frame_due and self.shown:
+                self._frame_due = True
+                self.ui.run(self._redraw)
+            if done:
+                return
+            time.sleep(step)
+
+    # -- the map ------------------------------------------------------------
+    def _tile(self, tx, ty, pw, ph):
+        key = (tx, ty, pw, ph)
+        if key in self._sized:
+            return self._sized[key]
+        if (tx, ty) not in self._tiles:
+            try:
+                self._tiles[(tx, ty)] = Image.open(self._folder / "map_tiles" / f"{tx}_{ty}.webp").convert("RGB")
+            except OSError:
+                self._tiles[(tx, ty)] = None
+        src = self._tiles[(tx, ty)]
+        im = src.resize((pw, ph), Image.BILINEAR) if src is not None else None
+        self._sized[key] = im
+        while len(self._sized) > self.TILE_CACHE:
+            self._sized.pop(next(iter(self._sized)))
+        return im
+
+    def _canvas_for(self, x0, y0, ppu, reach):
+        """The tiles around (x0, y0) at ppu, on one canvas, kept while the
+        hero stays well inside it: (image, its corner's world x, y)."""
+        c = self._canvas
+        unit = float((self._data or {}).get("tile") or 576.0)
+        if c is not None and c[0] == ppu:
+            _p, wx0, wy0, w, hh, img = c
+            mx, my = (x0 - wx0) * ppu, (y0 - wy0) * ppu
+            if reach * 1.42 < mx < w - reach * 1.42 and reach * 1.42 < my < hh - reach * 1.42:
+                return img, wx0, wy0
+        span = math.ceil(reach * 2 * 1.42 * 2)          # twice the turned view
+        wx0, wy0 = x0 - span / 2 / ppu, y0 - span / 2 / ppu
+        img = Image.new("RGB", (span, span), (32, 44, 52))
+
+        def edge(t, origin):
+            return round((t * unit - origin) * ppu)
+        for ty in range(math.floor(wy0 / unit), math.floor((wy0 + span / ppu) / unit) + 1):
+            for tx in range(math.floor(wx0 / unit), math.floor((wx0 + span / ppu) / unit) + 1):
+                px, py = edge(tx, wx0), edge(ty, wy0)
+                w, hh = edge(tx + 1, wx0) - px, edge(ty + 1, wy0) - py
+                tile = self._tile(tx, ty, max(1, w), max(1, hh))
+                if tile is not None:
+                    img.paste(tile, (px, py))
+        self._canvas = (ppu, wx0, wy0, span, span, img)
+        return img, wx0, wy0
+
+    def _icon(self, key, px, found=False):
+        return _key_icon(self._icons, self._folder, key, px, found)
+
+    def _redraw(self):
+        self._frame_due = False
+        if not self._data:
+            return
+        at, _done = self._now_at()
+        if at is None:
+            return
+        dpi_k = self._dpi_k()
+        k = dpi_k * self.scale / 100
+        self._k = k
+        p, hits, W, H = self._view.draw(k, self._data, at, self._canvas_for, self._icon)
+        self._hover_tip(k)
+        self._drawn = at
+        self._hits = hits
+        self._img = p.img
+        if p.img.size != self.size:
+            self.size = p.img.size
+            if self.game and not self.dragging:
+                self._place(present=False)
+        self._present()
+
+    HAND = NativeOverlay.HAND + ("zin", "zout")
+    HOVER_ARGS = NativeOverlay.HOVER_ARGS + ("pet",)
+
+    def _hover_tip(self, k):
+        """The point under the mouse: what it says in the tip window (out
+        of the minimap if need be), or nothing."""
+        hov = self._ui.get("hover")
+        hov = hov[1] if isinstance(hov, tuple) and hov and hov[0] == "pet" else None
+        key = (hov[2], hov[3], hov[4], hov[5]) if hov else None
+        if key == self._hov_tip:
+            return
+        self._hov_tip = key
+        tip = self._tip[0] if self._tip else None
+        if tip is None:
+            return
+        if hov is None:
+            self._hide_tip()
+            return
+        img = self._view.hover_image(k, hov, self._icon)
+        _off_thread(lambda: tip.show_image(self, img), "overlay minimap: tip")
+
+    def _click(self, kind, arg):
+        if kind in ("zin", "zout"):
+            self._notify("mm_zoom", {"d": 1 if kind == "zin" else -1})
+        elif kind == "switch":
+            key, on = arg
+            if key.startswith("layer:"):
+                self._notify("mm_set", {"key": "layer", "id": key[6:], "value": bool(on)})
+            elif key == "shape":
+                self._notify("mm_set", {"key": "shape", "value": "round" if on else "square"})
+            else:
+                self._notify("mm_set", {"key": key, "value": bool(on)})
+        else:
+            super()._click(kind, arg)
+
+    def on_wheel(self, delta, x, y):
+        self._notify("mm_zoom", {"d": 1 if delta > 0 else -1})
+
+
+class _PanelPipe:
+    """The panel's way to the app: its moves kept to itself (it shares the
+    minimap's id: the app would move the minimap), the rest passed on."""
+
+    def __init__(self, panel, pipe):
+        self.panel, self.pipe = panel, pipe
+
+    def send(self, msg):
+        if msg.get("m") == "ov_moved":
+            rect = (msg.get("p") or {}).get("rect") or ()
+            if len(rect) >= 2:
+                self.panel._user_at = (int(rect[0]), int(rect[1]))
+            return
+        self.pipe.send(msg)
+
+
+CONFIG = [None]                         # the overlays' settings window (NativeConfig)
+
+
+def _key_icon(cache, folder, key, px, found=False):
+    """A picture by its key, px wide, kept in cache: "mk:" a map marker,
+    "item:" an item's icon, "coll:" a companion's picture, "foe:" a
+    monster's badge, "best:" a monster's picture, "data:..." a data URI."""
+    k = (key, px, bool(found))
+    if k in cache:
+        return cache[k]
+    im = None
+    if str(key).startswith("data:"):
+        src = _data_image(key)
+        if src is not None:
+            w, h = src.size
+            f = px / max(w, h)
+            im = src.resize((max(1, round(w * f)), max(1, round(h * f))), Image.LANCZOS)
+        cache[k] = im
+        return im
+    kind, _, ident = str(key).partition(":")
+    path = {"mk": f"map_tiles/icon_{ident}.webp", "item": f"item_icons/{ident}.png",
+            "coll": f"collection_img/{ident}.webp", "foe": f"bestiary_img/{ident}.webp",
+            "best": f"bestiary_img/{ident}.webp"}.get(kind)
+    im = _foe_badge(None, px) if kind == "foe" else None
+    if path and ident.replace("_", "").isalnum():
+        try:
+            src = Image.open(Path(folder) / path).convert("RGBA")
+            w, h = src.size
+            f = px / max(w, h)
+            im = src.resize((max(1, round(w * f)), max(1, round(h * f))), Image.LANCZOS)
+            if kind == "foe":
+                im = _foe_badge(src, px)
+            elif kind not in ("mk", "best"):
+                # the game's markers carry their own edge: items get one
+                im = _edged(im, (30, 22, 16))
+            if found:
+                im = _grayscale(im, 0.8)
+                im.putalpha(im.getchannel("A").point(lambda v: v * 55 // 100))
+        except OSError:
+            im = _foe_badge(None, px) if kind == "foe" else None
+    cache[k] = im
+    return im
+
+
+class ConfigView:
+    """The overlays' settings, as the game's options draw theirs: a menu on
+    the left (an overlay a tab), the tab's rows on the right — sections,
+    ranges (a track, its arrows, its value), choices (two arrows round it),
+    toggles (a diamond, gold when on), toggles three a line; a rule from
+    each label to its control."""
+
+    BG = (208, 187, 178)                # colours measured on the game's options
+    INK = (106, 78, 68)
+    LINE = (177, 151, 141)
+    TRACK = (96, 83, 75)
+    END = (102, 94, 87)
+    RED = (215, 92, 78)
+    CREAM = (255, 255, 240)
+    BOX = (246, 228, 221)
+    GOLD = (255, 208, 23)
+    EDGE = (29, 31, 38)
+    MENU_W = 210
+    W = 830
+    MENU_BG = (230, 207, 198)           # the game's lists: the ground, a band,
+    TAB = (75, 65, 60)                  # the one open, its inner frame
+    TAB_HOVER = (86, 75, 70)
+    TAB_ON = (98, 86, 80)
+    TAB_FRAME = (207, 184, 170)
+    TAB_H = 44
+    # each overlay's glyph (the app's tabs', the game's)
+    TAB_ICONS = {"meter": "Live", "meterheal": "Character", "luck": "Collection",
+                 "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
+                 "minimap": "Map"}
+    ROW, SEC, PAD = 28, 32, 14
+    CTL_W = 180                          # a range's, a choice's width
+
+    def __init__(self, tr):
+        self.tr = tr
+
+    def _height(self, rows):
+        h = self.PAD
+        for r in rows:
+            if r["k"] == "sec":
+                h += self.SEC
+            elif r["k"] == "grid":
+                h += self.ROW * math.ceil(len(r["items"]) / 3)
+            else:
+                h += self.ROW
+        return h + self.PAD
+
+    def draw(self, k, dpi_k, data, tab, ui, local, icon_fn):
+        tr = self.tr
+        tabs = (data or {}).get("tabs") or []
+        cur = next((t for t in tabs if t["id"] == tab), tabs[0] if tabs else None)
+        body = max([self._height(t["rows"]) for t in tabs] + [len(tabs) * (self.TAB_H + 2) + 2])
+        W = self.W
+        H = 44 + body + 22
+        hits = []
+        p = Paint(W, H, k)
+        _frame(p, W, H)
+        _head(p, W, tr("Configuration overlays"), dpi_k, ui, hits)
+        p.fill(8, 44, W - 16, body, self.BG)
+        # the menu: an overlay a tab, as the game's own lists (dark bands
+        # on a light ground, the glyph and the name in white, the one open
+        # lighter, framed inside)
+        mx, mw = 8, self.MENU_W
+        p.fill(mx, 44, mw, body, self.MENU_BG)
+        y = 44 + 2
+        for t in tabs:
+            on = cur is not None and t["id"] == cur["id"]
+            hov = ui.get("hover") == "tab:" + t["id"]
+            th = self.TAB_H
+            p.fill(mx, y, mw, th, self.TAB_ON if on else self.TAB_HOVER if hov else self.TAB)
+            if on:
+                p.ring(mx + 4, y + 4, mw - 8, th - 8, 1, self.TAB_FRAME)
+            glyph = _piece(f"ui_tab_{self.TAB_ICONS.get(t['id'], 'Live')}.png")
+            if glyph is not None:
+                p.mask_image(glyph, mx + 14, y + (th - 24) / 2, 24, 24, "#FFFFFF")
+            self._tab_name(p, t["t"], mx + 50, y + th / 2, mw - 60, dpi_k)
+            hits.append((mx, y, mw, th, "tab", t["id"]))
+            y += th + 2
+        if cur is None:
+            return p, hits, W, H
+        # the tab's rows
+        x0, x1 = mx + mw + 20, W - 24
+        y = 44 + self.PAD
+        for i, r in enumerate(cur["rows"]):
+            kind = r["k"]
+            if kind == "sec":
+                p.text(r["t"].upper(), x0, y + self.SEC - 7 - LH11, LH11, 11, 700, self.INK,
+                       spacing=0.8)
+                p.hline(x0, y + self.SEC - 4, x1 - x0, self.LINE, 0.8)
+                y += self.SEC
+                continue
+            if kind == "grid":
+                items = r["items"]
+                cw = (x1 - x0) / 3
+                for j, it in enumerate(items):
+                    cx = x0 + (j % 3) * cw
+                    cy = y + (j // 3) * self.ROW
+                    self._toggle_row(p, cx, cx + cw - 14, cy, it, (cur["id"], i, j), hits,
+                                     icon_fn, local)
+                y += self.ROW * math.ceil(len(items) / 3)
+                continue
+            if kind == "toggle":
+                self._toggle_row(p, x0, x1, y, r, (cur["id"], i, None), hits, icon_fn, local)
+            else:
+                mid = y + self.ROW / 2
+                p.text(r["t"], x0, mid - LH13 / 2, LH13, 13, 400, self.INK)
+                cx = x1 - self.CTL_W
+                self._connector(p, x0 + p.width(r["t"], 13, 400) + 10, cx - 10, mid)
+                if kind == "range":
+                    v = local.get((cur["id"], i), r["v"])
+                    self._range(p, cx, mid, self.CTL_W, r, v, (cur["id"], i), hits)
+                else:
+                    self._choice(p, cx, mid, self.CTL_W, r, (cur["id"], i), hits)
+            y += self.ROW
+        return p, hits, W, H
+
+    def _tab_name(self, p, text, x, mid, maxw, dpi_k):
+        """A tab's name in the game's title font, white (Segoe UI bold when
+        a letter is missing from it)."""
+        t = _title_image(text, dpi_k, "#FFFFFF")
+        k = p.k
+        if t:
+            ink, cw, chh = t
+            f = 0.82 * k / max(1e-6, dpi_k) * dpi_k     # 20 px glyphs to about 16
+            w, h = round(cw * f), round(chh * f)
+            if w > maxw * k:
+                f = maxw * k / cw
+                w, h = round(cw * f), round(chh * f)
+            p._put(ink.resize((max(1, w), max(1, h)), Image.LANCZOS),
+                   round(x * k), round(mid * k - h / 2))
+        else:
+            p.text(text, x, mid - LH13 / 2, LH13, 13, 700, "#FFFFFF", clip=maxw)
+
+    def _toggle_row(self, p, x0, x1, y, r, ref, hits, icon_fn, local):
+        """A label (its icon before it), the rule, its diamond at x1."""
+        mid = y + self.ROW / 2
+        lx = x0
+        k = p.k
+        pic = None
+        if r.get("img"):
+            pic = icon_fn(r["img"], round(18 * k), False)
+        elif r.get("ic"):
+            pic = icon_fn(r["ic"], round(18 * k), False)
+        if pic is not None:
+            p._put(pic, round((lx + 9) * k - pic.width / 2), round(mid * k - pic.height / 2))
+            lx += 26
+        on = local.get(ref, r["on"])
+        dx = x1 - 8
+        room = dx - 14 - lx
+        p.text(r["t"], lx, mid - LH13 / 2, LH13, 13, 400, self.INK, clip=room)
+        lw = min(room, p.width(r["t"], 13, 400))
+        self._connector(p, lx + lw + 10, dx - 12, mid)
+        _diamond(p, dx, mid, 7.5, self.EDGE)
+        _diamond(p, dx, mid, 5.5, self.GOLD if on else self.BG)
+        hits.append((x0, mid - self.ROW / 2, x1 - x0, self.ROW, "switch", ref))
+
+    def _connector(self, p, x0, x1, y):
+        """A label's rule: a line, a few dashes, a small star (the game's)."""
+        if x1 - x0 < 24:
+            return
+        star = x1 - 5
+        dash0 = max(x0, star - 34)
+        if dash0 > x0:
+            p.hline(x0, y, dash0 - x0, self.LINE, 0.9)
+        for i in range(4):
+            if dash0 + 4 + i * 6 + 3 < star - 6:
+                p.fill(dash0 + 4 + i * 6, y - 1, 3, 2, self.LINE, 0.9)
+        p.hline(dash0 + 28, y, max(0, star - (dash0 + 28) - 4), self.LINE, 0.9)
+        _diamond(p, star, y, 4.5, self.LINE)
+
+    def _range(self, p, x, mid, w, r, v, ref, hits):
+        lo, hi = r["lo"], r["hi"]
+        tw = w - 34
+        h = 16
+        top = mid - h / 2
+        p.fill(x, top, tw, h, self.TRACK, r=3)
+        frac = (v - lo) / max(1, hi - lo)
+        ix, iw = x + h, tw - 2 * h
+        if frac > 0:
+            p.fill(ix, top + 2, max(4, iw * frac), h - 4, self.RED, r=3)
+        for bx, d in ((x, -1), (x + tw - h, 1)):
+            p.fill(bx, top, h, h, self.END, r=3)
+            _triangle(p, bx + h / 2, mid, 6, d, self.CREAM)
+            hits.append((bx, top, h, h, "step", (ref, d)))
+        hits.append((ix, top, iw, h, "slider", (ref, ix, iw)))
+        p.text(f"{v}", x + tw + 4, mid - LH13 / 2, LH13, 13, 400, self.INK, align="right", w=30)
+
+    def _choice(self, p, x, mid, w, r, ref, hits):
+        h = 24
+        top = mid - h / 2
+        p.fill(x, top, w, h, self.BOX, r=4)
+        label = next((o[1] for o in r["opts"] if o[0] == r["v"]), str(r["v"]))
+        for bx, d in ((x + 5, -1), (x + w - 20, 1)):
+            p.fill(bx, mid - 7.5, 15, 15, self.RED, r=2)
+            _triangle(p, bx + 7.5, mid, 5.5, d, self.CREAM)
+            hits.append((bx - 3, top, 21, h, "choice", (ref, d)))
+        p.text(label, x + 24, mid - LH12 / 2, LH12, 12, 400, self.INK, align="center",
+               w=w - 48, clip=w - 48)
+        hits.append((x + 21, top, w - 42, h, "choice", (ref, 1)))
+
+
+class NativeConfig(NativeOverlay):
+    """The overlays' settings window ("Configuration overlays"), mid-screen
+    over the game: opened by any overlay's gear on its tab, closed by its
+    own. Each change goes to the app (its row's action); an overlay's
+    size and opacity show on it at once."""
+
+    HAND = NativeOverlay.HAND + ("step", "choice")
+
+    def __init__(self, pipe, lang, catalog, folder, overlays):
+        super().__init__("config", _PanelPipe(self, pipe), lang, catalog)
+        self._folder = Path(folder)
+        self._overlays = overlays           # () -> the overlays (to show a size on)
+        self._icons = {}
+        self._view = ConfigView(self.tr)
+        self._tab = None
+        self._local = {}                    # (tab, row[, item]) -> its value, before the app's
+        self._user_at = None
+        self._ui["settings"] = True
+
+    def attach(self):
+        if self._make():
+            _log("overlay config: drawn natively (no WebView2)")
+
+    def set_lang(self, lang):
+        super().set_lang(lang)
+        self._view.tr = self.tr
+
+    def update(self, d):
+        """The app's state: its tabs; never shown by it (a gear opens it)."""
+        if not self.hwnd:
+            return
+        self.game = d.get("game")
+        self.lock_mode = d.get("lock") or "auto"
+        data = d.get("config")
+        if data != self._data:
+            self._data = data
+            # a value the app now has: no more held here
+            self._local = {k: v for k, v in self._local.items() if self._row_value(k) != v}
+            if self.shown:
+                self.redraw()
+        if self.shown and (not d.get("show") or not self.game):
+            self.close()
+
+    def _row(self, ref):
+        tab, i = ref[0], ref[1]
+        t = next((t for t in (self._data or {}).get("tabs") or () if t["id"] == tab), None)
+        if t is None or i >= len(t["rows"]):
+            return None
+        r = t["rows"][i]
+        if len(ref) > 2 and ref[2] is not None:
+            items = r.get("items") or ()
+            return items[ref[2]] if ref[2] < len(items) else None
+        return r
+
+    def _row_value(self, ref):
+        r = self._row(ref)
+        if r is None:
+            return None
+        return r.get("on") if r["k"] == "toggle" else r.get("v")
+
+    def toggle(self, tab):
+        if self.shown and tab == self._tab:
+            self.close()
+        else:
+            self.open(tab)
+
+    def open(self, tab):
+        self._tab = tab
+        self._ui["hover"] = None
+        self.shown = True
+
+        def go():
+            self._redraw()
+            _U32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+            self._topmost()
+        if self.hwnd:
+            self.ui.run(go)
+
+    def close(self):
+        if self.shown and self.hwnd:
+            self.ui.run(lambda: _U32.ShowWindow(self.hwnd, SW_HIDE))
+        self.shown = False
+
+    def _show(self):
+        pass                                # opened by a gear only
+
+    def _redraw(self):
+        if not self._data or not self.hwnd:
+            return
+        k = self._dpi_k()
+        self._k = k
+        p, hits, _w, _h = self._view.draw(k, k, self._data, self._tab, dict(self._ui),
+                                          self._local, self._icon)
+        self._hits = hits
+        self._img = p.img
+        self.size = p.img.size
+        self._place(present=False)
+        self._present()
+
+    def _icon(self, key, px, found=False):
+        return _key_icon(self._icons, self._folder, key, px, found)
+
+    def _place(self, present=True):
+        """In the middle of the game's window, or where the player put it."""
+        if not self.game or not self.hwnd or self.dragging:
+            return
+        gx, gy, gw, gh = self.game
+        w, h = self.size
+        self._at = self._user_at or (int(gx + (gw - w) / 2), int(gy + max(0, (gh - h) / 2)))
+        if present:
+            self._present()
+
+    # -- its controls -------------------------------------------------------
+    def _send(self, r, value):
+        self._notify(r["act"], dict(r.get("p") or {}, value=value))
+
+    def _set_range(self, ref, v, final):
+        r = self._row(ref)
+        if r is None:
+            return
+        v = int(max(r["lo"], min(r["hi"], round(v / r["step"]) * r["step"])))
+        changed = self._local.get(ref, r["v"]) != v
+        self._local[ref] = v
+        if r.get("style"):
+            # the overlay itself, at once
+            o = next((o for o in self._overlays() if o.id == ref[0]), None)
+            if o is not None and changed:
+                o._style = dict(o._style, **{r["style"]: v})
+                if r["style"] == "opacity":
+                    o.opacity = max(30, min(100, v))
+                else:
+                    o.scale = max(70, min(o.SCALE_MAX, v))
+                o.redraw()
+        if changed or final:
+            self._redraw()
+        now = time.monotonic()
+        if final or (r.get("style") and now - self._last_send > 0.06):
+            self._last_send = now
+            self._send(r, v)
+
+    def _slide(self, arg, x, final):
+        ref, ix, iw = arg
+        r = self._row(ref)
+        if r is None:
+            return
+        v = r["lo"] + (x / self._k - ix) / max(1, iw) * (r["hi"] - r["lo"])
+        self._set_range(ref, v, final)
+
+    def _click(self, kind, arg):
+        if kind == "gear":
+            self.close()
+        elif kind == "tab":
+            if arg != self._tab:
+                self._tab = arg
+                self._redraw()
+        elif kind == "step":
+            ref, d = arg
+            r = self._row(ref)
+            if r is not None:
+                self._set_range(ref, self._local.get(ref, r["v"]) + d * r["step"], True)
+        elif kind == "choice":
+            ref, d = arg
+            r = self._row(ref)
+            if r is not None and r.get("opts"):
+                vals = [o[0] for o in r["opts"]]
+                i = vals.index(r["v"]) if r["v"] in vals else 0
+                self._send(r, vals[(i + d) % len(vals)])
+        elif kind == "switch":
+            r = self._row(arg)
+            if r is not None:
+                on = not self._local.get(arg, r["on"])
+                self._local[arg] = on
+                self._redraw()
+                self._send(r, on)
+
+
+def _diamond(p, cx, cy, r, color, alpha=1.0):
+    """A diamond (a square on its point) centred on (cx, cy), r to a tip."""
+    x0, y0, pw, ph = p.box(cx - r, cy - r, 2 * r, 2 * r)
+    if pw <= 0 or ph <= 0:
+        return
+    m = Image.new("L", (pw * SS, ph * SS), 0)
+    W_, H_ = pw * SS, ph * SS
+    ImageDraw.Draw(m).polygon([(W_ / 2, 0), (W_ - 1, H_ / 2), (W_ / 2, H_ - 1), (0, H_ / 2)], fill=255)
+    m = m.resize((pw, ph), Image.BOX)
+    layer = Image.new("RGBA", (pw, ph), _rgba(color, alpha))
+    layer.putalpha(ImageChops.multiply(layer.getchannel("A"), m))
+    p._put(layer, x0, y0)
+
+
+def _triangle(p, cx, cy, size, direction, color):
+    """A small arrowhead centred on (cx, cy), pointing left (-1) or right
+    (1)."""
+    x0, y0, pw, ph = p.box(cx - size / 2, cy - size / 2, size, size)
+    if pw <= 0 or ph <= 0:
+        return
+    W_, H_ = pw * SS, ph * SS
+    m = Image.new("L", (W_, H_), 0)
+    pts = ([(W_ * 0.2, H_ / 2), (W_ * 0.8, 0), (W_ * 0.8, H_ - 1)] if direction < 0
+           else [(W_ * 0.8, H_ / 2), (W_ * 0.2, 0), (W_ * 0.2, H_ - 1)])
+    ImageDraw.Draw(m).polygon(pts, fill=255)
+    m = m.resize((pw, ph), Image.BOX)
+    layer = Image.new("RGBA", (pw, ph), _rgba(color))
+    layer.putalpha(m)
+    p._put(layer, x0, y0)
+
+
+def _foe_badge(src, px):
+    """A monster on the minimap: a round badge px wide, dark red, framed
+    red, its picture over it (cut to the round), or the badge alone."""
+    n = 4
+    D = px * n
+    out = Image.new("RGBA", (D, D), (0, 0, 0, 0))
+    d = ImageDraw.Draw(out)
+    edge = max(1, round(D * 0.09))
+    d.ellipse((0, 0, D - 1, D - 1), fill=(150, 24, 20, 255))            # the frame
+    d.ellipse((edge, edge, D - 1 - edge, D - 1 - edge), fill=(64, 10, 10, 255))
+    if src is not None:
+        inner = D - 2 * edge
+        w, h = src.size
+        f = inner * 0.92 / max(w, h)
+        pic = src.resize((max(1, round(w * f)), max(1, round(h * f))), Image.LANCZOS)
+        layer = Image.new("RGBA", (D, D), (0, 0, 0, 0))
+        layer.alpha_composite(pic, ((D - pic.width) // 2, (D - pic.height) // 2))
+        cut = Image.new("L", (D, D), 0)
+        ImageDraw.Draw(cut).ellipse((edge, edge, D - 1 - edge, D - 1 - edge), fill=255)
+        layer.putalpha(ImageChops.multiply(layer.getchannel("A"), cut))
+        out.alpha_composite(layer)
+    ring = Image.new("RGBA", (D, D), (0, 0, 0, 0))
+    ImageDraw.Draw(ring).ellipse((0, 0, D - 1, D - 1), outline=(232, 58, 46, 255),
+                                 width=max(1, round(D * 0.07)))
+    out.alpha_composite(ring)
+    return out.resize((px, px), Image.LANCZOS)
+
+
+def _edged(im, ink):
+    """A picture with a thin dark edge (its silhouette, grown a pixel)."""
+    a = im.getchannel("A")
+    grown = a.filter(ImageFilter.MaxFilter(3))
+    out = Image.new("RGBA", im.size, ink + (0,))
+    out.putalpha(grown)
+    out.alpha_composite(im)
+    return out
+
+
 class NativeTip(_NativeWindow):
     """A player's details, under the mouse (the meter's rows): never
     focused, the clicks going through it; it follows the mouse
@@ -2336,6 +3296,7 @@ class NativeTip(_NativeWindow):
         self._img = None
         self._at = None
         self._data = None
+        self._under = False             # centred under the mouse (a picture's)
 
     def tr(self, s):
         return self._dict.get(s) or s
@@ -2343,6 +3304,24 @@ class NativeTip(_NativeWindow):
     def attach(self):
         if self._make():
             self.ui.run(lambda: self._set_ex(True))
+
+    def show_image(self, owner, img):
+        """A picture drawn by an overlay (the minimap's hovers), centred
+        under the mouse, free of the overlay's own window."""
+        self.owner = owner
+        self.game = owner.game
+
+        def go():
+            self._img = img
+            self.size = img.size
+            self._under = True
+            self.at = None
+            self.follow()
+            if not self.shown:
+                _U32.ShowWindow(self.hwnd, SW_SHOWNOACTIVATE)
+                self.shown = True
+        if self.hwnd:
+            self.ui.run(go)
 
     def set_lang(self, lang):
         if self._catalog:
@@ -2377,6 +3356,7 @@ class NativeTip(_NativeWindow):
             p, _w, _h = TipView(self.tr).draw(k, self._data)
             self._img = p.img
             self.size = p.img.size
+            self._under = False
             self.at = None
             self.follow()
             if not self.shown:
@@ -2399,9 +3379,13 @@ class NativeTip(_NativeWindow):
         px, py = _screen_pt()
         w, h = self.size
         x, y = px + self.GAP, py + self.GAP
+        if self._under:
+            x = px - w // 2
         if self.game:
             gx, gy, gw, gh = self.game
-            if x + w > gx + gw:
+            if self._under:
+                x = max(gx, min(x, gx + gw - w))
+            elif x + w > gx + gw:
                 x = px - self.GAP - w
             if y + h > gy + gh:
                 y = py - self.GAP - h
