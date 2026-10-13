@@ -213,6 +213,11 @@ class AppWindow:
                 if oid == "bonus" and oid in NATIVE:
                     self.overlays.append(native_overlay.NativeBonus(
                         oid, pipe, self._lang, i18n.catalog, _bonus_art))
+                elif oid == "luck" and oid in NATIVE:
+                    # the bonus dungeon may be drawn in it: its pictures too
+                    self.overlays.append(native_overlay.NativeLuck(
+                        oid, pipe, self._lang, i18n.catalog, TIP, PICKER,
+                        art=_bonus_art))
                 elif oid in NATIVE:
                     cls = {"meter": native_overlay.NativeMeter,
                            "meterheal": native_overlay.NativeMeter,

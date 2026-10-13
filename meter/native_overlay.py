@@ -1216,8 +1216,9 @@ class LuckView:
         hits = []
         rows = (data or {}).get("rows")
         if ui.get("settings"):
-            # what it shows: the bonus dungeon's overlay, each of its lines
-            switches = [(tr("Donjon héroïque bonus"), bool((data or {}).get("bonusOn")), "bonus")]
+            # what it shows: the bonus dungeon in it (its own overlay
+            # otherwise), each of its lines
+            switches = [(tr("Donjon héroïque bonus"), bool((data or {}).get("merged")), "bonus")]
             switches += [(str(r.get("t") or ""), not r.get("hide"), "row:" + str(r.get("id")))
                          for r in rows or () if r.get("id")]
             H = _settings_height(len(switches), True) + 22
@@ -1228,8 +1229,11 @@ class LuckView:
             return p, hits, W, H
         # the lines the player keeps
         rows = [r for r in rows or () if not r.get("hide")] if rows is not None else None
+        # the bonus dungeon on top, when it is in this overlay
+        bonus = (data or {}).get("bonus") if (data or {}).get("merged") else None
+        band = self.BAND_H if bonus else 0
         content = 26 * len(rows) if rows else LH12 + 16
-        body_h = 1 + 4 + content + 6 + 1
+        body_h = 1 + 4 + band + content + 6 + 1
         H = 44 + body_h + 22
         p = Paint(W, H, k)
         _frame(p, W, H)
@@ -1237,14 +1241,17 @@ class LuckView:
         p.fill(8, 44, W - 16, body_h, OV_BG)
         p.hline(8, 44, W - 16, OV_LINE, 0.35)
         p.hline(8, 44 + body_h - 1, W - 16, OV_LINE, 0.35)
+        if bonus:
+            self._band(p, W, 49, bonus, ui.get("bonusArt") or (None, None, None))
+        top0 = 49 + band
         if not rows:
             # not read yet, or every line hidden (its gear shows them again)
             p.text(tr("Lecture des compteurs…") if rows is None
-                   else tr("Toutes les lignes sont masquées."), 20, 49 + 8, LH12, 12, 400, OV_DIM)
+                   else tr("Toutes les lignes sont masquées."), 20, top0 + 8, LH12, 12, 400, OV_DIM)
             return p, hits, W, H
         sh = [(1, 2, 0.9), (0, 3, 0.6)]
         for i, r in enumerate(rows):
-            y = 49 + i * 26
+            y = top0 + i * 26
             on, full = bool(r.get("on")), bool(r.get("full"))
             img = _data_image(r.get("img"))
             if img is not None:
@@ -1271,14 +1278,47 @@ class LuckView:
             if not on:
                 _lock_icon(p, right - vw - 4 - 9, by + (20 - 11) / 2, 9, 11, "#FFFFFF")
         if not any(r.get("on") for r in rows):
-            self._veil(p, W, body_h, (data or {}).get("well"))
+            self._veil(p, W, 45 + band, body_h - 2 - band, (data or {}).get("well"))
         return p, hits, W, H
 
-    def _veil(self, p, W, body_h, well):
+    BAND_H = 46                         # the bonus dungeon's band, its line under
+
+    def _band(self, p, W, y, b, art):
+        """The bonus heroic dungeon to aim for, as its own overlay shows it:
+        the boss's portrait, its name, the heroic mark with the plus."""
+        tr = self.tr
+        portrait, heroic, plus = art
+        face, mark = 34, 30
+        x = 18
+        if portrait is not None:
+            p.fill(x, y + 2, face, face, OV_WELL, r=face / 2)
+            p.image(portrait, x + 1, y + 3, face - 2, face - 2, r=face / 2 - 1)
+        tx = x + face + 10
+        mx = W - 18 - mark
+        tw = mx - 8 - tx
+        p.text(tr("Donjon héroïque bonus").upper(), tx, y + 3, LH9, 9, 700, OV_DIM,
+               spacing=0.6, clip=tw)
+        p.text(str(b.get("t") or ""), tx, y + 3 + LH9 + 1, LH13, 13, 700, OV_TEXT, clip=tw)
+        my = y + 2 + (face - mark) / 2
+        if heroic is not None:
+            mh = mark * heroic.height / max(1, heroic.width)
+            _outlined(p, heroic, mx, my, mark, mh, 0.5, BONUS_INK)
+        if plus is not None:
+            ps = 14
+            g = plus.convert("RGBA").resize((64, 64), Image.LANCZOS)
+            grad = Image.new("RGBA", (1, 64))
+            top, bot = _rgba("#9BE04E"), _rgba("#4E9F27")
+            grad.putdata([tuple(round(top[c] + (bot[c] - top[c]) * i / 63) for c in range(3)) + (255,)
+                          for i in range(64)])
+            grad = grad.resize((64, 64))
+            grad.putalpha(g.getchannel("A"))
+            _outlined(p, grad, mx + mark - ps + 1, my + mark - ps - 4, ps, ps, 1, "#2A3A1C")
+        p.hline(18, y + self.BAND_H - 6, W - 36, OV_LINE, 0.35)
+
+    def _veil(self, p, W, vy, vh, well):
         """No offering at all: a veil over the counters, what unfreezes them
         (.lveil, .lvbox)."""
         tr = self.tr
-        vy, vh = 45, body_h - 2
         p.fill(8, vy, W - 16, vh, OV_WELL, 0.45, r=3)
         bw = W - 16 - 28
         msg = tr("Fais une offrande au {well} pour les activer.").replace(
@@ -2087,14 +2127,24 @@ class NativeMeter(NativeOverlay):
 class NativeLuck(NativeOverlay):
     VIEW = LuckView
 
+    def __init__(self, oid, pipe, lang, catalog, tip_ref=None, picker_ref=None, art=None):
+        super().__init__(oid, pipe, lang, catalog, tip_ref, picker_ref)
+        self._art = _BonusArt(art, oid)
+
     def _default_pos(self, gw, gh, w, h):
         return {"ax": "l", "dx": 24, "ay": "b", "dy": gh // 5}       # low left
+
+    def _redraw(self):
+        # the bonus dungeon in this overlay: its pictures
+        b = (self._data or {}).get("bonus") if (self._data or {}).get("merged") else None
+        self._ui["bonusArt"] = self._art.get(b.get("boss")) if b else None
+        super()._redraw()
 
     def _click(self, kind, arg):
         if kind == "switch":
             key, on = arg
-            if key == "bonus":                  # the bonus dungeon's overlay
-                self._notify("ov_show", {"id": "bonus", "value": bool(on)})
+            if key == "bonus":                  # the bonus dungeon in it, or apart
+                self._notify("luck_merge", {"value": bool(on)})
             elif key.startswith("row:"):        # one of its own lines
                 self._notify("luck_row", {"id": key[4:], "value": bool(on)})
         else:
@@ -2118,25 +2168,19 @@ class NativeGoals(NativeOverlay):
             super()._click(kind, arg)
 
 
-class NativeBonus(NativeOverlay):
-    """The bonus heroic dungeon: a text alone over the game, held to move."""
+class _BonusArt:
+    """The bonus dungeon's pictures, loaded once: fn() -> (portraits,
+    heroic uri, plus path); get(boss) -> (portrait, heroic, plus) images."""
 
-    KEYED = True
+    def __init__(self, fn, oid):
+        self._fn, self._oid, self._art = fn, oid, None
 
-    def __init__(self, oid, pipe, lang, catalog, art):
-        super().__init__(oid, pipe, lang, catalog)
-        self._art_fn = art                  # () -> (portraits, heroic uri, plus path)
-        self._art = None
-
-    def _default_pos(self, gw, gh, w, h):
-        return {"ax": "l", "dx": max(0, (gw - w) // 2), "ay": "t", "dy": 70}
-
-    def _art_for(self, boss):
+    def get(self, boss):
         if self._art is None:
             try:
-                self._art = self._art_fn()
+                self._art = self._fn() if self._fn else ({}, None, None)
             except Exception as e:
-                _log(f"overlay {self.id}: art unavailable: {e!r}")
+                _log(f"overlay {self._oid}: art unavailable: {e!r}")
                 self._art = ({}, None, None)
         portraits, heroic, plus = self._art
         try:
@@ -2144,6 +2188,22 @@ class NativeBonus(NativeOverlay):
         except OSError:
             plus_img = None
         return (_data_image(portraits.get(boss)), _data_image(heroic), plus_img)
+
+
+class NativeBonus(NativeOverlay):
+    """The bonus heroic dungeon: a text alone over the game, held to move."""
+
+    KEYED = True
+
+    def __init__(self, oid, pipe, lang, catalog, art):
+        super().__init__(oid, pipe, lang, catalog)
+        self._art = _BonusArt(art, oid)
+
+    def _default_pos(self, gw, gh, w, h):
+        return {"ax": "l", "dx": max(0, (gw - w) // 2), "ay": "t", "dy": 70}
+
+    def _art_for(self, boss):
+        return self._art.get(boss)
 
     def _redraw(self):
         if not self._data:

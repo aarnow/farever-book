@@ -222,6 +222,9 @@ class App:
         # Collection and Succès: the content out of reach in the game as it
         # is (no way to get it in its data) left out
         self._hide_na = False
+        # the bonus heroic dungeon in the loot luck overlay (one overlay),
+        # else in its own
+        self._luck_merge = False
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
@@ -326,6 +329,8 @@ class App:
             self._auto_reset_dummy = data["auto_reset_dummy"]
         if isinstance(data.get("hide_unavailable"), bool):
             self._hide_na = data["hide_unavailable"]
+        if isinstance(data.get("luck_merge"), bool):
+            self._luck_merge = data["luck_merge"]
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
             self._rift_keep = data["rift_keep"]
         bind = data.get("reset_bind")
@@ -395,6 +400,7 @@ class App:
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "auto_reset_dummy": bool(self._auto_reset_dummy),
                 "hide_unavailable": bool(self._hide_na),
+                "luck_merge": bool(self._luck_merge),
                 "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
@@ -910,6 +916,9 @@ class App:
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "toggle_auto_reset_dummy": self._toggle_auto_reset_dummy,
             "hide_unavailable": self._set_hide_na,
+            # the bonus dungeon in the loot luck overlay, or in its own
+            # (value: True, False, or None to switch)
+            "luck_merge": lambda p: self._set_luck_merge(p.get("value")),
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "set_view3d": lambda p: self._set_view3d(p.get("on")),
@@ -1858,6 +1867,8 @@ class App:
         on = dict(self._ov_on)
         # the heals' meter only while the meter is split
         on["meterheal"] = bool(self._ov_split and on.get("meterheal"))
+        # the bonus dungeon in the loot luck overlay: its own one hidden
+        on["bonus"] = bool(on.get("bonus") and not self._luck_merge)
         spec = {"show": show, "game": list(win[1]) if win else None,
                 # the game's drawing area's corner: its own coordinates' 0, 0
                 "client": client_origin(win[0]) if win else None,
@@ -1893,8 +1904,9 @@ class App:
         spec["luck"] = {"rows": [dict(r, hide=r.get("id") in self._luck_hidden)
                                  for r in rows] if rows is not None else None,
                         "well": soulwell_name(),
-                        # its gear: the bonus dungeon's overlay shown or not
-                        "bonusOn": bool(self._ov_on.get("bonus"))}
+                        # the bonus dungeon in it (its gear's switch)
+                        "merged": bool(self._luck_merge),
+                        "bonus": spec["bonus"] if self._luck_merge else None}
         # the currencies the player shows, so many a line
         spec["currencies"] = {"items": [c for c in self._currencies() if not c["hide"]],
                               "perRow": int(self._cur_per_row)}
@@ -3224,6 +3236,9 @@ class App:
                       "luck": tr("Chance de butin"),
                       "bonus": tr("Donjon héroïque bonus"),
                       "currencies": tr("Monnaies")})
+        if self._luck_merge:
+            # the bonus dungeon is in the loot luck overlay
+            names.pop("bonus")
         out = [{"k": "section", "t": tr("Afficher / masquer")}]
         # each overlay, a switch at the end of its line
         for oid, t in names.items():
@@ -3234,6 +3249,10 @@ class App:
                     "t": self._tick(self._ov_split,
                                     tr("Meter : deux overlays, un pour les "
                                        "dégâts et un pour les soins"))})
+        out.append({"k": "button", "id": "luck_merge",
+                    "t": self._tick(self._luck_merge,
+                                    tr("Chance de butin : y afficher le donjon "
+                                       "héroïque bonus (un seul overlay)"))})
         # each one's own settings, as its gear has them
         for oid, t in names.items():
             st = self._ov_style.get(oid) or _ov_style({})
@@ -3411,6 +3430,17 @@ class App:
     def auto_reset_dummy(self) -> bool:
         """Read by the hook thread, so it stays a plain attribute read."""
         return bool(self._auto_reset_dummy)
+
+    def _set_luck_merge(self, value):
+        """The bonus heroic dungeon in the loot luck overlay (one overlay)
+        or in its own. In it, the loot luck overlay shows."""
+        merge = (not self._luck_merge) if value is None else bool(value)
+        if merge == self._luck_merge:
+            return
+        self._luck_merge = merge
+        if merge:
+            self._ov_on["luck"] = True
+        self._save_settings()
 
     def _set_hide_na(self, p):
         """Collection and Succès: the unavailable content shown or not."""
