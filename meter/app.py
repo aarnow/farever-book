@@ -137,7 +137,7 @@ def _dungeon_backdrop(kind, boss, region=""):
 
 
 # the overlays' looks: the game's own frames and colours, for now the only one
-OVERLAY_THEMES = {"farever": "Farever"}
+OVERLAY_THEMES = {"farever": "Farever", "minimal": "Minimaliste"}
 
 
 # an overlay's greatest size (%), when not OV_SCALE_MAX
@@ -151,7 +151,8 @@ def _ov_style(v, oid=None):
     none) 30-900."""
     def num(k, lo, hi):
         try:
-            return max(lo, min(hi, int(v.get(k) or 100)))
+            x = v.get(k)
+            return max(lo, min(hi, int(100 if x is None or x == "" else x)))
         except (TypeError, ValueError):
             return 100
     try:
@@ -160,6 +161,8 @@ def _ov_style(v, oid=None):
         maxh = 0
     return {"opacity": num("opacity", 30, 100),
             "scale": num("scale", 70, OV_SCALE_MAX_OF.get(oid, OV_SCALE_MAX)),
+            # its background's own opacity (its frame, its panels), 0-100 %
+            "bg": num("bg", 0, 100),
             "maxh": max(30, min(900, maxh)) if maxh else 0}
 
 
@@ -219,6 +222,8 @@ class App:
         # level, when), its shape, turned with the hero or north up, its
         # zoom's step, its size, its layers, the points found left out
         self._mm_pos = None
+        # a meter overlay's parts the player hid ("title", "time"), per overlay
+        self._meter_hide = {"meter": set(), "meterheal": set()}
         # the units around (the hook's): wild companions and monsters
         # alive, [[kind, x, y]], the level, when
         self._mm_units = ([], [], "", 0.0)
@@ -369,6 +374,10 @@ class App:
             self._auto_reset_dummy = data["auto_reset_dummy"]
         if isinstance(data.get("hide_unavailable"), bool):
             self._hide_na = data["hide_unavailable"]
+        mh = data.get("meter_hide") if isinstance(data.get("meter_hide"), dict) else {}
+        for oid in self._meter_hide:
+            if isinstance(mh.get(oid), list):
+                self._meter_hide[oid] = {x for x in mh[oid] if x in ("title", "time")}
         mm = data.get("minimap") if isinstance(data.get("minimap"), dict) else {}
         if mm.get("shape") in ("round", "square"):
             self._mm_shape = mm["shape"]
@@ -453,6 +462,7 @@ class App:
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "auto_reset_dummy": bool(self._auto_reset_dummy),
                 "hide_unavailable": bool(self._hide_na),
+                "meter_hide": {k: sorted(v) for k, v in self._meter_hide.items()},
                 "minimap": {"shape": self._mm_shape, "rotate": bool(self._mm_rotate),
                             "zoom": int(self._mm_zoom), "size": int(self._mm_size),
                             "layers": sorted(self._mm_layers),
@@ -965,6 +975,8 @@ class App:
             "cur_per_row": self._cur_set_per_row,
             # the minimap: its zoom (d: a step in or out), its settings
             "mm_zoom": self._mm_set_zoom,
+            # a meter's title or clock shown or not
+            "meter_part": self._meter_part,
             "mm_set": self._mm_set,
             "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
@@ -1821,7 +1833,7 @@ class App:
     def _ov_style_set(self, p):
         """Réglages › Overlay: one of an overlay's settings (its gear's)."""
         oid, key = p.get("id"), p.get("key")
-        if oid not in self._ov_on or key not in ("opacity", "scale"):
+        if oid not in self._ov_on or key not in ("opacity", "scale", "bg"):
             return
         st = dict(self._ov_style.get(oid) or _ov_style({}, oid))
         st[key] = p.get("value")
@@ -1839,7 +1851,10 @@ class App:
         oid = p.get("id")
         if oid not in self._ov_on:
             return
-        self._ov_style[oid] = _ov_style(p, oid)
+        # what it sends over what it has (its background's opacity kept)
+        st = dict(self._ov_style.get(oid) or _ov_style({}, oid))
+        st.update({k: p[k] for k in ("opacity", "scale", "maxh", "bg") if k in p})
+        self._ov_style[oid] = _ov_style(st, oid)
         if p.get("save", True):
             self._save_settings()
 
@@ -1908,7 +1923,12 @@ class App:
                       "minimap": tr("Minimap")})
         if self._luck_merge:
             names.pop("bonus")
-        tabs = []
+        # first, what holds for them all: their theme
+        tabs = [{"id": "general", "t": tr("Général"), "rows": [
+            sec(tr("Thème")),
+            {"k": "cards", "act": "ov_theme", "p": {},
+             "items": [{"v": t_id, "t": tr(t), "on": t_id == self._ov_theme}
+                       for t_id, t in OVERLAY_THEMES.items()]}]}]
         for oid, title in names.items():
             st = self._ov_style.get(oid) or _ov_style({}, oid)
             rows = [tog(tr("Afficher l'overlay"), self._ov_on.get(oid), "ov_show", {"id": oid}),
@@ -1916,10 +1936,16 @@ class App:
                     rng(tr("Taille"), 70, OV_SCALE_MAX_OF.get(oid, OV_SCALE_MAX), st["scale"],
                         "ov_style_set", {"id": oid, "key": "scale"}, style="scale"),
                     rng(tr("Opacité"), 30, 100, st["opacity"],
-                        "ov_style_set", {"id": oid, "key": "opacity"}, style="opacity")]
+                        "ov_style_set", {"id": oid, "key": "opacity"}, style="opacity"),
+                    rng(tr("Opacité du fond"), 0, 100, st.get("bg", 100),
+                        "ov_style_set", {"id": oid, "key": "bg"}, style="bg")]
             if oid in ("meter", "meterheal"):
-                rows.append(tog(tr("Deux overlays : dégâts et soins"), self._ov_split,
-                                "ov_split", {}))
+                rows += [tog(tr("Afficher le titre"), "title" not in self._meter_hide[oid],
+                             "meter_part", {"id": oid, "key": "title"}),
+                         tog(tr("Afficher la durée"), "time" not in self._meter_hide[oid],
+                             "meter_part", {"id": oid, "key": "time"}),
+                         tog(tr("Deux overlays : dégâts et soins"), self._ov_split,
+                             "ov_split", {})]
             elif oid == "luck":
                 rows.append(tog(tr("Donjon héroïque bonus"), self._luck_merge, "luck_merge", {}))
                 lines = (spec.get("luck") or {}).get("rows") or []
@@ -2016,6 +2042,14 @@ class App:
                 "hideFound": bool(self._mm_hide_found),
                 "layers": [[lid, t, lid in self._mm_layers]
                            for lid, (t, _cs) in MINIMAP_LAYERS.items()]}
+
+    def _meter_part(self, p):
+        """A meter overlay's title or clock, shown (value) or not."""
+        oid, key = p.get("id"), p.get("key")
+        if oid not in self._meter_hide or key not in ("title", "time"):
+            return
+        (self._meter_hide[oid].discard if p.get("value") else self._meter_hide[oid].add)(key)
+        self._save_settings()
 
     def _mm_set_zoom(self, p):
         """The minimap's zoom, a step in or out (its buttons, the wheel)."""
@@ -2154,6 +2188,11 @@ class App:
         else:
             spec["meter"] = self._meter_spec(self._ov_tab == "heal", None)
             spec["meterheal"] = None
+        # the parts the player hid: its title, its clock
+        for oid in ("meter", "meterheal"):
+            if spec.get(oid):
+                spec[oid]["noTitle"] = "title" in self._meter_hide[oid]
+                spec[oid]["noTime"] = "time" in self._meter_hide[oid]
         # copies: the bridge pushes only a spec unlike the last one, and
         # these dicts change in place
         spec["style"] = {k: dict(v) for k, v in self._ov_style.items()}
@@ -2179,6 +2218,8 @@ class App:
         spec["minimap"] = self._minimap_spec()
         # the overlays' settings window (any overlay's gear opens it)
         spec["config"] = self._overlay_config(spec)
+        # the overlays' looks (OVERLAY_THEMES): colours only
+        spec["theme"] = self._ov_theme
         return spec
 
     def on_achievements(self, p):

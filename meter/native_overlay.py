@@ -408,11 +408,89 @@ SS = 4                              # shapes drawn this many times larger
 TEXT_GAMMA = [round(255 * (v / 255) ** 0.72) for v in range(256)]
 
 
-def _rgba(c, a=1.0):
-    """'#RRGGBB' or (r, g, b) and an alpha 0..1 -> (r, g, b, a 0..255)."""
+# The overlays' theme: "farever" (the game's own looks) or "minimal" (dark,
+# light backgrounds, the content kept opaque). A theme changes colours
+# only: each of the game's palette has its minimal one (MINIMAL: colour ->
+# (colour, its alpha's factor)), the rest (classes, rarities, pictures)
+# stays as it is.
+_THEME = ["farever"]
+MINIMAL = {
+    (184, 151, 134): ((0, 0, 0), 0.0),            # a panel's body (OV_BG): the frame shows
+    (58, 46, 39): ((0, 0, 0), 0.38),              # wells, tracks (OV_WELL)
+    (46, 30, 24): ((236, 236, 242), 1.0),         # text (OV_TEXT)
+    # dim text and rules share it (OV_DIM, OV_LINE): a light grey, rules
+    # drawn at a third of it
+    (94, 66, 56): ((255, 255, 255), 0.6),
+    (74, 50, 41): ((255, 255, 255), 0.35),        # borders
+    (106, 78, 68): ((226, 226, 234), 1.0),        # ink (titles, the options' labels)
+    (138, 63, 14): ((255, 170, 90), 1.0),         # the clock, a fight on
+    (255, 246, 230): ((255, 255, 255), 0.45),     # light fills
+    (205, 184, 172): ((210, 210, 220), 1.0),      # light texts
+    (237, 216, 208): ((210, 210, 220), 1.0),
+    (38, 28, 23): ((14, 14, 18), 1.0),            # dark boxes (the veil's, the hovers')
+    (38, 18, 16): ((14, 14, 18), 1.0),
+    (107, 90, 82): ((0, 0, 0), 0.75),             # the text-alone overlays' outline
+    (206, 183, 170): ((255, 255, 255), 0.22),     # the minimap's light edge
+    # the options (ConfigView)
+    (208, 187, 178): ((14, 14, 20), 0.45),        # its rows' ground: readable over the game
+    (177, 151, 141): ((255, 255, 255), 0.28),
+    (96, 83, 75): ((44, 44, 54), 1.0),
+    (102, 94, 87): ((62, 62, 74), 1.0),
+    (246, 228, 221): ((46, 46, 58), 1.0),
+    (230, 207, 198): ((0, 0, 0), 0.25),
+    (75, 65, 60): ((34, 34, 44), 0.9),
+    (86, 75, 70): ((46, 46, 58), 0.9),
+    (98, 86, 80): ((58, 58, 72), 1.0),
+    (207, 184, 170): ((255, 255, 255), 0.35),
+    (196, 172, 162): ((0, 0, 0), 0.25),
+}
+MINIMAL_FRAME = ((12, 12, 16), 0.62)            # its panels' ground, under all
+# an overlay's background's own opacity (its style's "bg"), while it draws:
+# its frame and its panels' ground (OV_BG) only, never its content
+_BG = [1.0]
+BG_KEYS = {(184, 151, 134)}
+# texts: always opaque, light on the dark (some share a colour with a light
+# fill, kept see-through by MINIMAL)
+MINIMAL_TEXT = {
+    (255, 246, 230): ((255, 255, 255), 1.0),
+    (94, 66, 56): ((178, 180, 192), 1.0),
+    (74, 50, 41): ((205, 205, 215), 1.0),
+    (46, 30, 24): ((240, 240, 245), 1.0),
+    (47, 94, 16): ((124, 191, 60), 1.0),          # done, green
+    (138, 63, 14): ((255, 170, 90), 1.0),
+    (106, 78, 68): ((226, 226, 234), 1.0),
+}
+
+
+def _set_theme(name):
+    """The overlays' theme (all of them, this process): True when it
+    changed."""
+    name = name if name in ("farever", "minimal") else "farever"
+    if name == _THEME[0]:
+        return False
+    _THEME[0] = name
+    return True
+
+
+def _minimal():
+    return _THEME[0] == "minimal"
+
+
+def _rgba(c, a=1.0, text=False):
+    """'#RRGGBB' or (r, g, b) and an alpha 0..1 -> (r, g, b, a 0..255), in
+    the overlays' theme (a text's colour by its own table)."""
     if isinstance(c, str):
         c = c.lstrip("#")
         c = (int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16))
+    if _THEME[0] == "minimal":
+        key = (c[0], c[1], c[2])
+        m = (MINIMAL_TEXT.get(key) if text else None) or MINIMAL.get(key)
+        if m is not None:
+            c, a = m[0], a * m[1]
+        if not text and key in BG_KEYS:
+            a *= _BG[0]
+    elif not text and (c[0], c[1], c[2]) in BG_KEYS:
+        a *= _BG[0]
     return (c[0], c[1], c[2], max(0, min(255, round(a * 255))))
 
 
@@ -500,6 +578,10 @@ class Paint:
         self.ring(x, y, w, h, 1, color, alpha, r)
 
     def hline(self, x, y, w, color, alpha=1.0):
+        # the minimal theme has no frame under its panels: no rule closing
+        # them at its foot either (the last 30 px)
+        if _minimal() and y >= self.img.height / self.k - 30:
+            return
         self.fill(x, y, w, 1, color, alpha)
 
     def image(self, im, x, y, w, h, r=0.0, opacity=1.0, fit="fill"):
@@ -666,7 +748,7 @@ class Paint:
             sl = Image.new("RGBA", (mw, mh), sc[:3] + (0,))
             sl.putalpha(draw(stroke[0]).point(lambda v: v * sc[3] // 255))
             self._put(sl, ox, oy)
-        c = _rgba(color, alpha)
+        c = _rgba(color, alpha, text=True)
         layer = Image.new("RGBA", (mw, mh), c[:3] + (0,))
         layer.putalpha(mask.point(lambda v: v * c[3] // 255))
         self._put(layer, ox, oy)
@@ -702,7 +784,13 @@ FRAME_SLICE, FRAME_CSS = 32, 32
 
 def _frame(p, w, h):
     """The game's window frame (overlay.css html.framed #ov: border-image
-    32 fill / 32px stretch) over the whole w x h box."""
+    32 fill / 32px stretch) over the whole w x h box; in the minimal theme,
+    a dark ground, light, its corners rounded."""
+    if _minimal():
+        (c, a) = MINIMAL_FRAME
+        p.fill(2, 2, w - 4, h - 4, c, a * _BG[0], r=8)
+        p.border(2, 2, w - 4, h - 4, (255, 255, 255), 0.07 * _BG[0], r=8)
+        return True
     tex = _piece("ui_frame.png")
     if tex is None:
         p.fill(0, 0, w, h, "#B89786", r=5)
@@ -720,6 +808,8 @@ def _frame(p, w, h):
             if pw <= 0 or ph <= 0:
                 continue
             part = tex.crop((sx0, sy0, sx1, sy1)).resize((pw, ph), Image.BILINEAR)
+            if _BG[0] < 1:
+                part.putalpha(part.getchannel("A").point(lambda v: round(v * _BG[0])))
             p._put(part, x0, y0)
     return True
 
@@ -887,26 +977,47 @@ def _border_px(css, k):
     return max(1, math.floor(css * k)) / k
 
 
-def _head(p, W, title, dpi_k, ui, hits, extra=None):
+def _head(p, W, title, dpi_k, ui, hits, extra=None, close=False):
     """A panel's header (overlay.css .head, html.framed): the title in the
     game's font, centred; on the right `extra` (a dim text) then the gear.
     Its whole width drags the window."""
     k = p.k
     # the title, a bitmap font, at its own pixels; an overlay made smaller
-    # than that makes it smaller too (it would pass its header)
+    # than that makes it smaller too (it would pass its header); in the
+    # minimal theme, plain text on the left
     dpi_k = min(dpi_k, k)
-    t = _title_image(title, dpi_k)
+    t = None if _minimal() else _title_image(title, dpi_k)
+    if _minimal():
+        p.text(title, 16, 12 + (32 - LH13) / 2, LH13, 13, 700, (236, 236, 242),
+               shadow=[(0, 2, 0.6)])
     if t:
         ink, cw, chh = t
         x0 = round((18 + (W - 36) / 2) * k - cw * dpi_k / 2)
         y0 = round((12 + 16) * k - chh * dpi_k / 2)
         p._put(ink.resize((round(cw * dpi_k), round(chh * dpi_k)), Image.BILINEAR)
                if abs(dpi_k - 1) > 0.01 else ink, x0, y0)
-    else:
+    elif not _minimal():
         p.text(title, 18, 12, 32, 15, 700, "#6A4E44", align="center", w=W - 36)
     gx, gy = W - 49, 16.5
     hover = ui.get("hover")
     on = bool(ui.get("settings"))
+    if close:
+        # a window closed by it (the overlays' settings): the game's cross,
+        # in its brown (white in the minimal theme), darker under the mouse
+        btn = _piece("ui_close_x.png")
+        if btn is not None:
+            if _minimal():
+                if hover == "gear":
+                    p.fill(gx, gy, 23, 23, (255, 255, 255), 0.12, r=6)
+                p.mask_image(btn, gx, gy, 23, 23, "#FFFFFF", 1.0 if hover == "gear" else 0.8)
+            else:
+                p.mask_image(btn, gx, gy, 23, 23,
+                             (122, 92, 78) if hover == "gear" else (165, 131, 114))
+        else:
+            p.text("×", gx, gy, 23, 18, 700, OV_TEXT, align="center", w=23)
+        hits.append((gx, gy, 23, 23, "gear", None))
+        hits.append((18, 12, W - 36, 32, "drag", None))
+        return
     if on:
         p.fill(gx, gy, 23, 23, OV_LINE, 0.18, r=6)
     elif hover == "gear":
@@ -1030,34 +1141,43 @@ class MeterView:
         gripping = ui.get("grip_h") is not None
         maxh = ui["grip_h"] if gripping else (style.get("maxh") or 0)
         sized = bool(style.get("maxh"))     # the fit button shown
-        mline_h = 18 if sized else LH115
-        tabs_y = 49 + mline_h + 5
+        # its title, its clock: each may be hidden (its list then higher up)
+        no_title, no_time = bool(m.get("noTitle")), bool(m.get("noTime"))
+        T = 12 if no_title else 44                    # where its panels start
+        B = 12 if no_title else 22                    # its frame's foot
+        top = T + 5
+        mline_h = 0 if no_time else (18 if sized else LH115)
+        tabs_y = top + (mline_h + 5 if not no_time else 0)
         bar_bottom = (tabs_y + TAB_H + 2) if not split else tabs_y
         content_h = 26 * len(rows) if rows else LH12 + 16
         list_h = maxh if gripping else (min(content_h, maxh) if maxh else content_h)
         body_h = 4 + 18 + list_h + 6 + 1
-        H = bar_bottom + body_h + 22
+        H = bar_bottom + body_h + B
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, title, dpi_k, ui, hits)
+        if not no_title:
+            _head(p, W, title, dpi_k, ui, hits)
         # -- the duration line and the tabs ---------------------------------
-        p.fill(8, 44, W - 16, bar_bottom - 44, OV_BG)
-        p.hline(8, 44, W - 16, OV_LINE, 0.35)
-        hot = bool(m.get("fight"))
-        clock = tr("Durée : {t}").replace("{t}", m.get("time") or "0:00")
-        if hot:
-            clock += " " + tr("(en cours)")
-        elif m.get("held"):
-            clock += " " + tr("(terminé)")
-        clock_top = 49 + (18 - LH115) / 2 if sized else 49
-        p.text(clock, 18, clock_top, LH115, 11.5, 700 if hot else 400,
-               "#8A3F0E" if hot else "#4A3229")
-        if sized:
-            fx = W - 36
-            p.fill(fx, 49, 20, 18, (255, 246, 230), 0.4 if hover == "fit" else 0.2, r=4)
-            p.border(fx, 49, 20, 18, (74, 50, 41), 0.45, r=4)
-            _icon(p, "fit", fx + 4.5, 49 + 2.5, 11, 13, OV_TEXT if hover == "fit" else "#4A3229")
-            hits.append((fx, 49, 20, 18, "fit", None))
+        if bar_bottom > T:
+            p.fill(8, T, W - 16, bar_bottom - T, OV_BG)
+        if not no_title:
+            p.hline(8, T, W - 16, OV_LINE, 0.35)
+        if not no_time:
+            hot = bool(m.get("fight"))
+            clock = tr("Durée : {t}").replace("{t}", m.get("time") or "0:00")
+            if hot:
+                clock += " " + tr("(en cours)")
+            elif m.get("held"):
+                clock += " " + tr("(terminé)")
+            clock_top = top + (18 - LH115) / 2 if sized else top
+            p.text(clock, 18, clock_top, LH115, 11.5, 700 if hot else 400,
+                   "#8A3F0E" if hot else "#4A3229")
+            if sized:
+                fx = W - 36
+                p.fill(fx, top, 20, 18, (255, 246, 230), 0.4 if hover == "fit" else 0.2, r=4)
+                p.border(fx, top, 20, 18, (74, 50, 41), 0.45, r=4)
+                _icon(p, "fit", fx + 4.5, top + 2.5, 11, 13, OV_TEXT if hover == "fit" else "#4A3229")
+                hits.append((fx, top, 20, 18, "fit", None))
         tw = W - 32
         half = (tw - 2) / 2
         if not split:
@@ -1108,7 +1228,14 @@ class MeterView:
         if gripping:
             # the height being set: the list's edge outlined (.mrows.sizing)
             p.border(14, list_y, W - 28, list_h, (74, 50, 41), 0.6)
-        hits.append((32, H - 24, W - 64, 16, "grip", list_h))
+        hits.append((32, H - B - 2, W - 64, B, "grip", list_h))
+        if no_title:
+            # no head: its gear in the corner, seen with the mouse over it
+            gx, gy = W - 26, 0
+            if hover is not None:
+                p.fill(gx, gy, 20, 20, (58, 46, 39), 0.85, r=10)
+                _icon(p, "gear", gx + 3, gy + 3, 14, 14, "#FFFFFF")
+            hits.insert(0, (gx, gy, 20, 20, "gear", None))
         return p, hits, W, H
 
     def _tabs(self, p, tabs_y, tw, half, heal, hover, hits):
@@ -1840,6 +1967,11 @@ class NativeOverlay(_NativeWindow):
         self.hide_free = bool(d.get("hideFree"))
         on = (d.get("on") or {}).get(self.id, True)
         changed = False
+        theme = d.get("theme") or "farever"
+        _set_theme(theme)
+        if theme != getattr(self, "_drawn_theme", None):
+            self._drawn_theme = theme
+            changed = True
         if d.get("show") and data != self._data:
             self._data = data
             self._pushed(data)
@@ -1886,12 +2018,23 @@ class NativeOverlay(_NativeWindow):
         self._hide_tip()
 
     # -- drawing (the UI thread) ----------------------------------------------
+    def _bg(self):
+        """Its background's opacity (0..1), its style's."""
+        try:
+            return max(0, min(100, int(self._style.get("bg", 100)))) / 100
+        except (TypeError, ValueError):
+            return 1.0
+
     def _redraw(self):
         dpi_k = self._dpi_k()
         k = dpi_k * self.scale / 100
         self._k = k
         ui = dict(self._ui)
-        p, hits, _w, _h = self.VIEW(self.tr).draw(k, dpi_k, self._data, self._style, ui)
+        _BG[0] = self._bg()
+        try:
+            p, hits, _w, _h = self.VIEW(self.tr).draw(k, dpi_k, self._data, self._style, ui)
+        finally:
+            _BG[0] = 1.0
         self._ui["scroll"] = ui.get("scroll", 0.0)
         self._hits = hits
         self._img = p.img
@@ -1926,6 +2069,8 @@ class NativeOverlay(_NativeWindow):
     # -- the mouse (the UI thread) --------------------------------------------
     HAND = ("gear", "tab", "fit", "slider", "reset", "add", "del", "switch")
     HOVER_ARGS = ("row", "goal", "del", "switch")       # hovers kept with their arg
+    # where a press held and moved moves it (anywhere but on a control)
+    HOLD_TO_MOVE = (None, "row", "list", "pet", "goal")
     SCALE_MAX = 110                                     # its size's greatest (%)
     SCALE_DEFAULT = 100                                 # its size, reset (%)
 
@@ -1969,6 +2114,12 @@ class NativeOverlay(_NativeWindow):
             kind, arg, rect = self._hit(x, y)
             self._press = {"kind": kind, "arg": arg, "rect": rect, "x": x, "y": y,
                            "screen": _screen_pt()}
+            if kind in self.HOLD_TO_MOVE:
+                # held anywhere but on a control: it moves once the mouse
+                # does (a few pixels), else it is the click it was
+                self._press.update(kind="drag", pending=(kind, arg),
+                                   at=self._at or (0, 0))
+                return
             if kind == "drag":
                 self.dragging = True
                 self._press["at"] = self._at or (0, 0)
@@ -1982,6 +2133,15 @@ class NativeOverlay(_NativeWindow):
             if not press:
                 return
             kind, arg = press["kind"], press["arg"]
+            if kind == "drag" and press.get("pending") is not None:
+                # held without moving: a click on what was under it
+                kind, arg = press["pending"]
+                if ev != "up" or kind is None:
+                    return
+                k2, a2, _r = self._hit(x, y)
+                if (k2, a2) == (kind, arg):
+                    self._click(kind, arg)
+                return
             if kind == "drag":
                 self.dragging = False
                 if ev == "up" and self.game and self._at:
@@ -2010,6 +2170,13 @@ class NativeOverlay(_NativeWindow):
 
     def _drag_move(self, x, y):
         pr = self._press
+        if pr["kind"] == "drag" and pr.get("pending") is not None:
+            sx, sy = _screen_pt()
+            if abs(sx - pr["screen"][0]) + abs(sy - pr["screen"][1]) < 5:
+                return
+            pr["pending"] = None                    # moving now
+            self.dragging = True
+            self._hide_tip()
         if pr["kind"] == "drag":
             sx, sy = _screen_pt()
             self._at = (pr["at"][0] + sx - pr["screen"][0], pr["at"][1] + sy - pr["screen"][1])
@@ -2853,7 +3020,8 @@ class ConfigView:
     TAB_FRAME = (207, 184, 170)
     TAB_H = 44
     # each overlay's glyph (the app's tabs', the game's)
-    TAB_ICONS = {"meter": "Live", "meterheal": "Character", "luck": "Collection",
+    TAB_ICONS = {"general": "Build", "meter": "Live", "meterheal": "Character",
+                 "luck": "Collection",
                  "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
                  "minimap": "Map"}
     ROW, SEC, PAD = 28, 32, 14
@@ -2869,11 +3037,13 @@ class ConfigView:
                 h += self.SEC
             elif r["k"] == "grid":
                 h += self.ROW * math.ceil(len(r["items"]) / 3)
+            elif r["k"] == "cards":
+                h += self.CARD_H + 12
             else:
                 h += self.ROW
         return h + self.PAD
 
-    def draw(self, k, dpi_k, data, tab, ui, local, icon_fn):
+    def draw(self, k, dpi_k, data, tab, ui, local, icon_fn, preview_fn=None):
         tr = self.tr
         tabs = (data or {}).get("tabs") or []
         cur = next((t for t in tabs if t["id"] == tab), tabs[0] if tabs else None)
@@ -2883,7 +3053,7 @@ class ConfigView:
         hits = []
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, tr("Configuration overlays"), dpi_k, ui, hits)
+        _head(p, W, tr("Configuration overlays"), dpi_k, ui, hits, close=True)
         p.fill(8, 44, W - 16, body, self.BG)
         # the menu: an overlay a tab, as the game's own lists (dark bands
         # on a light ground, the glyph and the name in white, the one open
@@ -2927,6 +3097,10 @@ class ConfigView:
                                      icon_fn, local)
                 y += self.ROW * math.ceil(len(items) / 3)
                 continue
+            if kind == "cards":
+                self._cards(p, x0, y + 6, r, (cur["id"], i), hits, ui, preview_fn)
+                y += self.CARD_H + 12
+                continue
             if kind == "toggle":
                 self._toggle_row(p, x0, x1, y, r, (cur["id"], i, None), hits, icon_fn, local)
             else:
@@ -2942,10 +3116,35 @@ class ConfigView:
             y += self.ROW
         return p, hits, W, H
 
+    CARD_W, CARD_H = 250, 178
+
+    def _cards(self, p, x, y, r, ref, hits, ui, preview_fn):
+        """Choices as cards side by side: each its preview (the meter in
+        it, over the game), its name; the chosen one framed gold."""
+        for j, it in enumerate(r["items"]):
+            cx = x + j * (self.CARD_W + 16)
+            on = bool(it.get("on"))
+            hov = ui.get("hover") == ("card", (ref, it["v"]))
+            p.fill(cx, y, self.CARD_W, self.CARD_H, self.BOX if on or hov else self.MENU_BG,
+                   1.0 if on else 0.8, r=6)
+            pw, ph = self.CARD_W - 16, self.CARD_H - 44
+            pic = preview_fn(it["v"], pw, ph) if preview_fn else None
+            if pic is not None:
+                p._put(pic, round((cx + 8) * p.k), round((y + 8) * p.k))
+            p.ring(cx + 8, y + 8, pw, ph, 1, self.LINE, 0.8, r=3)
+            p.text(it["t"], cx + 12, y + self.CARD_H - 22 - LH13 / 2 + 6, LH13, 13,
+                   700 if on else 400, self.INK)
+            _diamond(p, cx + self.CARD_W - 18, y + self.CARD_H - 18, 7.5, self.EDGE)
+            _diamond(p, cx + self.CARD_W - 18, y + self.CARD_H - 18, 5.5,
+                     self.GOLD if on else self.BG)
+            if on:
+                p.ring(cx, y, self.CARD_W, self.CARD_H, 2, self.GOLD, r=6)
+            hits.append((cx, y, self.CARD_W, self.CARD_H, "card", (ref, it["v"])))
+
     def _tab_name(self, p, text, x, mid, maxw, dpi_k):
         """A tab's name in the game's title font, white (Segoe UI bold when
         a letter is missing from it)."""
-        t = _title_image(text, dpi_k, "#FFFFFF")
+        t = None if _minimal() else _title_image(text, dpi_k, "#FFFFFF")
         k = p.k
         if t:
             ink, cw, chh = t
@@ -3033,7 +3232,9 @@ class NativeConfig(NativeOverlay):
     own. Each change goes to the app (its row's action); an overlay's
     size and opacity show on it at once."""
 
-    HAND = NativeOverlay.HAND + ("step", "choice")
+    HAND = NativeOverlay.HAND + ("step", "choice", "card")
+    HOVER_ARGS = NativeOverlay.HOVER_ARGS + ("card",)
+    HOLD_TO_MOVE = (None,)
 
     def __init__(self, pipe, lang, catalog, folder, overlays):
         super().__init__("config", _PanelPipe(self, pipe), lang, catalog)
@@ -3041,6 +3242,7 @@ class NativeConfig(NativeOverlay):
         self._overlays = overlays           # () -> the overlays (to show a size on)
         self._icons = {}
         self._view = ConfigView(self.tr)
+        self._previews = {}                 # (theme, w, h, k) -> its card's picture
         self._tab = None
         self._local = {}                    # (tab, row[, item]) -> its value, before the app's
         self._user_at = None
@@ -3061,6 +3263,12 @@ class NativeConfig(NativeOverlay):
         self.game = d.get("game")
         self.lock_mode = d.get("lock") or "auto"
         data = d.get("config")
+        theme = d.get("theme") or "farever"
+        _set_theme(theme)
+        if theme != getattr(self, "_drawn_theme", None):
+            self._drawn_theme = theme
+            if self.shown:
+                self.redraw()
         if data != self._data:
             self._data = data
             # a value the app now has: no more held here
@@ -3119,7 +3327,7 @@ class NativeConfig(NativeOverlay):
         k = self._dpi_k()
         self._k = k
         p, hits, _w, _h = self._view.draw(k, k, self._data, self._tab, dict(self._ui),
-                                          self._local, self._icon)
+                                          self._local, self._icon, self._preview)
         self._hits = hits
         self._img = p.img
         self.size = p.img.size
@@ -3128,6 +3336,47 @@ class NativeConfig(NativeOverlay):
 
     def _icon(self, key, px, found=False):
         return _key_icon(self._icons, self._folder, key, px, found)
+
+    def _preview(self, theme, w, h):
+        """A theme's card: the meter in it, over a scene of the game, w x h
+        (CSS px) at the window's scale; kept."""
+        k = self._k
+        key = (theme, w, h, round(k * 100))
+        if key in self._previews:
+            return self._previews[key]
+        was = _THEME[0]
+        try:
+            _THEME[0] = theme
+            rows = [("warrior", "Baduok", 1.0, "1080k", "112", "34%"),
+                    ("priest", "Zecharia", 0.79, "851k", "88", "27%"),
+                    ("mage", "Pikabou", 0.78, "847k", "88", "26%"),
+                    ("rogue", "Avira", 0.4, "426k", "44", "13%")]
+            m = {"tab": "dmg", "time": "1:36", "fight": True,
+                 "rows": [{"rank": i + 1, "name": n, "ck": c, "cls": c, "f": f, "total": t,
+                           "rate": rt, "pct": pc} for i, (c, n, f, t, rt, pc) in enumerate(rows)]}
+            pm, _hh, mw, mh = MeterView(self.tr).draw(k, k, m, {}, {})
+            scene = None
+            try:
+                scene = Image.open(self._folder / "dungeon_bg" / "loading_screen1.webp").convert("RGBA")
+            except OSError:
+                pass
+            W, H = round(w * k), round(h * k)
+            out = Image.new("RGBA", (W, H), (60, 80, 70, 255))
+            if scene is not None:
+                f = max(W / scene.width, H / scene.height)
+                sc = scene.resize((round(scene.width * f), round(scene.height * f)), Image.LANCZOS)
+                out.paste(sc.crop((0, 0, W, H)), (0, 0))
+            f = min((W - 12) / pm.img.width, (H - 12) / pm.img.height)
+            mi = pm.img.resize((max(1, round(pm.img.width * f)), max(1, round(pm.img.height * f))),
+                               Image.LANCZOS)
+            out.alpha_composite(mi, ((W - mi.width) // 2, (H - mi.height) // 2))
+            cut = Image.new("L", out.size, 0)
+            ImageDraw.Draw(cut).rounded_rectangle((0, 0, W - 1, H - 1), round(3 * k), fill=255)
+            out.putalpha(cut)
+        finally:
+            _THEME[0] = was
+        self._previews[key] = out
+        return out
 
     def _place(self, present=True):
         """In the middle of the game's window, or where the player put it."""
@@ -3157,7 +3406,7 @@ class NativeConfig(NativeOverlay):
                 o._style = dict(o._style, **{r["style"]: v})
                 if r["style"] == "opacity":
                     o.opacity = max(30, min(100, v))
-                else:
+                elif r["style"] == "scale":
                     o.scale = max(70, min(o.SCALE_MAX, v))
                 o.redraw()
         if changed or final:
@@ -3187,6 +3436,11 @@ class NativeConfig(NativeOverlay):
             r = self._row(ref)
             if r is not None:
                 self._set_range(ref, self._local.get(ref, r["v"]) + d * r["step"], True)
+        elif kind == "card":
+            ref, v = arg
+            r = self._row(ref)
+            if r is not None:
+                self._send(r, v)
         elif kind == "choice":
             ref, d = arg
             r = self._row(ref)

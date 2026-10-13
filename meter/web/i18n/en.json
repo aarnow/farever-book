@@ -1335,5 +1335,11 @@
  "Configuration overlays": "Overlay settings",
  "Afficher l'overlay": "Show the overlay",
  "Lignes": "Lines",
- "Donjon bonus": "Bonus dungeon"
+ "Donjon bonus": "Bonus dungeon",
+ "Minimaliste": "Minimalist",
+ "Général": "General",
+ "Apparence": "Appearance",
+ "Opacité du fond": "Background opacity",
+ "Afficher le titre": "Show the title",
+ "Afficher la durée": "Show the duration"
 }
