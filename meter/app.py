@@ -192,6 +192,8 @@ class App:
         # the meter split in two overlays, damage ("meter") and heals
         # ("meterheal"), each its own place and settings; else one, tabbed
         self._ov_split = False
+        # the loot luck overlay's lines the player hid (their counter ids)
+        self._luck_hidden = set()
         self._bonus_dungeon = None          # the hero's bonus heroic dungeon
         # locked (the mouse goes through): in the game's focus mode, or always
         self._ov_lock_always = False
@@ -210,6 +212,9 @@ class App:
         self._show_heal = True
         self._parse_journal = False         # a parse keeps its journal
         self._auto_reset_boss = True        # on unless the player turns it off
+        # the meter afresh on the first hit on a training dummy (gamelink
+        # _dummy_hit): on unless the player turns it off
+        self._auto_reset_dummy = True
         self._rift_keep = 0                 # rift reports kept (0: all)
         self._rift_sel = set()              # rift reports ticked for deletion
         self._rift_confirm = False          # "delete" pressed once
@@ -309,6 +314,8 @@ class App:
         # default: turned on once for everyone, then the player's choice
         if isinstance(data.get("auto_reset_boss"), bool) and                 int(data.get("settings_rev") or 0) >= SETTINGS_REV:
             self._auto_reset_boss = data["auto_reset_boss"]
+        if isinstance(data.get("auto_reset_dummy"), bool):
+            self._auto_reset_dummy = data["auto_reset_dummy"]
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
             self._rift_keep = data["rift_keep"]
         bind = data.get("reset_bind")
@@ -345,6 +352,8 @@ class App:
             self._ov_tab = data["overlay_tab"]
         if isinstance(data.get("overlay_split"), bool):
             self._ov_split = data["overlay_split"]
+        if isinstance(data.get("luck_hidden"), list):
+            self._luck_hidden = {str(x) for x in data["luck_hidden"]}
         if isinstance(data.get("overlay_lock_always"), bool):
             self._ov_lock_always = data["overlay_lock_always"]
         if isinstance(data.get("overlay_hide_free"), bool):
@@ -370,6 +379,7 @@ class App:
                 "show_heal": bool(self._show_heal),
                 "parse_journal": bool(self._parse_journal),
                 "auto_reset_boss": bool(self._auto_reset_boss),
+                "auto_reset_dummy": bool(self._auto_reset_dummy),
                 "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
                 "reset_bind": dict(RESET_BIND),
@@ -381,6 +391,7 @@ class App:
                 "overlay_on": self._ov_on,
                 "overlay_tab": self._ov_tab,
                 "overlay_split": bool(self._ov_split),
+                "luck_hidden": sorted(self._luck_hidden),
                 "overlay_lock_always": bool(self._ov_lock_always),
                 "overlay_hide_free": bool(self._ov_hide_free),
                 "overlay_style": self._ov_style,
@@ -867,6 +878,8 @@ class App:
             # the meter: one overlay with two tabs, or one for damage and
             # one for heals (value: True, False, or None to switch)
             "ov_split": lambda p: self._ov_set_split(p.get("value")),
+            # the loot luck overlay: one of its lines shown or hidden
+            "luck_row": self._luck_row,
             "esc_open": self._esc_open,
             "goal_catalog": lambda p: G.catalog(p.get("cat"), p.get("sub"),
                                                 self._learnt()),
@@ -875,6 +888,7 @@ class App:
             # settings
             "toggle_heal": self._toggle_heal,
             "toggle_auto_reset": self._toggle_auto_reset_boss,
+            "toggle_auto_reset_dummy": self._toggle_auto_reset_dummy,
             "begin_bind": self._begin_bind_capture,
             "set_zoom": lambda p: self._set_zoom(p.get("value", 130)),
             "set_view3d": lambda p: self._set_view3d(p.get("on")),
@@ -1719,6 +1733,17 @@ class App:
             self._ov_tab = tab
             self._save_settings()
 
+    def _luck_row(self, p):
+        """The loot luck overlay's gear: one of its lines shown or not."""
+        cid = str(p.get("id") or "")
+        if not cid:
+            return
+        if p.get("value"):
+            self._luck_hidden.discard(cid)
+        else:
+            self._luck_hidden.add(cid)
+        self._save_settings()
+
     def _ov_set_split(self, value):
         """The meter as two overlays (damage, heals) or one with two tabs
         (value None: the other way). Split, the heals' one shows."""
@@ -1804,9 +1829,12 @@ class App:
                          if kind and not self.ui_state.in_dungeon() else None)
         spec["goals"] = self.goals.view()
         # the loot luck counters, as the live tab shows them
-        spec["luck"] = {"rows": (_profile_luck(self._self_prof)
-                                 if self._self_prof else None),
-                        "well": soulwell_name()}
+        rows = _profile_luck(self._self_prof) if self._self_prof else None
+        spec["luck"] = {"rows": [dict(r, hide=r.get("id") in self._luck_hidden)
+                                 for r in rows] if rows is not None else None,
+                        "well": soulwell_name(),
+                        # its gear: the bonus dungeon's overlay shown or not
+                        "bonusOn": bool(self._ov_on.get("bonus"))}
         return spec
 
     def on_achievements(self, p):
@@ -3093,6 +3121,10 @@ class App:
             {"k": "button", "id": "toggle_auto_reset",
              "t": self._tick(self._auto_reset_boss,
                              tr("Réinitialiser au pull d'un boss"))},
+            {"k": "button", "id": "toggle_auto_reset_dummy",
+             "t": self._tick(self._auto_reset_dummy,
+                             tr("Réinitialiser au premier coup sur un mannequin "
+                                "(après 10 s sans le frapper)"))},
             {"k": "section", "t": tr("Raccourci clavier")},
             {"k": "field", "t": tr("Réinitialiser le combat"),
              "c": {"k": "label", "t": self._bind_prompt()}},
@@ -3286,6 +3318,14 @@ class App:
 
     def _toggle_auto_reset_boss(self):
         self._auto_reset_boss = not self._auto_reset_boss
+        self._save_settings()
+
+    def auto_reset_dummy(self) -> bool:
+        """Read by the hook thread, so it stays a plain attribute read."""
+        return bool(self._auto_reset_dummy)
+
+    def _toggle_auto_reset_dummy(self):
+        self._auto_reset_dummy = not self._auto_reset_dummy
         self._save_settings()
 
 

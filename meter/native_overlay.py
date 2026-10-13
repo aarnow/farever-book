@@ -920,13 +920,14 @@ def _head(p, W, title, dpi_k, ui, hits, extra=None):
     hits.append((18, 12, W - 36, 32, "drag", None))
 
 
-def _settings(p, W, style, ui, hits, tr, switch=None):
+def _settings(p, W, style, ui, hits, tr, switches=(), title=None):
     """The gear's panel: opacity and size, each a slider, and back to the
-    defaults (overlay.js settingsPanel); `switch` (label, on) a box to tick
-    under them (the meter's: two overlays or one). -> its bottom."""
+    defaults (overlay.js settingsPanel); `switches` [(label, on, key)] boxes
+    to tick under them, under `title` (the meter's: two overlays or one;
+    the luck's: the bonus dungeon, its lines). -> its bottom."""
     st = ui.get("style") or style
     y = 44.0
-    h = _settings_height(bool(switch)) - 44.0
+    h = _settings_height(len(switches), bool(title)) - 44.0
     p.fill(8, y, W - 16, h, OV_BG)
     p.hline(8, y, W - 16, OV_LINE, 0.35)
     p.hline(8, y + h - 1, W - 16, OV_LINE, 0.35)
@@ -947,9 +948,12 @@ def _settings(p, W, style, ui, hits, tr, switch=None):
         p.fill(cx - 7, mid - 7, 14, 14, OV_ACCENT, r=7)
         hits.append((tx, ty, tw, 16, "slider", (key, lo, hi, tx + 8, tw - 16)))
         sy += SET_H + 10
-    if switch:
-        label, on = switch
-        hov = ui.get("hover") == "switch"
+    if title and switches:
+        p.text(title.upper(), 20, sy, LH11, 10, 700, (237, 216, 208), spacing=0.5)
+        sy += LH11 + 6
+    for i, (label, on, key) in enumerate(switches):
+        arg = (key, not on)
+        hov = ui.get("hover") == ("switch", arg)
         p.fill(20, sy + (SWITCH_H - 14) / 2, 14, 14, OV_ACCENT if on else OV_WELL, r=3)
         p.border(20, sy + (SWITCH_H - 14) / 2, 14, 14,
                  "#FFF6E6" if hov else (237, 216, 208), 1.0 if hov else 0.5, r=3)
@@ -958,8 +962,8 @@ def _settings(p, W, style, ui, hits, tr, switch=None):
                    align="center", w=14)
         p.text(label, 42, sy + (SWITCH_H - LH12) / 2, LH12, 12, 400, "#FFF6E6",
                clip=W - 62)
-        hits.append((18, sy, W - 36, SWITCH_H, "switch", not on))
-        sy += SWITCH_H + 10
+        hits.append((18, sy, W - 36, SWITCH_H, "switch", arg))
+        sy += SWITCH_H + (SWITCH_GAP if i < len(switches) - 1 else 10)
     label = tr("Par défaut")
     cw = p.width(label, 11) + 18 + 2
     hov = ui.get("hover") == "reset"
@@ -971,12 +975,13 @@ def _settings(p, W, style, ui, hits, tr, switch=None):
     return y + h
 
 
-def _settings_height(switch=False):
+def _settings_height(switches=0, title=False):
     return (44.0 + 1 + 10 + SET_H + 10 + SET_H + 10 + CHIP_H + 12 + 1
-            + (SWITCH_H + 10 if switch else 0))
+            + (switches * SWITCH_H + (switches - 1) * SWITCH_GAP + 10 if switches else 0)
+            + (LH11 + 6 if title and switches else 0))
 
 
-SWITCH_H = 20                       # the gear's box to tick, its line
+SWITCH_H, SWITCH_GAP = 20, 4        # the gear's boxes to tick, their lines
 
 
 class MeterView:
@@ -1012,12 +1017,12 @@ class MeterView:
         title = tr(self.title) if not split else (
             tr("Soins") if split == "heal" else tr("Dégâts"))
         if ui.get("settings"):
-            W, H = self.MIN_W, _settings_height(True) + 22
+            W, H = self.MIN_W, _settings_height(1) + 22
             p = Paint(W, H, k)
             _frame(p, W, H)
             _head(p, W, title, dpi_k, ui, hits)
-            _settings(p, W, style, ui, hits, tr, switch=(
-                tr("Deux overlays : dégâts et soins"), bool(split)))
+            _settings(p, W, style, ui, hits, tr, switches=[
+                (tr("Deux overlays : dégâts et soins"), bool(split), "split")])
             return p, hits, W, H
         W = self.layout_width(Paint(1, 1, k), m)
         # the list: its rows' height, at most the player's (max-height),
@@ -1211,12 +1216,18 @@ class LuckView:
         hits = []
         rows = (data or {}).get("rows")
         if ui.get("settings"):
-            H = _settings_height() + 22
+            # what it shows: the bonus dungeon's overlay, each of its lines
+            switches = [(tr("Donjon héroïque bonus"), bool((data or {}).get("bonusOn")), "bonus")]
+            switches += [(str(r.get("t") or ""), not r.get("hide"), "row:" + str(r.get("id")))
+                         for r in rows or () if r.get("id")]
+            H = _settings_height(len(switches), True) + 22
             p = Paint(W, H, k)
             _frame(p, W, H)
             _head(p, W, tr(self.title), dpi_k, ui, hits)
-            _settings(p, W, style, ui, hits, tr)
+            _settings(p, W, style, ui, hits, tr, switches=switches, title=tr("Affichage"))
             return p, hits, W, H
+        # the lines the player keeps
+        rows = [r for r in rows or () if not r.get("hide")] if rows is not None else None
         content = 26 * len(rows) if rows else LH12 + 16
         body_h = 1 + 4 + content + 6 + 1
         H = 44 + body_h + 22
@@ -1227,7 +1238,9 @@ class LuckView:
         p.hline(8, 44, W - 16, OV_LINE, 0.35)
         p.hline(8, 44 + body_h - 1, W - 16, OV_LINE, 0.35)
         if not rows:
-            p.text(tr("Lecture des compteurs…"), 20, 49 + 8, LH12, 12, 400, OV_DIM)
+            # not read yet, or every line hidden (its gear shows them again)
+            p.text(tr("Lecture des compteurs…") if rows is None
+                   else tr("Toutes les lignes sont masquées."), 20, 49 + 8, LH12, 12, 400, OV_DIM)
             return p, hits, W, H
         sh = [(1, 2, 0.9), (0, 3, 0.6)]
         for i, r in enumerate(rows):
@@ -1871,7 +1884,7 @@ class NativeOverlay(_NativeWindow):
             kind, arg, _r = self._hit(x, y)
             self._cursor_kind = ("resize" if kind == "grip" else
                                  "hand" if kind in self.HAND else "arrow")
-            hover = ((kind, arg) if kind in ("row", "goal", "del") else
+            hover = ((kind, arg) if kind in ("row", "goal", "del", "switch") else
                      "tab:" + arg if kind == "tab" else kind)
             if hover != self._ui.get("hover"):
                 self._ui["hover"] = hover
@@ -2059,7 +2072,7 @@ class NativeMeter(NativeOverlay):
             self._ui["settings"] = False
             self._ui.pop("style", None)
             self._redraw()
-            self._notify("ov_split", {"value": bool(arg)})
+            self._notify("ov_split", {"value": bool(arg[1])})
         else:
             super()._click(kind, arg)
 
@@ -2076,6 +2089,16 @@ class NativeLuck(NativeOverlay):
 
     def _default_pos(self, gw, gh, w, h):
         return {"ax": "l", "dx": 24, "ay": "b", "dy": gh // 5}       # low left
+
+    def _click(self, kind, arg):
+        if kind == "switch":
+            key, on = arg
+            if key == "bonus":                  # the bonus dungeon's overlay
+                self._notify("ov_show", {"id": "bonus", "value": bool(on)})
+            elif key.startswith("row:"):        # one of its own lines
+                self._notify("luck_row", {"id": key[4:], "value": bool(on)})
+        else:
+            super()._click(kind, arg)
 
 
 class NativeGoals(NativeOverlay):

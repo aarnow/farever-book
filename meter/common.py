@@ -180,6 +180,13 @@ NULLIFIED_BLOCKERS = frozenset({"InvulnerableHit"})
 BOSS_PULL_BACKLAG_SECS = 4.0
 
 
+# The training dummy (unit "Dummy", "Mannequin": not the fleeing bag nor
+# the ally dummy): the meter starts afresh on a hit on it after this long
+# without hitting it.
+DUMMY_UNITS = frozenset({"Dummy"})
+DUMMY_PAUSE_SECS = 10.0
+
+
 # Cap on the rolling event buffer behind that replay.
 RECENT_EVENT_MAX = 2048
 

@@ -1364,7 +1364,7 @@ def _profile_luck(prof):
         steps = (max(0, math.ceil(round((cap - base) / inc, 6)) - int(n))
                  if inc else 0)
         st = p.get("status")
-        out.append({"t": tr(label), "n": int(n), "bonus": _pct2(bonus),
+        out.append({"id": cid, "t": tr(label), "n": int(n), "bonus": _pct2(bonus),
                     "img": item_icon(LUCK_ICONS.get(cid)),
                     "cap": _pct2(cap), "full": bonus >= cap,
                     # how far to the cap, for a bar

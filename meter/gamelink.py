@@ -8,7 +8,8 @@ import time
 import frida
 
 from common import (
-    BOSS_PULL_BACKLAG_SECS, NULLIFIED_BLOCKERS, STOP, TARGET_PROCESS, _APP,
+    BOSS_PULL_BACKLAG_SECS, DUMMY_PAUSE_SECS, DUMMY_UNITS, NULLIFIED_BLOCKERS,
+    STOP, TARGET_PROCESS, _APP,
     _mmss)
 from i18n import tr
 from winsys import _process_age, _window_rect_of_pid
@@ -106,6 +107,9 @@ class GameSession:
         self.boss_fight_on = False
         self.boss_t0 = None
         self.boss_kinds = ()
+        # the last hit on the training dummy (see _on_hit), 0: none since
+        # another target
+        self.dummy_at = 0.0
         # diagnostics (see their handlers)
         self.nullified = {}
         self.nullified_at = 0.0
@@ -361,10 +365,28 @@ class GameSession:
                 print(f"[meter] summon damage: pet={sig[0]!r} "
                       f"credited to {sig[1]!r}", file=sys.stderr)
         if not dropped:
+            self._dummy_hit(p)
             # a nullified hit must not start or extend a fight
             self.session.record(p)
             self.rift_rec.record("hit", p)
             self.dungeon.record("hit", p)
+
+    def _dummy_hit(self, p):
+        """Our hit on the training dummy after DUMMY_PAUSE_SECS without one:
+        the meter starts afresh (this hit its first), when the player wants
+        it. Only the pause counts: hits on other units come between those on
+        the dummy (measured 2026-10-13: an area's, a summon's), and re-arming
+        on them reset the meter on nearly every hit."""
+        if p.get("tk") not in DUMMY_UNITS:
+            return
+        now = time.monotonic()
+        fresh = now - self.dummy_at > DUMMY_PAUSE_SECS
+        self.dummy_at = now
+        app = _app()
+        if fresh and app is not None and app.auto_reset_dummy():
+            self.session.reset()
+            print("[meter] meter reset: a new run on the training dummy",
+                  file=sys.stderr)
 
     def _on_taken(self, p):
         # a mob's hit on a player: the journals' only (a dungeon boss's, a
