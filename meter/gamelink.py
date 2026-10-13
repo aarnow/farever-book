@@ -80,7 +80,7 @@ class GameSession:
                   "roster": "on_character", "profile": "on_character",
                   "selfprofile": "on_character", "elements": "on_elements",
                   "cursor": "on_cursor", "pos": "on_pos",
-                  "units": "on_units"}
+                  "units": "on_units", "open_panel": "on_open_panel"}
 
     def _on_dungeon(self, p):
         self.dungeon.update(p.get("d") or {})
@@ -612,6 +612,9 @@ class GameSession:
             self.link.step("hook", "ok", "")
         self.ready["ok"] = p.get("ok")
         self.ready["early"] = bool(p.get("early"))
+        app = _app()
+        if app is not None and p.get("ok"):
+            app.on_hook_ready()
         print(f"[meter] hook ready ok={p.get('ok')}"
               + (" (game still booting)" if self.ready["early"] else ""),
               file=sys.stderr)

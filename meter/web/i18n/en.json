@@ -1341,5 +1341,11 @@
  "Apparence": "Appearance",
  "Opacité du fond": "Background opacity",
  "Afficher le titre": "Show the title",
- "Afficher la durée": "Show the duration"
+ "Afficher la durée": "Show the duration",
+ "Dans le jeu": "In the game",
+ "Afficher les points de vie dans les barres (prototype)": "Show health points in the bars (prototype)",
+ "Barres de vie": "Health bars",
+ "Afficher les points de vie dans les barres": "Show health points in the bars",
+ "Jeu": "Game",
+ "Overlays": "Overlays"
 }

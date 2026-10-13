@@ -115,6 +115,7 @@ function findTableFast(resolved) {
         if (!m) continue;
         let frontier = seedsOf(m);
         const seen = new Set();
+        const parentOf = new Map();         // node -> [the pointer it was read from, its slot]
         let gaveUp = false;
         for (let depth = 0; depth <= 2 && frontier.length && !gaveUp; depth++) {
             const next = [];
@@ -123,11 +124,21 @@ function findTableFast(resolved) {
                 if (seen.has(k)) continue;
                 seen.add(k);
                 if (seen.size > MAX_NODES || Date.now() - t0 > BUDGET_MS) { gaveUp = true; break; }
-                if (isTableAt(p, resolved)) return p;
+                if (isTableAt(p, resolved)) {
+                    // read from hl_module.functions_ptrs (+32): that is the
+                    // module, its globals at +16 (indexes) and +24 (data)
+                    const par = parentOf.get(k);
+                    if (par && par[1] === 4) hlModule = par[0];
+                    return p;
+                }
                 if (depth === 2) continue;
                 for (let i = 0; i < EXPAND; i++) {
                     let v; try { v = p.add(i * 8).readPointer(); } catch (e) { break; }
-                    if (v.and(7).toInt32() === 0 && inHeap(v)) next.push(v);
+                    if (v.and(7).toInt32() === 0 && inHeap(v)) {
+                        const vk = v.toString();
+                        if (!parentOf.has(vk)) parentOf.set(vk, [p, i]);
+                        next.push(v);
+                    }
                 }
             }
             frontier = next;
@@ -212,6 +223,56 @@ let getHeroFns = [];      // [{addr}]
 let localHero = null;
 let localName = null;
 let pickedHero = null;      // {id, name}: the character picked on the select screen
+let hlModule = null;        // the game's hl_module (its globals), when the walk found it
+
+// ---- the bars' values (an option of the app's, off by default) ----
+// The game's own bars write "value / max" in themselves when its developer
+// preference DevPrefs.showRessources is on (AttributeBar.sync): set in its
+// memory, never saved (the game's onChange is not called). Off again: the
+// value it had. Re-set every few seconds (the game may read its prefs anew).
+let barValuesWanted = false, barValuesWas = null;
+function hlGlobal(g) {
+    // a global's value (an object), by its index: hl_module's globals
+    const idx = hlModule.add(16).readPointer().add(g * 4).readS32();
+    return hlModule.add(24).readPointer().add(idx).readPointer();
+}
+function devPrefs() {
+    if (!hlModule || !OFF.Config || OFF.Config.global == null || !OFF.DevPrefs) return null;
+    try {
+        const cfg = hlGlobal(OFF.Config.global);
+        if (typeName(cfg) !== "$Config") return null;
+        const prefs = cfg.add(OFF.Config.prefs).readPointer();
+        return typeName(prefs) === "DevPrefs" ? prefs : null;
+    } catch (e) { return null; }
+}
+function applyBarValues() {
+    const prefs = devPrefs();
+    if (!prefs) return false;
+    try {
+        const at = prefs.add(OFF.DevPrefs.showRessources);
+        const cur = at.readU8();
+        if (barValuesWanted) {
+            if (barValuesWas === null) barValuesWas = cur;
+            if (cur !== 1) at.writeU8(1);
+        } else if (barValuesWas !== null) {
+            if (cur !== barValuesWas) at.writeU8(barValuesWas);
+            barValuesWas = null;
+        }
+        return true;
+    } catch (e) { return false; }
+}
+function listenConfig() {
+    recv("config", function (msg) {
+        const want = !!msg.barValues;
+        if (want !== barValuesWanted) {
+            barValuesWanted = want;
+            const ok = applyBarValues();
+            log("bar values " + (want ? "on" : "off")
+                + (ok ? "" : " (the game's preferences not reached)"));
+        }
+        listenConfig();                 // recv is one-shot: listen again
+    });
+}
 let partyNames = {};      // set of names in the local player's group (incl. self)
 const heroByName = {};    // name -> {ptr: ent.Hero*, t: last-seen ms} (from hits)
 
@@ -533,6 +594,49 @@ function classifyBossUnit(u, kind) {
     return hit;
 }
 
+// ---- the boss bars' values (the bars' values option) ----
+// A boss's bar (top of the screen) is a HealthBar too, its text hidden by
+// the game: shown, its update writes "value / max" in it (with the
+// showRessources preference, a percentage without). Found under the
+// BossInfo among its children; put back hidden when the option goes off.
+let bossTextShown = {};         // HealthBar.txt -> true, the texts shown by us
+let setVisibleFn = null;
+function findChild(o, type, depth) {
+    if (!o || o.isNull() || depth > 4 || OFF.Object.children == null) return null;
+    try {
+        const arr = o.add(OFF.Object.children).readPointer();
+        if (!arr || arr.isNull()) return null;
+        const n = arr.add(OFF.ArrayObj.length).readS32();
+        const data = arr.add(OFF.ArrayObj.array).readPointer();
+        for (let i = 0; i < n && i < 64; i++) {
+            const c = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+            if (!c || c.isNull()) continue;
+            if (typeName(c) === type) return c;
+            const deeper = findChild(c, type, depth + 1);
+            if (deeper) return deeper;
+        }
+    } catch (e) {}
+    return null;
+}
+function bossBarValues(slot) {
+    if (!setVisibleFn || !OFF.HealthBar || OFF.HealthBar.txt == null) return;
+    try {
+        const hb = findChild(slot, "ui.comp.HealthBar", 0);
+        if (!hb) return;
+        const txt = hb.add(OFF.HealthBar.txt).readPointer();
+        if (!txt || txt.isNull()) return;
+        const key = txt.toString();
+        const vis = txt.add(OFF.Object.visible).readU8();
+        if (barValuesWanted && !vis) {
+            setVisibleFn(txt, 1);
+            bossTextShown[key] = true;
+        } else if (!barValuesWanted && vis && bossTextShown[key]) {
+            setVisibleFn(txt, 0);
+            delete bossTextShown[key];
+        }
+    } catch (e) {}
+}
+
 function pollBossBars(bi) {
     if (!bi || bi.isNull() || !OFF.BossesInfo || !OFF.BossInfo || !OFF.ArrayObj)
         return;
@@ -552,6 +656,7 @@ function pollBossBars(bi) {
                         if (!slot || slot.isNull() || slot.compare(ptr("0x10000")) <= 0)
                             continue;
                         if (!slot.add(OFF.BossInfo.active).readU8()) continue;
+                        bossBarValues(slot);
                         const u = slot.add(OFF.BossInfo.unit).readPointer();
                         if (!u || u.isNull() || u.compare(ptr("0x10000")) <= 0) continue;
                         const kind = hlStr(u.add(OFF.Unit.kind).readPointer());
@@ -627,6 +732,13 @@ function hookBossBar(base) {
         } catch (e) { return null; }
     }
     bossFnIsBoss = nf("ent.Unit.isBoss");
+    const visFi = (DATA.bar_fns || {})["h2d.Object.set_visible"];
+    if (visFi != null && OFF.Object && OFF.Object.visible != null) {
+        try {
+            setVisibleFn = new NativeFunction(base.add(visFi * 8).readPointer(),
+                                              "uint8", ["pointer", "uint8"]);
+        } catch (e) { setVisibleFn = null; }
+    }
     if (!bossFnIsBoss)
         log("!! ent.Unit.isBoss unavailable; every bar will count as an elite "
             + "and boss-only rules will never fire");
@@ -1797,6 +1909,8 @@ function main() {
     every(function () { rosterDue = true; }, 5000);
     every(function () { selfDue = true; }, 5000);
     listenAnalyze();
+    listenConfig();
+    every(function () { if (barValuesWanted) applyBarValues(); }, 2000);
 
     for (const nm in DATA.funcs) {
         try { getHeroFns.push({ addr: base.add(DATA.funcs[nm] * 8).readPointer() }); } catch (e) {}
@@ -2153,6 +2267,76 @@ function main() {
     } else {
         log("status data missing (st.skill.Status.init / Status offsets): "
             + "the journals show no crowd control");
+    }
+
+    // ---- the Farever Book button in the game's menu (Échap) ----
+    // Made as the game makes its own when the menu opens (EscapeMenu.init,
+    // onLeave): a Button of Quit's type, its label a String of ours, its
+    // click a closure of Quit's click's type calling back here, put after
+    // Options. Allocated by libhl's own exports, on the game thread; any
+    // doubt (a type, a pointer) and nothing is made.
+    const MF = DATA.menu_fns || {};
+    const escFi = MF["ui.win.EscapeMenu.init"], btnFi = MF["ui.comp.$Button.__constructor__"];
+    const clickFi = MF["ui.UIElement.set_onClick"], atFi = MF["h2d.Object.addChildAt"];
+    const idxFi = MF["h2d.Object.getChildIndex"];
+    if (escFi != null && btnFi != null && clickFi != null && atFi != null && idxFi != null
+            && OFF.EscapeMenu && OFF.UIElement && OFF.Object && OFF.String.length != null) {
+        try {
+            const hl = Process.findModuleByName("libhl.dll");
+            const allocObj = new NativeFunction(hl.findExportByName("hl_alloc_obj"), "pointer", ["pointer"]);
+            const allocBytes = new NativeFunction(hl.findExportByName("hl_alloc_bytes"), "pointer", ["int"]);
+            const allocClosure = new NativeFunction(hl.findExportByName("hl_alloc_closure_void"),
+                                                    "pointer", ["pointer", "pointer"]);
+            const fn = (fi, ret, args) => new NativeFunction(base.add(fi * 8).readPointer(), ret, args);
+            const newButton = fn(btnFi, "void", ["pointer", "pointer", "pointer", "pointer", "pointer"]);
+            const setOnClick = fn(clickFi, "pointer", ["pointer", "pointer"]);
+            const onClick = new NativeCallback(function () {
+                try { send({ kind: "open_panel" }); } catch (e) {}
+            }, "void", []);
+            let menuFailed = false;
+            const hlText = function (text, like) {
+                // a String of the game's type (borrowed from one it made)
+                const s = allocObj(like.readPointer());
+                const b = allocBytes((text.length + 1) * 2);
+                b.writeUtf16String(text);
+                s.add(OFF.String.bytes).writePointer(b);
+                s.add(OFF.String.length).writeS32(text.length);
+                return s;
+            };
+            Interceptor.attach(base.add(escFi * 8).readPointer(), {
+                onEnter() { this.menu = this.context.rcx; },
+                onLeave() {
+                    if (menuFailed) return;
+                    try {
+                        const menu = this.menu;
+                        if (typeName(menu) !== "ui.win.EscapeMenu") return;
+                        const quit = menu.add(OFF.EscapeMenu.quitButton).readPointer();
+                        const opt = menu.add(OFF.EscapeMenu.optionsBtn).readPointer();
+                        if (typeName(quit) !== "ui.comp.Button" || typeName(opt) !== "ui.comp.Button") return;
+                        const parent = opt.add(OFF.Object.parent).readPointer();
+                        const quitClick = quit.add(OFF.UIElement.onClick).readPointer();
+                        const name = localHero && !localHero.isNull()
+                            ? localHero.add(OFF.Hero.name).readPointer() : null;
+                        if (!parent || parent.isNull() || !quitClick || quitClick.isNull()
+                                || !name || name.isNull()) return;
+                        const btn = allocObj(quit.readPointer());
+                        newButton(btn, hlText("Farever Book", name), NULL, NULL, parent);
+                        setOnClick(btn, allocClosure(quitClick.readPointer(), onClick));
+                        // left where the constructor put it, last in the
+                        // menu: moving it with h2d.Object.addChildAt passed
+                        // over the menu's own layout (an h2d.Flow, its own
+                        // addChildAt) and blacked the screen (2026-10-14)
+                    } catch (e) {
+                        menuFailed = true;
+                        log("menu button failed: " + e);
+                    }
+                }
+            });
+        } catch (e) {
+            log("menu button unavailable: " + e);
+        }
+    } else {
+        log("menu data missing (EscapeMenu / Button): no Farever Book button in the game's menu");
     }
 
     // ---- the character picked ----

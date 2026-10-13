@@ -3019,8 +3019,9 @@ class ConfigView:
     TAB_ON = (98, 86, 80)
     TAB_FRAME = (207, 184, 170)
     TAB_H = 44
+    GROUP_H = 30                        # a group's heading in the menu
     # each overlay's glyph (the app's tabs', the game's)
-    TAB_ICONS = {"general": "Build", "meter": "Live", "meterheal": "Character",
+    TAB_ICONS = {"combat": "Hunt", "general": "Build", "meter": "Live", "meterheal": "Character",
                  "luck": "Collection",
                  "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
                  "minimap": "Map"}
@@ -3047,13 +3048,16 @@ class ConfigView:
         tr = self.tr
         tabs = (data or {}).get("tabs") or []
         cur = next((t for t in tabs if t["id"] == tab), tabs[0] if tabs else None)
-        body = max([self._height(t["rows"]) for t in tabs] + [len(tabs) * (self.TAB_H + 2) + 2])
+        groups = (data or {}).get("groups") or {}
+        n_groups = len({t.get("group") for t in tabs if t.get("group") in groups})
+        body = max([self._height(t["rows"]) for t in tabs]
+                   + [len(tabs) * (self.TAB_H + 2) + n_groups * self.GROUP_H + 2])
         W = self.W
         H = 44 + body + 22
         hits = []
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, tr("Configuration overlays"), dpi_k, ui, hits, close=True)
+        _head(p, W, tr("Farever Book"), dpi_k, ui, hits, close=True)
         p.fill(8, 44, W - 16, body, self.BG)
         # the menu: an overlay a tab, as the game's own lists (dark bands
         # on a light ground, the glyph and the name in white, the one open
@@ -3061,7 +3065,16 @@ class ConfigView:
         mx, mw = 8, self.MENU_W
         p.fill(mx, 44, mw, body, self.MENU_BG)
         y = 44 + 2
+        last_group = None
         for t in tabs:
+            g = t.get("group")
+            if g in groups and g != last_group:
+                # a group's heading: its name, small, over its tabs
+                last_group = g
+                p.text(groups[g].upper(), mx + 14, y + self.GROUP_H - 8 - LH11, LH11, 11, 700,
+                       self.INK, spacing=1.0)
+                p.hline(mx + 14, y + self.GROUP_H - 5, mw - 28, self.LINE, 0.9)
+                y += self.GROUP_H
             on = cur is not None and t["id"] == cur["id"]
             hov = ui.get("hover") == "tab:" + t["id"]
             th = self.TAB_H
@@ -3301,7 +3314,10 @@ class NativeConfig(NativeOverlay):
         else:
             self.open(tab)
 
-    def open(self, tab):
+    def open(self, tab=None):
+        if tab is None:
+            tabs = (self._data or {}).get("tabs") or []
+            tab = tabs[0]["id"] if tabs else None
         self._tab = tab
         self._ui["hover"] = None
         self.shown = True
@@ -3693,7 +3709,7 @@ class NativeEsc(_NativeWindow):
     def _redraw(self):
         k = self._dpi_k()
         self._k = k
-        label = self.tr("Farever Book - Overlay")
+        label = self.tr("Farever Book")
         probe = Paint(1, 1, k)
         W = probe.width(label, 15, 600) + 56
         H = LH15 + 18
@@ -3737,7 +3753,12 @@ class NativeEsc(_NativeWindow):
             self._hover = False
             self._redraw()
         elif ev == "up":
-            self.pipe.send({"t": "call", "id": 0, "m": "esc_open", "p": {}})
+            # the panel in the game (the app's window when there is none)
+            cfg = CONFIG[0]
+            if cfg is not None:
+                cfg.open()
+            else:
+                self.pipe.send({"t": "call", "id": 0, "m": "esc_open", "p": {}})
 
 
 LH15 = 1248 / 64                    # 1.3 times 15 px

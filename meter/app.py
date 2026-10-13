@@ -266,6 +266,9 @@ class App:
         # Collection and Succès: the content out of reach in the game as it
         # is (no way to get it in its data) left out
         self._hide_na = False
+        # the game's own bars with their values written in (its developer
+        # preference, set by the hook): off by default, a prototype
+        self._bar_values = False
         # the bonus heroic dungeon in the loot luck overlay (one overlay),
         # else in its own
         self._luck_merge = False
@@ -374,6 +377,8 @@ class App:
             self._auto_reset_dummy = data["auto_reset_dummy"]
         if isinstance(data.get("hide_unavailable"), bool):
             self._hide_na = data["hide_unavailable"]
+        if isinstance(data.get("bar_values"), bool):
+            self._bar_values = data["bar_values"]
         mh = data.get("meter_hide") if isinstance(data.get("meter_hide"), dict) else {}
         for oid in self._meter_hide:
             if isinstance(mh.get(oid), list):
@@ -462,6 +467,7 @@ class App:
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "auto_reset_dummy": bool(self._auto_reset_dummy),
                 "hide_unavailable": bool(self._hide_na),
+                "bar_values": bool(self._bar_values),
                 "meter_hide": {k: sorted(v) for k, v in self._meter_hide.items()},
                 "minimap": {"shape": self._mm_shape, "rotate": bool(self._mm_rotate),
                             "zoom": int(self._mm_zoom), "size": int(self._mm_size),
@@ -988,6 +994,7 @@ class App:
             "toggle_auto_reset": self._toggle_auto_reset_boss,
             "toggle_auto_reset_dummy": self._toggle_auto_reset_dummy,
             "hide_unavailable": self._set_hide_na,
+            "bar_values": self._set_bar_values,
             # the bonus dungeon in the loot luck overlay, or in its own
             # (value: True, False, or None to switch)
             "luck_merge": lambda p: self._set_luck_merge(p.get("value")),
@@ -1923,12 +1930,17 @@ class App:
                       "minimap": tr("Minimap")})
         if self._luck_merge:
             names.pop("bonus")
-        # first, what holds for them all: their theme
-        tabs = [{"id": "general", "t": tr("Général"), "rows": [
-            sec(tr("Thème")),
-            {"k": "cards", "act": "ov_theme", "p": {},
-             "items": [{"v": t_id, "t": tr(t), "on": t_id == self._ov_theme}
-                       for t_id, t in OVERLAY_THEMES.items()]}]}]
+        # the game's own options first (set in the game: its bars' values),
+        # then the overlays': what holds for them all (their theme), each one
+        tabs = [{"id": "combat", "t": tr("Combat"), "group": "game", "rows": [
+                    sec(tr("Barres de vie")),
+                    tog(tr("Afficher les points de vie dans les barres"),
+                        self._bar_values, "bar_values", {})]},
+                {"id": "general", "t": tr("Général"), "group": "overlays", "rows": [
+                    sec(tr("Thème")),
+                    {"k": "cards", "act": "ov_theme", "p": {},
+                     "items": [{"v": t_id, "t": tr(t), "on": t_id == self._ov_theme}
+                               for t_id, t in OVERLAY_THEMES.items()]}]}]
         for oid, title in names.items():
             st = self._ov_style.get(oid) or _ov_style({}, oid)
             rows = [tog(tr("Afficher l'overlay"), self._ov_on.get(oid), "ov_show", {"id": oid}),
@@ -1979,8 +1991,8 @@ class App:
                              tog(tr(t), lid in self._mm_layers, "mm_set",
                                  {"key": "layer", "id": lid}, ic=MINIMAP_LAYER_ICONS.get(lid))
                              for lid, (t, _cs) in MINIMAP_LAYERS.items()]}]
-            tabs.append({"id": oid, "t": title, "rows": rows})
-        return {"tabs": tabs}
+            tabs.append({"id": oid, "t": title, "group": "overlays", "rows": rows})
+        return {"tabs": tabs, "groups": {"game": tr("Jeu"), "overlays": tr("Overlays")}}
 
     def on_units(self, p):
         """The units the client holds around the hero (hook, each second on
@@ -3827,6 +3839,30 @@ class App:
         if merge:
             self._ov_on["luck"] = True
         self._save_settings()
+
+    def on_open_panel(self, p):
+        """The Farever Book button of the game's menu: our panel in the game
+        (drawn by the window's host). Hook thread."""
+        self.menubridge.send({"t": "config_open"})
+
+    def on_hook_ready(self):
+        """The hook up (each attach): what it is to do for the app."""
+        self._enqueue(self._post_hook_config)()
+
+    def _post_hook_config(self):
+        script = self.link.script if self.link is not None else None
+        if script is None:
+            return
+        try:
+            script.post({"type": "config", "barValues": bool(self._bar_values)})
+        except Exception as e:
+            print(f"[meter] hook config not sent: {e!r}", file=sys.stderr)
+
+    def _set_bar_values(self, p):
+        """In the game: the values written in its bars, or not."""
+        self._bar_values = bool(p.get("value"))
+        self._save_settings()
+        self._post_hook_config()
 
     def _set_hide_na(self, p):
         """Collection and Succès: the unavailable content shown or not."""

@@ -272,11 +272,8 @@ class AppWindow:
                 PICKER[0] = self.picker
             except Exception as e:
                 _log(f"goal chooser unavailable: {e!r}")
-            try:
-                self.esc = (native_overlay.NativeEsc(pipe, self._lang, i18n.catalog)
-                            if "esc" in NATIVE else EscButton(pipe, self._lang))
-            except Exception as e:
-                _log(f"menu button unavailable: {e!r}")
+            # (the button over the game's menu is gone: the hook makes one
+            # in it, Farever Book, which opens the panel)
 
     def attach(self):
         """Once the native window exists: restore the saved geometry, tell the
@@ -455,6 +452,11 @@ class AppWindow:
             # the game gone: no chooser over nothing
             if self.picker is not None and not (msg.get("d") or {}).get("game"):
                 self.picker.hide()
+        elif t == "config_open":
+            # the Farever Book button of the game's menu
+            cfg = native_overlay.CONFIG[0]
+            if cfg is not None:
+                cfg.open()
         elif t == "cursor":
             self._game_cursor = (bool(msg.get("win")), bool(msg.get("alt")),
                                  time.monotonic(), bool(msg.get("load")),

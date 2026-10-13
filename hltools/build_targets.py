@@ -40,6 +40,16 @@ TARGETS = (
     # the journals' crowd controls (stun, root, slow...)
     ("status_fns", ("st.skill.Status.init",), "status target",
      "the journals show no crowd control"),
+    # the boss bars' values: their health bar's text shown (the game hides
+    # it there; its update writes "value / max" once it is)
+    ("bar_fns", ("h2d.Object.set_visible",), "bar target",
+     "no health values on the boss bars"),
+    # the game's menu (Échap): a Farever Book button made in it, as the
+    # game makes its own (a Button, its click, its place after Options)
+    ("menu_fns", ("ui.win.EscapeMenu.init", "ui.comp.$Button.__constructor__",
+                  "ui.UIElement.set_onClick", "h2d.Object.addChildAt",
+                  "h2d.Object.getChildIndex"), "menu target",
+     "no Farever Book button in the game's menu"),
     # the character picked on the select screen: its id in the game's
     # database (HeroData is null on the client), two may share a name
     ("select_fns", ("ui.win.CharacterSelectScreen.setCurrentCharacter",),

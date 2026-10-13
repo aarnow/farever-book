@@ -138,7 +138,17 @@ def hook_layout(code):
             "longer share a layout; fix the inventory sweep before shipping.")
 
     meta = {
-        "String": {"bytes": string["bytes"][0]},
+        "String": {"bytes": string["bytes"][0], "length": string["length"][0]},
+        # the game's menu: its first and last buttons (ours goes after
+        # Options; Quit lends its type and its click's), a click, a parent
+        "EscapeMenu": {"optionsBtn": offs("ui.win.EscapeMenu")["optionsBtn"][0],
+                       "quitButton": offs("ui.win.EscapeMenu")["quitButton"][0]},
+        "UIElement": {"onClick": offs("ui.UIElement")["onClick"][0]},
+        "Object": {"parent": offs("h2d.Object")["parent"][0],
+                   "children": offs("h2d.Object")["children"][0],
+                   "visible": offs("h2d.Object")["visible"][0]},
+        # a health bar's text (a boss bar's, hidden by the game)
+        "HealthBar": {"txt": offs("ui.comp.HealthBar")["txt"][0]},
         # _block / blocker / effect: which one marks a nullified hit (boss
         # immunity phase) is not settled yet.
         "DamageResult": {k: dr[k][0] for k in
@@ -242,6 +252,13 @@ def hook_layout(code):
                    "instigator": status["instigator"][0],
                    "instigatorSkill": status["instigatorSkill"][0]},
         # a foe with a summonOwner is a pet (same class as a mob)
+        # the game's preferences ($Config.prefs, a DevPrefs): the global
+        # holding $Config, where prefs sits on it; showRessources shows the
+        # bars' values (value / max) — the app's "values on the bars"
+        "Config": {"global": next(g for g, t in enumerate(code.globals)
+                                  if t == byname["$Config"].index),
+                   "prefs": offs("$Config")["prefs"][0]},
+        "DevPrefs": {"showRessources": offs("DevPrefs")["showRessources"][0]},
         "Foe": {"summonOwner": foe["summonOwner"][0],
                 # a summon that stays (a player's companion): never wild
                 "persistantSummon": foe["persistantSummon"][0]},
