@@ -22,6 +22,8 @@ let STOPPING = false;
 // Farever Book closing: the game given back as it was (what the in-game
 // options changed), on the game's thread (the tick), before the shutdown.
 let RESTORE_WANTED = false, RESTORED = false;
+// the hero's bar kept each frame (its gauge draws only when it changes)
+let heroUiTick = null;
 const restorers = [];
 rpc.exports = {
     restore: function () {
@@ -284,6 +286,9 @@ let classTint = {};
 // the skills' bar: its frame made a plain rounded rectangle (its colour's
 // opacity %, its corners' radius px), or the game's
 let skillBarMin = false, skillBarAlpha = 55, skillBarRadius = 10;
+// the hero's own health bar: moved, sized (px; 0: the game's), its text;
+// the effects on the hero moved with it (and their own offset)
+let meBar = false, meW = 0, meH = 0, meDx = 0, meDy = 0, fxDx = 0, fxDy = 0, meText = "none";
 let targetGlowA = 100, targetLineA = 100;       // the halo's, the target's frame's (%)
 let barColors = { mine: null, aggro: null, neutral: null };
 function hlGlobal(g) {
@@ -371,6 +376,14 @@ function listenConfig() {
         allyClassDx = Math.max(-300, Math.min(300, msg.allyClassDx | 0));
         allyClassDy = Math.max(-300, Math.min(300, msg.allyClassDy | 0));
         skillBarMin = !!msg.skillBarMin;
+        meBar = !!msg.meBar;
+        meW = Math.max(0, Math.min(900, msg.meW | 0));
+        meH = Math.max(0, Math.min(60, msg.meH | 0));
+        meDx = Math.max(-600, Math.min(600, msg.meDx | 0));
+        meDy = Math.max(-400, Math.min(400, msg.meDy | 0));
+        fxDx = Math.max(-400, Math.min(400, msg.fxDx | 0));
+        fxDy = Math.max(-400, Math.min(400, msg.fxDy | 0));
+        meText = ["none", "pct", "value", "max", "max_pct"].indexOf(msg.meText) >= 0 ? msg.meText : "none";
         skillBarAlpha = Math.max(0, Math.min(100, msg.skillBarAlpha == null ? 55 : msg.skillBarAlpha | 0));
         skillBarRadius = Math.max(0, Math.min(30, msg.skillBarRadius == null ? 10 : msg.skillBarRadius | 0));
         classTint = {};
@@ -690,6 +703,7 @@ function hookGameTick(base) {
                     return;
                 }
                 cursorTick();
+                if (heroUiTick) heroUiTick();
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
                 if (rosterDue || analyzeWanted !== null || selfDue) characterTick();
                 if (codexDue && hbKeys) {
@@ -2624,13 +2638,153 @@ function main() {
                     dynAlpha(o, skillBarAlpha / 100);
                     sb.set = key;
                 }
-                const sh = o.add(D.dynShader).readPointer();
-                const rv = sh && !sh.isNull() ? sh.add(D.dynRadius).readPointer() : null;
-                if (rv && !rv.isNull()) {
-                    for (const f of [D.vx, D.vy, D.vz, D.vw]) rv.add(f).writeDouble(skillBarRadius);
+                oursKey = o.toString();
+            };
+            // its corners: the game's sync gives a DynamicBackground's shader
+            // its own radius each frame (none: 0); ours given after it
+            let oursKey = null;
+            const syncFi = FF["shiro.ui.DynamicBackground.sync"];
+            if (syncFi != null) {
+                Interceptor.attach(base.add(syncFi * 8).readPointer(), {
+                    onEnter() { this.ours = oursKey !== null && this.context.rcx.toString() === oursKey; },
+                    onLeave() {
+                        if (!this.ours || !skillBarMin || !sb.ours) return;
+                        try {
+                            const sh = sb.ours.add(D.dynShader).readPointer();
+                            const rv = sh && !sh.isNull() ? sh.add(D.dynRadius).readPointer() : null;
+                            if (rv && !rv.isNull()) {
+                                for (const f of [D.vx, D.vy, D.vz, D.vw]) rv.add(f).writeDouble(skillBarRadius);
+                            }
+                        } catch (e) {}
+                    }
+                });
+            }
+            restorers.push(function () { try { skillBarUndo(); } catch (e) {} });
+
+            // ---- the hero's own health bar (in HeroBar, its gauge the one met
+            // above): its size (its gauge's and its shield's, the fill
+            // following), its place (its FlowProperties' offsets, as the
+            // levels'), the effects on the hero (the status bars' holder)
+            // moved alike, its text as chosen; the game's own given back ----
+            const me = { gauge: null, w0: 0, h0: 0, sw0: 0, sh0: 0, set: null, txtOn: false };
+            const meUndo = function () {
+                const g = me.gauge;
+                if (g && me.set && setBarW && setBarH) {
+                    setBarW(g, me.w0);
+                    setBarH(g, me.h0);
+                    if (me.shield && me.sw0 > 0) {
+                        setBarW(me.shield, me.sw0);
+                        setBarH(me.shield, me.sh0);
+                    }
+                }
+                me.set = null;
+                if (me.hb && me.off) moveInFlow(me.hb, me, "off", 0, 0);
+                for (const f of me.fx || []) if (f.st.off) moveInFlow(f.o, f.st, "off", 0, 0);
+                if (me.txt && me.txtShown && setVisibleFn) setVisibleFn(me.txt, 0);
+                me.txtShown = false;
+            };
+            const meBarTick = function () {
+                const g = heroGauge ? ptr(heroGauge) : null;
+                const why = function (t) { if (me.why !== t) { me.why = t; log("my bar: " + t); } };
+                if (!g || typeName(g) !== "ui.comp.AttributeBar") { why("gauge " + (g ? typeName(g) : "none")); return; }
+                if (!me.gauge || !g.equals(me.gauge)) {
+                    // its parts, the game's own sizes
+                    me.gauge = g;
+                    me.hb = g.add(OFF.Object.parent).readPointer();
+                    if (typeName(me.hb) !== "ui.comp.HealthBar") { why("its parent " + typeName(me.hb)); me.gauge = null; return; }
+                    me.shield = shieldOf(me.hb);
+                    me.txt = me.hb.add(OFF.HealthBar.txt).readPointer();
+                    me.w0 = g.add(OFF.Gauge.barWidth).readS32();
+                    me.h0 = g.add(OFF.Gauge.barHeight).readS32();
+                    me.sw0 = me.shield ? me.shield.add(OFF.Gauge.barWidth).readS32() : 0;
+                    me.sh0 = me.shield ? me.shield.add(OFF.Gauge.barHeight).readS32() : 0;
+                    // the effects on the hero: its StatusBar, or the first of
+                    // its parents a layout places (offsets it can take), the
+                    // health bar's own holder left out
+                    me.fx = [];
+                    const hold = me.hb.add(OFF.Object.parent).readPointer();
+                    const all = [];
+                    const walk = function (o, d) {
+                        if (d > 7 || all.length > 8) return;
+                        const arr = o.add(OFF.Object.children).readPointer();
+                        if (!arr || arr.isNull()) return;
+                        const n = arr.add(OFF.ArrayObj.length).readS32();
+                        const data = arr.add(OFF.ArrayObj.array).readPointer();
+                        for (let i = 0; i < n && i < 64; i++) {
+                            const c = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+                            if (!c || c.isNull()) continue;
+                            if (typeName(c) === "ui.hud.StatusBar") all.push(c);
+                            else walk(c, d + 1);
+                        }
+                    };
+                    walk(heroBar, 0);
+                    const names = [];
+                    for (let fo of all) {
+                        for (let i = 0; fo && !fo.isNull() && i < 6 && !fo.equals(heroBar) && !fo.equals(hold); i++) {
+                            const up = fo.add(OFF.Object.parent).readPointer();
+                            if (!up || up.isNull()) break;
+                            if (FLOWS[typeName(up)] && flowPropsOf(fo, up)) {
+                                if (!me.fx.some(x => x.o.equals(fo))) me.fx.push({ o: fo, st: {} });
+                                break;
+                            }
+                            fo = up;
+                        }
+                        names.push(typeName(fo) + " in " + typeName(fo.add(OFF.Object.parent).readPointer()));
+                    }
+                    log("my bar: effects " + all.length + " status bar(s): " + (names.join(", ") || "none"));
+                    me.set = me.off = null;
+                    // its text: as chosen (the allies' way: a holder of ours)
+                    me.who = { name: null, me: true };
+                    if (me.txt && !me.txt.isNull()) barTexts.set(me.txt.toString(), me.who);
+                    barTexts.set(g.toString(), me.who);
+                }
+                if (!meBar) {
+                    if (me.set || me.off || (me.fx || []).some(f => f.st.off) || me.txtShown) meUndo();
+                    return;
+                }
+                // its size: the game's set again (a new layout) taken as its own
+                if (setBarW && setBarH) {
+                    const cw = g.add(OFF.Gauge.barWidth).readS32(), ch = g.add(OFF.Gauge.barHeight).readS32();
+                    if (me.set && (cw !== me.set.w || ch !== me.set.h)) {
+                        if (cw !== me.set.w) me.w0 = cw;
+                        if (ch !== me.set.h) me.h0 = ch;
+                        me.set = null;
+                    }
+                    const W = meW > 0 ? meW : me.w0, Hh = meH > 0 ? meH : me.h0;
+                    if (!me.set || me.set.w !== W || me.set.h !== Hh) {
+                        if (cw !== W) setBarW(g, W);
+                        if (ch !== Hh) setBarH(g, Hh);
+                        if (me.shield && me.sw0 > 0) {
+                            setBarW(me.shield, W);
+                            setBarH(me.shield, Hh);
+                        }
+                        me.set = { w: W, h: Hh };
+                    }
+                }
+                // its place, the effects' (with it, then their own offset)
+                if (me.hb && !me.hb.isNull()) moveInFlow(me.hb, me, "off", meDx, meDy);
+                for (const f of me.fx || []) moveInFlow(f.o, f.st, "off", meDx + fxDx, meDy + fxDy);
+                // its text shown or not by its choice (the game's visibility kept)
+                if (me.txt && !me.txt.isNull() && setVisibleFn) {
+                    const vis = me.txt.add(OFF.Object.visible).readU8() !== 0;
+                    if (meText !== "none" && !vis) { setVisibleFn(me.txt, 1); me.txtShown = true; }
+                    else if (meText === "none" && vis && me.txtShown) { setVisibleFn(me.txt, 0); me.txtShown = false; }
                 }
             };
-            restorers.push(function () { try { skillBarUndo(); } catch (e) {} });
+            restorers.push(function () { try { meUndo(); } catch (e) {} });
+            // each frame (the camera's tick): the hero's bar still the one met
+            // gone (or failed): looked for again when a gauge of its draws
+            const lose = function () {
+                if (heroGauge) gaugeBoss.delete(heroGauge);
+                heroBar = heroGauge = null;
+            };
+            heroUiTick = function () {
+                if (!heroGauge || plateFailed) return;
+                if (!heroBar || typeName(heroBar) !== "ui.hud.HeroBar"
+                    || typeName(ptr(heroGauge)) !== "ui.comp.AttributeBar") { lose(); return; }
+                try { skillBarTick(); } catch (e) { log("skills' bar failed: " + e); lose(); return; }
+                try { meBarTick(); } catch (e) { log("own health bar failed: " + e); lose(); }
+            };
             if (colorFi != null && hltI32) {
                 Interceptor.attach(base.add(colorFi * 8).readPointer(), {
                     onEnter() {
@@ -2645,7 +2799,15 @@ function main() {
                                 let o = g;
                                 for (let i = 0; i < 10 && o && !o.isNull(); i++) {
                                     if (typeName(o) === "ui.hud.BossInfo") { slot = o; break; }
-                                    if (typeName(o) === "ui.hud.HeroBar") { heroBar = o; heroGauge = gk; break; }
+                                    if (typeName(o) === "ui.hud.HeroBar") {
+                                        // its health gauge only (its experience's is one too)
+                                        if (typeName(g) === "ui.comp.AttributeBar"
+                                            && typeName(g.add(OFF.Object.parent).readPointer()) === "ui.comp.HealthBar") {
+                                            heroBar = o;
+                                            heroGauge = gk;
+                                        }
+                                        break;
+                                    }
                                     o = o.add(OFF.Object.parent).readPointer();
                                 }
                             } catch (e) { slot = null; }
@@ -2657,6 +2819,7 @@ function main() {
                         if (slot && bossStyler) bossStyler(slot);
                         if (heroGauge === gk && !plateFailed) {
                             try { skillBarTick(); } catch (e) { log("skills' bar failed: " + e); heroGauge = null; }
+                            try { meBarTick(); } catch (e) { log("own health bar failed: " + e); }
                         }
                         if (!lags.size) return;
                         const e = lags.get(gk);
@@ -2988,6 +3151,13 @@ function main() {
                 if (!barTexts.size) return;
                 const who = barTexts.get(ctx.rcx.toString());
                 if (!who) return;
+                if (typeof who === "object" && who.me) {
+                    // the hero's own: as its own choice
+                    if (meBar && meText !== "none" && meText !== "max") {
+                        try { writeText(ctx.rdx, meText); } catch (e) {}
+                    }
+                    return;
+                }
                 if (typeof who === "object") {
                     // an ally's: as its own choice
                     if (allyText !== "none" && allyText !== "max") {

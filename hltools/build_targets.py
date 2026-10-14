@@ -55,6 +55,7 @@ TARGETS = (
                  "h2d.$Tile.fromColor", "shiro.ui.$DynamicBackground.__constructor__",
                  "shiro.ui.DynamicBackground.set_background",
                  "shiro.ui.DynamicBackground.set_backgroundAlpha",
+                 "shiro.ui.DynamicBackground.sync",
                  "h2d.ScaleGrid.set_height",
                  "h2d.filter.$Glow.__constructor__"),
      "nameplate target", "no targeting options"),
@@ -111,6 +112,7 @@ SIGNATURES = {
     "shiro.ui.$DynamicBackground.__constructor__": "(shiro.ui.DynamicBackground,h2d.Tile,h2d.Object)->void",
     "shiro.ui.DynamicBackground.set_background": "(shiro.ui.DynamicBackground,i32)->i32",
     "shiro.ui.DynamicBackground.set_backgroundAlpha": "(shiro.ui.DynamicBackground,f64)->f64",
+    "shiro.ui.DynamicBackground.sync": "(shiro.ui.DynamicBackground,h2d.RenderContext)->void",
     "h2d.ScaleGrid.set_height": "(h2d.ScaleGrid,f64)->f64",
     "h2d.filter.$Glow.__constructor__":
         "(h2d.filter.Glow,ref<i32>,ref<f64>,ref<f64>,ref<f64>,ref<f64>,ref<bool>)->void",

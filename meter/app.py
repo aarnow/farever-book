@@ -330,6 +330,16 @@ class App:
         self._skillbar_min = False
         self._skillbar_alpha = 55
         self._skillbar_radius = 10
+        # the hero's own health bar: moved, sized (px, 0 the game's), its
+        # text; the effects on the hero moved with it, then their own offset
+        self._me_bar = False
+        self._me_w = 0
+        self._me_h = 0
+        self._me_dx = 0
+        self._me_dy = 0
+        self._fx_dx = 0
+        self._fx_dy = 0
+        self._me_text = "none"
         # the quick setups imported (name -> their values), the last share's note
         self._quick_custom = {}
         self._quick_note = ""
@@ -520,6 +530,14 @@ class App:
             ok = self._quick_clean(vals)
             if ok is not None and isinstance(name, str) and name and name not in self.QUICK_PRESETS:
                 self._quick_custom[name[:40]] = ok
+        if isinstance(data.get("me_bar"), bool):
+            self._me_bar = data["me_bar"]
+        for key, lo, hi in (("me_w", 0, 900), ("me_h", 0, 60), ("me_dx", -600, 600),
+                            ("me_dy", -400, 400), ("fx_dx", -400, 400), ("fx_dy", -400, 400)):
+            if isinstance(data.get(key), int) and lo <= data[key] <= hi:
+                setattr(self, "_" + key, data[key])
+        if data.get("me_text") in self.BAR_TEXTS:
+            self._me_text = data["me_text"]
         if isinstance(data.get("skillbar_min"), bool):
             self._skillbar_min = data["skillbar_min"]
         if isinstance(data.get("skillbar_alpha"), int) and 0 <= data["skillbar_alpha"] <= 100:
@@ -671,6 +689,9 @@ class App:
                 "esc_button": bool(self._esc_button),
                 "skillbar_min": bool(self._skillbar_min), "skillbar_alpha": int(self._skillbar_alpha),
                 "skillbar_radius": int(self._skillbar_radius),
+                "me_bar": bool(self._me_bar), "me_w": int(self._me_w), "me_h": int(self._me_h),
+                "me_dx": int(self._me_dx), "me_dy": int(self._me_dy),
+                "fx_dx": int(self._fx_dx), "fx_dy": int(self._fx_dy), "me_text": self._me_text,
                 "quick_custom": {n: {a[1:]: v for a, v in vals.items()}
                                  for n, vals in self._quick_custom.items()},
                 "target_scale": int(self._target_scale),
@@ -2315,6 +2336,25 @@ class App:
                     sec(tr("Menu du jeu")),
                     tog(tr("Bouton Farever Book dans le menu Échap"),
                         self._esc_button, "esc_button", {}),
+                    sec(tr("Ma barre de vie")),
+                    tog(tr("Placer et dimensionner ma barre de vie"), self._me_bar,
+                        "target_option", {"key": "me_bar"}),
+                    rng(tr("Largeur (0 : celle du jeu)"), 0, 900, self._me_w,
+                        "target_option", {"key": "me_w"}, step=2),
+                    rng(tr("Hauteur (0 : celle du jeu)"), 0, 60, self._me_h,
+                        "target_option", {"key": "me_h"}, step=1),
+                    rng(tr("Décalage horizontal"), -600, 600, self._me_dx,
+                        "target_option", {"key": "me_dx"}, step=1),
+                    rng(tr("Décalage vertical"), -400, 400, self._me_dy,
+                        "target_option", {"key": "me_dy"}, step=1),
+                    cho(tr("Contenu"), self._me_text,
+                        [[k, tr(n)] for k, n in self.BAR_TEXTS.items()],
+                        "target_option", {"key": "me_text"}),
+                    sub(tr("Effets actifs (suivent la barre)")),
+                    rng(tr("Décalage horizontal"), -400, 400, self._fx_dx,
+                        "target_option", {"key": "fx_dx"}, step=1),
+                    rng(tr("Décalage vertical"), -400, 400, self._fx_dy,
+                        "target_option", {"key": "fx_dy"}, step=1),
                     sec(tr("Barre de sorts")),
                     tog(tr("Fond minimaliste (rectangle sombre)"), self._skillbar_min,
                         "target_option", {"key": "skillbar_min"}),
@@ -4579,6 +4619,9 @@ class App:
                          "allyClassDx": int(self._ally_class_dx),
                          "allyClassDy": int(self._ally_class_dy),
                          "skillBarMin": bool(self._skillbar_min),
+                         "meBar": bool(self._me_bar), "meW": int(self._me_w), "meH": int(self._me_h),
+                         "meDx": int(self._me_dx), "meDy": int(self._me_dy),
+                         "fxDx": int(self._fx_dx), "fxDy": int(self._fx_dy), "meText": self._me_text,
                          "skillBarAlpha": int(self._skillbar_alpha),
                          "skillBarRadius": int(self._skillbar_radius),
                          "classTint": {k: self._rgb(v) for k, v in self._class_colors.items() if v},
@@ -4843,6 +4886,14 @@ class App:
                 setattr(self, "_" + key, max(-120, min(120, int(v))))
             elif str(key).startswith("class_") and key[6:] in self._class_colors and self._hex_ok(v):
                 self._class_colors[key[6:]] = v.upper()
+            elif key == "me_bar":
+                self._me_bar = bool(v)
+            elif key in ("me_w", "me_h", "me_dx", "me_dy", "fx_dx", "fx_dy"):
+                lo, hi = {"me_w": (0, 900), "me_h": (0, 60), "me_dx": (-600, 600),
+                          "me_dy": (-400, 400), "fx_dx": (-400, 400), "fx_dy": (-400, 400)}[key]
+                setattr(self, "_" + key, max(lo, min(hi, int(v))))
+            elif key == "me_text" and v in self.BAR_TEXTS:
+                self._me_text = v
             elif key == "skillbar_min":
                 self._skillbar_min = bool(v)
             elif key == "skillbar_alpha":

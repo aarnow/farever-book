@@ -1445,5 +1445,10 @@
  "Fond : {cls}": "Background: {cls}",
  "Afficher l'icône de classe": "Show the class icon",
  "Fond minimaliste (rectangle sombre)": "Minimal background (dark rectangle)",
- "Arrondi des coins": "Corner radius"
+ "Arrondi des coins": "Corner radius",
+ "Ma barre de vie": "My health bar",
+ "Placer et dimensionner ma barre de vie": "Place and size my health bar",
+ "Largeur (0 : celle du jeu)": "Width (0: the game's)",
+ "Hauteur (0 : celle du jeu)": "Height (0: the game's)",
+ "Effets actifs (suivent la barre)": "Active effects (follow the bar)"
 }
