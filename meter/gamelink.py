@@ -31,6 +31,8 @@ FRIDA_GOOD_VERSION = "17.18.0"
 # How long the game's threads get to leave our hooks' trampolines before
 # the agent is unloaded (the hooked functions are short).
 HOOK_DRAIN_SECS = 1.0
+# How long the game gets to undo the in-game options (its next frames)
+RESTORE_WAIT_SECS = 1.5
 
 
 def _unload_hook(script):
@@ -39,6 +41,15 @@ def _unload_hook(script):
     away crashes the game (see meter_hook.js)."""
     try:
         exports = getattr(script, "exports_sync", None) or script.exports
+        # the game given back as it was first (the in-game options' changes,
+        # undone on the game's thread at its next frame): waited for a while
+        try:
+            exports.restore()
+            until = time.monotonic() + RESTORE_WAIT_SECS
+            while time.monotonic() < until and not exports.restored():
+                time.sleep(0.05)
+        except Exception as e:
+            print(f"[meter] hook restore call failed ({e})", file=sys.stderr)
         exports.shutdown()
         time.sleep(HOOK_DRAIN_SECS)
     except Exception as e:
@@ -84,7 +95,7 @@ class GameSession:
 
     def _on_dungeon(self, p):
         self.dungeon.update(p.get("d") or {})
-        self.ui_state.set_dungeon(self.dungeon.run is not None)
+        self.ui_state.set_dungeon(self.dungeon.run is not None, self.dungeon.run)
 
     def __init__(self, link, device, proc, session, ui_state, world,
                  rift_rec, heal_sizer):

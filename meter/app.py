@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import threading
+import unicodedata
 import time
 from collections import defaultdict, deque
 from pathlib import Path
@@ -41,6 +42,7 @@ import goals as G
 from me import MeStore
 from gamedata import (
     MODEL_FORMAT, REGENERATING, _boss_label, char_look, _element_done, _fr_names, bestiary_catalogue,
+    _codex_thresholds, _table, achievements_catalogue,
     _spark_units, _unit_label,
     build_data, collection_catalogue, dungeon_catalogue,
     item_rarity,
@@ -57,6 +59,7 @@ from journal import (
     JOURNAL_PAGE, RIFT_JOURNALS_KEPT, journal_view, load_journal,
     prune_journals, remove_journal, save_journal)
 from views import (
+    _ach_crest, _ach_text, _family_label,
     collection_sheet,
     encyclopedia_item, encyclopedia_view,
     CLASS_LABELS, LUCK_LABELS, RIFT_STAT_ICONS, RIFT_STAT_LABELS, _pct, _profile_luck, _profile_stats, achievements_view,
@@ -217,7 +220,10 @@ class App:
         self._ov_on = {"meter": True, "goals": False, "luck": False,
                        "bonus": True,       # shown, per overlay
                        "meterheal": True,   # (the heals' meter, split)
-                       "currencies": False, "minimap": False}
+                       "currencies": False, "minimap": False, "quest": False}
+        # the quests overlay: its kinds shown, its lines at most
+        self._quest_kinds = {"drop": True, "codex": True, "ach": True}
+        self._quest_max = 12
         # the minimap: the hero where the hook last saw it (x, y, facing,
         # level, when), its shape, turned with the hero or north up, its
         # zoom's step, its size, its layers, the points found left out
@@ -233,6 +239,11 @@ class App:
         self._mm_size = 200
         self._mm_layers = set(MINIMAP_LAYERS_DEFAULT)
         self._mm_hide_found = True
+        # only the enemies a quest wants (the Quêtes overlay's), its button
+        self._mm_quest_only = False
+        self._quest_units = set()
+        self._quest_seen = {}               # monster seen alive -> when (the quests')
+        self._quest_pins = set()            # the quests of no place the player follows
         # the currencies overlay: those the player hid, how many a line
         self._cur_hidden = set()
         self._cur_per_row = 4
@@ -546,6 +557,8 @@ class App:
             self._mm_layers = {str(x) for x in mm["layers"] if x in MINIMAP_LAYERS}
         if isinstance(mm.get("hideFound"), bool):
             self._mm_hide_found = mm["hideFound"]
+        if isinstance(mm.get("questOnly"), bool):
+            self._mm_quest_only = mm["questOnly"]
         if isinstance(data.get("luck_merge"), bool):
             self._luck_merge = data["luck_merge"]
         if isinstance(data.get("rift_keep"), int) and data["rift_keep"] >= 0:
@@ -575,6 +588,14 @@ class App:
                     self._ov_pos[k] = {"ax": v["ax"], "ay": v["ay"],
                                        "dx": int(v.get("dx") or 0),
                                        "dy": int(v.get("dy") or 0)}
+        qk = data.get("quest_kinds") if isinstance(data.get("quest_kinds"), dict) else {}
+        for k in self._quest_kinds:
+            if isinstance(qk.get(k), bool):
+                self._quest_kinds[k] = qk[k]
+        if isinstance(data.get("quest_max"), int) and 3 <= data["quest_max"] <= 40:
+            self._quest_max = data["quest_max"]
+        if isinstance(data.get("quest_pins"), list):
+            self._quest_pins = {str(x) for x in data["quest_pins"]}
         on = data.get("overlay_on")
         if isinstance(on, dict):
             for k in self._ov_on:
@@ -650,7 +671,8 @@ class App:
                 "minimap": {"shape": self._mm_shape, "rotate": bool(self._mm_rotate),
                             "zoom": int(self._mm_zoom), "size": int(self._mm_size),
                             "layers": sorted(self._mm_layers),
-                            "hideFound": bool(self._mm_hide_found)},
+                            "hideFound": bool(self._mm_hide_found),
+                            "questOnly": bool(self._mm_quest_only)},
                 "luck_merge": bool(self._luck_merge),
                 "settings_rev": SETTINGS_REV,
                 "rift_keep": int(self._rift_keep),
@@ -666,6 +688,8 @@ class App:
                 "luck_hidden": sorted(self._luck_hidden),
                 "cur_hidden": sorted(self._cur_hidden),
                 "cur_per_row": int(self._cur_per_row),
+                "quest_kinds": dict(self._quest_kinds), "quest_max": int(self._quest_max),
+                "quest_pins": sorted(self._quest_pins),
                 "overlay_lock_always": bool(self._ov_lock_always),
                 "overlay_hide_free": bool(self._ov_hide_free),
                 "overlay_style": self._ov_style,
@@ -1157,6 +1181,7 @@ class App:
             # the currencies overlay: one shown or hidden, how many a line
             "cur_show": self._cur_show,
             "cur_per_row": self._cur_set_per_row,
+            "quest_set": self._quest_set,
             # the minimap: its zoom (d: a step in or out), its settings
             "mm_zoom": self._mm_set_zoom,
             # a meter's title or clock shown or not
@@ -2115,7 +2140,7 @@ class App:
         # (the bonus dungeon's name shortened: the menu's width)
         names.update({"luck": tr("Chance de butin"), "bonus": tr("Donjon bonus"),
                       "goals": tr("Objectifs"), "currencies": tr("Monnaies"),
-                      "minimap": tr("Minimap")})
+                      "minimap": tr("Minimap"), "quest": tr("Quêtes")})
         if self._luck_merge:
             names.pop("bonus")
         def swatch(t, cur, none, key, start="#D93A2B", alpha=False):
@@ -2298,6 +2323,23 @@ class App:
                                  tog(r.get("t") or "", not r.get("hide"), "luck_row",
                                      {"id": r.get("id")}, img=r.get("img"))
                                  for r in lines if r.get("id")]}]
+            elif oid == "quest":
+                rows += [sec(tr("Quêtes affichées")),
+                         tog(tr("Montures et planeurs à faire tomber"), self._quest_kinds["drop"],
+                             "quest_set", {"key": "drop"}),
+                         tog(tr("Codex : prochain palier"), self._quest_kinds["codex"],
+                             "quest_set", {"key": "codex"}),
+                         tog(tr("Succès du personnage"), self._quest_kinds["ach"],
+                             "quest_set", {"key": "ach"}),
+                         rng(tr("Lignes visibles (le reste à la molette)"), 3, 40, self._quest_max,
+                             "quest_set", {"key": "max"}, step=1)]
+                free = self._quest_offplace()
+                if free:
+                    rows += [sec(tr("Quêtes sans zone (à suivre)")),
+                             {"k": "grid", "items": [
+                                 tog(q["t"], q["id"] in self._quest_pins, "quest_set",
+                                     {"key": "pin", "id": q["id"]}, ic=q.get("ic"))
+                                 for q in free]}]
             elif oid == "currencies":
                 rows.append(rng(tr("Monnaies par ligne"), 1, 6, self._cur_per_row,
                                 "cur_per_row", {}, step=1))
@@ -2333,6 +2375,285 @@ class App:
             return [c[:4] for c in p.get(k) or () if isinstance(c, list) and len(c) >= 3]
         self._mm_units = (rows("pets"), rows("foes"), str(p.get("lv") or ""), time.time())
 
+    # ---- the quests: what the hero can do here (the Quêtes overlay) ----
+    # Only what the game's data and the hero's progress tell: the monsters
+    # around (the hook's, the minimap's), the dungeon the hero is in (its
+    # activity, its difficulty), the codex of this character, the
+    # collection, this character's achievements.
+    QUEST_FOES_SECS = 10
+    # the spawn points that tell the sub-zones around the hero (world units)
+    QUEST_ZONE_REACH = 300
+    # a monster seen alive, no spawn point of its own: kept that long
+    QUEST_SEEN_SECS = 90
+    # an achievement's banner by its category (the game's: its colour, its
+    # icon in ui_banner_<i>: trophy, collection, swords, tools, star, armour)
+    # (the star for all: an achievement's own mark; its category's colour)
+    ACH_BANNERS = {"Combat": "ban:C8494B:4", "Exploration": "ban:7B3FA0:4",
+                   "WorldEvents": "ban:7B3FA0:4", "Collection": "ban:C55A9C:4",
+                   "Jobs": "ban:C9902F:4", "Character": "ban:4F7FD6:4",
+                   "Reputation": "ban:5E9E3E:4"}
+
+    def _quest_spec(self):
+        kinds_on = self._quest_kinds
+        self._quest_units = useful = set()
+        empty = {"rows": [], "n": 0, "visible": int(self._quest_max), "where": ""}
+        if not any(kinds_on.values()):
+            return empty
+        best = bestiary_catalogue()
+        units = best.get("units") or {}
+        # The monsters of the place: those the game spawns in the sub-zones
+        # around the hero (its spawn points, each in its sub-zone: every
+        # monster of those, killed or not yet back), the nearest first; then
+        # those seen alive around lately (no spawn point known: events,
+        # summons), kept QUEST_SEEN_SECS after they went.
+        now = time.time()
+        pets, foes, lv, at = self._mm_units
+        pos = self._mm_pos
+        near = []
+        if pos and pos[3] == MINIMAP_WORLD and now - pos[4] < MINIMAP_POS_SECS                 and not self.ui_state.in_dungeon():
+            hx, hy = pos[0], pos[1]
+            spawns = best.get("spawns") or {}
+            r2 = self.QUEST_ZONE_REACH ** 2
+            zones = {z for pts in spawns.values() for sx, sy, z in pts
+                     if (sx - hx) ** 2 + (sy - hy) ** 2 <= r2}
+            dist = {}
+            for u, pts in spawns.items():
+                d = [(sx - hx) ** 2 + (sy - hy) ** 2 for sx, sy, z in pts if z in zones]
+                if d:
+                    dist[u] = min(d)
+            near += sorted(dist, key=dist.get)
+        # the invoked monsters (their ids end with _FS, the game's "Invoqué
+        # ..."): of no use, never a quest
+        near = [u for u in near if not self._invoked(u)]
+        seen = self._quest_seen
+        if now - at < self.QUEST_FOES_SECS:
+            for kind, *_r in foes:
+                seen[kind] = now
+        for kind in sorted(seen, key=lambda k: -seen[k]):
+            if now - seen[kind] > self.QUEST_SEEN_SECS:
+                del seen[kind]
+            elif kind not in near and not self._invoked(kind):
+                near.append(kind)
+        # the dungeon the hero is in: its monsters too (the game's: where
+        # each one is met)
+        run = self.ui_state.dungeon_run()
+        if run and run.get("kind"):
+            for u, w in (best.get("where") or {}).items():
+                if run["kind"] in (w.get("acts") or ()) and u not in near                         and not self._invoked(u):
+                    near.append(u)
+        cx = self._codex()
+        ranks = ((cx.get("heroes") or {}).get(cx.get("last")) or {}).get("ranks") or {}
+        kills = lambda u: int((ranks.get(u) or [0])[0] or 0)
+        ach = self._achievements()
+        done = set(((ach.get("heroes") or {}).get(ach.get("last")) or {}).get("done") or ())
+        owned = self._collection()
+        mine = set(owned.get("mounts") or ()) | set(owned.get("gliders") or ())
+        rows = []
+
+        def head(t, img="", tint=""):
+            rows.append({"sec": t, "img": img, "tint": tint})
+
+        def abc(got):
+            # in alphabetical order (accents aside)
+            return sorted(got, key=lambda r: unicodedata.normalize(
+                "NFKD", str(r.get("t") or "")).encode("ascii", "ignore").decode().casefold())
+
+        # the quests of no place the player follows (Réglages: checked)
+        pinned = []
+        for q in self._quest_offplace():
+            if q["id"] in self._quest_pins:
+                pinned.append({"t": q["t"], "s": q.get("s") or "", "r": q.get("r") or "",
+                               "img": q.get("img") or "", "name": "p:" + q["id"],
+                               "wrap": q.get("wrap", False)})
+        if pinned:
+            head(tr("Suivies"), "ban:C9902F:0")
+            rows += abc(pinned)
+
+        # mounts and gliders those monsters drop, not owned
+        if kinds_on["drop"]:
+            col = collection_catalogue()
+            got = []
+            # (a quest followed is in its own section already)
+            seen = {i[2:] for i in self._quest_pins if i.startswith("d:")}
+            for cat in ("mounts", "gliders"):
+                for e in col.get(cat) or ():
+                    if e["id"] in mine:
+                        continue
+                    for s in e.get("src") or ():
+                        k, p = s.get("k"), s.get("chance")
+                        if not p or k not in ("unit", "family"):
+                            continue
+                        who = next((u for u in near if (k == "unit" and u == s["id"]) or (
+                            k == "family" and (units.get(u) or {}).get("family") == s["id"])), None)
+                        if who and e["id"] not in seen:
+                            seen.add(e["id"])
+                            useful.add(who)
+                            got.append({"t": item_label(e["id"]), "img": "item:" + e["id"],
+                                        "s": _unit_label(who), "r": _pct(p), "name": "q:" + e["id"],
+                                        "tip": tr("{item} : {chance} par {unit} tué").replace(
+                                            "{item}", item_label(e["id"])).replace(
+                                            "{chance}", _pct(p)).replace("{unit}", _unit_label(who))})
+            # the dungeon's own loot (its difficulty's)
+            if run and run.get("kind"):
+                ids = {e["id"] for c in ("mounts", "gliders") for e in col.get(c) or ()}
+                for d in dungeon_catalogue():
+                    if d.get("kind") != run["kind"]:
+                        continue
+                    for l in d.get("loot") or ():
+                        it = l.get("item")
+                        if it in ids and it not in mine and it not in seen and (
+                                not l.get("diff") or l.get("diff") == run.get("difficulty")):
+                            seen.add(it)
+                            got.append({"t": item_label(it), "img": "item:" + it,
+                                        "s": dungeon_name(run["kind"]),
+                                        "r": _pct(l.get("chance")), "name": "q:" + it})
+            if got:
+                head(tr("Montures et planeurs"), "ban:9B4FD0:1")
+                rows += abc(got)
+        # the codex: the next rank of each monster there
+        if kinds_on["codex"]:
+            # the game's own rank (the codex's: 3 is mastered), the kills
+            # its next one needs (the unit's codex tier: elite, big, foe)
+            thr = _codex_thresholds()
+            cu = _table("codex_units.json")
+            nocodex = set(cu.get("noCodex") or ())
+            elite, big = set(cu.get("elite") or ()), set(cu.get("big") or ())
+            got = []
+            for u in near:
+                if u in nocodex or u not in units:
+                    continue
+                n, rank = ((ranks.get(u) or [0, 0]) + [0, 0])[:2]
+                n, rank = int(n or 0), int(rank or 0)
+                th = thr.get("elite" if u in elite else "big" if u in big else "foe") or []
+                if rank >= len(th):
+                    continue
+                need = th[rank]
+                if need <= n:
+                    continue                # the game's rank behind: not told
+                useful.add(u)
+                got.append({"t": _unit_label(u), "img": "best:" + u,
+                            "s": tr("Codex : palier {n}").replace("{n}", str(rank + 1)),
+                            "r": f"{n} / {need}", "name": "c:" + u})
+            if got:
+                head(tr("Codex"), "ban:C8494B:2")
+                rows += abc(got)
+        # this character's achievements: a monster there to kill once, the
+        # dungeon it is in to finish (in its difficulty)
+        if kinds_on["ach"]:
+            cat = achievements_catalogue()
+            by_id = {a["id"]: a for a in cat.get("achievements") or ()}
+            got = []
+            for a in cat.get("achievements") or ():
+                if a["id"] in done:
+                    continue
+                for o in a.get("obj") or ():
+                    ref = o.get("ref")
+                    for t in o.get("t") or ():
+                        if not isinstance(t, list) or len(t) < 2:
+                            continue
+                        if ref == "FoeKilledOnce" and t[0] == 0 and t[1] in near and kills(t[1]) == 0:
+                            name, _d = _ach_text(a, by_id, o.get("v"))
+                            useful.add(t[1])
+                            got.append({"t": name, "img": self.ACH_BANNERS.get(_ach_crest(a["id"]), "ban:C9902F:4"),
+                                        "wrap": True,
+                                        "s": tr("Tuer : {unit}").replace("{unit}", _unit_label(t[1])),
+                                        "r": "0 / 1", "name": "a:" + a["id"] + t[1]})
+                        elif (ref in ("ActivityCompleted", "DungeonWithoutSparkCube") and t[0] == 1
+                              and run and t[1] == run.get("kind")):
+                            want = t[2][0] if len(t) > 2 and isinstance(t[2], list) and t[2] else None
+                            if want is not None and want != run.get("difficulty"):
+                                continue
+                            name, desc = _ach_text(a, by_id, o.get("v"))
+                            got.append({"t": name, "wrap": True,
+                                        "img": self.ACH_BANNERS.get(_ach_crest(a["id"]), "ban:C9902F:4"),
+                                        "s": desc or dungeon_name(run["kind"]),
+                                        "r": "", "name": "a:" + a["id"], "tip": desc})
+            if got:
+                head(tr("Succès"), "ban:C9902F:4")
+                rows += abc(got)
+        if not rows:
+            return dict(empty, where=dungeon_name(run["kind"]) if run and run.get("kind") else "")
+        # every row (the overlay shows so many, the rest by its wheel)
+        return {"rows": rows, "n": sum(1 for r in rows if "sec" not in r),
+                "visible": int(self._quest_max),
+                "where": dungeon_name(run["kind"]) if run and run.get("kind") else ""}
+
+    def _invoked(self, u):
+        """An invoked monster (the game's French name "… invoqué(e)", its id
+        with _FS): of no use, never a quest."""
+        if "_FS" in str(u):
+            return True
+        names = getattr(self, "_fr_units", None)
+        if names is None:
+            names = self._fr_units = {k for k, v in (
+                _table("names_fr.json").get("unit") or {}).items() if "invoqu" in str(v).lower()}
+        return u in names
+
+    def _quest_offplace(self):
+        """The quests of no place (their monster spawned nowhere the levels
+        say, no dungeon's): a mount or glider it drops, not owned; an
+        achievement to kill it once, not done. [{id, t, s, r, img, ic}]."""
+        best = bestiary_catalogue()
+        units = best.get("units") or {}
+        placed = set(best.get("spawns") or {}) | {
+            u for u, w in (best.get("where") or {}).items() if w.get("acts")}
+        fam_placed = {(m or {}).get("family") for u, m in units.items() if u in placed}
+        owned = self._collection()
+        mine = set(owned.get("mounts") or ()) | set(owned.get("gliders") or ())
+        ach = self._achievements()
+        done = set(((ach.get("heroes") or {}).get(ach.get("last")) or {}).get("done") or ())
+        out, seen = [], set()
+        col = collection_catalogue()
+        for cat in ("mounts", "gliders"):
+            for e in col.get(cat) or ():
+                if e["id"] in mine or e["id"] in seen:
+                    continue
+                for s in e.get("src") or ():
+                    k, p = s.get("k"), s.get("chance")
+                    if not p or (k == "unit" and s["id"] in placed) or (
+                            k == "family" and s["id"] in fam_placed) or k not in ("unit", "family"):
+                        continue
+                    who = _unit_label(s["id"]) if k == "unit" else _family_label(s["id"])
+                    seen.add(e["id"])
+                    out.append({"id": "d:" + e["id"], "t": item_label(e["id"]), "s": who,
+                                "r": _pct(p), "img": "item:" + e["id"], "ic": "item:" + e["id"]})
+                    break
+        cat_ = achievements_catalogue()
+        by_id = {a["id"]: a for a in cat_.get("achievements") or ()}
+        for a in cat_.get("achievements") or ():
+            if a["id"] in done:
+                continue
+            for o in a.get("obj") or ():
+                if o.get("ref") != "FoeKilledOnce":
+                    continue
+                for t in o.get("t") or ():
+                    if isinstance(t, list) and t[0] == 0 and t[1] not in placed:
+                        name, desc = _ach_text(a, by_id, o.get("v"))
+                        out.append({"id": "a:" + a["id"] + ":" + t[1], "t": name,
+                                    "s": tr("Tuer : {unit}").replace("{unit}", _unit_label(t[1])),
+                                    "img": self.ACH_BANNERS.get(_ach_crest(a["id"]), "ban:C9902F:4"),
+                                    "wrap": True})
+        return out
+
+    def _quest_set(self, p):
+        """The quests overlay: a kind shown or not, its lines at most, a
+        quest of no place followed or not."""
+        key, v = p.get("key"), p.get("value")
+        if key == "pin" and p.get("id"):
+            (self._quest_pins.add if v else self._quest_pins.discard)(str(p["id"]))
+            self._save_settings()
+            return
+        if key in self._quest_kinds:
+            self._quest_kinds[key] = bool(v)
+        elif key == "max":
+            try:
+                self._quest_max = max(3, min(40, int(v)))
+            except (TypeError, ValueError):
+                return
+        else:
+            return
+        self._save_settings()
+
     def _mm_pet_info(self, kind):
         """A companion's hover: its name, owned or not (the Collection),
         a Spark one (its glow)."""
@@ -2366,12 +2687,15 @@ class App:
         # the units there now (the hook's): wild companions, monsters
         pets, foes, lv, at = self._mm_units
         if lv == MINIMAP_WORLD and time.time() - at < 10:
-            if "foe" in self._mm_layers:
+            if "foe" in self._mm_layers or self._mm_quest_only:
                 for kind, cx, cy, *lv in foes:
+                    useful = kind in self._quest_units
+                    if self._mm_quest_only and not useful:
+                        continue
                     if abs(cx - x) <= reach and abs(cy - y) <= reach:
                         pts.append([cx, cy, f"foe:{kind}", False,
                                     {"foe": True, "t": _unit_label(kind),
-                                     "lvl": lv[0] if lv else 0}])
+                                     "lvl": lv[0] if lv else 0, "quest": useful}])
             if "pet" in self._mm_layers:
                 for kind, cx, cy, *_l in pets:
                     if abs(cx - x) <= reach and abs(cy - y) <= reach:
@@ -2383,6 +2707,7 @@ class App:
                 "rotate": bool(self._mm_rotate), "pts": pts,
                 # its gear's panel: what it shows
                 "hideFound": bool(self._mm_hide_found),
+                "questOnly": bool(self._mm_quest_only),
                 "layers": [[lid, t, lid in self._mm_layers]
                            for lid, (t, _cs) in MINIMAP_LAYERS.items()]}
 
@@ -2414,6 +2739,8 @@ class App:
             self._mm_rotate = v == "turn" if isinstance(v, str) else bool(v)
         elif key == "hideFound":
             self._mm_hide_found = bool(v)
+        elif key == "questOnly":
+            self._mm_quest_only = bool(v)
         elif key == "size":
             try:
                 lo, hi, step = MINIMAP_SIZES
@@ -2558,6 +2885,13 @@ class App:
         # the currencies the player shows, so many a line
         spec["currencies"] = {"items": [c for c in self._currencies() if not c["hide"]],
                               "perRow": int(self._cur_per_row)}
+        try:
+            spec["quest"] = self._quest_spec()
+        except Exception as e:  # noqa: BLE001 - the other overlays first
+            spec["quest"] = None
+            if not getattr(self, "_quest_err_logged", False):
+                self._quest_err_logged = True
+                print(f"[meter] quests not made: {e!r}", file=sys.stderr)
         spec["minimap"] = self._minimap_spec()
         # the overlays' settings window (any overlay's gear opens it)
         spec["config"] = self._overlay_config(spec)
@@ -3939,7 +4273,8 @@ class App:
                       "luck": tr("Chance de butin"),
                       "bonus": tr("Donjon héroïque bonus"),
                       "currencies": tr("Monnaies"),
-                      "minimap": tr("Minimap")})
+                      "minimap": tr("Minimap"),
+                      "quest": tr("Quêtes")})
         if self._luck_merge:
             # the bonus dungeon is in the loot luck overlay
             names.pop("bonus")

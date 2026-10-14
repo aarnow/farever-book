@@ -874,7 +874,10 @@ UI_FRAME = "UI/Elements/background_close.png"
 # an atlas).
 UI_TITLE_FONT = "Font/platypi-bold-20.fnt"
 # Bumped when what ensure_ui_frame copies changes: copied again.
-UI_ASSETS = 10
+UI_ASSETS = 11
+# the game's banner (a white pennant) and the icons it carries (6 in a row)
+UI_FLAG = "UI/Elements/flag.png"
+UI_BANNER_ICONS = "UI/icons/banner_icon.png"
 # the game's white glyphs (square cells in a row) in front of the app's
 # tabs: its menu's (window_buttons) and its achievement categories'
 UI_TAB_GLYPHS = {"wb": "UI/icons/window_buttons.png",
@@ -958,6 +961,17 @@ def ensure_ui_frame():
             sq.paste(glyph, ((side - glyph.width) // 2,
                              (side - glyph.height) // 2))
             sq.save(ANALYSIS / f"ui_tab_{tab}.png")
+        # the game's banners (a white pennant to tint, its white icons in a
+        # row: trophy, collection, swords, tools, star, armour)
+        (ANALYSIS / "ui_flag.png").write_bytes(
+            pak_extract.read_entry(game / "res.pak", UI_FLAG))
+        icons = Image.open(io.BytesIO(pak_extract.read_entry(
+            game / "res.pak", UI_BANNER_ICONS))).convert("RGBA")
+        n = 6
+        cw = icons.width // n
+        for i in range(n):
+            icons.crop((i * cw, 0, i * cw + cw, icons.height)).save(
+                ANALYSIS / f"ui_banner_{i}.png")
         stamp.write_text(json.dumps({"v": UI_ASSETS}), encoding="utf-8")
         return True
     except Exception as e:

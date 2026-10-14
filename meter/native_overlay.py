@@ -2351,6 +2351,190 @@ class NativeLuck(NativeOverlay):
             super()._click(kind, arg)
 
 
+class QuestView:
+    """What the hero can do here (the app's): by kind (a heading and its
+    icon), each its picture (in colour), its name, what to do, its count or
+    chance; an achievement's name and text whole (wrapped)."""
+
+    title = "Quêtes"
+    W = 300
+    ROW = 4 + LH13 + 1 + LH11 + 4
+    SEC = LH13 + 14
+
+    def __init__(self, tr, icon_fn=None):
+        self.tr = tr
+        self.icon_fn = icon_fn
+
+    def _lines(self, p, r, tw_):
+        """A row's name and text lines (an achievement's wrapped)."""
+        right = str(r.get("r") or "")
+        rw = p.width(right, 11, 700) + 8 if right else 0
+        if r.get("wrap"):
+            return (p.wrap(str(r.get("t") or ""), 13, 600, tw_ - rw),
+                    p.wrap(str(r.get("s") or ""), 11, 400, tw_) if r.get("s") else [])
+        return [str(r.get("t") or "")], [str(r.get("s") or "")] if r.get("s") else []
+
+    def _row_h(self, tl, sl):
+        return max(self.ROW, 4 + len(tl) * LH13 + 1 + len(sl) * LH11 + 4)
+
+    def _pic(self, key, px, tint):
+        """A picture by its key, px wide, in its tint when it has one (the
+        game's crests are white: given their kind's colour)."""
+        im = self.icon_fn(key, px) if self.icon_fn and key else None
+        if im is not None and tint:
+            # its light parts in the colour, its dark ones kept
+            c = _rgba(tint)
+            col = ImageChops.multiply(im.convert("RGB"), Image.new("RGB", im.size, c[:3]))
+            col.putalpha(im.getchannel("A"))
+            im = col
+        return im
+
+    def draw(self, k, dpi_k, q, style, ui):
+        tr = self.tr
+        W = self.W
+        hits = []
+        q = q or {"rows": []}
+        rows = q.get("rows") or []
+        extra = str(q.get("n") or "")
+        if ui.get("settings"):
+            H = _settings_height() + 22
+            p = Paint(W, H, k)
+            _frame(p, W, H)
+            _head(p, W, tr(self.title), dpi_k, ui, hits, extra)
+            _settings(p, W, style, ui, hits, tr)
+            return p, hits, W, H
+        ix = 16
+        tx = ix + 34
+        tw_ = W - 16 - tx - 8
+        # the lines shown: `visible` quests from the scroll (its heading
+        # kept over the first), the rest by the wheel
+        vis = int(q.get("visible") or len(rows) or 1)
+        starts = [i for i, r in enumerate(rows) if "sec" not in r]
+        last = max(0, len(starts) - vis)
+        off = max(0, min(int(ui.get("qoff") or 0), last))
+        ui["qoff"] = off
+        self.more = (off > 0, off < last)
+        if starts and len(starts) > vis:
+            a, b = starts[off], starts[off + vis - 1]
+            head_i = max((i for i in range(a) if "sec" in rows[i]), default=None)
+            rows = ([rows[head_i]] if head_i is not None and head_i < a else []) + rows[a:b + 1]
+        else:
+            self.more = (False, False)
+        probe = Paint(1, 1, k)
+        laid = [None if "sec" in r else self._lines(probe, r, tw_) for r in rows]
+        where = q.get("where") or ""
+        top = (LH11 + 8) if where else 0
+        body = 6 + top + sum(self.SEC if "sec" in r else self._row_h(*laid[i])
+                             for i, r in enumerate(rows)) + 6
+        if not rows:
+            body = 6 + top + LH12 + 6           # a sentence alone
+        H = 44 + body + 22
+        p = Paint(W, H, k)
+        _frame(p, W, H)
+        _head(p, W, tr(self.title), dpi_k, ui, hits, extra)
+        p.fill(8, 44, W - 16, body, OV_BG)
+        y = 44 + 6
+        if where:
+            p.text(where, 16, y + 2, LH11, 11, 700, OV_DIM, clip=W - 32)
+            y += top
+        if not rows:
+            p.text(tr("Aucune quête dans les environs"), 16, y, LH12, 12, 400, OV_DIM, clip=W - 32)
+        for i, r in enumerate(rows):
+            if "sec" in r:
+                # its heading: its icon (in colour), its name, a rule
+                hx = 16
+                im = self._pic(r.get("img"), round(24 * k), r.get("tint"))
+                if im is not None:
+                    p._put(im, round((hx + 9) * k - im.width / 2), round((y + 7 + LH13 / 2) * k - im.height / 2))
+                    hx += 26
+                t = str(r["sec"]).upper()
+                p.text(t, hx, y + 7, LH13, 12.5, 700, OV_TEXT, spacing=0.8)
+                tw = p.width(t, 12.5, 700, 0.8)
+                p.hline(hx + tw + 8, y + 7 + LH13 / 2, max(0, W - 24 - hx - tw - 8), OV_LINE, 0.5)
+                y += self.SEC
+                continue
+            tl, sl = laid[i]
+            rh = self._row_h(tl, sl)
+            # its picture
+            iy = y + 4 if r.get("wrap") else y + (rh - 26) / 2
+            ban = str(r.get("img") or "").startswith("ban:")
+            if not ban:
+                p.fill(ix, iy, 26, 26, OV_WELL, r=5)
+            im = self._pic(r.get("img"), round((30 if ban else 18 if r.get("tint") else 24) * k),
+                           r.get("tint"))
+            if im is not None:
+                p._put(im, round((ix + 13) * k - im.width / 2), round((iy + 13) * k - im.height / 2))
+            else:
+                p.text("✦", ix, iy + (26 - LH13) / 2, LH13, 13, 400, OV_TEXT, align="center", w=26)
+            # its name, its count, what to do
+            right = str(r.get("r") or "")
+            rw = p.width(right, 11, 700) if right else 0
+            ty = y + 4
+            for j, line in enumerate(tl):
+                p.text(line, tx, ty, LH13, 13, 600, OV_TEXT,
+                       clip=None if r.get("wrap") else tw_ - (rw + 8 if right else 0))
+                ty += LH13
+            if right:
+                p.text(right, tx + tw_ - rw, y + 4 + (LH13 - LH11) / 2, LH11, 11, 700, OV_TEXT)
+            ty += 1
+            for line in sl:
+                p.text(line, tx, ty, LH11, 11, 400, OV_DIM, clip=None if r.get("wrap") else tw_)
+                ty += LH11
+            if r.get("tip"):
+                hits.append((8, y, W - 16, rh, "row", r.get("name")))
+            y += rh
+        # more above or below: a small arrow at the body's edge
+        up, down = self.more
+        if up:
+            p.text("▲", 0, 44 + 1, LH11, 9, 700, OV_DIM, align="center", w=W)
+        if down:
+            p.text("▼", 0, 44 + body - LH11 - 1, LH11, 9, 700, OV_DIM, align="center", w=W)
+        return p, hits, W, H
+
+
+class NativeQuest(NativeOverlay):
+    """The quests around the hero (the app's), its pictures read from
+    analysis_out; shown only with one at least."""
+
+    VIEW = QuestView
+    KEYED = True
+
+    def __init__(self, oid, pipe, lang, catalog, folder, tip_ref=None):
+        super().__init__(oid, pipe, lang, catalog, tip_ref)
+        self._folder = Path(folder)
+        self._icons = {}
+
+    def _icon(self, key, px):
+        return _key_icon(self._icons, self._folder, key, px)
+
+    def on_wheel(self, delta, x, y):
+        """The quests past the lines shown, one a notch."""
+        self._ui["qoff"] = max(0, int(self._ui.get("qoff") or 0) - (1 if delta > 0 else -1))
+        self._redraw()
+
+    def _default_pos(self, gw, gh, w, h):
+        return {"ax": "l", "dx": 24, "ay": "t", "dy": gh // 2}
+
+    def _redraw(self):
+        dpi_k = self._dpi_k()
+        k = dpi_k * self.scale / 100
+        self._k = k
+        ui = dict(self._ui)
+        _BG[0] = self._bg()
+        try:
+            p, hits, _w, _h = QuestView(self.tr, self._icon).draw(k, dpi_k, self._data, self._style, ui)
+            self._ui["qoff"] = ui.get("qoff", 0)
+        finally:
+            _BG[0] = 1.0
+        self._hits = hits
+        self._img = p.img
+        if p.img.size != self.size:
+            self.size = p.img.size
+            if self.game and not self.dragging:
+                self._place(present=False)
+        self._present()
+
+
 class NativeGoals(NativeOverlay):
     VIEW = GoalsView
 
@@ -2571,6 +2755,11 @@ class MinimapView:
             if info and info.get("spark"):
                 g = self._glow(size)
                 world.alpha_composite(g, (round(sx - g.width / 2), round(sy - g.height / 2)))
+            if info and info.get("quest"):
+                # an enemy a quest wants: ringed in gold
+                rq = size / 2 + 2 * k
+                dots.ellipse((sx - rq, sy - rq, sx + rq, sy + rq), outline=(242, 201, 76, 255),
+                             width=max(1, round(2 * k)))
             if ic is None:
                 rr = (2.5 if foe else 3) * k
                 dots.ellipse((sx - rr, sy - rr, sx + rr, sy + rr),
@@ -2587,7 +2776,7 @@ class MinimapView:
                                   int(info.get("lvl") or 0) if foe else 0)))
         # the hero: a gold arrow, its way (up when the map turns)
         self._arrow(world, h, h, -math.pi / 2 if rotate else r, 9 * k)
-        edge, cut, buttons, hits = self._decor_for(round_, S, k, D)
+        edge, cut, buttons, hits = self._decor_for(round_, S, k, D, bool(data.get("questOnly")))
         world.putalpha(ImageChops.multiply(world.getchannel("A"), cut))
         world.alpha_composite(edge)
         # the north, on the edge (where it is when the map turns)
@@ -2684,9 +2873,9 @@ class MinimapView:
             self._glows = {px: g.filter(ImageFilter.GaussianBlur(px / 8))}
         return self._glows[px]
 
-    def _decor_for(self, round_, S, k, D):
+    def _decor_for(self, round_, S, k, D, quest_on=False):
         """Its edge and buttons (a layer), its cut (a mask), their hits."""
-        key = (round_, S, k)
+        key = (round_, S, k, quest_on)
         if key not in self._decor:
             p = Paint(S, S, k)
             rr = S / 2 if round_ else 8
@@ -2704,20 +2893,25 @@ class MinimapView:
 
             def place(i, n_from_top):
                 if round_:
-                    ang = math.radians((-45, 30, 52)[i])
+                    ang = math.radians((-45, 30, 52, -135)[i])
                     return (M + S / 2 + math.cos(ang) * R - B / 2,
                             M + S / 2 + math.sin(ang) * R - B / 2)
+                if i == 3:
+                    return M + self.RING / 2 - B / 2, M + 22 - B / 2
                 x = M + S - self.RING / 2 - B / 2
                 return x, (M + 22 - B / 2 if i == 0 else M + S - 26 - (B + 4) * (2 - i) + 4)
-            for i, (glyph, kind) in enumerate((("", "gear"), ("+", "zin"), ("−", "zout"))):
+            # the quests-only button: gold when on (the enemies a quest wants)
+            for i, (glyph, kind) in enumerate((("", "gear"), ("+", "zin"), ("−", "zout"),
+                                               ("!", "mmq"))):
                 bx, by = place(i, i)
-                bp.fill(bx, by, B, B, (58, 46, 39), 0.95, r=B / 2)
+                on_q = kind == "mmq" and quest_on
+                bp.fill(bx, by, B, B, (242, 201, 76) if on_q else (58, 46, 39), 0.95, r=B / 2)
                 bp.ring(bx, by, B, B, 1, (206, 183, 170), 0.9, r=B / 2)
                 if kind == "gear":
                     _icon(bp, "gear", bx + 3, by + 3, B - 6, B - 6, "#FFFFFF")
                 else:
-                    bp.text(glyph, bx, by + (B - LH13) / 2 - 1, LH13, 13, 700, "#FFFFFF",
-                            align="center", w=B)
+                    bp.text(glyph, bx, by + (B - LH13) / 2 - 1, LH13, 13, 700,
+                            (58, 46, 39) if on_q else "#FFFFFF", align="center", w=B)
                 hits.insert(0, (bx, by, B, B, kind, None))
             # the cut a little inside the edge: the edge is drawn on CSS
             # pixels, the map on device ones (D, rounded up): never a row
@@ -2903,7 +3097,7 @@ class NativeMinimap(NativeOverlay):
                 self._place(present=False)
         self._present()
 
-    HAND = NativeOverlay.HAND + ("zin", "zout")
+    HAND = NativeOverlay.HAND + ("zin", "zout", "mmq")
     HOVER_ARGS = NativeOverlay.HOVER_ARGS + ("pet",)
 
     def _hover_tip(self, k):
@@ -2927,6 +3121,9 @@ class NativeMinimap(NativeOverlay):
     def _click(self, kind, arg):
         if kind in ("zin", "zout"):
             self._notify("mm_zoom", {"d": 1 if kind == "zin" else -1})
+        elif kind == "mmq":
+            self._notify("mm_set", {"key": "questOnly",
+                                    "value": not bool((self._data or {}).get("questOnly"))})
         elif kind == "switch":
             key, on = arg
             if key.startswith("layer:"):
@@ -2969,6 +3166,9 @@ def _key_icon(cache, folder, key, px, found=False):
     if k in cache:
         return cache[k]
     im = None
+    if str(key).startswith("ban:"):
+        cache[k] = _banner(folder, key, px)
+        return cache[k]
     if str(key).startswith("data:"):
         src = _data_image(key)
         if src is not None:
@@ -3033,6 +3233,7 @@ class ConfigView:
                  "meter": "Live", "meterheal": "Character",
                  "luck": "Collection",
                  "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
+                 "quest": "Map",
                  "minimap": "Map"}
     ROW, SEC, PAD = 28, 34, 14
     SUB = 26                            # a part of a section: its heading
@@ -4171,6 +4372,34 @@ def _triangle(p, cx, cy, size, direction, color):
     layer = Image.new("RGBA", (pw, ph), _rgba(color))
     layer.putalpha(m)
     p._put(layer, x0, y0)
+
+
+def _banner(folder, key, px):
+    """"ban:RRGGBB:i": the game's banner (its white pennant, ui_flag.png) in
+    that colour, its icon i (ui_banner_<i>.png, white) on it, px high."""
+    try:
+        _b, col, idx = str(key).split(":")
+        flag = Image.open(Path(folder) / "ui_flag.png").convert("RGBA")
+        icon = Image.open(Path(folder) / f"ui_banner_{int(idx)}.png").convert("RGBA")
+    except (OSError, ValueError):
+        return None
+    c = _rgba("#" + col)[:3]
+    # the pennant: a gradient of its colour (lighter at the top)
+    H = max(8, round(px))
+    W = max(4, round(H * flag.width / flag.height))
+    a = flag.getchannel("A").resize((W, H), Image.LANCZOS)
+    top = tuple(min(255, round(v + (255 - v) * 0.18)) for v in c)
+    grad = Image.new("RGB", (1, H))
+    grad.putdata([tuple(round(top[i] + (c[i] - top[i]) * y / max(1, H - 1)) for i in range(3))
+                  for y in range(H)])
+    out = grad.resize((W, H)).convert("RGBA")
+    out.putalpha(a)
+    # its icon, white, in its upper part
+    iw = round(W * 0.72)
+    ih = max(1, round(iw * icon.height / icon.width))
+    ic = icon.resize((iw, ih), Image.LANCZOS)
+    out.alpha_composite(ic, ((W - iw) // 2, max(0, round(H * 0.36 - ih / 2))))
+    return out
 
 
 def _foe_badge(src, px):

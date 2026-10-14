@@ -19,7 +19,18 @@ function every(fn, ms) {
     return t;
 }
 let STOPPING = false;
+// Farever Book closing: the game given back as it was (what the in-game
+// options changed), on the game's thread (the tick), before the shutdown.
+let RESTORE_WANTED = false, RESTORED = false;
+const restorers = [];
 rpc.exports = {
+    restore: function () {
+        RESTORE_WANTED = true;
+        return true;
+    },
+    restored: function () {
+        return RESTORED;
+    },
     shutdown: function () {
         STOPPING = true;
         TIMERS.forEach(function (t) { clearInterval(t); });
@@ -621,6 +632,34 @@ function cursorTick() {
     } catch (e) {}
 }
 
+// The game as it was: each part's own undo (the targeting options'), the
+// bars' values pref, the bosses' texts; then nothing more done.
+function runRestore() {
+    for (const fn of restorers) {
+        try { fn(); } catch (e) { log("restore part failed: " + e); }
+    }
+    try {
+        barValuesWanted = false;
+        applyBarValues();
+    } catch (e) {}
+    try {
+        if (setVisibleFn) {
+            for (const k in bossTextShown) {
+                const t = ptr(k);
+                if (typeName(t) === "ui.comp.FmtText") setVisibleFn(t, 0);
+            }
+            for (const k in bossTextHidden) {
+                const t = ptr(k);
+                if (typeName(t) === "ui.comp.FmtText") setVisibleFn(t, 1);
+            }
+        }
+        bossTextShown = {};
+        bossTextHidden = {};
+    } catch (e) {}
+    RESTORED = true;
+    log("game restored (Farever Book closing)");
+}
+
 // ---- the game-thread tick ----
 // HL calls must run on the game thread: from a timer they kill the game ("Can't
 // lock GC in unregistered thread"). client.BaseCamera.postUpdate runs every
@@ -631,6 +670,10 @@ function hookGameTick(base) {
     try {
         Interceptor.attach(base.add(fi * 8).readPointer(), {
             onEnter: function () {
+                if (RESTORE_WANTED) {
+                    if (!RESTORED) runRestore();
+                    return;
+                }
                 cursorTick();
                 if (heroRefreshDue) { heroRefreshDue = false; refreshLocalHero(); }
                 if (rosterDue || analyzeWanted !== null || selfDue) characterTick();
@@ -717,6 +760,7 @@ function findChild(o, type, depth) {
     return null;
 }
 function bossBarValues(slot) {
+    if (RESTORE_WANTED) return;
     if (!setVisibleFn || !OFF.HealthBar || OFF.HealthBar.txt == null) return;
     try {
         const hb = findChild(slot, "ui.comp.HealthBar", 0);
@@ -2955,7 +2999,10 @@ function main() {
             // (hl_add_root locks the collector: called on the game's thread
             // only, the first time a string is made there, never at load)
             const addRootAt = libhl ? libhl.findExportByName("hl_add_root") : null;
-            const hlRoot = addRootAt ? Memory.alloc(16) : null;
+            const mallocAt = (Module.findGlobalExportByName || ((n) => Module.findExportByName(null, n)))("malloc");
+            const hlRoot = addRootAt && mallocAt
+                ? new NativeFunction(mallocAt, "pointer", ["size_t"])(16) : null;
+            if (hlRoot) { hlRoot.writePointer(NULL); hlRoot.add(8).writePointer(NULL); }
             let rooted = false;
             const makeStr = function (text, like) {
                 if (!hlRoot || !allocBytes || !glowAlloc || !like || like.isNull()) return null;
@@ -3389,6 +3436,87 @@ function main() {
                         plateFailed = true;
                         log("targeting options failed: " + err);
                     }
+                }
+            });
+            // ---- Farever Book closing: every bar given back ----
+            const removeRootAt = libhl ? libhl.findExportByName("hl_remove_root") : null;
+            const undoBar = function (st) {
+                if (stale(st)) return;
+                const g = st.gauge;
+                if (g && st.set && setBarW && setBarH) {
+                    setBarW(g, st.w0);
+                    setBarH(g, st.h0);
+                    st.set = null;
+                }
+                if (st.shield && st.sh && st.sh.set && setBarW && setBarH) {
+                    setBarW(st.shield, st.sh.w0);
+                    setBarH(st.shield, st.sh.h0);
+                }
+                if (st.own && st.fill && !st.fill.isNull()) {
+                    const vs = fillVecs(st.fill);
+                    if (vs && vs.length === st.own.length) writeVecs(vs, st.own);
+                }
+                if (st.bgOwn && g) {
+                    const v = plainVec(g.add(OFF.Gauge.emptyBar).readPointer());
+                    if (v) writeVecs([v], st.bgOwn);
+                }
+                for (const t of st.txts || []) if (t && !t.isNull()) scaleText(t, 1);
+                if (st.outline && g) {
+                    const sh = outlineOf(g);
+                    if (sh) writeOutline(sh, st.outline);
+                }
+                const b = st.badge;
+                if (b && !b.isNull()) {
+                    if (Math.abs(b.add(D.scaleX).readDouble() - 1) > 0.001) {
+                        b.add(D.scaleX).writeDouble(1);
+                        b.add(D.scaleY).writeDouble(1);
+                        b.add(D.posChanged).writeU8(1);
+                    }
+                    if (st.badgeHidden && setVisibleFn) setVisibleFn(b, 1);
+                    const up = b.add(OFF.Object.parent).readPointer();
+                    if (st.off && up && !up.isNull() && FLOWS[typeName(up)]) {
+                        const fp = flowPropsOf(b, up);
+                        if (fp) {
+                            fp.add(D.fpOffsetX).writeS32(st.off.bx);
+                            fp.add(D.fpOffsetY).writeS32(st.off.by);
+                            up.add(D.needReflow).writeU8(1);
+                        }
+                    }
+                    if (st.lvTextOwn) tintObj(st, "lvTextOwn", b.add(D.levelText).readPointer(), null);
+                    if (st.lvPicOwn) tintObj(st, "lvPicOwn", findChild(b, "h2d.Bitmap", 3), null);
+                }
+                // an ally's: its text, its class icon
+                if (st.txtShown && st.txt && setVisibleFn) setVisibleFn(st.txt, 0);
+                if (st.clsBg && setVisibleFn) setVisibleFn(st.clsBg, 0);
+            };
+            restorers.push(function () {
+                plateFailed = true;             // nothing more done to the bars
+                lags.clear();
+                barTexts.clear();
+                plates.forEach(function (st, key) {
+                    try {
+                        undoBar(st);
+                        // the target indicator: its size, its halo
+                        const w = ptr(key);
+                        if (typeName(w) !== "ui.hud.FoeWidget") return;
+                        const ind = w.add(OFF.FoeWidget.targetIndicator).readPointer();
+                        if (!ind || ind.isNull()) return;
+                        if (st.scaled) {
+                            ind.add(D.scaleX).writeDouble(1);
+                            ind.add(D.scaleY).writeDouble(1);
+                            ind.add(D.posChanged).writeU8(1);
+                        }
+                        if (st.glowSet !== null && st.glowSet !== undefined && setFilter) setFilter(ind, NULL);
+                    } catch (e) {}
+                });
+                heroes.forEach(function (st) { try { undoBar(st); } catch (e) {} });
+                bossBars.forEach(function (st) { try { undoBar(st); } catch (e) {} });
+                // the collector's root of ours, taken back
+                if (hlRoot && rooted && removeRootAt) {
+                    const removeRoot = new NativeFunction(removeRootAt, "void", ["pointer"]);
+                    removeRoot(hlRoot);
+                    removeRoot(hlRoot.add(8));
+                    rooted = false;
                 }
             });
             log("targeting options ready (nameplates followed)");

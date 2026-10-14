@@ -972,9 +972,17 @@ class GameUIState:
         with self._lock:
             return self._rift
 
-    def set_dungeon(self, state: bool):
+    def set_dungeon(self, state: bool, run=None):
         with self._lock:
             self._dungeon = bool(state)
+            # its activity and difficulty (DungeonTracker.run), when known
+            self._run = ({"kind": run.get("kind"), "difficulty": run.get("difficulty")}
+                         if state and isinstance(run, dict) else None)
+
+    def dungeon_run(self):
+        """{kind, difficulty} of the dungeon the hero is in, or None."""
+        with self._lock:
+            return dict(self._run) if getattr(self, "_run", None) else None
 
     def in_dungeon(self) -> bool:
         with self._lock:
