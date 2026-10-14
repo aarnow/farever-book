@@ -1430,7 +1430,6 @@
  "Couleur de la vie (fin du dégradé)": "Life colour (gradient end)",
  "Expérimental": "Experimental",
  "À côté du niveau": "Beside the level",
- "Afficher l'icône de classe à côté du niveau": "Show the class icon beside the level",
  "Quêtes": "Quests",
  "Quêtes affichées": "Quests shown",
  "Montures et planeurs à faire tomber": "Mounts and gliders to drop",
@@ -1442,5 +1441,7 @@
  "Lignes visibles (le reste à la molette)": "Lines shown (the rest with the wheel)",
  "Quêtes sans zone (à suivre)": "Quests of no zone (to follow)",
  "Suivies": "Followed",
- "Aucune quête dans les environs": "No quest around"
+ "Aucune quête dans les environs": "No quest around",
+ "Fond : {cls}": "Background: {cls}",
+ "Afficher l'icône de classe": "Show the class icon"
 }

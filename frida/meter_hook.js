@@ -277,6 +277,10 @@ let barColorsEnd = { mine: null, aggro: null, neutral: null }, bossColorEnd = nu
 // "replace": in the level's square, "beside": apart), its size (%), its place
 let allyLevelDx = 0, allyLevelDy = 0, allyClass = "none", allyClassScale = 100;
 let allyClassDx = 0, allyClassDy = 0;
+// the game's class colours (its class flags, UI/icons/Classes/class_flag.png)
+const CLASS_TINT = { Warrior: 0xBB5649, Mage: 0x388E9F, Rogue: 0x5F5C6E, Priest: 0xB2945E };
+// the player's own (Réglages): a class -> 0xRRGGBB, else the game's
+let classTint = {};
 let targetGlowA = 100, targetLineA = 100;       // the halo's, the target's frame's (%)
 let barColors = { mine: null, aggro: null, neutral: null };
 function hlGlobal(g) {
@@ -363,6 +367,11 @@ function listenConfig() {
         allyClassScale = Math.max(20, Math.min(300, msg.allyClassScale | 0 || 100));
         allyClassDx = Math.max(-300, Math.min(300, msg.allyClassDx | 0));
         allyClassDy = Math.max(-300, Math.min(300, msg.allyClassDy | 0));
+        classTint = {};
+        for (const k in (msg.classTint || {})) {
+            const v = rgb(msg.classTint[k]);
+            if (v !== null) classTint[k] = v;
+        }
         bossTextScale = Math.max(50, Math.min(250, msg.bossTextScale | 0 || 100));
         targetGlowA = Math.max(0, Math.min(100, msg.targetGlowA == null ? 100 : msg.targetGlowA | 0));
         targetLineA = Math.max(0, Math.min(100, msg.targetLineA == null ? 100 : msg.targetLineA | 0));
@@ -3069,40 +3078,37 @@ function main() {
                         && sg.add(OFF.Object.visible).readU8()) return sg;
                 return lvBmp && lvBmp.add(OFF.Object.visible).readU8() ? lvBmp : null;
             };
+            const colorTile = fnOf(FF["h2d.$Tile.fromColor"], "pointer", ["int", "pointer", "pointer", "pointer"]);
             const makeClassIcon = function (st, lvBmp, cls, like, w) {
-                if (!newBmp || !iconTile || !glowAlloc || !hlRoot) return;
+                if (!newBmp || !iconTile || !glowAlloc || !hlRoot || !colorTile || !hltI32) return;
                 const src = levelSquare(st.badge, lvBmp);
                 if (!src) { st.clsTried = false; return; }      // looked for again
                 const grid = typeName(src) === "h2d.ScaleGrid";
-                if (grid && (!newGrid || !gridW || !gridH)) return;
-                const srcTile = src.add(grid ? D.gridTile : D.bitmapTile).readPointer();
-                if (!srcTile || srcTile.isNull()) return;
+                // the level's square's size (its ScaleGrid's, else its picture's)
+                const [sw, sh] = grid ? [src.add(D.gridW).readDouble(), src.add(D.gridH).readDouble()]
+                    : tileWH(src);
+                if (!(sw > 0) || !(sh > 0)) { st.clsTried = false; return; }
                 const name = makeStr("icon/Class_" + cls, like);
                 if (!name) return;
                 const tile = iconTile(name);
                 hlRoot.writePointer(NULL);
                 hlRoot.add(8).writePointer(NULL);
                 if (!tile || tile.isNull()) return;
-                // its copy, a child of the square (drawn with it: under the
-                // bar, drawn after, where they overlap). A child of the
-                // nameplate, out of its layout, was never drawn (2026-10-14)
-                const bg = glowAlloc(src.readPointer());
-                if (!bg || bg.isNull()) return;
+                // its ground: a plain white square (the game's tile of one
+                // colour) as big as the level's square, in the class's colour;
+                // a child of the square (drawn with it: under the bar, drawn
+                // after, where they overlap). A child of the nameplate, out of
+                // its layout, was never drawn (2026-10-14)
+                const ground = colorTile(0xFFFFFF, boxFor(Math.round(sw)), boxFor(Math.round(sh)), NULL);
+                if (!ground || ground.isNull()) return;
+                hlRoot.writePointer(ground);
+                const bg = glowAlloc(lvBmp.readPointer());
+                if (!bg || bg.isNull()) { hlRoot.writePointer(NULL); return; }
+                hlRoot.add(8).writePointer(bg);
+                newBmp(bg, ground, src);
                 hlRoot.writePointer(bg);
-                if (grid) {
-                    newGrid(bg, srcTile, src.add(D.gridBL).readS32(), src.add(D.gridBT).readS32(),
-                            NULL, NULL, src);
-                    for (const f of [D.gridBR, D.gridBB]) bg.add(f).writeS32(src.add(f).readS32());
-                    for (const f of [D.gridTB, D.gridTC, D.gridIS]) bg.add(f).writeU8(src.add(f).readU8());
-                    bg.add(D.gridBS).writeDouble(src.add(D.gridBS).readDouble());
-                    st.clsW = src.add(D.gridW).readDouble();
-                    st.clsH = src.add(D.gridH).readDouble();
-                    gridW(bg, st.clsW);
-                    gridH(bg, st.clsH);
-                } else {
-                    newBmp(bg, srcTile, src);
-                    [st.clsW, st.clsH] = tileWH(src);
-                }
+                st.clsW = Math.round(sw);
+                st.clsH = Math.round(sh);
                 const ic = glowAlloc(lvBmp.readPointer());
                 if (ic && !ic.isNull()) {
                     hlRoot.add(8).writePointer(ic);
@@ -3112,6 +3118,10 @@ function main() {
                 hlRoot.writePointer(NULL);
                 hlRoot.add(8).writePointer(NULL);
                 st.clsBg = bg;
+                // its ground in the class's colour (the game's: its class flag),
+                // the square's dark multiplied up to it
+                st.clsCls = cls;
+                st.clsTint = null;
                 st.clsSrc = src;
                 if (!classLogged) {
                     classLogged = true;
@@ -3127,6 +3137,12 @@ function main() {
             const placeClassIcon = function (st, w) {
                 const bg = st.clsBg, sq = st.clsSrc, g = st.gauge;
                 if (!bg.add(OFF.Object.visible).readU8() && setVisibleFn) setVisibleFn(bg, 1);
+                // its ground: the class's colour (the player's, else the game's)
+                const tint = classTint[st.clsCls] !== undefined ? classTint[st.clsCls] : CLASS_TINT[st.clsCls];
+                if (tint !== st.clsTint) {
+                    tintSquare(bg, tint);
+                    st.clsTint = tint;
+                }
                 const bw = st.clsW || 0, bh = st.clsH || 0;
                 // The level's mirror, by the bar (where the game drew them:
                 // absolute places and scales), in the square's own space (it is
@@ -3156,10 +3172,10 @@ function main() {
                 }
                 const ic = st.clsIcon;
                 if (ic && !ic.isNull() && !st.clsPlaced) {
-                    // the icon in the square: 70 % of it, centred
+                    // the icon in the square: all of it but 1 px round, centred
                     const [iw, ih] = tileWH(ic);
                     if (iw > 0 && ih > 0 && bw > 0 && bh > 0) {
-                        const f = Math.min(bw * 0.7 / iw, bh * 0.7 / ih);
+                        const f = Math.min((bw - 2) / iw, (bh - 2) / ih);
                         ic.add(D.scaleX).writeDouble(f);
                         ic.add(D.scaleY).writeDouble(f);
                         // (its tile drawn from its own offset: dx, dy)
@@ -3173,6 +3189,15 @@ function main() {
                 }
             };
 
+            // a white square of ours in a colour (its colour: the tint)
+            const tintSquare = function (o, c) {
+                if (c === undefined || c === null) return;
+                const v = o.add(D.color).readPointer();
+                if (!v || v.isNull()) return;
+                v.add(D.vx).writeDouble((c >> 16 & 255) / 255);
+                v.add(D.vy).writeDouble((c >> 8 & 255) / 255);
+                v.add(D.vz).writeDouble((c & 255) / 255);
+            };
             // a text scaled (k: 1 its own), its row laid out anew
             const scaleText = function (t, k) {
                 if (Math.abs(t.add(D.scaleX).readDouble() - k) <= 0.001) return;
@@ -3552,6 +3577,16 @@ function main() {
                 try { send({ kind: "open_panel" }); } catch (e) {}
             }, "void", []);
             let menuFailed = false;
+            // the buttons made: hidden when the hook goes (their click is ours)
+            const menuButtons = [];
+            restorers.push(function () {
+                for (const b of menuButtons) {
+                    try {
+                        if (typeName(b) === "ui.comp.Button" && setVisibleFn) setVisibleFn(b, 0);
+                    } catch (e) {}
+                }
+                menuButtons.length = 0;
+            });
             const hlText = function (text, like) {
                 // a String of the game's type (borrowed from one it made)
                 const s = allocObj(like.readPointer());
@@ -3580,6 +3615,7 @@ function main() {
                         const btn = allocObj(quit.readPointer());
                         newButton(btn, hlText("Farever Book", name), NULL, NULL, parent);
                         setOnClick(btn, allocClosure(quitClick.readPointer(), onClick));
+                        menuButtons.push(btn);
                         // left where the constructor put it, last in the
                         // menu: moving it with h2d.Object.addChildAt passed
                         // over the menu's own layout (an h2d.Flow, its own

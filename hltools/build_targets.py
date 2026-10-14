@@ -52,6 +52,7 @@ TARGETS = (
                  "ui.comp.BaseGauge.set_text", "ui.comp.FmtText.set_text",
                  "h2d.$Bitmap.__constructor__", "ui.$BaseUI.loadTextIcon",
                  "h2d.$ScaleGrid.__constructor__", "h2d.ScaleGrid.set_width",
+                 "h2d.$Tile.fromColor",
                  "h2d.ScaleGrid.set_height",
                  "h2d.filter.$Glow.__constructor__"),
      "nameplate target", "no targeting options"),
@@ -104,6 +105,7 @@ SIGNATURES = {
     "h2d.$ScaleGrid.__constructor__":
         "(h2d.ScaleGrid,h2d.Tile,i32,i32,null<i32>,null<i32>,h2d.Object)->void",
     "h2d.ScaleGrid.set_width": "(h2d.ScaleGrid,f64)->f64",
+    "h2d.$Tile.fromColor": "(i32,null<i32>,null<i32>,null<f64>)->h2d.Tile",
     "h2d.ScaleGrid.set_height": "(h2d.ScaleGrid,f64)->f64",
     "h2d.filter.$Glow.__constructor__":
         "(h2d.filter.Glow,ref<i32>,ref<f64>,ref<f64>,ref<f64>,ref<f64>,ref<bool>)->void",

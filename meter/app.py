@@ -145,7 +145,7 @@ OVERLAY_THEMES = {"farever": "Farever", "minimal": "Minimaliste"}
 
 # an overlay's greatest size (%), when not OV_SCALE_MAX
 OV_SCALE_MAX = 110
-OV_SCALE_MAX_OF = {"minimap": 160}
+OV_SCALE_MAX_OF = {"minimap": 240}
 
 
 def _ov_style(v, oid=None):
@@ -317,6 +317,8 @@ class App:
         self._ally_class_scale = 100
         self._ally_class_dx = 0
         self._ally_class_dy = 0
+        # the class icons' grounds: a class -> "#RRGGBB" ("": the game's)
+        self._class_colors = {"Warrior": "", "Mage": "", "Rogue": "", "Priest": ""}
         # the monsters' bars wider (px)
         self._foe_width = 0
         # the text in the bars: its size (%), its outline ("": none), its width
@@ -492,6 +494,10 @@ class App:
         for key in ("ally_level_show",):
             if isinstance(data.get(key), bool):
                 setattr(self, "_" + key, data[key])
+        cc = data.get("class_colors") if isinstance(data.get("class_colors"), dict) else {}
+        for k in self._class_colors:
+            if self._hex_ok(cc.get(k)):
+                self._class_colors[k] = cc[k]
         # (the icon in the level's square, a choice of before, now beside it)
         ac = "beside" if data.get("ally_class") == "replace" else data.get("ally_class")
         if ac in self.ALLY_CLASS:
@@ -650,6 +656,7 @@ class App:
                     "ally_level_show", "ally_level_scale", "ally_level_dx", "ally_text",
                     "ally_color", "ally_color_end", "ally_lag", "ally_bg", "boss_color_end",
                     "ally_level_dy", "ally_class", "ally_class_scale", "ally_class_dx",
+                    "class_colors",
                     "ally_class_dy")},
                 "esc_button": bool(self._esc_button),
                 "quick_custom": {n: {a[1:]: v for a, v in vals.items()}
@@ -2280,8 +2287,12 @@ class App:
                     rng(tr("Décalage vertical"), -120, 120, self._ally_level_dy,
                         "target_option", {"key": "ally_level_dy"}, step=1),
                     sub(tr("Icône de classe")),
-                    tog(tr("Afficher l'icône de classe à côté du niveau"),
+                    tog(tr("Afficher l'icône de classe"),
                         self._ally_class == "beside", "target_option", {"key": "ally_class_on"}),
+                    *[swatch(tr("Fond : {cls}").replace("{cls}", tr(lbl)), self._class_colors[k],
+                             tr("Couleur du jeu"), "class_" + k, start=dflt)
+                      for k, lbl, dflt in (("Warrior", "Guerrier", "#BB5649"), ("Mage", "Mage", "#388E9F"),
+                                           ("Rogue", "Voleur", "#5F5C6E"), ("Priest", "Prêtre", "#B2945E"))],
                     rng(tr("Taille de l'icône"), 20, 300, self._ally_class_scale,
                         "target_option", {"key": "ally_class_scale"}, step=1),
                     rng(tr("Décalage horizontal"), -300, 300, self._ally_class_dx,
@@ -4548,6 +4559,7 @@ class App:
                          "allyClassScale": int(self._ally_class_scale),
                          "allyClassDx": int(self._ally_class_dx),
                          "allyClassDy": int(self._ally_class_dy),
+                         "classTint": {k: self._rgb(v) for k, v in self._class_colors.items() if v},
                          "bossTextScale": int(self._boss_text_scale),
                          "targetGlowA": self._alpha(self._target_glow),
                          "targetLineA": self._alpha(self._target_line),
@@ -4807,6 +4819,8 @@ class App:
                 self._ally_level_scale = max(20, min(250, int(v)))
             elif key in ("ally_level_dx", "ally_level_dy"):
                 setattr(self, "_" + key, max(-120, min(120, int(v))))
+            elif str(key).startswith("class_") and key[6:] in self._class_colors and self._hex_ok(v):
+                self._class_colors[key[6:]] = v.upper()
             elif key == "ally_class_on":
                 self._ally_class = "beside" if v else "none"
                 # turned on with the level and icon untouched: the setting

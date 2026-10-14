@@ -2968,7 +2968,7 @@ class NativeMinimap(NativeOverlay):
     teleport) is drawn at once."""
 
     KEYED = True
-    SCALE_MAX = 160
+    SCALE_MAX = 240
     SCALE_DEFAULT = 130
     TILE_CACHE = 48                     # tiles kept at a size
     EASE = 0.25
