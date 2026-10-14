@@ -104,7 +104,7 @@
  "Avec assistance": "Guided",
  "Babiole": "Trinket",
  "Banque pas encore lue : ouvre-la une fois en jeu.": "Bank not read yet: open it once in game.",
- "Barre de sorts": "Spell bar",
+ "Barre de sorts": "Skill bar",
  "Barre de sorts indisponible pour ce profil.": "Spell bar unavailable for this profile.",
  "Bas": "Down",
  "Base de tous ses dégâts": "Base of all its damage",
@@ -1443,5 +1443,7 @@
  "Suivies": "Followed",
  "Aucune quête dans les environs": "No quest around",
  "Fond : {cls}": "Background: {cls}",
- "Afficher l'icône de classe": "Show the class icon"
+ "Afficher l'icône de classe": "Show the class icon",
+ "Fond minimaliste (rectangle sombre)": "Minimal background (dark rectangle)",
+ "Arrondi des coins": "Corner radius"
 }

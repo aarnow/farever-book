@@ -326,6 +326,10 @@ class App:
         self._boss_text_scale = 100
         # the Farever Book button made in the game's menu (Échap) by the hook
         self._esc_button = True
+        # the skills' bar: its frame a plain dark rectangle (opacity %, corners px)
+        self._skillbar_min = False
+        self._skillbar_alpha = 55
+        self._skillbar_radius = 10
         # the quick setups imported (name -> their values), the last share's note
         self._quick_custom = {}
         self._quick_note = ""
@@ -516,6 +520,12 @@ class App:
             ok = self._quick_clean(vals)
             if ok is not None and isinstance(name, str) and name and name not in self.QUICK_PRESETS:
                 self._quick_custom[name[:40]] = ok
+        if isinstance(data.get("skillbar_min"), bool):
+            self._skillbar_min = data["skillbar_min"]
+        if isinstance(data.get("skillbar_alpha"), int) and 0 <= data["skillbar_alpha"] <= 100:
+            self._skillbar_alpha = data["skillbar_alpha"]
+        if isinstance(data.get("skillbar_radius"), int) and 0 <= data["skillbar_radius"] <= 30:
+            self._skillbar_radius = data["skillbar_radius"]
         if isinstance(data.get("esc_button"), bool):
             self._esc_button = data["esc_button"]
         if isinstance(data.get("target_scale"), int) and 50 <= data["target_scale"] <= 300:
@@ -659,6 +669,8 @@ class App:
                     "class_colors",
                     "ally_class_dy")},
                 "esc_button": bool(self._esc_button),
+                "skillbar_min": bool(self._skillbar_min), "skillbar_alpha": int(self._skillbar_alpha),
+                "skillbar_radius": int(self._skillbar_radius),
                 "quick_custom": {n: {a[1:]: v for a, v in vals.items()}
                                  for n, vals in self._quick_custom.items()},
                 "target_scale": int(self._target_scale),
@@ -2302,7 +2314,14 @@ class App:
                 {"id": "interface", "t": tr("Interface"), "group": "game", "tag": tr("Expérimental"), "rows": [
                     sec(tr("Menu du jeu")),
                     tog(tr("Bouton Farever Book dans le menu Échap"),
-                        self._esc_button, "esc_button", {})]},
+                        self._esc_button, "esc_button", {}),
+                    sec(tr("Barre de sorts")),
+                    tog(tr("Fond minimaliste (rectangle sombre)"), self._skillbar_min,
+                        "target_option", {"key": "skillbar_min"}),
+                    rng(tr("Opacité du fond"), 0, 100, self._skillbar_alpha,
+                        "target_option", {"key": "skillbar_alpha"}, step=5),
+                    rng(tr("Arrondi des coins"), 0, 30, self._skillbar_radius,
+                        "target_option", {"key": "skillbar_radius"}, step=1)]},
                 {"id": "general", "t": tr("Général"), "group": "overlays", "rows": [
                     sec(tr("Thème")),
                     {"k": "cards", "act": "ov_theme", "p": {},
@@ -4559,6 +4578,9 @@ class App:
                          "allyClassScale": int(self._ally_class_scale),
                          "allyClassDx": int(self._ally_class_dx),
                          "allyClassDy": int(self._ally_class_dy),
+                         "skillBarMin": bool(self._skillbar_min),
+                         "skillBarAlpha": int(self._skillbar_alpha),
+                         "skillBarRadius": int(self._skillbar_radius),
                          "classTint": {k: self._rgb(v) for k, v in self._class_colors.items() if v},
                          "bossTextScale": int(self._boss_text_scale),
                          "targetGlowA": self._alpha(self._target_glow),
@@ -4821,6 +4843,12 @@ class App:
                 setattr(self, "_" + key, max(-120, min(120, int(v))))
             elif str(key).startswith("class_") and key[6:] in self._class_colors and self._hex_ok(v):
                 self._class_colors[key[6:]] = v.upper()
+            elif key == "skillbar_min":
+                self._skillbar_min = bool(v)
+            elif key == "skillbar_alpha":
+                self._skillbar_alpha = max(0, min(100, int(v)))
+            elif key == "skillbar_radius":
+                self._skillbar_radius = max(0, min(30, int(v)))
             elif key == "ally_class_on":
                 self._ally_class = "beside" if v else "none"
                 # turned on with the level and icon untouched: the setting

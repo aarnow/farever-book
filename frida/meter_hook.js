@@ -281,6 +281,9 @@ let allyClassDx = 0, allyClassDy = 0;
 const CLASS_TINT = { Warrior: 0xBB5649, Mage: 0x388E9F, Rogue: 0x5F5C6E, Priest: 0xB2945E };
 // the player's own (Réglages): a class -> 0xRRGGBB, else the game's
 let classTint = {};
+// the skills' bar: its frame made a plain rounded rectangle (its colour's
+// opacity %, its corners' radius px), or the game's
+let skillBarMin = false, skillBarAlpha = 55, skillBarRadius = 10;
 let targetGlowA = 100, targetLineA = 100;       // the halo's, the target's frame's (%)
 let barColors = { mine: null, aggro: null, neutral: null };
 function hlGlobal(g) {
@@ -367,6 +370,9 @@ function listenConfig() {
         allyClassScale = Math.max(20, Math.min(300, msg.allyClassScale | 0 || 100));
         allyClassDx = Math.max(-300, Math.min(300, msg.allyClassDx | 0));
         allyClassDy = Math.max(-300, Math.min(300, msg.allyClassDy | 0));
+        skillBarMin = !!msg.skillBarMin;
+        skillBarAlpha = Math.max(0, Math.min(100, msg.skillBarAlpha == null ? 55 : msg.skillBarAlpha | 0));
+        skillBarRadius = Math.max(0, Math.min(30, msg.skillBarRadius == null ? 10 : msg.skillBarRadius | 0));
         classTint = {};
         for (const k in (msg.classTint || {})) {
             const v = rgb(msg.classTint[k]);
@@ -2537,6 +2543,94 @@ function main() {
             };
             const colorFi = FF["ui.comp.BaseGauge.applyColorTo"];
             const gaugeBoss = new Map();    // gauge -> its BossInfo, or null
+            // The hero's bar (HeroBar, met by its health gauge's parents): its
+            // skills' bar's frame (SkillBar's background, a ScaleGrid of the
+            // game's 50 px tile) made invisible (its colour's alpha: its place
+            // kept), a DynamicBackground of ours under it in its stead (the
+            // game's own kind of ground: a colour, its opacity, round corners),
+            // its size the frame's, kept each frame the gauge draws.
+            let heroBar = null, heroGauge = null;
+            const sb = { bar: null, frame: null, ours: null, frameA: undefined, set: "" };
+            const newDyn = fnOf(FF["shiro.ui.$DynamicBackground.__constructor__"], "void",
+                                ["pointer", "pointer", "pointer"]);
+            const dynColor = fnOf(FF["shiro.ui.DynamicBackground.set_background"], "int", ["pointer", "int"]);
+            const dynAlpha = fnOf(FF["shiro.ui.DynamicBackground.set_backgroundAlpha"], "double",
+                                  ["pointer", "double"]);
+            const skillBarUndo = function () {
+                if (sb.ours && setVisibleFn) setVisibleFn(sb.ours, 0);
+                if (sb.frame && sb.frameA !== undefined) {
+                    const v = sb.frame.add(D.color).readPointer();
+                    if (v && !v.isNull()) v.add(D.vw).writeDouble(sb.frameA);
+                }
+                sb.frameA = undefined;
+                sb.set = "";
+            };
+            const skillBarTick = function () {
+                if (!heroBar || typeName(heroBar) !== "ui.hud.HeroBar") return;
+                if (!sb.bar || typeName(sb.bar) !== "ui.hud.SkillBar") {
+                    sb.bar = findChild(heroBar, "ui.hud.SkillBar", 0);
+                    sb.frame = sb.ours = null;
+                    sb.frameA = undefined;
+                }
+                if (!sb.bar) return;
+                const frame = sb.bar.add(D.background).readPointer();
+                if (!frame || frame.isNull() || typeName(frame) !== "h2d.ScaleGrid") return;
+                if (sb.frame && !frame.equals(sb.frame)) {        // made anew by the game
+                    sb.frame = sb.ours = null;
+                    sb.frameA = undefined;
+                }
+                sb.frame = frame;
+                if (!skillBarMin) {
+                    if (sb.frameA !== undefined || sb.ours) skillBarUndo();
+                    return;
+                }
+                // ours, once: a DynamicBackground (its type a health bar's), its
+                // tile the game's of one colour, a child of the frame (drawn
+                // where it is, the frame itself invisible)
+                if (!sb.ours) {
+                    if (!newDyn || !dynColor || !dynAlpha || !colorTile || !glowAlloc || !hlRoot || !gridW || !gridH)
+                        return;
+                    const eb = heroGauge ? ptr(heroGauge).add(OFF.Gauge.emptyBar).readPointer() : null;
+                    const like = eb && !eb.isNull() ? eb.add(D.background).readPointer() : null;
+                    if (!like || like.isNull() || typeName(like) !== "shiro.ui.DynamicBackground") return;
+                    const white = colorTile(0xFFFFFF, NULL, NULL, NULL);
+                    if (!white || white.isNull()) return;
+                    hlRoot.writePointer(white);
+                    const o = glowAlloc(like.readPointer());
+                    if (!o || o.isNull()) { hlRoot.writePointer(NULL); return; }
+                    hlRoot.add(8).writePointer(o);
+                    newDyn(o, white, frame);
+                    hlRoot.writePointer(NULL);
+                    hlRoot.add(8).writePointer(NULL);
+                    sb.ours = o;
+                    sb.set = "";
+                    log("skills' bar: its frame made a plain rectangle");
+                }
+                // the frame invisible (its own alpha kept to give back)
+                const fv = frame.add(D.color).readPointer();
+                if (fv && !fv.isNull()) {
+                    if (sb.frameA === undefined) sb.frameA = fv.add(D.vw).readDouble();
+                    fv.add(D.vw).writeDouble(0);
+                }
+                const o = sb.ours;
+                if (!o.add(OFF.Object.visible).readU8() && setVisibleFn) setVisibleFn(o, 1);
+                // its size the frame's, its colour, its corners
+                const w = frame.add(D.gridW).readDouble(), h = frame.add(D.gridH).readDouble();
+                const key = w + ":" + h + ":" + skillBarAlpha;
+                if (key !== sb.set) {
+                    gridW(o, w);
+                    gridH(o, h);
+                    dynColor(o, 0x000000);
+                    dynAlpha(o, skillBarAlpha / 100);
+                    sb.set = key;
+                }
+                const sh = o.add(D.dynShader).readPointer();
+                const rv = sh && !sh.isNull() ? sh.add(D.dynRadius).readPointer() : null;
+                if (rv && !rv.isNull()) {
+                    for (const f of [D.vx, D.vy, D.vz, D.vw]) rv.add(f).writeDouble(skillBarRadius);
+                }
+            };
+            restorers.push(function () { try { skillBarUndo(); } catch (e) {} });
             if (colorFi != null && hltI32) {
                 Interceptor.attach(base.add(colorFi * 8).readPointer(), {
                     onEnter() {
@@ -2551,6 +2645,7 @@ function main() {
                                 let o = g;
                                 for (let i = 0; i < 10 && o && !o.isNull(); i++) {
                                     if (typeName(o) === "ui.hud.BossInfo") { slot = o; break; }
+                                    if (typeName(o) === "ui.hud.HeroBar") { heroBar = o; heroGauge = gk; break; }
                                     o = o.add(OFF.Object.parent).readPointer();
                                 }
                             } catch (e) { slot = null; }
@@ -2560,6 +2655,9 @@ function main() {
                             }
                         }
                         if (slot && bossStyler) bossStyler(slot);
+                        if (heroGauge === gk && !plateFailed) {
+                            try { skillBarTick(); } catch (e) { log("skills' bar failed: " + e); heroGauge = null; }
+                        }
                         if (!lags.size) return;
                         const e = lags.get(gk);
                         if (e && this.context.rdx.equals(e.bar)) this.context.r8 = boxFor(e.c);

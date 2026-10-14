@@ -2875,7 +2875,7 @@ class MinimapView:
 
     def _decor_for(self, round_, S, k, D, quest_on=False):
         """Its edge and buttons (a layer), its cut (a mask), their hits."""
-        key = (round_, S, k, quest_on)
+        key = (round_, S, k, quest_on, _THEME[0])       # (its colours: the theme's)
         if key not in self._decor:
             p = Paint(S, S, k)
             rr = S / 2 if round_ else 8
@@ -2930,8 +2930,9 @@ class MinimapView:
         return self._decor[key]
 
     def _badge_for(self, k):
+        k = (k, _THEME[0])
         if k not in self._badge:
-            p = Paint(16, 16, k)
+            p = Paint(16, 16, k[0])
             p.fill(0, 0, 16, 16, (58, 46, 39), 0.9, r=8)
             p.text("N", 0, (16 - LH11) / 2, LH11, 11, 700, "#F2C94C", align="center", w=16)
             self._badge = {k: p.img}

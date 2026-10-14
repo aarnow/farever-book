@@ -148,7 +148,8 @@ def hook_layout(code):
         "Object": {"parent": offs("h2d.Object")["parent"][0],
                    "children": offs("h2d.Object")["children"][0],
                    "visible": offs("h2d.Object")["visible"][0],
-                   "alpha": offs("h2d.Object")["alpha"][0]},
+                   "alpha": offs("h2d.Object")["alpha"][0],
+                   "name": offs("h2d.Object")["name"][0]},
         # a health bar's text (a boss bar's, hidden by the game)
         "HealthBar": {"txt": offs("ui.comp.HealthBar")["txt"][0],
                       "shieldGauge": offs("ui.comp.HealthBar")["shieldGauge"][0],
@@ -213,6 +214,8 @@ def hook_layout(code):
                  "fpElt": offs("h2d.FlowProperties")["elt"][0],
                  "fpOffsetX": offs("h2d.FlowProperties")["offsetX"][0],
                  "fpOffsetY": offs("h2d.FlowProperties")["offsetY"][0],
+                 "flowCW": offs("h2d.Flow")["calculatedWidth"][0],
+                 "flowCH": offs("h2d.Flow")["calculatedHeight"][0],
                  # where the game drew an object last (its absolute place, scale)
                  "absX": offs("h2d.Object")["absX"][0], "absY": offs("h2d.Object")["absY"][0],
                  "matA": offs("h2d.Object")["matA"][0], "matD": offs("h2d.Object")["matD"][0],
@@ -233,7 +236,9 @@ def hook_layout(code):
                  "dynConstModified": dbs["constModified"][0],
                  "dynOutlineOffset": dbs["outlineOffset__"][0],
                  "dynUseGradient": dbs["useGradient__"][0],
-                 "dynGrad1": dbs["gradColor1__"][0], "dynGrad2": dbs["gradColor2__"][0]},
+                 "dynGrad1": dbs["gradColor1__"][0], "dynGrad2": dbs["gradColor2__"][0],
+                 "dynUseImage": dbs["useImage__"][0], "dynImgTex": dbs["imgTex__"][0],
+                 "dynRadius": dbs["borderRadius__"][0], "dynMargins": dbs["margins__"][0]},
         # the game's halo filter: its class's global (an object type's
         # global is stored plus one), the hl_type it holds
         "Glow": {"global": byname["h2d.filter.Glow"].global_index - 1,
