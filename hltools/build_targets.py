@@ -44,6 +44,17 @@ TARGETS = (
     # it there; its update writes "value / max" once it is)
     ("bar_fns", ("h2d.Object.set_visible",), "bar target",
      "no health values on the boss bars"),
+    # the monsters' nameplates (FoeWidget): its update each frame (the
+    # closure initActive binds, found below), the gauge's inset (its frame)
+    ("foe_fns", ("ui.hud.FoeWidget.initActive",
+                 "ui.comp.BaseGauge.set_barWidth", "ui.comp.BaseGauge.set_barHeight",
+                 "ui.comp.BaseGauge.applyColorTo", "h2d.Object.set_filter",
+                 "ui.comp.BaseGauge.set_text", "ui.comp.FmtText.set_text",
+                 "h2d.$Bitmap.__constructor__", "ui.$BaseUI.loadTextIcon",
+                 "h2d.$ScaleGrid.__constructor__", "h2d.ScaleGrid.set_width",
+                 "h2d.ScaleGrid.set_height",
+                 "h2d.filter.$Glow.__constructor__"),
+     "nameplate target", "no targeting options"),
     # the game's menu (Échap): a Farever Book button made in it, as the
     # game makes its own (a Button, its click, its place after Options)
     ("menu_fns", ("ui.win.EscapeMenu.init", "ui.comp.$Button.__constructor__",
@@ -73,11 +84,68 @@ def by_name(names, wanted):
     return {nm: fi for fi, nm in names.items() if nm in wanted}
 
 
+# The functions the hook calls to change the game (not only reads): their
+# arguments as this build has them must be these, or they are left out (the
+# feature then off, the hook told so) — a game update changing one must
+# never have the hook call it with the wrong arguments.
+SIGNATURES = {
+    "ui.comp.$Button.__constructor__": "(ui.comp.Button,String,String,null<bool>,h2d.Object)->void",
+    "ui.UIElement.set_onClick": "(ui.UIElement,()->void)->()->void",
+    "ui.win.EscapeMenu.init": "(ui.win.EscapeMenu)->void",
+    "h2d.Object.set_visible": "(h2d.Object,bool)->bool",
+    "ui.comp.BaseGauge.set_barWidth": "(ui.comp.BaseGauge,i32)->i32",
+    "ui.comp.BaseGauge.applyColorTo": "(ui.comp.BaseGauge,h2d.Flow,null<i32>)->void",
+    "ui.comp.BaseGauge.set_barHeight": "(ui.comp.BaseGauge,i32)->i32",
+    "h2d.Object.set_filter": "(h2d.Object,h2d.filter.Filter)->h2d.filter.Filter",
+    "ui.comp.BaseGauge.set_text": "(ui.comp.BaseGauge,String)->String",
+    "ui.comp.FmtText.set_text": "(ui.comp.FmtText,String)->String",
+    "h2d.$Bitmap.__constructor__": "(h2d.Bitmap,h2d.Tile,h2d.Object)->void",
+    "ui.$BaseUI.loadTextIcon": "(String)->h2d.Tile",
+    "h2d.$ScaleGrid.__constructor__":
+        "(h2d.ScaleGrid,h2d.Tile,i32,i32,null<i32>,null<i32>,h2d.Object)->void",
+    "h2d.ScaleGrid.set_width": "(h2d.ScaleGrid,f64)->f64",
+    "h2d.ScaleGrid.set_height": "(h2d.ScaleGrid,f64)->f64",
+    "h2d.filter.$Glow.__constructor__":
+        "(h2d.filter.Glow,ref<i32>,ref<f64>,ref<f64>,ref<f64>,ref<f64>,ref<bool>)->void",
+}
+# a nameplate's update, each frame: the closure FoeWidget.initActive binds
+FOE_UPDATE = "(ui.hud.FoeWidget,f64)->void"
+# a player's nameplate's update (HeroWidget), each frame: the closure its
+# init binds (UIElement.bindUpdate)
+HERO_UPDATE = "(ui.hud.HeroWidget,f64)->void"
+
+
 def resolve(code):
     names = code.findex_names()
     payload = {"anchors": anchors(code)}
     for key, wanted, *_ in TARGETS:
         payload[key] = by_name(names, wanted)
+    # those that change the game: kept only with their arguments as expected
+    by_fn = {v: k for k, v in names.items()}
+    init = by_fn.get("ui.hud.FoeWidget.initActive")
+    hero_init = by_fn.get("ui.hud.HeroWidget.init")
+    types = code.function_types(closures_of={i for i in (init, hero_init) if i is not None})
+    hu = [c for c in (code.closures.get(hero_init) or [])
+          if code.type_str(types.get(c, -1)) == HERO_UPDATE]
+    if len(hu) == 1:
+        payload["hero_update"] = hu[0]
+    else:
+        print("    [!] the players' nameplates' update not found: no options for the allies")
+    upd = (code.closures.get(init) or [None])[0] if init is not None else None
+    if upd is not None and code.type_str(types.get(upd, -1)) == FOE_UPDATE:
+        payload["foe_update"] = upd
+    else:
+        print("    [!] the nameplates' update not found: no targeting options")
+    bad = []
+    for key, *_ in TARGETS:
+        for nm, fi in list(payload[key].items()):
+            want = SIGNATURES.get(nm)
+            got = code.type_str(types[fi]) if fi in types else "?"
+            if want is not None and got != want:
+                del payload[key][nm]
+                bad.append(f"{nm}: {got} (expected {want})")
+    for line in bad:
+        print(f"    [!] arguments changed, left out: {line}")
     payload["map_natives"] = {n.name: n.findex for n in code.natives
                               if n.lib == "std" and n.name in MAP_NATIVES}
     payload["funcs"] = {nm.lstrip("$"): fi for nm, fi in
@@ -95,6 +163,24 @@ def report(payload):
                       + (f" — {cost[0]}" if cost else ""))
             else:
                 print(f"    {nm:<45} findex={payload[key][nm]}")
+
+
+def neutral_units(game_dir):
+    """The units that attack no one first (data.cdb unit flags NeutralAggro
+    or NoAggro), for the bars' colours: a neutral foe's."""
+    try:
+        import pak_extract
+        cdb = json.loads(pak_extract.read_entry(Path(game_dir)
+                                                / "res.light.pak", "data.cdb"))
+        sheet = next(s for s in cdb["sheets"] if s["name"] == "unit")
+        col = next(c for c in sheet["columns"] if c["name"] == "flags")
+        flags = col["typeStr"].split(":", 1)[1].split(",")
+        mask = (1 << flags.index("NeutralAggro")) | (1 << flags.index("NoAggro"))
+    except Exception as e:  # noqa: BLE001
+        print(f"    [!] unit flags unreadable ({e}): no neutral foe told apart")
+        return []
+    return sorted(ln["id"] for ln in sheet["lines"] if isinstance(ln.get("id"), str)
+                  and isinstance(ln.get("flags"), int) and ln["flags"] & mask)
 
 
 def critter_units(game_dir):
@@ -153,6 +239,7 @@ def main():
     payload = resolve(HLCode(hlboot).parse())
     payload["cc_statuses"] = cc_statuses(Path(hlboot).parent)
     payload["critters"] = critter_units(Path(hlboot).parent)
+    payload["neutral_units"] = neutral_units(Path(hlboot).parent)
     print(f"    companions' units: {len(payload['critters'])}")
     print(f"    crowd-control statuses: {len(payload['cc_statuses'])}")
     OUT.mkdir(parents=True, exist_ok=True)

@@ -71,6 +71,7 @@ def hook_layout(code):
     hd = offs("st.skill.HitData")
     ua = offs("ent.UnitAttributes")
     hero = offs("ent.Hero")
+    dbs = offs("shiro.ui.DynamicBackgroundShader")
     layer = offs("st.GameLayer")
     tstate = offs("TimeState")
     player = offs("st.Player")
@@ -146,9 +147,99 @@ def hook_layout(code):
         "UIElement": {"onClick": offs("ui.UIElement")["onClick"][0]},
         "Object": {"parent": offs("h2d.Object")["parent"][0],
                    "children": offs("h2d.Object")["children"][0],
-                   "visible": offs("h2d.Object")["visible"][0]},
+                   "visible": offs("h2d.Object")["visible"][0],
+                   "alpha": offs("h2d.Object")["alpha"][0]},
         # a health bar's text (a boss bar's, hidden by the game)
-        "HealthBar": {"txt": offs("ui.comp.HealthBar")["txt"][0]},
+        "HealthBar": {"txt": offs("ui.comp.HealthBar")["txt"][0],
+                      "shieldGauge": offs("ui.comp.HealthBar")["shieldGauge"][0],
+                      "healthGauge": offs("ui.comp.HealthBar")["healthGauge"][0]},
+        # the targeting options: a nameplate's indicator (its scale, its
+        # place), its foe's target (a network uid: the hero's __uid), its
+        # health gauge's fill (its tint) and inset (its frame)
+        "FoeWidget": {"targetIndicator": offs("ui.hud.FoeWidget")["targetIndicator"][0],
+                      "gameObject": offs("ui.hud.FoeWidget")["gameObject"][0]},
+        # a player's nameplate: its name (its holder, its text), its bar
+        "HeroWidget": {"nameCont": offs("ui.hud.HeroWidget")["nameCont"][0],
+                       "hero": offs("ui.hud.HeroWidget")["hero"][0],
+                       "heroName": offs("ui.hud.HeroWidget")["heroName"][0],
+                       "healthBar": offs("ui.hud.HeroWidget")["healthBar"][0],
+                       "fmtText": offs("ui.comp.FmtText")["text"][0]},
+        "FoeTarget": {"target": offs("ent.Foe")["target"][0],
+                      "heroUid": hero["__uid"][0]},
+        "Gauge": {"inset": offs("ui.comp.BaseGauge")["inset"][0],
+                  "barWidth": offs("ui.comp.BaseGauge")["barWidth"][0],
+                  "emptyBar": offs("ui.comp.BaseGauge")["emptyBar"][0],
+                  "lagBar": offs("ui.comp.BaseGauge")["lagBar"][0],
+                  "txt": offs("ui.comp.BaseGauge")["txt"][0],
+                  "barHeight": offs("ui.comp.BaseGauge")["barHeight"][0],
+                  "fillBar": offs("ui.comp.BaseGauge")["fillBar"][0]},
+        "Draw": {"x": offs("h2d.Object")["x"][0], "y": offs("h2d.Object")["y"][0],
+                 "scaleX": offs("h2d.Object")["scaleX"][0],
+                 "scaleY": offs("h2d.Object")["scaleY"][0],
+                 "posChanged": offs("h2d.Object")["posChanged"][0],
+                 "allocated": offs("h2d.Object")["allocated"][0],
+                 "color": offs("h2d.Drawable")["color"][0],
+                 "background": offs("h2d.Flow")["background"][0],
+                 "bitmapTile": offs("h2d.Bitmap")["tile"][0],
+                 "tileW": offs("h2d.Tile")["width"][0], "tileH": offs("h2d.Tile")["height"][0],
+                 "tileTex": offs("h2d.Tile")["innerTex"][0],
+                 "tileDx": offs("h2d.Tile")["dx"][0], "tileDy": offs("h2d.Tile")["dy"][0],
+                 # a layout's background (its square): a ScaleGrid's own
+                 "gridTile": offs("h2d.ScaleGrid")["tile"][0],
+                 "gridBL": offs("h2d.ScaleGrid")["borderLeft"][0],
+                 "gridBR": offs("h2d.ScaleGrid")["borderRight"][0],
+                 "gridBT": offs("h2d.ScaleGrid")["borderTop"][0],
+                 "gridBB": offs("h2d.ScaleGrid")["borderBottom"][0],
+                 "gridW": offs("h2d.ScaleGrid")["width"][0],
+                 "gridH": offs("h2d.ScaleGrid")["height"][0],
+                 "gridTB": offs("h2d.ScaleGrid")["tileBorders"][0],
+                 "gridTC": offs("h2d.ScaleGrid")["tileCenter"][0],
+                 "gridIS": offs("h2d.ScaleGrid")["ignoreScale"][0],
+                 "gridBS": offs("h2d.ScaleGrid")["borderScale"][0],
+                 "filter": offs("h2d.Object")["filter"][0],
+                 "tileU": offs("h2d.Tile")["u"][0], "tileV": offs("h2d.Tile")["v"][0],
+                 "tileU2": offs("h2d.Tile")["u2"][0], "tileV2": offs("h2d.Tile")["v2"][0],
+                 "texW": offs("h3d.mat.Texture")["width"][0],
+                 "texH": offs("h3d.mat.Texture")["height"][0],
+                 "vx": offs("h3d.Vector4Impl")["x"][0], "vy": offs("h3d.Vector4Impl")["y"][0],
+                 "vz": offs("h3d.Vector4Impl")["z"][0], "vw": offs("h3d.Vector4Impl")["w"][0],
+                 # a background drawn by a DynamicBackground: its colour and
+                 # outline are its shader's (the Drawable's own colour unused)
+                 "dynShader": offs("shiro.ui.DynamicBackground")["shader"][0],
+                 # a Flow told to lay its children out again
+                 "needReflow": offs("h2d.Flow")["needReflow"][0],
+                 # a child's place in its Flow (its properties, by elt)
+                 "flowProps": offs("h2d.Flow")["properties"][0],
+                 "fpElt": offs("h2d.FlowProperties")["elt"][0],
+                 "fpOffsetX": offs("h2d.FlowProperties")["offsetX"][0],
+                 "fpOffsetY": offs("h2d.FlowProperties")["offsetY"][0],
+                 # where the game drew an object last (its absolute place, scale)
+                 "absX": offs("h2d.Object")["absX"][0], "absY": offs("h2d.Object")["absY"][0],
+                 "matA": offs("h2d.Object")["matA"][0], "matD": offs("h2d.Object")["matD"][0],
+                 # the level beside a foe's bar: its digits
+                 "levelText": offs("ui.hud.LevelDisplay")["fmtText"][0],
+                 # a background's shadow (its blurred glow)
+                 "dynUseShadow": dbs["useShadow__"][0],
+                 "dynShadowInset": dbs["shadowInset__"][0],
+                 "dynShadowOffset": dbs["shadowOffset__"][0],
+                 "dynShadowBlur": dbs["shadowBlurRadius__"][0],
+                 "dynShadowSpread": dbs["shadowSpreadRadius__"][0],
+                 "dynShadowColor": dbs["shadowColor__"][0],
+                 "dynColor": dbs["backgroundColor__"][0],
+                 "dynUseOutline": dbs["useOutline__"][0],
+                 "dynOutlineColor": dbs["outlineColor__"][0],
+                 "dynOutlineThickness": dbs["outlineThickness__"][0],
+                 "dynSeparate": dbs["separateThicknesses__"][0],
+                 "dynConstModified": dbs["constModified"][0],
+                 "dynOutlineOffset": dbs["outlineOffset__"][0],
+                 "dynUseGradient": dbs["useGradient__"][0],
+                 "dynGrad1": dbs["gradColor1__"][0], "dynGrad2": dbs["gradColor2__"][0]},
+        # the game's halo filter: its class's global (an object type's
+        # global is stored plus one), the hl_type it holds
+        "Glow": {"global": byname["h2d.filter.Glow"].global_index - 1,
+                 "type": offs("h2d.filter.$Glow")["__type__"][0],
+                 "smooth": offs("h2d.filter.Glow")["smooth"][0],
+                 "screenRes": offs("h2d.filter.Glow")["useScreenResolution"][0]},
         # _block / blocker / effect: which one marks a nullified hit (boss
         # immunity phase) is not settled yet.
         "DamageResult": {k: dr[k][0] for k in

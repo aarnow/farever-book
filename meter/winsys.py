@@ -734,6 +734,37 @@ def copy_text_to_clipboard(text):
         u32.CloseClipboard()
 
 
+def read_text_from_clipboard():
+    """The Windows clipboard's text, or None."""
+    if sys.platform != "win32":
+        return None
+    k32, u32 = ctypes.windll.kernel32, ctypes.windll.user32
+    k32.GlobalLock.restype = ctypes.c_void_p
+    k32.GlobalLock.argtypes = (ctypes.c_void_p,)
+    k32.GlobalUnlock.argtypes = (ctypes.c_void_p,)
+    u32.GetClipboardData.restype = ctypes.c_void_p
+    u32.GetClipboardData.argtypes = (wintypes.UINT,)
+    for _ in range(5):
+        if u32.OpenClipboard(0):
+            break
+        time.sleep(0.05)
+    else:
+        return None
+    try:
+        h = u32.GetClipboardData(13)                    # CF_UNICODETEXT
+        if not h:
+            return None
+        ptr = k32.GlobalLock(h)
+        if not ptr:
+            return None
+        try:
+            return ctypes.wstring_at(ptr)
+        finally:
+            k32.GlobalUnlock(h)
+    finally:
+        u32.CloseClipboard()
+
+
 def copy_image_to_clipboard(img):
     """Put a PIL image on the Windows clipboard as CF_DIB (a BMP file minus
     its 14-byte header)."""

@@ -231,6 +231,43 @@ let hlModule = null;        // the game's hl_module (its globals), when the walk
 // memory, never saved (the game's onChange is not called). Off again: the
 // value it had. Re-set every few seconds (the game may read its prefs anew).
 let barValuesWanted = false, barValuesWas = null;
+let escButtonWanted = true;     // the Farever Book button in the game's menu (an option, on)
+// the targeting options (the app's): the indicator's size (%) and halo
+// (0xRRGGBB or null), the health bars' frame (px more than the game's),
+// their colours (0xRRGGBB, null: the game's) on a foe targeting the hero,
+// an aggressive one, a neutral one; the outline of the targeted foe's bar
+// (0xRRGGBB or null, its width in px)
+let targetScale = 100, frameExtra = 0, targetGlow = null;
+let targetLine = null, targetLineWidth = 2;
+// the colour of the life being lost (by the same kinds), the bars' background
+let lagColors = { mine: null, aggro: null, neutral: null }, barBg = null;
+let levelScale = 100;           // the level beside the bar (%), on top of the bar's growth
+// the halo's and the outline's blur (px), the level shown, its digits'
+// colour and its picture's tint (0xRRGGBB or null), its offset (px)
+let glowBlur = 5, lineBlur = 0, levelShow = true, levelText = null, levelTint = null;
+let levelDx = 0, levelDy = 0;
+// the text in the bars, the monsters' and the bosses': "none", "pct",
+// "value", "max" (value / max); the bosses' bars: their colours (fill,
+// life being lost, background: 0xRRGGBB or null), thickness, level
+let foeText = "none", bossText = "none";
+let bossColor = null, bossLag = null, bossBg = null, bossExtra = 0;
+let bossLevelShow = true, bossLevelScale = 100, bossLevelDx = 0, bossLevelDy = 0;
+let foeWidth = 0;               // the monsters' bars wider (px, may be less)
+// the text in the bars: its size (%), its outline (0xRRGGBB or null, px)
+let foeTextScale = 100, bossTextScale = 100;
+// the allies' (players') bars: thicker, wider (px), their level (shown, %),
+// their name in the bar (its own place hidden)
+let allyExtra = 0, allyWidth = 0, allyLevelShow = true, allyLevelScale = 100;
+// the allies' text (as the monsters'), their life's colours (0xRRGGBB or
+// null), and every life's gradient end (null: the game's, in its ratio)
+let allyText = "none", allyColor = null, allyColorEnd = null, allyLag = null, allyBg = null;
+let barColorsEnd = { mine: null, aggro: null, neutral: null }, bossColorEnd = null;
+// their level's place (px from the game's), their class's icon ("none",
+// "replace": in the level's square, "beside": apart), its size (%), its place
+let allyLevelDx = 0, allyLevelDy = 0, allyClass = "none", allyClassScale = 100;
+let allyClassDx = 0, allyClassDy = 0;
+let targetGlowA = 100, targetLineA = 100;       // the halo's, the target's frame's (%)
+let barColors = { mine: null, aggro: null, neutral: null };
 function hlGlobal(g) {
     // a global's value (an object), by its index: hl_module's globals
     const idx = hlModule.add(16).readPointer().add(g * 4).readS32();
@@ -263,6 +300,61 @@ function applyBarValues() {
 }
 function listenConfig() {
     recv("config", function (msg) {
+        escButtonWanted = msg.escButton !== false;
+        targetScale = Math.max(50, Math.min(300, msg.targetScale | 0 || 100));
+        frameExtra = Math.max(0, Math.min(16, msg.frameExtra | 0));
+        const rgb = v => (typeof v === "number" && v >= 0 && v <= 0xFFFFFF) ? v : null;
+        targetGlow = rgb(msg.targetGlow);
+        targetLine = rgb(msg.targetLine);
+        targetLineWidth = Math.max(1, Math.min(6, msg.targetLineWidth | 0 || 2));
+        const bc = msg.barColors || {};
+        barColors = { mine: rgb(bc.mine), aggro: rgb(bc.aggro), neutral: rgb(bc.neutral) };
+        const lc = msg.lagColors || {};
+        lagColors = { mine: rgb(lc.mine), aggro: rgb(lc.aggro), neutral: rgb(lc.neutral) };
+        barBg = rgb(msg.barBg);
+        levelScale = Math.max(50, Math.min(250, msg.levelScale | 0 || 100));
+        glowBlur = Math.max(1, Math.min(16, msg.glowBlur | 0 || 5));
+        lineBlur = Math.max(0, Math.min(16, msg.lineBlur | 0));
+        levelShow = msg.levelShow !== false;
+        levelText = rgb(msg.levelText);
+        levelTint = rgb(msg.levelTint);
+        levelDx = Math.max(-60, Math.min(60, msg.levelDx | 0));
+        levelDy = Math.max(-60, Math.min(60, msg.levelDy | 0));
+        const mode = v => ["none", "pct", "value", "max", "max_pct"].indexOf(v) >= 0 ? v : "none";
+        foeText = mode(msg.foeText);
+        bossText = mode(msg.bossText);
+        bossColor = rgb(msg.bossColor);
+        bossLag = rgb(msg.bossLag);
+        bossBg = rgb(msg.bossBg);
+        bossExtra = Math.max(0, Math.min(16, msg.bossExtra | 0));
+        bossLevelShow = msg.bossLevelShow !== false;
+        bossLevelScale = Math.max(50, Math.min(250, msg.bossLevelScale | 0 || 100));
+        bossLevelDx = Math.max(-80, Math.min(80, msg.bossLevelDx | 0));
+        bossLevelDy = Math.max(-80, Math.min(80, msg.bossLevelDy | 0));
+        foeWidth = Math.max(-60, Math.min(200, msg.foeWidth | 0));
+        foeTextScale = Math.max(50, Math.min(250, msg.foeTextScale | 0 || 100));
+        allyExtra = Math.max(0, Math.min(16, msg.allyExtra | 0));
+        allyWidth = Math.max(-60, Math.min(200, msg.allyWidth | 0));
+        allyLevelShow = msg.allyLevelShow !== false;
+        allyText = ["none", "pct", "value", "max", "max_pct"].indexOf(msg.allyText) >= 0
+            ? msg.allyText : "none";
+        allyColor = rgb(msg.allyColor);
+        allyColorEnd = rgb(msg.allyColorEnd);
+        allyLag = rgb(msg.allyLag);
+        allyBg = rgb(msg.allyBg);
+        bossColorEnd = rgb(msg.bossColorEnd);
+        const be = msg.barColorsEnd || {};
+        barColorsEnd = { mine: rgb(be.mine), aggro: rgb(be.aggro), neutral: rgb(be.neutral) };
+        allyLevelScale = Math.max(20, Math.min(250, msg.allyLevelScale | 0 || 100));
+        allyLevelDx = Math.max(-120, Math.min(120, msg.allyLevelDx | 0));
+        allyLevelDy = Math.max(-120, Math.min(120, msg.allyLevelDy | 0));
+        allyClass = msg.allyClass === "beside" ? "beside" : "none";
+        allyClassScale = Math.max(20, Math.min(300, msg.allyClassScale | 0 || 100));
+        allyClassDx = Math.max(-300, Math.min(300, msg.allyClassDx | 0));
+        allyClassDy = Math.max(-300, Math.min(300, msg.allyClassDy | 0));
+        bossTextScale = Math.max(50, Math.min(250, msg.bossTextScale | 0 || 100));
+        targetGlowA = Math.max(0, Math.min(100, msg.targetGlowA == null ? 100 : msg.targetGlowA | 0));
+        targetLineA = Math.max(0, Math.min(100, msg.targetLineA == null ? 100 : msg.targetLineA | 0));
         const want = !!msg.barValues;
         if (want !== barValuesWanted) {
             barValuesWanted = want;
@@ -600,6 +692,12 @@ function classifyBossUnit(u, kind) {
 // showRessources preference, a percentage without). Found under the
 // BossInfo among its children; put back hidden when the option goes off.
 let bossTextShown = {};         // HealthBar.txt -> true, the texts shown by us
+let bossTextHidden = {};        // HealthBar.txt -> true, the texts hidden by us
+// the bars' texts (a HealthBar's txt, a gauge's own) -> "foe" or "boss": their
+// text written as the player chose when the game gives it
+const barTexts = new Map();
+// a boss's bar styled (its slot): set by the targeting options
+let bossStyler = null;
 let setVisibleFn = null;
 function findChild(o, type, depth) {
     if (!o || o.isNull() || depth > 4 || OFF.Object.children == null) return null;
@@ -627,13 +725,23 @@ function bossBarValues(slot) {
         if (!txt || txt.isNull()) return;
         const key = txt.toString();
         const vis = txt.add(OFF.Object.visible).readU8();
-        if (barValuesWanted && !vis) {
+        if (barTexts.size > 800) barTexts.clear();
+        barTexts.set(key, "boss");
+        const gauge = OFF.HealthBar.healthGauge != null
+            ? hb.add(OFF.HealthBar.healthGauge).readPointer() : null;
+        if (gauge && !gauge.isNull()) barTexts.set(gauge.toString(), "boss");
+        // shown or hidden by its own choice (the game's own given back)
+        const want = bossText !== "none";
+        if (want && !vis) {
             setVisibleFn(txt, 1);
-            bossTextShown[key] = true;
-        } else if (!barValuesWanted && vis && bossTextShown[key]) {
+            if (bossTextHidden[key]) delete bossTextHidden[key];
+            else bossTextShown[key] = true;
+        } else if (!want && vis) {
             setVisibleFn(txt, 0);
-            delete bossTextShown[key];
+            if (bossTextShown[key]) delete bossTextShown[key];
+            else bossTextHidden[key] = true;
         }
+        if (bossStyler) bossStyler(slot);
     } catch (e) {}
 }
 
@@ -2269,6 +2377,1028 @@ function main() {
             + "the journals show no crowd control");
     }
 
+    // ---- the targeting options (the monsters' nameplates) ----
+    // Right after the game updates a nameplate (FoeWidget, each frame: it
+    // has just placed its target indicator), on the game thread:
+    //  * the indicator scaled (the game's layout keeps it centred, its foot
+    //    lifted to stay where it was), a halo around it (the game's own
+    //    h2d.filter.Glow at the screen's resolution, set as its filter,
+    //    taken off when none);
+    //  * the health bar's fill coloured by the foe's kind: one that targets
+    //    the hero (Foe.target is the hero's network uid), an aggressive one,
+    //    a neutral one (data.cdb unit flags NeutralAggro / NoAggro). A foe's
+    //    fill is a gradient (its background's shader, seen 2026-10-14: its
+    //    plain colour unused): both its colours set, the second kept in the
+    //    same ratio to the first as the game's; the game's given back when
+    //    no colour is chosen. The life being lost (lagBar) painted by the
+    //    game each time it moves (BaseGauge's lag update -> applyColorTo(
+    //    lagBar, its lagColor)): our colour given in place of its own (a
+    //    null<i32> of ours, the game's i32 type). The bar's background
+    //    (emptyBar, a plain colour) set, its own given back after;
+    //  * the level beside the bar (LevelDisplay) scaled as the bar's height;
+    //  * the bars bigger: the gauge's width and height (its fill follows,
+    //    its inset, the frame, kept);
+    //  * the bar of the foe the hero targets (its indicator shown) outlined:
+    //    the outline of the bar's background (a DynamicBackground's shader,
+    //    as its set_outline sets it), outside it (a negative outline offset:
+    //    the background drawn that much larger, DynamicBackground.sync), its
+    //    own given back after.
+    const FF = DATA.foe_fns || {};
+    const fuFi = DATA.foe_update;
+    const D = OFF.Draw;
+    if (fuFi != null && OFF.FoeWidget && OFF.FoeTarget && OFF.Gauge && D && OFF.HealthBar
+            && OFF.HealthBar.healthGauge != null) {
+        try {
+            const fnOf = (fi, ret, args) => fi != null
+                ? new NativeFunction(base.add(fi * 8).readPointer(), ret, args) : null;
+            const setBarW = fnOf(FF["ui.comp.BaseGauge.set_barWidth"], "int", ["pointer", "int"]);
+            const setBarH = fnOf(FF["ui.comp.BaseGauge.set_barHeight"], "int", ["pointer", "int"]);
+            const setFilter = fnOf(FF["h2d.Object.set_filter"], "pointer", ["pointer", "pointer"]);
+            const newGlow = fnOf(FF["h2d.filter.$Glow.__constructor__"], "void",
+                                 ["pointer", "pointer", "pointer", "pointer", "pointer", "pointer", "pointer"]);
+            const libhl = Process.findModuleByName("libhl.dll");
+            const NEUTRAL = {};
+            (DATA.neutral_units || []).forEach(function (k) { NEUTRAL[k] = 1; });
+            let plates = new Map();     // widget -> its state (below)
+            let plateFailed = false;
+
+            // a background's colour vector: a DynamicBackground's shader's,
+            // else the Drawable's own
+            const dynShader = function (bg) {
+                if (typeName(bg) !== "shiro.ui.DynamicBackground") return null;
+                const sh = bg.add(D.dynShader).readPointer();
+                return sh && !sh.isNull() ? sh : null;
+            };
+            const bgVec = function (bg) {
+                const sh = dynShader(bg);
+                const v = sh ? sh.add(D.dynColor).readPointer() : bg.add(D.color).readPointer();
+                return v && !v.isNull() ? v : null;
+            };
+            const vecInt = function (v) {
+                const ch = o => Math.max(0, Math.min(255, Math.round(v.add(o).readDouble() * 255)));
+                return ((ch(D.vw) << 24) | (ch(D.vx) << 16) | (ch(D.vy) << 8) | ch(D.vz)) | 0;
+            };
+            // a fill's colours: its gradient's two, or its plain one
+            const fillVecs = function (fill) {
+                const bg = fill.add(D.background).readPointer();
+                const sh = bg && !bg.isNull() ? dynShader(bg) : null;
+                if (!sh) return null;
+                const vs = sh.add(D.dynUseGradient).readU8()
+                    ? [sh.add(D.dynGrad1).readPointer(), sh.add(D.dynGrad2).readPointer()]
+                    : [sh.add(D.dynColor).readPointer()];
+                return vs.every(v => v && !v.isNull()) ? vs : null;
+            };
+            const RGB = [D.vx, D.vy, D.vz];
+            const readVecs = vs => vs.map(v => RGB.map(o => v.add(o).readDouble()));
+            const writeVecs = function (vs, cols) {
+                vs.forEach(function (v, i) {
+                    RGB.forEach(function (o, k) { v.add(o).writeDouble(cols[i][k]); });
+                });
+            };
+            // our colour as the game's: its first colour ours, the others in
+            // the ratio the game's have to its first
+            const colorAs = function (c, own, end) {
+                const ours = [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255];
+                if (end !== null && end !== undefined && own.length === 2) {
+                    return [ours, [(end >> 16 & 255) / 255, (end >> 8 & 255) / 255, (end & 255) / 255]];
+                }
+                return own.map(rgb => rgb.map((x, k) =>
+                    Math.max(0, Math.min(1, ours[k] * (own[0][k] > 0.004 ? x / own[0][k] : 1)))));
+            };
+            let colorLogged = false;
+
+            // the life being lost: our colour given to the game as it paints
+            // it (a null<i32> of ours, the game's i32 type, kept for good)
+            const hltI32 = libhl ? libhl.findExportByName("hlt_i32") : null;
+            const lags = new Map();         // gauge -> {bar, c}
+            const boxes = new Map();
+            const boxFor = function (c) {
+                let b = boxes.get(c);
+                if (!b) {
+                    b = Memory.alloc(16);
+                    b.writePointer(hltI32);
+                    b.add(8).writeS32(c | 0);
+                    boxes.set(c, b);
+                }
+                return b;
+            };
+            const colorFi = FF["ui.comp.BaseGauge.applyColorTo"];
+            const gaugeBoss = new Map();    // gauge -> its BossInfo, or null
+            if (colorFi != null && hltI32) {
+                Interceptor.attach(base.add(colorFi * 8).readPointer(), {
+                    onEnter() {
+                        const g = this.context.rcx;
+                        const gk = g.toString();
+                        // a boss's (its gauge in a BossInfo, looked for once)
+                        let slot = gaugeBoss.get(gk);
+                        if (slot === undefined) {
+                            if (gaugeBoss.size > 600) gaugeBoss.clear();
+                            slot = null;
+                            try {
+                                let o = g;
+                                for (let i = 0; i < 10 && o && !o.isNull(); i++) {
+                                    if (typeName(o) === "ui.hud.BossInfo") { slot = o; break; }
+                                    o = o.add(OFF.Object.parent).readPointer();
+                                }
+                            } catch (e) { slot = null; }
+                            // not yet in its place: looked for again
+                            if (slot !== null || g.add(OFF.Object.parent).readPointer().isNull() === false) {
+                                gaugeBoss.set(gk, slot);
+                            }
+                        }
+                        if (slot && bossStyler) bossStyler(slot);
+                        if (!lags.size) return;
+                        const e = lags.get(gk);
+                        if (e && this.context.rdx.equals(e.bar)) this.context.r8 = boxFor(e.c);
+                    }
+                });
+            } else {
+                log("gauge colour data missing (BaseGauge.applyColorTo / hlt_i32): "
+                    + "no colour for the life being lost");
+            }
+            // the layouts a level badge sits in (h2d.Flow and the game's own)
+            const FLOWS = { "h2d.Flow": 1, "ui.BaseElement": 1, "ui.UIElement": 1 };
+            // a plain background's colour (the bar's own, under it)
+            const plainVec = function (bar) {
+                const bg = bar && !bar.isNull() ? bar.add(D.background).readPointer() : null;
+                const sh = bg && !bg.isNull() ? dynShader(bg) : null;
+                const v = sh ? sh.add(D.dynColor).readPointer() : null;
+                return v && !v.isNull() ? v : null;
+            };
+
+            // the outline of the targeted foe's bar: its background's shader
+            // as DynamicBackground.set_outline sets it; its own kept to give back
+            const outlineOf = function (gauge) {
+                const eb = gauge.add(OFF.Gauge.emptyBar).readPointer();
+                if (!eb || eb.isNull()) return null;
+                const bg = eb.add(D.background).readPointer();
+                return bg && !bg.isNull() ? dynShader(bg) : null;
+            };
+            const readOutline = function (sh) {
+                const col = sh.add(D.dynOutlineColor).readPointer();
+                const th = sh.add(D.dynOutlineThickness).readPointer();
+                if (!col || col.isNull() || !th || th.isNull()) return null;
+                const scol = sh.add(D.dynShadowColor).readPointer();
+                const soff = sh.add(D.dynShadowOffset).readPointer();
+                const sspr = sh.add(D.dynShadowSpread).readPointer();
+                if (!scol || scol.isNull() || !soff || soff.isNull() || !sspr || sspr.isNull()) return null;
+                const o = { use: sh.add(D.dynUseOutline).readU8(), sep: sh.add(D.dynSeparate).readU8(),
+                            off: sh.add(D.dynOutlineOffset).readDouble(), col: [], th: [],
+                            shUse: sh.add(D.dynUseShadow).readU8(), shIn: sh.add(D.dynShadowInset).readU8(),
+                            shBlur: sh.add(D.dynShadowBlur).readDouble(), shCol: [],
+                            shOff: [soff.add(D.vx).readDouble(), soff.add(D.vy).readDouble()],
+                            shSpr: [sspr.add(D.vx).readDouble(), sspr.add(D.vy).readDouble()] };
+                for (const f of [D.vx, D.vy, D.vz, D.vw]) {
+                    o.col.push(col.add(f).readDouble());
+                    o.th.push(th.add(f).readDouble());
+                    o.shCol.push(scol.add(f).readDouble());
+                }
+                return o;
+            };
+            const writeOutline = function (sh, o) {
+                const col = sh.add(D.dynOutlineColor).readPointer();
+                const th = sh.add(D.dynOutlineThickness).readPointer();
+                [D.vx, D.vy, D.vz, D.vw].forEach(function (f, i) {
+                    col.add(f).writeDouble(o.col[i]);
+                    th.add(f).writeDouble(o.th[i]);
+                });
+                sh.add(D.dynOutlineOffset).writeDouble(o.off);
+                const scol = sh.add(D.dynShadowColor).readPointer();
+                const soff = sh.add(D.dynShadowOffset).readPointer();
+                const sspr = sh.add(D.dynShadowSpread).readPointer();
+                [D.vx, D.vy, D.vz, D.vw].forEach(function (f, i) { scol.add(f).writeDouble(o.shCol[i]); });
+                soff.add(D.vx).writeDouble(o.shOff[0]);
+                soff.add(D.vy).writeDouble(o.shOff[1]);
+                sspr.add(D.vx).writeDouble(o.shSpr[0]);
+                sspr.add(D.vy).writeDouble(o.shSpr[1]);
+                sh.add(D.dynShadowBlur).writeDouble(o.shBlur);
+                // its switches are the shader's constants: told changed only if so
+                if (sh.add(D.dynUseOutline).readU8() !== o.use || sh.add(D.dynSeparate).readU8() !== o.sep
+                        || sh.add(D.dynUseShadow).readU8() !== o.shUse
+                        || sh.add(D.dynShadowInset).readU8() !== o.shIn) {
+                    sh.add(D.dynUseOutline).writeU8(o.use);
+                    sh.add(D.dynSeparate).writeU8(o.sep);
+                    sh.add(D.dynUseShadow).writeU8(o.shUse);
+                    sh.add(D.dynShadowInset).writeU8(o.shIn);
+                    sh.add(D.dynConstModified).writeU8(1);
+                }
+            };
+
+            // The level beside the bar (LevelDisplay: its picture, the dark
+            // square and its frame in one, and its digits, a FmtText): as tall
+            // as the bar times its own size, shown or not, moved by its
+            // place in its row (its FlowProperties' offsets), its digits
+            // coloured, its picture tinted (multiplied); the game's own kept
+            // and given back. Its row laid out anew when it changes.
+            const vecOf = function (o) {
+                const v = o && !o.isNull() ? o.add(D.color).readPointer() : null;
+                return v && !v.isNull() ? v : null;
+            };
+            const rgbOf = c => [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255];
+            const tintObj = function (st, key, o, c) {
+                const v = vecOf(o);
+                if (!v) return;
+                if (c !== null) {
+                    if (!st[key]) st[key] = readVecs([v]);
+                    writeVecs([v], [rgbOf(c)]);
+                } else if (st[key]) {
+                    writeVecs([v], st[key]);
+                    st[key] = null;
+                }
+            };
+            const flowPropsOf = function (o, up) {
+                const arr = up.add(D.flowProps).readPointer();
+                if (!arr || arr.isNull()) return null;
+                const n = arr.add(OFF.ArrayObj.length).readS32();
+                const data = arr.add(OFF.ArrayObj.array).readPointer();
+                for (let i = 0; i < n && i < 64; i++) {
+                    const fp = data.add(OFF.ArrayObj.data + i * 8).readPointer();
+                    if (fp && !fp.isNull() && fp.add(D.fpElt).readPointer().equals(o)) return fp;
+                }
+                return null;
+            };
+            // a picture's tile half a texel in on each side (once a tile:
+            // tiles are shared): scaled, its neighbours in the texture
+            // no more drawn on its edge (the white line over the level)
+            const insetDone = new Set();
+            const insetTile = function (bmp) {
+                if (!bmp || bmp.isNull()) return;
+                const t = bmp.add(D.bitmapTile).readPointer();
+                if (!t || t.isNull() || insetDone.has(t.toString())) return;
+                const tex = t.add(D.tileTex).readPointer();
+                if (!tex || tex.isNull()) return;
+                const tw = tex.add(D.texW).readS32(), th = tex.add(D.texH).readS32();
+                if (tw <= 0 || th <= 0) return;
+                insetDone.add(t.toString());
+                const du = 0.5 / tw, dv = 0.5 / th;
+                t.add(D.tileU).writeDouble(t.add(D.tileU).readDouble() + du);
+                t.add(D.tileV).writeDouble(t.add(D.tileV).readDouble() + dv);
+                t.add(D.tileU2).writeDouble(t.add(D.tileU2).readDouble() - du);
+                t.add(D.tileV2).writeDouble(t.add(D.tileV2).readDouble() - dv);
+            };
+            const levelBadge = function (st, o) {
+                const b = st.badge;
+                const up = b.add(OFF.Object.parent).readPointer();
+                const flow = up && !up.isNull() && FLOWS[typeName(up)] ? up : null;
+                let moved = false;
+                // its size
+                const s = (st.h0 > 0 ? (st.h0 + 2 * o.extra) / st.h0 : 1) * o.scale / 100;
+                if (Math.abs(b.add(D.scaleX).readDouble() - s) > 0.001) {
+                    b.add(D.scaleX).writeDouble(s);
+                    b.add(D.scaleY).writeDouble(s);
+                    b.add(D.posChanged).writeU8(1);
+                    moved = true;
+                    if (Math.abs(s - 1) > 0.001) insetTile(findChild(b, "h2d.Bitmap", 3));
+                }
+                // shown or not
+                const vis = b.add(OFF.Object.visible).readU8() !== 0;
+                if (!o.show && vis) {
+                    if (setVisibleFn) setVisibleFn(b, 0);
+                    st.badgeHidden = true;
+                    moved = true;
+                } else if (o.show && st.badgeHidden) {
+                    if (setVisibleFn && !vis) setVisibleFn(b, 1);
+                    st.badgeHidden = false;
+                    moved = true;
+                }
+                // its place in its row: the game's offsets plus ours (the
+                // game's taken anew if it sets them again)
+                if (flow) {
+                    const fp = flowPropsOf(b, flow);
+                    if (fp) {
+                        const cx = fp.add(D.fpOffsetX).readS32(), cy = fp.add(D.fpOffsetY).readS32();
+                        if (!st.off || cx !== st.off.x || cy !== st.off.y) {
+                            st.off = { bx: cx, by: cy, x: cx, y: cy };      // the game's (anew)
+                        }
+                        const tx = st.off.bx + o.dx, ty = st.off.by + o.dy;
+                        if (cx !== tx || cy !== ty) {
+                            fp.add(D.fpOffsetX).writeS32(tx);
+                            fp.add(D.fpOffsetY).writeS32(ty);
+                            st.off.x = tx;
+                            st.off.y = ty;
+                            moved = true;
+                        }
+                    }
+                }
+                if (moved && flow) flow.add(D.needReflow).writeU8(1);
+                // its digits, its picture
+                if (o.text !== null || st.lvTextOwn) {
+                    tintObj(st, "lvTextOwn", b.add(D.levelText).readPointer(), o.text);
+                }
+                if (o.tint !== null || st.lvPicOwn) {
+                    tintObj(st, "lvPicOwn", findChild(b, "h2d.Bitmap", 3), o.tint);
+                }
+            };
+
+            // A bar styled (a monster's, a boss's): the life being lost
+            // coloured (c: its fill, lc: the life being lost, bg: under it,
+            // null: the game's), bigger by extra (its width and height: the
+            // game may set its own again, taken then as its new base).
+            const styleBar = function (st, c, lc, bg, extra, wider, cEnd) {
+                wider = wider || 0;
+                const gk = st.gauge.toString();
+                if (lc !== null && st.lag && !st.lag.isNull()) lags.set(gk, { bar: st.lag, c: lc });
+                else if (lags.size) lags.delete(gk);
+                if (bg !== null || st.bgOwn) {
+                    const v = plainVec(st.gauge.add(OFF.Gauge.emptyBar).readPointer());
+                    if (v) {
+                        if (bg !== null) {
+                            if (!st.bgOwn) st.bgOwn = readVecs([v]);
+                            writeVecs([v], [rgbOf(bg)]);
+                        } else {
+                            writeVecs([v], st.bgOwn);
+                            st.bgOwn = null;
+                        }
+                    }
+                }
+                if ((c !== null || st.own) && st.fill && !st.fill.isNull()) {
+                    const vs = fillVecs(st.fill);
+                    if (vs) {
+                        if (c !== null) {
+                            if (!st.own || st.own.length !== vs.length) st.own = readVecs(vs);
+                            writeVecs(vs, colorAs(c, st.own, cEnd));
+                            st.ownEnd = cEnd;
+                            if (!colorLogged) {
+                                colorLogged = true;
+                                log("bar colour: the fill's " + (vs.length === 2 ? "gradient" : "colour")
+                                    + " set");
+                            }
+                        } else {
+                            if (st.own.length === vs.length) writeVecs(vs, st.own);
+                            st.own = null;
+                        }
+                    }
+                }
+                if (setBarW && setBarH && st.w0 > 0 && st.h0 > 0) {
+                    sizeGauge(st.gauge, st, extra, wider);
+                    if (st.shield && !st.shield.isNull()) {
+                        if (!st.sh) st.sh = { w0: st.shield.add(OFF.Gauge.barWidth).readS32(),
+                                              h0: st.shield.add(OFF.Gauge.barHeight).readS32(), set: null };
+                        if (st.sh.w0 > 0 && st.sh.h0 > 0) sizeGauge(st.shield, st.sh, extra, wider);
+                    }
+                }
+            };
+            // a gauge bigger by extra (and wider): the game may set its own
+            // size again, taken then as its new base
+            const sizeGauge = function (g, rec, extra, wider) {
+                const G = OFF.Gauge;
+                const cw = g.add(G.barWidth).readS32();
+                const ch = g.add(G.barHeight).readS32();
+                let again = rec.set === null ? extra !== 0 || wider !== 0
+                    : rec.set.extra !== extra || rec.set.wider !== wider;
+                if (rec.set !== null) {
+                    if (cw !== rec.set.w) { rec.w0 = cw; again = true; }
+                    if (ch !== rec.set.h) { rec.h0 = ch; again = true; }
+                }
+                if (again) {
+                    const nw = Math.max(20, rec.w0 + 2 * extra + wider), nh = rec.h0 + 2 * extra;
+                    if (cw !== nw) setBarW(g, nw);
+                    if (ch !== nh) setBarH(g, nh);
+                    rec.set = { extra: extra, wider: wider, w: nw, h: nh };
+                }
+            };
+            // a health bar's shield gauge (drawn over its life's)
+            const shieldOf = function (hb) {
+                if (!hb || hb.isNull() || OFF.HealthBar.shieldGauge == null) return null;
+                const s = hb.add(OFF.HealthBar.shieldGauge).readPointer();
+                return s && !s.isNull() ? s : null;
+            };
+            // a bar's state (its parts, the game's own values kept)
+            // A bar's state's signature: what each part it keeps is and holds
+            // it. Kept parts are looked at again each frame: a nameplate gone,
+            // its memory may be another object's (a network one) and a new
+            // nameplate at the same place; written to, that other object would
+            // be broken. A signature changed: the state made anew.
+            const sigOf = function (st) {
+                let out = "";
+                for (const o of [st.gauge, st.fill, st.lag, st.shield, st.badge]) {
+                    if (!o || o.isNull()) { out += "-|"; continue; }
+                    out += typeName(o) + "@" + o.add(OFF.Object.parent).readPointer() + "|";
+                }
+                return out;
+            };
+            const stale = function (st) {
+                try { return sigOf(st) !== st.sig; } catch (e) { return true; }
+            };
+            const barState = function (gauge, badge, hb) {
+                const st = { gauge: gauge && !gauge.isNull() ? gauge : null, fill: null, lag: null,
+                             inset0: null, w0: 0, h0: 0, set: null, own: null, bgOwn: null,
+                             badge: badge, shield: shieldOf(hb) };
+                if (st.gauge) {
+                    st.fill = st.gauge.add(OFF.Gauge.fillBar).readPointer();
+                    st.lag = st.gauge.add(OFF.Gauge.lagBar).readPointer();
+                    st.inset0 = st.gauge.add(OFF.Gauge.inset).readS32();
+                    st.w0 = st.gauge.add(OFF.Gauge.barWidth).readS32();
+                    st.h0 = st.gauge.add(OFF.Gauge.barHeight).readS32();
+                }
+                return st;
+            };
+
+            // ---- the text in the bars ----
+            // As the game gives a bar its text (a HealthBar's txt, a gauge's
+            // own: "value / max", fresh from its making), it is written as
+            // chosen: the value, a percentage, value / max (percentage). A
+            // new string's bytes (libhl's), the string itself kept (only
+            // one allocation, made before it is linked).
+            const allocBytes = libhl
+                ? new NativeFunction(libhl.findExportByName("hl_alloc_bytes"), "pointer", ["int"]) : null;
+            let textLogged = false;
+            const writeText = function (str, mode, name) {
+                const len = str.add(OFF.String.length).readS32();
+                if (len <= 0 || len > 80) return;
+                const t = str.add(OFF.String.bytes).readPointer().readUtf16String(len);
+                const m = /^(\d+) \/ (\d+)(.*)$/.exec(t);
+                if (!m) return;
+                const v = +m[1], mx = +m[2];
+                const pct = mx > 0 ? Math.round(v / mx * 100) : 0;
+                const out = name !== undefined ? name
+                    : mode === "value" ? m[1]
+                    : mode === "pct" ? pct + "%"
+                    : mode === "max_pct" ? m[1] + " / " + m[2] + m[3] + " (" + pct + "%)"
+                    : t;
+                if (out === t) return;
+                if (out.length <= len) {
+                    // shorter: its own bytes, cut
+                    str.add(OFF.String.bytes).readPointer().writeUtf16String(out);
+                } else {
+                    if (!allocBytes) return;
+                    const b = allocBytes((out.length + 1) * 2);
+                    if (!b || b.isNull()) return;
+                    b.writeUtf16String(out);
+                    str.add(OFF.String.bytes).writePointer(b);
+                }
+                str.add(OFF.String.length).writeS32(out.length);
+                if (!textLogged) {
+                    textLogged = true;
+                    log("bar text: written as chosen (" + mode + ")");
+                }
+            };
+            const onText = function (ctx) {
+                if (!barTexts.size) return;
+                const who = barTexts.get(ctx.rcx.toString());
+                if (!who) return;
+                if (typeof who === "object") {
+                    // an ally's: as its own choice
+                    if (allyText !== "none" && allyText !== "max") {
+                        try { writeText(ctx.rdx, allyText); } catch (e) {}
+                    }
+                    return;
+                }
+                const mode = who === "boss" ? bossText : foeText;
+                if (mode === "none" || mode === "max") return;
+                try { writeText(ctx.rdx, mode); } catch (e) {}
+            };
+            for (const nm of ["ui.comp.BaseGauge.set_text", "ui.comp.FmtText.set_text"]) {
+                const fi = FF[nm];
+                if (fi == null || OFF.String.length == null) {
+                    log("text data missing (" + nm + "): the bars' text as the game writes it");
+                    continue;
+                }
+                Interceptor.attach(base.add(fi * 8).readPointer(), {
+                    onEnter() { onText(this.context); }
+                });
+            }
+
+            // ---- a boss's bar (its slot in BossesInfo, followed by the
+            // bosses' tracking): its colours, size, level ----
+            let bossBars = new Map();
+            bossStyler = function (slot) {
+                if (plateFailed) return;
+                try {
+                    const key = slot.toString();
+                    if (typeName(slot) !== "ui.hud.BossInfo") return;
+                    let st = bossBars.get(key);
+                    if (st && stale(st)) { bossBars.delete(key); st = null; }
+                    if (!st) {
+                        if (bossBars.size > 64) bossBars = new Map();
+                        const hb = findChild(slot, "ui.comp.HealthBar", 0);
+                        st = barState(hb ? hb.add(OFF.HealthBar.healthGauge).readPointer() : null,
+                                      findChild(slot, "ui.hud.LevelDisplay", 0), hb);
+                        st.txts = barTextsOf(hb, st.gauge);
+                        st.sig = sigOf(st);
+                        bossBars.set(key, st);
+                    }
+                    if (!st.gauge) return;
+                    styleBar(st, bossColor, bossLag, bossBg, bossExtra, 0, bossColorEnd);
+                    textStyle(st.txts, bossTextScale);
+                    if (st.badge && !st.badge.isNull()) {
+                        levelBadge(st, { extra: bossExtra, scale: bossLevelScale, show: bossLevelShow,
+                                         dx: bossLevelDx, dy: bossLevelDy, text: null, tint: null });
+                    }
+                } catch (err) {
+                    plateFailed = true;
+                    log("boss bar options failed: " + err);
+                }
+            };
+
+            // The text in a bar (a HealthBar's txt, its gauge's: whichever
+            // the game shows): its size (scaled, its row laid out anew).
+            const textStyle = function (txts, scale) {
+                const k = scale / 100;
+                for (const t of txts) {
+                    if (!t || t.isNull()) continue;
+                    if (Math.abs(t.add(D.scaleX).readDouble() - k) > 0.001) {
+                        t.add(D.scaleX).writeDouble(k);
+                        t.add(D.scaleY).writeDouble(k);
+                        t.add(D.posChanged).writeU8(1);
+                        const up = t.add(OFF.Object.parent).readPointer();
+                        if (up && !up.isNull() && FLOWS[typeName(up)]) up.add(D.needReflow).writeU8(1);
+                    }
+                }
+            };
+            const barTextsOf = function (hb, gauge) {
+                const out = [];
+                if (hb && !hb.isNull()) out.push(hb.add(OFF.HealthBar.txt).readPointer());
+                if (gauge && !gauge.isNull()) out.push(gauge.add(OFF.Gauge.txt).readPointer());
+                return out;
+            };
+
+            // the halo: a Glow of the game's (its type from its class global),
+            // drawn at the screen's resolution and smoothed (not the
+            // indicator's own small size scaled up)
+            const glowType = function () {
+                if (!hlModule || !OFF.Glow) return null;
+                const cls = hlGlobal(OFF.Glow.global);
+                if (typeName(cls) !== "h2d.filter.$Glow") return null;
+                const t = cls.add(OFF.Glow.type).readPointer();
+                return t && !t.isNull() ? t : null;
+            };
+            const glowAlloc = libhl
+                ? new NativeFunction(libhl.findExportByName("hl_alloc_obj"), "pointer", ["pointer"]) : null;
+            const makeGlow = function (c, blur, strength, opacity) {
+                const t = glowType();
+                if (!t || !newGlow || !glowAlloc) return null;
+                const g = glowAlloc(t);
+                if (!g || g.isNull()) return null;
+                const col = Memory.alloc(8), alpha = Memory.alloc(8), radius = Memory.alloc(8),
+                      gain = Memory.alloc(8), quality = Memory.alloc(8), smoothCol = Memory.alloc(8);
+                col.writeS32(c & 0xFFFFFF);
+                alpha.writeDouble(opacity === undefined ? 1 : opacity);
+                radius.writeDouble(blur);
+                gain.writeDouble(strength || 2);
+                quality.writeDouble(2);
+                smoothCol.writeU8(1);
+                newGlow(g, col, alpha, radius, gain, quality, smoothCol);
+                g.add(OFF.Glow.smooth).writeU8(1);
+                g.add(OFF.Glow.screenRes).writeU8(1);
+                return g;
+            };
+
+            // ---- the allies' (players') nameplates (HeroWidget), each
+            // frame after the game's update: their bar's size, their level,
+            // their name in the bar (its own place hidden, the bar's text
+            // shown with it; given back after) ----
+            const heFi = DATA.hero_update;
+            // A String of ours (the game's type, borrowed from one of its
+            // strings): its object and its bytes held in a root of libhl's
+            // while they are made (the collector never sees them half-made).
+            // (hl_add_root locks the collector: called on the game's thread
+            // only, the first time a string is made there, never at load)
+            const addRootAt = libhl ? libhl.findExportByName("hl_add_root") : null;
+            const hlRoot = addRootAt ? Memory.alloc(16) : null;
+            let rooted = false;
+            const makeStr = function (text, like) {
+                if (!hlRoot || !allocBytes || !glowAlloc || !like || like.isNull()) return null;
+                if (!rooted) {
+                    const addRoot = new NativeFunction(addRootAt, "void", ["pointer"]);
+                    addRoot(hlRoot);
+                    addRoot(hlRoot.add(8));
+                    rooted = true;
+                }
+                const b = allocBytes((text.length + 1) * 2);
+                if (!b || b.isNull()) return null;
+                hlRoot.writePointer(b);
+                b.writeUtf16String(text);
+                const s = glowAlloc(like.readPointer());
+                if (!s || s.isNull()) { hlRoot.writePointer(NULL); return null; }
+                hlRoot.add(8).writePointer(s);
+                s.add(OFF.String.bytes).writePointer(b);
+                s.add(OFF.String.length).writeS32(text.length);
+                return s;
+            };
+            const strOf = function (s) {
+                if (!s || s.isNull()) return "";
+                const n = s.add(OFF.String.length).readS32();
+                return n > 0 && n < 400 ? s.add(OFF.String.bytes).readPointer().readUtf16String(n) : "";
+            };
+            // a text's own given back / ours set (the game's kept to give back)
+            const setOwnText = function (st, key, t, text, like) {
+                const cur = strOf(t.add(HW.fmtText).readPointer());
+                if (cur === text) return;
+                if (st[key] === undefined) st[key] = cur;
+                const s = makeStr(text, like);
+                if (s && setTextFn) setTextFn(t, s);
+                if (hlRoot) hlRoot.writePointer(NULL);
+                if (hlRoot) hlRoot.add(8).writePointer(NULL);
+            };
+            const backOwnText = function (st, key, t, like) {
+                if (st[key] === undefined) return;
+                const was = st[key];
+                delete st[key];
+                if (strOf(t.add(HW.fmtText).readPointer()) === was) return;
+                const s = makeStr(was, like);
+                if (s && setTextFn) setTextFn(t, s);
+                if (hlRoot) hlRoot.writePointer(NULL);
+                if (hlRoot) hlRoot.add(8).writePointer(NULL);
+            };
+            // ---- an ally's class icon, beside its level ----
+            // Two Bitmaps of the game's (h2d.Bitmap's constructor, its type
+            // the level's picture's): the level's square's tile (its rounded
+            // dark ground), the class's icon (the game's own tile, from
+            // BaseUI.loadTextIcon "icon/Class_<class>") as its child. Held in
+            // libhl's root while made; children of the level's picture (not a
+            // layout: placed by their x, y), so they go with the level.
+            const newBmp = fnOf(FF["h2d.$Bitmap.__constructor__"], "void", ["pointer", "pointer", "pointer"]);
+            const iconTile = fnOf(FF["ui.$BaseUI.loadTextIcon"], "pointer", ["pointer"]);
+            const newGrid = fnOf(FF["h2d.$ScaleGrid.__constructor__"], "void",
+                                 ["pointer", "pointer", "int", "int", "pointer", "pointer", "pointer"]);
+            const gridW = fnOf(FF["h2d.ScaleGrid.set_width"], "double", ["pointer", "double"]);
+            const gridH = fnOf(FF["h2d.ScaleGrid.set_height"], "double", ["pointer", "double"]);
+            // the level's square as the game shows it: its layout's
+            // background (a ScaleGrid) when it has one, else its picture
+            const levelSquare = function (badge, lvBmp) {
+                const sg = badge.add(D.background).readPointer();
+                if (sg && !sg.isNull() && typeName(sg) === "h2d.ScaleGrid"
+                        && sg.add(OFF.Object.visible).readU8()) return sg;
+                return lvBmp && lvBmp.add(OFF.Object.visible).readU8() ? lvBmp : null;
+            };
+            const makeClassIcon = function (st, lvBmp, cls, like, w) {
+                if (!newBmp || !iconTile || !glowAlloc || !hlRoot) return;
+                const src = levelSquare(st.badge, lvBmp);
+                if (!src) { st.clsTried = false; return; }      // looked for again
+                const grid = typeName(src) === "h2d.ScaleGrid";
+                if (grid && (!newGrid || !gridW || !gridH)) return;
+                const srcTile = src.add(grid ? D.gridTile : D.bitmapTile).readPointer();
+                if (!srcTile || srcTile.isNull()) return;
+                const name = makeStr("icon/Class_" + cls, like);
+                if (!name) return;
+                const tile = iconTile(name);
+                hlRoot.writePointer(NULL);
+                hlRoot.add(8).writePointer(NULL);
+                if (!tile || tile.isNull()) return;
+                // its copy, a child of the square (drawn with it: under the
+                // bar, drawn after, where they overlap). A child of the
+                // nameplate, out of its layout, was never drawn (2026-10-14)
+                const bg = glowAlloc(src.readPointer());
+                if (!bg || bg.isNull()) return;
+                hlRoot.writePointer(bg);
+                if (grid) {
+                    newGrid(bg, srcTile, src.add(D.gridBL).readS32(), src.add(D.gridBT).readS32(),
+                            NULL, NULL, src);
+                    for (const f of [D.gridBR, D.gridBB]) bg.add(f).writeS32(src.add(f).readS32());
+                    for (const f of [D.gridTB, D.gridTC, D.gridIS]) bg.add(f).writeU8(src.add(f).readU8());
+                    bg.add(D.gridBS).writeDouble(src.add(D.gridBS).readDouble());
+                    st.clsW = src.add(D.gridW).readDouble();
+                    st.clsH = src.add(D.gridH).readDouble();
+                    gridW(bg, st.clsW);
+                    gridH(bg, st.clsH);
+                } else {
+                    newBmp(bg, srcTile, src);
+                    [st.clsW, st.clsH] = tileWH(src);
+                }
+                const ic = glowAlloc(lvBmp.readPointer());
+                if (ic && !ic.isNull()) {
+                    hlRoot.add(8).writePointer(ic);
+                    newBmp(ic, tile, bg);
+                    st.clsIcon = ic;
+                }
+                hlRoot.writePointer(NULL);
+                hlRoot.add(8).writePointer(NULL);
+                st.clsBg = bg;
+                st.clsSrc = src;
+                if (!classLogged) {
+                    classLogged = true;
+                    log("class icon: made beside the level (" + cls + ")");
+                }
+            };
+            let classLogged = false;
+            let remadeLogged = false;
+            const tileWH = function (b) {
+                const t = b.add(D.bitmapTile).readPointer();
+                return t && !t.isNull() ? [t.add(D.tileW).readDouble(), t.add(D.tileH).readDouble()] : [0, 0];
+            };
+            const placeClassIcon = function (st, w) {
+                const bg = st.clsBg, sq = st.clsSrc, g = st.gauge;
+                if (!bg.add(OFF.Object.visible).readU8() && setVisibleFn) setVisibleFn(bg, 1);
+                const bw = st.clsW || 0, bh = st.clsH || 0;
+                // The level's mirror, by the bar (where the game drew them:
+                // absolute places and scales), in the square's own space (it is
+                // a child of the level's square): as big as the level's square
+                // (times its own size), as far right of the bar's end as the
+                // level is left of its start, level with it.
+                const sa = sq.add(D.matA).readDouble(), sd = sq.add(D.matD).readDouble();
+                const ga = g.add(D.matA).readDouble(), gd = g.add(D.matD).readDouble();
+                if (!(sa > 0) || !(sd > 0) || !(ga > 0) || !(gd > 0)) return;     // not drawn yet
+                const barW = g.add(OFF.Gauge.barWidth).readS32();
+                // its size its own: the level's own size (the scale we give
+                // the level) undone, so 100 is a level at 100 %
+                const lvS = st.badge && !st.badge.isNull() ? st.badge.add(D.scaleX).readDouble() || 1 : 1;
+                const k = allyClassScale / 100 / lvS;
+                const sqL = sq.add(D.absX).readDouble(), sqR = sqL + bw * sa;
+                const gL = g.add(D.absX).readDouble(), gR = gL + barW * ga;
+                const gap = gL - sqR;
+                const x = (gR + gap - sqL) / sa + allyClassDx * ga / sa;
+                const y = (bh - bh * k) / 2 + allyClassDy * gd / sd;     // centred on the level
+                if (Math.abs(bg.add(D.x).readDouble() - x) > 0.05 || Math.abs(bg.add(D.y).readDouble() - y) > 0.05
+                        || Math.abs(bg.add(D.scaleX).readDouble() - k) > 0.001) {
+                    bg.add(D.x).writeDouble(x);
+                    bg.add(D.y).writeDouble(y);
+                    bg.add(D.scaleX).writeDouble(k);
+                    bg.add(D.scaleY).writeDouble(k);
+                    bg.add(D.posChanged).writeU8(1);
+                }
+                const ic = st.clsIcon;
+                if (ic && !ic.isNull() && !st.clsPlaced) {
+                    // the icon in the square: 70 % of it, centred
+                    const [iw, ih] = tileWH(ic);
+                    if (iw > 0 && ih > 0 && bw > 0 && bh > 0) {
+                        const f = Math.min(bw * 0.7 / iw, bh * 0.7 / ih);
+                        ic.add(D.scaleX).writeDouble(f);
+                        ic.add(D.scaleY).writeDouble(f);
+                        // (its tile drawn from its own offset: dx, dy)
+                        const t = ic.add(D.bitmapTile).readPointer();
+                        const tdx = t.add(D.tileDx).readDouble(), tdy = t.add(D.tileDy).readDouble();
+                        ic.add(D.x).writeDouble((bw - iw * f) / 2 - tdx * f);
+                        ic.add(D.y).writeDouble((bh - ih * f) / 2 - tdy * f);
+                        ic.add(D.posChanged).writeU8(1);
+                        st.clsPlaced = true;
+                    }
+                }
+            };
+
+            // a text scaled (k: 1 its own), its row laid out anew
+            const scaleText = function (t, k) {
+                if (Math.abs(t.add(D.scaleX).readDouble() - k) <= 0.001) return;
+                t.add(D.scaleX).writeDouble(k);
+                t.add(D.scaleY).writeDouble(k);
+                t.add(D.posChanged).writeU8(1);
+                const up = t.add(OFF.Object.parent).readPointer();
+                if (up && !up.isNull() && FLOWS[typeName(up)]) up.add(D.needReflow).writeU8(1);
+            };
+            // an element moved in its flow (its FlowProperties' offsets: the
+            // game's plus ours, the game's taken anew if it sets them again)
+            const moveInFlow = function (o, st, key, dx, dy) {
+                const up = o.add(OFF.Object.parent).readPointer();
+                if (!up || up.isNull() || !FLOWS[typeName(up)]) return;
+                const fp = flowPropsOf(o, up);
+                if (!fp) return;
+                const cx = fp.add(D.fpOffsetX).readS32(), cy = fp.add(D.fpOffsetY).readS32();
+                let off = st[key];
+                if (!off || cx !== off.x || cy !== off.y) off = st[key] = { bx: cx, by: cy, x: cx, y: cy };
+                const tx = off.bx + dx, ty = off.by + dy;
+                if (cx !== tx || cy !== ty) {
+                    fp.add(D.fpOffsetX).writeS32(tx);
+                    fp.add(D.fpOffsetY).writeS32(ty);
+                    off.x = tx;
+                    off.y = ty;
+                    up.add(D.needReflow).writeU8(1);
+                }
+            };
+            const setTextFn = fnOf(FF["ui.comp.FmtText.set_text"], "pointer", ["pointer", "pointer"]);
+            let heroes = new Map();
+            const HW = OFF.HeroWidget;
+            if (heFi != null && HW) {
+                Interceptor.attach(base.add(heFi * 8).readPointer(), {
+                    onEnter() { this.w = this.context.rcx; },
+                    onLeave() {
+                        if (plateFailed) return;
+                        try {
+                            const w = this.w;
+                            const key = w.toString();
+                            let st = heroes.get(key);
+                            if (st && (stale(st) || !w.add(HW.healthBar).readPointer().equals(st.hb))) {
+                                heroes.delete(key);
+                                st = null;
+                            }
+                            if (!st) {
+                                if (typeName(w) !== "ui.hud.HeroWidget") return;
+                                if (heroes.size > 300) heroes = new Map();
+                                const hb = w.add(HW.healthBar).readPointer();
+                                const gauge = hb && !hb.isNull() ? hb.add(OFF.HealthBar.healthGauge).readPointer() : null;
+                                st = barState(gauge, findChild(w, "ui.hud.LevelDisplay", 0), hb);
+                                st.hb = hb;
+                                st.txt = hb && !hb.isNull() ? hb.add(OFF.HealthBar.txt).readPointer() : null;
+                                st.nameCont = w.add(HW.nameCont).readPointer();
+                                st.heroName = w.add(HW.heroName).readPointer();
+                                st.who = { name: null };
+                                st.hero = w.add(HW.hero).readPointer();
+                                if (st.txt && !st.txt.isNull()) {
+                                    if (barTexts.size > 800) barTexts.clear();
+                                    barTexts.set(st.txt.toString(), st.who);
+                                    if (st.gauge) barTexts.set(st.gauge.toString(), st.who);
+                                }
+                                st.sig = sigOf(st);
+                                heroes.set(key, st);
+                            }
+                            if (!st.gauge) return;
+                            styleBar(st, allyColor, allyLag, allyBg, allyExtra, allyWidth, allyColorEnd);
+                            // its text: shown or not by its own choice (the game's
+                            // own visibility given back), written as chosen
+                            if (st.txt && !st.txt.isNull() && setVisibleFn) {
+                                const vis = st.txt.add(OFF.Object.visible).readU8() !== 0;
+                                if (allyText !== "none" && !vis) {
+                                    setVisibleFn(st.txt, 1);
+                                    if (st.txtHidden) st.txtHidden = false; else st.txtShown = true;
+                                } else if (allyText === "none" && vis && st.txtShown) {
+                                    setVisibleFn(st.txt, 0);
+                                    st.txtShown = false;
+                                }
+                            }
+                            if (st.badge && !st.badge.isNull()) {
+                                levelBadge(st, { extra: allyExtra, scale: allyLevelScale, show: allyLevelShow,
+                                                 dx: allyLevelDx, dy: allyLevelDy, text: null, tint: null });
+                            }
+                            // its class's icon (the game's own, by the hero's class:
+                            // its unit kind), written as the game writes its icons
+                            const like = st.heroName && !st.heroName.isNull()
+                                ? st.heroName.add(HW.fmtText).readPointer() : null;
+                            const cls = st.hero && !st.hero.isNull() ? petKind(st.hero) : "";
+                            const icon = /^[A-Za-z]+$/.test(cls) ? '<img src="/icon/Class_' + cls + '"/>' : null;
+                            const lvTxt = st.badge && !st.badge.isNull()
+                                ? st.badge.add(D.levelText).readPointer() : null;
+                            // (the icon in the level's square, a choice gone: given back)
+                            if (lvTxt && !lvTxt.isNull() && (st.lvWas !== undefined || st.lvOff)) {
+                                backOwnText(st, "lvWas", lvTxt, like);
+                                scaleText(lvTxt, 1);
+                                moveInFlow(lvTxt, st, "lvOff", 0, 0);
+                            }
+                            // beside: pictures of ours, made once, under the level's
+                            // square (its own picture, so they follow it): a copy of
+                            // the square (its rounded dark ground), the class's icon
+                            // centred on it
+                            const lvBmp = st.badge && !st.badge.isNull()
+                                ? findChild(st.badge, "h2d.Bitmap", 3) : null;
+                            if (allyClass === "beside" && icon && lvBmp) {
+                                // the square shown now: ours made again if it is not
+                                // under it any more (the game may build the level anew,
+                                // ours then left on a square no more shown)
+                                if (st.clsBg) {
+                                    const now = levelSquare(st.badge, lvBmp);
+                                    const under = st.clsBg.add(OFF.Object.parent).readPointer();
+                                    if (now && (!under.equals(now) || !now.equals(st.clsSrc))) {
+                                        if (!remadeLogged) {
+                                            remadeLogged = true;
+                                            log("class icon: the level's square was made anew, the icon made again on it");
+                                        }
+                                        st.clsBg = st.clsIcon = st.clsSrc = null;
+                                        st.clsTried = st.clsPlaced = false;
+                                    }
+                                }
+                                if (!st.clsBg && !st.clsTried) {
+                                    st.clsTried = true;
+                                    makeClassIcon(st, lvBmp, cls, like, w);
+                                }
+                                if (st.clsBg) placeClassIcon(st, w);
+                            } else if (st.clsBg && st.clsBg.add(OFF.Object.visible).readU8() && setVisibleFn) {
+                                setVisibleFn(st.clsBg, 0);
+                            }
+                        } catch (err) {
+                            plateFailed = true;
+                            log("ally options failed: " + err);
+                        }
+                    }
+                });
+                log("ally options ready (players' nameplates followed)");
+            } else {
+                log("players' nameplate data missing (HeroWidget update): no ally options");
+            }
+
+            Interceptor.attach(base.add(fuFi * 8).readPointer(), {
+                onEnter() { this.w = this.context.rcx; },
+                onLeave() {
+                    if (plateFailed) return;
+                    try {
+                        const w = this.w;
+                        if (typeName(w) !== "ui.hud.FoeWidget") return;
+                        const key = w.toString();
+                        let st = plates.get(key);
+                        if (st && stale(st)) { plates.delete(key); st = null; }
+                        if (!st) {
+                            if (plates.size > 400) plates = new Map();
+                            const hb = findChild(w, "ui.comp.HealthBar", 0);
+                            const gauge = hb ? hb.add(OFF.HealthBar.healthGauge).readPointer() : null;
+                            if (hb) {
+                                if (barTexts.size > 800) barTexts.clear();
+                                barTexts.set(hb.add(OFF.HealthBar.txt).readPointer().toString(), "foe");
+                                if (gauge && !gauge.isNull()) barTexts.set(gauge.toString(), "foe");
+                            }
+                            st = { gauge: gauge && !gauge.isNull() ? gauge : null, fill: null,
+                                   inset0: null, w0: 0, h0: 0, set: null, scaled: false,
+                                   glowSet: null, outline: null, own: null, bgOwn: null,
+                                   badge: findChild(w, "ui.hud.LevelDisplay", 0), lag: null,
+                                   txts: barTextsOf(hb, gauge && !gauge.isNull() ? gauge : null),
+                                   shield: shieldOf(hb) };
+                            if (st.gauge) {
+                                st.fill = st.gauge.add(OFF.Gauge.fillBar).readPointer();
+                                st.lag = st.gauge.add(OFF.Gauge.lagBar).readPointer();
+                                st.inset0 = st.gauge.add(OFF.Gauge.inset).readS32();
+                                st.w0 = st.gauge.add(OFF.Gauge.barWidth).readS32();
+                                st.h0 = st.gauge.add(OFF.Gauge.barHeight).readS32();
+                            }
+                            st.sig = sigOf(st);
+                            plates.set(key, st);
+                        }
+                        const ind = w.add(OFF.FoeWidget.targetIndicator).readPointer();
+                        let targeted = false;
+                        if (ind && !ind.isNull()) {
+                            targeted = ind.add(OFF.Object.visible).readU8() !== 0;
+                            // its size
+                            if (targetScale !== 100 || st.scaled) {
+                                const s = targetScale / 100;
+                                const tile = ind.add(D.bitmapTile).readPointer();
+                                const th = tile && !tile.isNull() ? tile.add(D.tileH).readDouble() : 0;
+                                ind.add(D.scaleX).writeDouble(s);
+                                ind.add(D.scaleY).writeDouble(s);
+                                // the game set its y this frame for its own size
+                                ind.add(D.y).writeDouble(ind.add(D.y).readDouble() - th * (s - 1));
+                                ind.add(D.posChanged).writeU8(1);
+                                st.scaled = targetScale !== 100;
+                            }
+                            // its halo
+                            const glowKey = targetGlow === null ? null
+                                : targetGlow + ":" + glowBlur + ":" + targetGlowA;
+                            if (setFilter && st.glowSet !== glowKey) {
+                                if (targetGlow === null) {
+                                    setFilter(ind, NULL);
+                                } else {
+                                    const g = makeGlow(targetGlow, glowBlur, 2, targetGlowA / 100);
+                                    if (g) setFilter(ind, g);
+                                }
+                                st.glowSet = glowKey;
+                            }
+                        }
+                        if (!st.gauge) return;
+                        // the fill's colour, by the foe's kind
+                        const any = t => t.mine !== null || t.aggro !== null || t.neutral !== null;
+                        let c = null, lc = null, cEnd = null;
+                        if (any(barColors) || any(lagColors)) {
+                            const foe = w.add(OFF.FoeWidget.gameObject).readPointer();
+                            const hero = localHero;
+                            if (foe && !foe.isNull()) {
+                                const mine = hero && !hero.isNull()
+                                    && foe.add(OFF.FoeTarget.target).readS64()
+                                        .equals(hero.add(OFF.FoeTarget.heroUid).readS64());
+                                const neutral = !!NEUTRAL[petKind(foe)];
+                                const pick = t => mine && t.mine !== null ? t.mine
+                                    : neutral ? t.neutral : t.aggro;
+                                c = pick(barColors);
+                                lc = pick(lagColors);
+                                cEnd = c === null ? null
+                                    : mine && barColors.mine !== null ? barColorsEnd.mine
+                                    : neutral ? barColorsEnd.neutral : barColorsEnd.aggro;
+                            }
+                        }
+                        styleBar(st, c, lc, barBg, frameExtra, foeWidth, cEnd);
+                        textStyle(st.txts, foeTextScale);
+                        if (st.badge && !st.badge.isNull()) {
+                            levelBadge(st, { extra: frameExtra, scale: levelScale, show: levelShow,
+                                             dx: levelDx, dy: levelDy, text: levelText, tint: levelTint });
+                        }
+                        // the targeted foe's bar outlined
+                        const wantLine = targeted && targetLine !== null;
+                        if (wantLine || st.outline) {
+                            const sh = outlineOf(st.gauge);
+                            if (sh) {
+                                if (wantLine) {
+                                    if (!st.outline) st.outline = readOutline(sh);
+                                    const lc = targetLine, t = targetLineWidth;
+                                    if (st.outline) {
+                                        const rgba = [(lc >> 16 & 255) / 255, (lc >> 8 & 255) / 255,
+                                                      (lc & 255) / 255, targetLineA / 100];
+                                        // blurred: a glow of its colour round it (the
+                                        // background's shadow, outside, not moved)
+                                        const o = st.outline;
+                                        writeOutline(sh, { use: 1, sep: 0, off: -t, col: rgba,
+                                            th: [t, t, t, t],
+                                            shUse: lineBlur > 0 ? 1 : o.shUse,
+                                            shIn: lineBlur > 0 ? 0 : o.shIn,
+                                            shBlur: lineBlur > 0 ? lineBlur : o.shBlur,
+                                            shCol: lineBlur > 0 ? rgba : o.shCol,
+                                            shOff: lineBlur > 0 ? [0, 0] : o.shOff,
+                                            shSpr: lineBlur > 0 ? [t, t] : o.shSpr });
+                                    }
+                                } else {
+                                    writeOutline(sh, st.outline);
+                                    st.outline = null;
+                                }
+                            } else {
+                                st.outline = null;
+                            }
+                        }
+                    } catch (err) {
+                        plateFailed = true;
+                        log("targeting options failed: " + err);
+                    }
+                }
+            });
+            log("targeting options ready (nameplates followed)");
+        } catch (e) {
+            log("targeting options unavailable: " + e);
+        }
+    } else {
+        log("nameplate data missing (FoeWidget update): no targeting options");
+    }
+
     // ---- the Farever Book button in the game's menu (Échap) ----
     // Made as the game makes its own when the menu opens (EscapeMenu.init,
     // onLeave): a Button of Quit's type, its label a String of ours, its
@@ -2306,7 +3436,7 @@ function main() {
             Interceptor.attach(base.add(escFi * 8).readPointer(), {
                 onEnter() { this.menu = this.context.rcx; },
                 onLeave() {
-                    if (menuFailed) return;
+                    if (menuFailed || !escButtonWanted) return;
                     try {
                         const menu = this.menu;
                         if (typeName(menu) !== "ui.win.EscapeMenu") return;

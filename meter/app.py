@@ -269,6 +269,81 @@ class App:
         # the game's own bars with their values written in (its developer
         # preference, set by the hook): off by default, a prototype
         self._bar_values = False
+        # the text in the bars ("none", "pct", "value", "max": value / max),
+        # the monsters' and the bosses'; the bosses' bars: their colours
+        # ("": the game's), thickness, level
+        self._foe_text = "none"
+        self._boss_text = "none"
+        self._boss_color = ""
+        self._boss_lag = ""
+        self._boss_bg = ""
+        self._boss_extra = 0
+        self._boss_level_show = True
+        self._boss_level_scale = 100
+        self._boss_level_dx = 0
+        self._boss_level_dy = 0
+        # the allies' (players') bars: thicker, wider (px), their level
+        # (shown, %), their name in the bar
+        self._ally_extra = 0
+        self._ally_width = 0
+        self._ally_level_show = True
+        self._ally_level_scale = 100
+        # their text (as the monsters'), their life's colours and gradient end,
+        # the life being lost, the background ("": the game's)
+        self._ally_text = "none"
+        self._ally_color = ""
+        self._ally_color_end = ""
+        self._ally_lag = ""
+        self._ally_bg = ""
+        # every life's gradient end ("": the game's, in its own ratio)
+        self._bar_colors_end = {"mine": "", "aggro": "", "neutral": ""}
+        self._boss_color_end = ""
+        self._ally_level_dx = 0
+        self._ally_level_dy = 0
+        # their class's icon ("none", "replace": in the level's square,
+        # "beside": apart), its size (%), its place (px)
+        self._ally_class = "none"
+        self._ally_class_scale = 100
+        self._ally_class_dx = 0
+        self._ally_class_dy = 0
+        # the monsters' bars wider (px)
+        self._foe_width = 0
+        # the text in the bars: its size (%), its outline ("": none), its width
+        self._foe_text_scale = 100
+        self._boss_text_scale = 100
+        # the Farever Book button made in the game's menu (Échap) by the hook
+        self._esc_button = True
+        # the quick setups imported (name -> their values), the last share's note
+        self._quick_custom = {}
+        self._quick_note = ""
+        self._quick_imp = None              # the last import's answer: {seq, ok, msg}
+        # the targeting options (the hook's, on the monsters' nameplates):
+        # the target indicator's size (%), the health bars' frame (px more),
+        # the bars lighter on a monster after the hero, darker otherwise
+        self._target_scale = 100
+        self._frame_extra = 0
+        # the health bars' colours ("#RRGGBB", "": the game's): a monster
+        # targeting the hero, an aggressive one, a neutral one; the target
+        # indicator's halo ("": none)
+        self._bar_colors = {"mine": "", "aggro": "", "neutral": ""}
+        # the life being lost (same kinds), the bars' background ("": the game's)
+        self._lag_colors = {"mine": "", "aggro": "", "neutral": ""}
+        self._bar_bg = ""
+        # the level beside the bars: its size (%), shown, its digits' colour,
+        # its picture's tint ("": the game's), its offset (px)
+        self._level_scale = 100
+        self._level_show = True
+        self._level_text = ""
+        self._level_tint = ""
+        self._level_dx = 0
+        self._level_dy = 0
+        # the blur of the indicator's halo and of the targeted bar's outline (px)
+        self._glow_blur = 5
+        self._line_blur = 0
+        self._target_glow = ""
+        # the outline of the targeted monster's bar ("": none), its width
+        self._target_line = ""
+        self._target_line_w = 2
         # the bonus heroic dungeon in the loot luck overlay (one overlay),
         # else in its own
         self._luck_merge = False
@@ -379,6 +454,81 @@ class App:
             self._hide_na = data["hide_unavailable"]
         if isinstance(data.get("bar_values"), bool):
             self._bar_values = data["bar_values"]
+        # (the values were shown on or off before the choice of text)
+        old = "max" if self._bar_values else "none"
+        for key, attr in (("foe_text", "_foe_text"), ("boss_text", "_boss_text")):
+            v = data.get(key, old)
+            setattr(self, attr, v if v in self.BAR_TEXTS else "none")
+        for key, attr in (("boss_color", "_boss_color"), ("boss_lag", "_boss_lag"),
+                          ("boss_bg", "_boss_bg")):
+            if self._hex_ok(data.get(key)):
+                setattr(self, attr, data[key])
+        if isinstance(data.get("boss_extra"), int) and 0 <= data["boss_extra"] <= 16:
+            self._boss_extra = data["boss_extra"]
+        if isinstance(data.get("boss_level_show"), bool):
+            self._boss_level_show = data["boss_level_show"]
+        if isinstance(data.get("boss_level_scale"), int) and 50 <= data["boss_level_scale"] <= 250:
+            self._boss_level_scale = data["boss_level_scale"]
+        if data.get("ally_text") in self.BAR_TEXTS:
+            self._ally_text = data["ally_text"]
+        for key in ("ally_color", "ally_color_end", "ally_lag", "ally_bg", "boss_color_end"):
+            if self._hex_ok(data.get(key)):
+                setattr(self, "_" + key, data[key])
+        be = data.get("bar_colors_end") if isinstance(data.get("bar_colors_end"), dict) else {}
+        for k in self._bar_colors_end:
+            if self._hex_ok(be.get(k)):
+                self._bar_colors_end[k] = be[k]
+        for key in ("ally_level_show",):
+            if isinstance(data.get(key), bool):
+                setattr(self, "_" + key, data[key])
+        # (the icon in the level's square, a choice of before, now beside it)
+        ac = "beside" if data.get("ally_class") == "replace" else data.get("ally_class")
+        if ac in self.ALLY_CLASS:
+            self._ally_class = ac
+        for key, lo, hi in (("ally_extra", 0, 16), ("ally_width", -60, 200),
+                            ("ally_level_scale", 20, 250), ("ally_level_dx", -120, 120),
+                            ("ally_level_dy", -120, 120), ("ally_class_scale", 20, 300),
+                            ("ally_class_dx", -300, 300), ("ally_class_dy", -300, 300),
+                            ("boss_level_dx", -80, 80), ("boss_level_dy", -80, 80),
+                            ("foe_width", -60, 200), ("foe_text_scale", 50, 250),
+                            ("boss_text_scale", 50, 250)):
+            if isinstance(data.get(key), int) and lo <= data[key] <= hi:
+                setattr(self, "_" + key, data[key])
+        qc = data.get("quick_custom") if isinstance(data.get("quick_custom"), dict) else {}
+        for name, vals in qc.items():
+            ok = self._quick_clean(vals)
+            if ok is not None and isinstance(name, str) and name and name not in self.QUICK_PRESETS:
+                self._quick_custom[name[:40]] = ok
+        if isinstance(data.get("esc_button"), bool):
+            self._esc_button = data["esc_button"]
+        if isinstance(data.get("target_scale"), int) and 50 <= data["target_scale"] <= 300:
+            self._target_scale = data["target_scale"]
+        if isinstance(data.get("frame_extra"), int) and 0 <= data["frame_extra"] <= 16:
+            self._frame_extra = data["frame_extra"]
+        bc = data.get("bar_colors") if isinstance(data.get("bar_colors"), dict) else {}
+        if isinstance(data.get("level_scale"), int) and 50 <= data["level_scale"] <= 250:
+            self._level_scale = data["level_scale"]
+        if isinstance(data.get("level_show"), bool):
+            self._level_show = data["level_show"]
+        for key, attr, lo, hi in (("level_dx", "_level_dx", -60, 60), ("level_dy", "_level_dy", -60, 60),
+                                  ("glow_blur", "_glow_blur", 1, 16), ("line_blur", "_line_blur", 0, 16)):
+            if isinstance(data.get(key), int) and lo <= data[key] <= hi:
+                setattr(self, attr, data[key])
+        for key, attr in (("level_text", "_level_text"), ("level_tint", "_level_tint")):
+            if self._hex_ok(data.get(key)):
+                setattr(self, attr, data[key])
+        lc = data.get("lag_colors") if isinstance(data.get("lag_colors"), dict) else {}
+        for k in self._bar_colors:
+            if self._hex_ok(bc.get(k)):
+                self._bar_colors[k] = bc[k]
+            if self._hex_ok(lc.get(k)):
+                self._lag_colors[k] = lc[k]
+        for key, attr in (("target_glow", "_target_glow"), ("target_line", "_target_line"),
+                          ("bar_bg", "_bar_bg")):
+            if self._hex_ok(data.get(key)):
+                setattr(self, attr, data[key])
+        if isinstance(data.get("target_line_w"), int) and 1 <= data["target_line_w"] <= 6:
+            self._target_line_w = data["target_line_w"]
         mh = data.get("meter_hide") if isinstance(data.get("meter_hide"), dict) else {}
         for oid in self._meter_hide:
             if isinstance(mh.get(oid), list):
@@ -467,7 +617,35 @@ class App:
                 "auto_reset_boss": bool(self._auto_reset_boss),
                 "auto_reset_dummy": bool(self._auto_reset_dummy),
                 "hide_unavailable": bool(self._hide_na),
-                "bar_values": bool(self._bar_values),
+                "bar_values": self._foe_text != "none",
+                "foe_text": self._foe_text, "boss_text": self._boss_text,
+                "boss_color": self._boss_color, "boss_lag": self._boss_lag, "boss_bg": self._boss_bg,
+                "boss_extra": int(self._boss_extra), "boss_level_show": bool(self._boss_level_show),
+                "boss_level_scale": int(self._boss_level_scale),
+                "boss_level_dx": int(self._boss_level_dx), "boss_level_dy": int(self._boss_level_dy),
+                "foe_width": int(self._foe_width),
+                **{k: getattr(self, "_" + k) for k in (
+                    "foe_text_scale", "boss_text_scale", "ally_extra", "ally_width",
+                    "ally_level_show", "ally_level_scale", "ally_level_dx", "ally_text",
+                    "ally_color", "ally_color_end", "ally_lag", "ally_bg", "boss_color_end",
+                    "ally_level_dy", "ally_class", "ally_class_scale", "ally_class_dx",
+                    "ally_class_dy")},
+                "esc_button": bool(self._esc_button),
+                "quick_custom": {n: {a[1:]: v for a, v in vals.items()}
+                                 for n, vals in self._quick_custom.items()},
+                "target_scale": int(self._target_scale),
+                "frame_extra": int(self._frame_extra),
+                "bar_colors": dict(self._bar_colors),
+                "lag_colors": dict(self._lag_colors),
+                "bar_bg": self._bar_bg,
+                "level_scale": int(self._level_scale),
+                "level_show": bool(self._level_show),
+                "level_text": self._level_text, "level_tint": self._level_tint,
+                "level_dx": int(self._level_dx), "level_dy": int(self._level_dy),
+                "glow_blur": int(self._glow_blur), "line_blur": int(self._line_blur),
+                "target_glow": self._target_glow,
+                "target_line": self._target_line,
+                "target_line_w": int(self._target_line_w),
                 "meter_hide": {k: sorted(v) for k, v in self._meter_hide.items()},
                 "minimap": {"shape": self._mm_shape, "rotate": bool(self._mm_rotate),
                             "zoom": int(self._mm_zoom), "size": int(self._mm_size),
@@ -995,6 +1173,12 @@ class App:
             "toggle_auto_reset_dummy": self._toggle_auto_reset_dummy,
             "hide_unavailable": self._set_hide_na,
             "bar_values": self._set_bar_values,
+            "esc_button": self._set_esc_button,
+            "target_option": self._set_target_option,
+            "quick_preset": self._set_quick_preset,
+            "quick_export": self._quick_export,
+            "quick_import": self._quick_import,
+            "quick_delete": self._quick_delete,
             # the bonus dungeon in the loot luck overlay, or in its own
             # (value: True, False, or None to switch)
             "luck_merge": lambda p: self._set_luck_merge(p.get("value")),
@@ -1911,6 +2095,10 @@ class App:
         def sec(t):
             return {"k": "sec", "t": t}
 
+        def sub(t):
+            # a part of a section (its own heading, folded with it)
+            return {"k": "sub", "t": t}
+
         def rng(t, lo, hi, v, act, p, step=5, style=None):
             return {"k": "range", "t": t, "lo": lo, "hi": hi, "v": int(v), "step": step,
                     "act": act, "p": p, "style": style}
@@ -1930,12 +2118,155 @@ class App:
                       "minimap": tr("Minimap")})
         if self._luck_merge:
             names.pop("bonus")
+        def swatch(t, cur, none, key, start="#D93A2B", alpha=False):
+            # a colour: its swatch and code, the palette (or the code typed)
+            # on a click; "" is none (the game's colour, no halo); alpha: its
+            # opacity chosen too ("#RRGGBBAA")
+            return {"k": "color", "t": t, "v": cur, "none": none, "start": cur or start,
+                    "act": "target_option", "p": {"key": key}, "alpha": alpha}
+
+        game_col, no_col = tr("Couleur du jeu"), tr("Aucun")
+
         # the game's own options first (set in the game: its bars' values),
         # then the overlays': what holds for them all (their theme), each one
-        tabs = [{"id": "combat", "t": tr("Combat"), "group": "game", "rows": [
-                    sec(tr("Barres de vie")),
-                    tog(tr("Afficher les points de vie dans les barres"),
-                        self._bar_values, "bar_values", {})]},
+        preset = self._quick_preset_now()
+        tabs = [{"id": "combat", "t": tr("Combat"), "group": "game", "tag": tr("Expérimental"), "rows": [
+                    sec(tr("Configuration rapide")),
+                    cho(tr("Configuration"), preset,
+                        [[k, k] for k in self.QUICK_PRESETS] + [[k, k] for k in self._quick_custom]
+                        + ([[preset, tr("Personnalisée")]] if preset == "custom" else []),
+                        "quick_preset", {}),
+                    {"k": "btns", "t": self._quick_note, "imp": self._quick_imp, "items":
+                        [{"t": tr("Exporter le code"), "act": "quick_export"},
+                         {"t": tr("Importer un code"), "act": "@import"}]
+                        + ([{"t": tr("Supprimer"), "act": "quick_delete", "p": {"name": preset}}]
+                           if preset in self._quick_custom else [])},
+                    sec(tr("Ciblage")),
+                    sub(tr("Indicateur au-dessus du monstre")),
+                    rng(tr("Taille de l'indicateur"), 50, 300, self._target_scale,
+                        "target_option", {"key": "scale"}, step=10),
+                    swatch(tr("Halo autour de l'indicateur"), self._target_glow,
+                           no_col, "glow", start="#FFD54F", alpha=True),
+                    rng(tr("Flou du halo"), 1, 16, self._glow_blur,
+                        "target_option", {"key": "glow_blur"}, step=1),
+                    sub(tr("Cadre de la barre du monstre ciblé")),
+                    swatch(tr("Couleur du cadre"), self._target_line,
+                           no_col, "line", start="#7FD4FF", alpha=True),
+                    rng(tr("Épaisseur du cadre"), 1, 6, self._target_line_w,
+                        "target_option", {"key": "line_w"}, step=1),
+                    rng(tr("Flou du cadre"), 0, 16, self._line_blur,
+                        "target_option", {"key": "line_blur"}, step=1),
+                    sec(tr("Monstres environnants")),
+                    sub(tr("Barre")),
+                    rng(tr("Épaisseur"), 0, 16, self._frame_extra,
+                        "target_option", {"key": "frame"}, step=1),
+                    rng(tr("Largeur"), -60, 200, self._foe_width,
+                        "target_option", {"key": "foe_width"}, step=5),
+                    swatch(tr("Fond"), self._bar_bg, game_col, "bg", start="#3F3935"),
+                    sub(tr("Texte")),
+                    cho(tr("Contenu"), self._foe_text,
+                        [[k, tr(n)] for k, n in self.BAR_TEXTS.items()],
+                        "target_option", {"key": "foe_text"}),
+                    rng(tr("Taille du texte"), 50, 250, self._foe_text_scale,
+                        "target_option", {"key": "foe_text_scale"}, step=10),
+                    sub(tr("Couleur de la vie (dégradé : début, fin)")),
+                    swatch(tr("Monstre qui te cible"), self._bar_colors["mine"],
+                           game_col, "mine"),
+                    swatch(tr("Monstre qui te cible (fin)"), self._bar_colors_end["mine"],
+                           game_col, "end_mine"),
+                    swatch(tr("Monstre agressif"), self._bar_colors["aggro"],
+                           game_col, "aggro"),
+                    swatch(tr("Monstre agressif (fin)"), self._bar_colors_end["aggro"],
+                           game_col, "end_aggro"),
+                    swatch(tr("Monstre neutre (n'attaque pas en premier)"),
+                           self._bar_colors["neutral"], game_col, "neutral"),
+                    swatch(tr("Monstre neutre (fin)"), self._bar_colors_end["neutral"],
+                           game_col, "end_neutral"),
+                    sub(tr("Couleur de la vie en cours de perte")),
+                    swatch(tr("Monstre qui te cible"), self._lag_colors["mine"],
+                           game_col, "lag_mine", start="#FFFFFF"),
+                    swatch(tr("Monstre agressif"), self._lag_colors["aggro"],
+                           game_col, "lag_aggro", start="#FFFFFF"),
+                    swatch(tr("Monstre neutre (n'attaque pas en premier)"),
+                           self._lag_colors["neutral"], game_col, "lag_neutral",
+                           start="#FFFFFF"),
+                    sub(tr("Niveau")),
+                    tog(tr("Afficher le niveau à gauche de la barre"), self._level_show,
+                        "target_option", {"key": "level_show"}),
+                    rng(tr("Taille du niveau"), 50, 250, self._level_scale,
+                        "target_option", {"key": "level"}, step=1),
+                    swatch(tr("Couleur des chiffres"), self._level_text, game_col,
+                           "level_text", start="#FFFFFF"),
+                    swatch(tr("Teinte du fond et du cadre"), self._level_tint, game_col,
+                           "level_tint", start="#FFFFFF"),
+                    rng(tr("Décalage horizontal"), -60, 60, self._level_dx,
+                        "target_option", {"key": "level_dx"}, step=1),
+                    rng(tr("Décalage vertical"), -60, 60, self._level_dy,
+                        "target_option", {"key": "level_dy"}, step=1),
+                    sec(tr("Boss")),
+                    sub(tr("Barre")),
+                    rng(tr("Épaisseur"), 0, 16, self._boss_extra,
+                        "target_option", {"key": "boss_extra"}, step=1),
+                    swatch(tr("Fond"), self._boss_bg, game_col, "boss_bg", start="#3F3935"),
+                    swatch(tr("Couleur de la vie"), self._boss_color, game_col, "boss_color"),
+                    swatch(tr("Couleur de la vie (fin du dégradé)"), self._boss_color_end,
+                           game_col, "boss_color_end"),
+                    swatch(tr("Couleur de la vie en cours de perte"), self._boss_lag, game_col,
+                           "boss_lag", start="#FFFFFF"),
+                    sub(tr("Texte")),
+                    cho(tr("Contenu"), self._boss_text,
+                        [[k, tr(n)] for k, n in self.BAR_TEXTS.items()],
+                        "target_option", {"key": "boss_text"}),
+                    rng(tr("Taille du texte"), 50, 250, self._boss_text_scale,
+                        "target_option", {"key": "boss_text_scale"}, step=10),
+                    sub(tr("Niveau")),
+                    tog(tr("Afficher le niveau à gauche de la barre"), self._boss_level_show,
+                        "target_option", {"key": "boss_level_show"}),
+                    rng(tr("Taille du niveau"), 50, 250, self._boss_level_scale,
+                        "target_option", {"key": "boss_level_scale"}, step=1),
+                    rng(tr("Décalage horizontal"), -80, 80, self._boss_level_dx,
+                        "target_option", {"key": "boss_level_dx"}, step=1),
+                    rng(tr("Décalage vertical"), -80, 80, self._boss_level_dy,
+                        "target_option", {"key": "boss_level_dy"}, step=1),
+                    sec(tr("Alliés")),
+                    sub(tr("Barre")),
+                    rng(tr("Épaisseur"), 0, 16, self._ally_extra,
+                        "target_option", {"key": "ally_extra"}, step=1),
+                    rng(tr("Largeur"), -60, 200, self._ally_width,
+                        "target_option", {"key": "ally_width"}, step=5),
+                    swatch(tr("Fond"), self._ally_bg, game_col, "ally_bg", start="#3F3935"),
+                    swatch(tr("Couleur de la vie"), self._ally_color, game_col, "ally_color",
+                           start="#5DBB4C"),
+                    swatch(tr("Couleur de la vie (fin du dégradé)"), self._ally_color_end,
+                           game_col, "ally_color_end", start="#2E7D32"),
+                    swatch(tr("Couleur de la vie en cours de perte"), self._ally_lag, game_col,
+                           "ally_lag", start="#FFFFFF"),
+                    sub(tr("Texte")),
+                    cho(tr("Contenu"), self._ally_text,
+                        [[k, tr(n)] for k, n in self.BAR_TEXTS.items()],
+                        "target_option", {"key": "ally_text"}),
+                    sub(tr("Niveau")),
+                    tog(tr("Afficher le niveau à gauche de la barre"), self._ally_level_show,
+                        "target_option", {"key": "ally_level_show"}),
+                    rng(tr("Taille du niveau"), 20, 250, self._ally_level_scale,
+                        "target_option", {"key": "ally_level_scale"}, step=1),
+                    rng(tr("Décalage horizontal"), -120, 120, self._ally_level_dx,
+                        "target_option", {"key": "ally_level_dx"}, step=1),
+                    rng(tr("Décalage vertical"), -120, 120, self._ally_level_dy,
+                        "target_option", {"key": "ally_level_dy"}, step=1),
+                    sub(tr("Icône de classe")),
+                    tog(tr("Afficher l'icône de classe à côté du niveau"),
+                        self._ally_class == "beside", "target_option", {"key": "ally_class_on"}),
+                    rng(tr("Taille de l'icône"), 20, 300, self._ally_class_scale,
+                        "target_option", {"key": "ally_class_scale"}, step=1),
+                    rng(tr("Décalage horizontal"), -300, 300, self._ally_class_dx,
+                        "target_option", {"key": "ally_class_dx"}, step=1),
+                    rng(tr("Décalage vertical"), -300, 300, self._ally_class_dy,
+                        "target_option", {"key": "ally_class_dy"}, step=1)]},
+                {"id": "interface", "t": tr("Interface"), "group": "game", "tag": tr("Expérimental"), "rows": [
+                    sec(tr("Menu du jeu")),
+                    tog(tr("Bouton Farever Book dans le menu Échap"),
+                        self._esc_button, "esc_button", {})]},
                 {"id": "general", "t": tr("Général"), "group": "overlays", "rows": [
                     sec(tr("Thème")),
                     {"k": "cards", "act": "ov_theme", "p": {},
@@ -3854,9 +4185,348 @@ class App:
         if script is None:
             return
         try:
-            script.post({"type": "config", "barValues": bool(self._bar_values)})
+            script.post({"type": "config", "barValues": self._foe_text != "none",
+                         "foeText": self._foe_text, "bossText": self._boss_text,
+                         "bossColor": self._rgb(self._boss_color),
+                         "bossLag": self._rgb(self._boss_lag),
+                         "bossBg": self._rgb(self._boss_bg),
+                         "bossExtra": int(self._boss_extra),
+                         "bossLevelShow": bool(self._boss_level_show),
+                         "bossLevelScale": int(self._boss_level_scale),
+                         "bossLevelDx": int(self._boss_level_dx),
+                         "bossLevelDy": int(self._boss_level_dy),
+                         "foeWidth": int(self._foe_width),
+                         "foeTextScale": int(self._foe_text_scale),
+                         "allyExtra": int(self._ally_extra), "allyWidth": int(self._ally_width),
+                         "allyLevelShow": bool(self._ally_level_show),
+                         "allyLevelScale": int(self._ally_level_scale),
+                         "allyText": self._ally_text,
+                         "allyColor": self._rgb(self._ally_color),
+                         "allyColorEnd": self._rgb(self._ally_color_end),
+                         "allyLag": self._rgb(self._ally_lag),
+                         "allyBg": self._rgb(self._ally_bg),
+                         "bossColorEnd": self._rgb(self._boss_color_end),
+                         "barColorsEnd": {k: self._rgb(v) for k, v in self._bar_colors_end.items()},
+                         "allyLevelDx": int(self._ally_level_dx),
+                         "allyLevelDy": int(self._ally_level_dy),
+                         "allyClass": self._ally_class,
+                         "allyClassScale": int(self._ally_class_scale),
+                         "allyClassDx": int(self._ally_class_dx),
+                         "allyClassDy": int(self._ally_class_dy),
+                         "bossTextScale": int(self._boss_text_scale),
+                         "targetGlowA": self._alpha(self._target_glow),
+                         "targetLineA": self._alpha(self._target_line),
+                         "escButton": bool(self._esc_button),
+                         "targetScale": int(self._target_scale),
+                         "frameExtra": int(self._frame_extra),
+                         "barColors": {k: self._rgb(v) for k, v in self._bar_colors.items()},
+                         "lagColors": {k: self._rgb(v) for k, v in self._lag_colors.items()},
+                         "barBg": self._rgb(self._bar_bg),
+                         "levelScale": int(self._level_scale),
+                         "levelShow": bool(self._level_show),
+                         "levelText": self._rgb(self._level_text),
+                         "levelTint": self._rgb(self._level_tint),
+                         "levelDx": int(self._level_dx), "levelDy": int(self._level_dy),
+                         "glowBlur": int(self._glow_blur), "lineBlur": int(self._line_blur),
+                         "targetGlow": self._rgb(self._target_glow),
+                         "targetLine": self._rgb(self._target_line),
+                         "targetLineWidth": int(self._target_line_w)})
         except Exception as e:
             print(f"[meter] hook config not sent: {e!r}", file=sys.stderr)
+
+    @staticmethod
+    def _hex_ok(v):
+        """A colour as kept: "" (the game's, or none), "#RRGGBB" or
+        "#RRGGBBAA" (with its opacity)."""
+        return isinstance(v, str) and (
+            v == "" or re.fullmatch(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?", v) is not None)
+
+    @staticmethod
+    def _alpha(v):
+        """A colour's opacity (%): its AA, 100 without."""
+        return round(int(v[7:9], 16) / 255 * 100) if isinstance(v, str) and len(v) == 9 else 100
+
+    @staticmethod
+    def _rgb(v):
+        """"#RRGGBB[AA]" as an int for the hook (its colour, the opacity apart), "" as None."""
+        try:
+            return int(v[1:7], 16) if v else None
+        except (TypeError, ValueError):
+            return None
+
+    # The allies' level and class icon as they look right side by side
+    # (the level small, the icon level with it), found in the game
+    ALLY_ICON_BASE = {"_ally_level_scale": 35, "_ally_level_dx": 0, "_ally_level_dy": 7,
+                      "_ally_class_scale": 105, "_ally_class_dx": 0, "_ally_class_dy": 0}
+
+    # Ready-made settings of the in-game options: the game as it is
+    # (Default), the creator's own (Creator).
+    QUICK_PRESETS = {
+        "Default": {"_foe_text": "none", "_boss_text": "none", "_frame_extra": 0,
+                    "_bar_colors": {"mine": "", "aggro": "", "neutral": ""},
+                    "_lag_colors": {"mine": "", "aggro": "", "neutral": ""}, "_bar_bg": "",
+                    "_target_scale": 100, "_target_glow": "", "_glow_blur": 5,
+                    "_target_line": "", "_target_line_w": 2, "_line_blur": 0,
+                    "_level_show": True, "_level_scale": 100, "_level_text": "", "_level_tint": "",
+                    "_level_dx": 0, "_level_dy": 0},
+        "Creator": {"_foe_text": "max", "_boss_text": "max", "_frame_extra": 3,
+                    "_bar_colors": {"mine": "#EF7E71", "aggro": "#833030", "neutral": ""},
+                    "_lag_colors": {"mine": "#82453E", "aggro": "", "neutral": ""},
+                    "_bar_bg": "#000000",
+                    "_target_scale": 120, "_target_glow": "#FF0002", "_glow_blur": 3,
+                    "_target_line": "#FF0002", "_target_line_w": 2, "_line_blur": 4,
+                    "_level_show": False, "_level_scale": 80, "_level_text": "", "_level_tint": "",
+                    "_level_dx": 2, "_level_dy": 3,
+                    # the allies: the level and the class's icon each side of the bar
+                    **{"_ally_level_show": True, "_ally_class": "beside"},
+                    **dict(ALLY_ICON_BASE)},
+    }
+
+    # an ally's class's icon, its choices
+    ALLY_CLASS = {"none": "Aucune", "beside": "À côté du niveau"}
+    # the text in the bars, its choices
+    BAR_TEXTS = {"none": "Rien", "pct": "Pourcentage", "value": "Valeur",
+                 "max": "Valeur / max", "max_pct": "Valeur / max (pourcentage)"}
+    # the bosses' bars as the game has them (in every quick setup)
+    BOSS_DEFAULTS = {"_boss_color": "", "_boss_lag": "", "_boss_bg": "", "_boss_extra": 0,
+                     "_boss_level_show": True, "_boss_level_scale": 100,
+                     "_boss_level_dx": 0, "_boss_level_dy": 0, "_foe_width": 0,
+                     "_foe_text_scale": 100, "_boss_text_scale": 100,
+                     "_ally_extra": 0, "_ally_width": 0, "_ally_level_show": True,
+                     "_ally_level_scale": 100, "_ally_text": "none", "_ally_color": "",
+                     "_ally_color_end": "", "_ally_lag": "", "_ally_bg": "", "_boss_color_end": "",
+                     "_bar_colors_end": {"mine": "", "aggro": "", "neutral": ""},
+                     "_ally_level_dx": 0, "_ally_level_dy": 0, "_ally_class": "none",
+                     "_ally_class_scale": 100, "_ally_class_dx": 0, "_ally_class_dy": 0}
+
+    def _quick_all(self):
+        """Every quick setup by name (ready-made, then imported), whole."""
+        out = {n: dict(self.BOSS_DEFAULTS, **v) for n, v in self.QUICK_PRESETS.items()}
+        out.update(self._quick_custom)
+        return out
+
+    def _quick_preset_now(self):
+        """The quick setup the in-game options are now, or "custom"."""
+        for name, vals in self._quick_all().items():
+            if all(getattr(self, a) == v for a, v in vals.items()):
+                return name
+        return "custom"
+
+    # A setup's values as a share code may carry them: each known setting's
+    # kind (anything else, or out of its bounds, refused).
+    QUICK_KINDS = {
+        "_foe_text": "text", "_boss_text": "text",
+        "_bar_colors": "colors", "_lag_colors": "colors",
+        "_level_show": "bool", "_boss_level_show": "bool",
+        "_ally_level_show": "bool", "_ally_text": "text", "_bar_colors_end": "colors",
+        "_ally_extra": (0, 16), "_ally_width": (-60, 200), "_ally_level_scale": (20, 250),
+        "_ally_level_dx": (-120, 120), "_ally_level_dy": (-120, 120), "_ally_class": "class",
+        "_ally_class_scale": (20, 300), "_ally_class_dx": (-300, 300),
+        "_ally_class_dy": (-300, 300),
+        "_frame_extra": (0, 16), "_target_scale": (50, 300), "_glow_blur": (1, 16),
+        "_target_line_w": (1, 6), "_line_blur": (0, 16), "_level_scale": (50, 250),
+        "_level_dx": (-60, 60), "_level_dy": (-60, 60), "_boss_extra": (0, 16),
+        "_boss_level_scale": (50, 250), "_boss_level_dx": (-80, 80), "_boss_level_dy": (-80, 80),
+        "_foe_width": (-60, 200), "_foe_text_scale": (50, 250), "_boss_text_scale": (50, 250),
+    }
+
+    def _quick_clean(self, vals):
+        """A setup's values (keys without their "_"), checked: whole (the
+        Default's for what is missing), or None if any is wrong."""
+        if not isinstance(vals, dict):
+            return None
+        out = dict(self.BOSS_DEFAULTS, **self.QUICK_PRESETS["Default"])
+        for k, v in vals.items():
+            a = "_" + str(k)
+            if a not in out:
+                continue                    # a setting of another version: left
+            kind = self.QUICK_KINDS.get(a, "hex")
+            if kind == "text":
+                if v not in self.BAR_TEXTS:
+                    return None
+            elif kind == "class":
+                if v not in self.ALLY_CLASS:
+                    return None
+            elif kind == "colors":
+                if not isinstance(v, dict) or set(v) != {"mine", "aggro", "neutral"} \
+                        or not all(self._hex_ok(c) for c in v.values()):
+                    return None
+                v = {c: x.upper() for c, x in v.items()}
+            elif kind == "bool":
+                if not isinstance(v, bool):
+                    return None
+            elif kind == "hex":
+                if not self._hex_ok(v):
+                    return None
+                v = v.upper()
+            else:
+                if not isinstance(v, int) or isinstance(v, bool) or not kind[0] <= v <= kind[1]:
+                    return None
+            out[a] = v
+        return out
+
+    def _quick_code(self, name):
+        """The in-game options as a share code: FB1: then their JSON,
+        compressed, in URL-safe base64."""
+        import base64
+        import zlib
+        vals = {a[1:]: getattr(self, a) for a in self._quick_all()["Default"]}
+        raw = json.dumps({"n": name, "v": vals}, separators=(",", ":")).encode("utf-8")
+        return "FB1:" + base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii").rstrip("=")
+
+    def _quick_export(self, p):
+
+        now = self._quick_preset_now()
+        name = now if now != "custom" else tr("Ma configuration")
+        code = self._quick_code(name)
+        self._quick_note = (tr("Code copié ({n} caractères)").replace("{n}", str(len(code)))
+                            if copy_text_to_clipboard(code)
+                            else tr("Copie impossible : presse-papiers occupé"))
+
+    def _quick_import(self, p):
+        """A share code given in the panel's import window, under the name
+        given there: checked, added to the list, applied. The answer (taken
+        or why not) goes back to the window."""
+        import base64
+        import zlib
+
+        seq = p.get("seq")
+        name = " ".join(str(p.get("name") or "").split())[:40]
+        text = "".join(str(p.get("code") or "").split())
+        vals = None
+        if text.startswith("FB1:") and len(text) < 8000:
+            try:
+                body = text[4:]
+                raw = zlib.decompress(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
+                vals = self._quick_clean(json.loads(raw.decode("utf-8")).get("v"))
+            except Exception:  # noqa: BLE001 - any bad code is refused alike
+                vals = None
+        if not name:
+            msg = tr("Donne un nom à cette configuration")
+        elif name in self.QUICK_PRESETS or name in self._quick_custom:
+            msg = tr("Ce nom est déjà dans la liste")
+        elif vals is None:
+            msg = tr("Ce code n'est pas valide")
+        else:
+            msg = None
+        if msg:
+            self._quick_imp = {"seq": seq, "ok": False, "msg": msg}
+            return
+        self._quick_custom[name] = vals
+        self._quick_imp = {"seq": seq, "ok": True}
+        self._quick_note = tr("Importée : {x}").replace("{x}", name)
+        self._set_quick_preset({"value": name})
+
+    def _quick_delete(self, p):
+        name = p.get("name")
+        if name in self._quick_custom:
+            del self._quick_custom[name]
+            self._quick_note = tr("Supprimée : {x}").replace("{x}", name)
+            self._save_settings()
+            self._post_hook_config()
+
+    def _set_quick_preset(self, p):
+        vals = self._quick_all().get(p.get("value"))
+        if not vals:
+            return
+        for a, v in vals.items():
+            setattr(self, a, dict(v) if isinstance(v, dict) else v)
+        self._save_settings()
+        self._post_hook_config()
+
+    def _set_target_option(self, p):
+        """In the game: the target indicator's size and halo, the bars'
+        frame, their colours (key, value)."""
+        key, v = p.get("key"), p.get("value")
+        try:
+            if key == "scale":
+                self._target_scale = max(50, min(300, int(v)))
+            elif key == "level":
+                self._level_scale = max(50, min(250, int(v)))
+            elif key in ("foe_text", "boss_text") and v in self.BAR_TEXTS:
+                setattr(self, "_" + key, v)
+            elif key in ("boss_color", "boss_lag", "boss_bg") and self._hex_ok(v):
+                setattr(self, "_" + key, v.upper())
+            elif key == "boss_extra":
+                self._boss_extra = max(0, min(16, int(v)))
+            elif key == "boss_level_show":
+                self._boss_level_show = bool(v)
+            elif key in ("boss_level_dx", "boss_level_dy"):
+                setattr(self, "_" + key, max(-80, min(80, int(v))))
+            elif key in ("foe_text_scale", "boss_text_scale"):
+                setattr(self, "_" + key, max(50, min(250, int(v))))
+            elif key == "ally_text" and v in self.BAR_TEXTS:
+                self._ally_text = v
+            elif key in ("ally_color", "ally_color_end", "ally_lag", "ally_bg",
+                         "boss_color_end") and self._hex_ok(v):
+                setattr(self, "_" + key, v.upper())
+            elif str(key).startswith("end_") and key[4:] in self._bar_colors_end and self._hex_ok(v):
+                self._bar_colors_end[key[4:]] = v.upper()
+            elif key == "ally_level_show":
+                setattr(self, "_" + key, bool(v))
+            elif key == "ally_extra":
+                self._ally_extra = max(0, min(16, int(v)))
+            elif key == "ally_width":
+                self._ally_width = max(-60, min(200, int(v)))
+            elif key == "ally_level_scale":
+                self._ally_level_scale = max(20, min(250, int(v)))
+            elif key in ("ally_level_dx", "ally_level_dy"):
+                setattr(self, "_" + key, max(-120, min(120, int(v))))
+            elif key == "ally_class_on":
+                self._ally_class = "beside" if v else "none"
+                # turned on with the level and icon untouched: the setting
+                # that looks right (found in the game, 2026-10-14)
+                untouched = all(getattr(self, a) == d for a, d in
+                                (("_ally_level_scale", 100), ("_ally_level_dx", 0),
+                                 ("_ally_level_dy", 0), ("_ally_class_scale", 100),
+                                 ("_ally_class_dx", 0), ("_ally_class_dy", 0)))
+                if v and untouched:
+                    for a, d in self.ALLY_ICON_BASE.items():
+                        setattr(self, a, d)
+            elif key == "ally_class" and v in self.ALLY_CLASS:
+                self._ally_class = v
+            elif key == "ally_class_scale":
+                self._ally_class_scale = max(20, min(300, int(v)))
+            elif key in ("ally_class_dx", "ally_class_dy"):
+                setattr(self, "_" + key, max(-300, min(300, int(v))))
+            elif key == "foe_width":
+                self._foe_width = max(-60, min(200, int(v)))
+            elif key == "boss_level_scale":
+                self._boss_level_scale = max(50, min(250, int(v)))
+            elif key == "level_show":
+                self._level_show = bool(v)
+            elif key in ("level_dx", "level_dy"):
+                setattr(self, "_" + key, max(-60, min(60, int(v))))
+            elif key == "glow_blur":
+                self._glow_blur = max(1, min(16, int(v)))
+            elif key == "line_blur":
+                self._line_blur = max(0, min(16, int(v)))
+            elif key in ("level_text", "level_tint") and self._hex_ok(v):
+                setattr(self, "_" + key, v.upper())
+            elif key == "frame":
+                self._frame_extra = max(0, min(16, int(v)))
+            elif key in self._bar_colors and self._hex_ok(v):
+                self._bar_colors[key] = v.upper()
+            elif str(key).startswith("lag_") and key[4:] in self._lag_colors and self._hex_ok(v):
+                self._lag_colors[key[4:]] = v.upper()
+            elif key in ("glow", "line", "bg") and self._hex_ok(v):
+                setattr(self, {"glow": "_target_glow", "line": "_target_line",
+                               "bg": "_bar_bg"}[key], v.upper())
+            elif key == "line_w":
+                self._target_line_w = max(1, min(6, int(v)))
+            else:
+                return
+        except (TypeError, ValueError):
+            return
+        self._save_settings()
+        self._post_hook_config()
+
+    def _set_esc_button(self, p):
+        """In the game: the Farever Book button in its menu, or not (the
+        next time the menu opens)."""
+        self._esc_button = bool(p.get("value"))
+        self._save_settings()
+        self._post_hook_config()
 
     def _set_bar_values(self, p):
         """In the game: the values written in its bars, or not."""

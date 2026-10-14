@@ -236,7 +236,71 @@ class HLCode:
             ti = r.index()
             findex = r.index()
             self.natives.append(Native(lib, name, ti, findex))
+        self._functions_at = r.p        # the functions' section (function_types)
         return self
+
+    # each opcode's argument count (-1, -2: variable; hl/code.ml's order)
+    _NARGS = [2, 2, 2, 2, 2, 2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1, 1,
+              2, 3, 4, 5, 6, -1, -1, -1, -1, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3,
+              2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 2, 2,
+              0, 1, 1, 1, -1, 1, 2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 2, 2,
+              -2, 2, 2, 4, 3, 0, 2, 3, 0, 3, 3, 1]
+
+    def function_types(self, closures_of=()) -> dict[int, int]:
+        """{findex: its type index}: the functions' section, read past
+        their ops and debug lines (after parse). A function's type says its
+        arguments and return (type_str): "(ui.comp.Button,String,...)->void".
+        closures_of: functions whose closures (the functions they bind, in
+        order: an update bound with bindUpdate, nameless) self.closures
+        keeps, {findex: [findex]}."""
+        r = HLReader(self.data)
+        r.p = self._functions_at
+        out = {}
+        wanted = set(closures_of)
+        self.closures = {}
+        for _ in range(self.counts["nfunctions"]):
+            t, fi, nregs, nops = r.index(), r.index(), r.index(), r.index()
+            for _ in range(nregs):
+                r.index()
+            keep = fi in wanted
+            for _ in range(nops):
+                op = r.index()
+                na = self._NARGS[op]
+                if na >= 0:
+                    args = [r.index() for _ in range(na)]
+                    if keep and op in (33, 34):     # StaticClosure, InstanceClosure
+                        self.closures.setdefault(fi, []).append(args[1])
+                elif op == 70:                      # OSwitch: reg, n targets, end
+                    r.index()
+                    for _ in range(r.index()):
+                        r.index()
+                    r.index()
+                else:                               # calls: dst, fn, n args
+                    r.index(), r.index()
+                    for _ in range(r.byte()):
+                        r.index()
+            if self.has_debug:
+                pos = 0
+                while pos < nops:
+                    b = r.byte()
+                    if b & 1:
+                        r.byte()
+                    elif b & 2:
+                        pos += (b >> 2) & 15
+                    elif b & 4:
+                        pos += 1
+                    else:
+                        r.byte()
+                        r.byte()
+                        pos += 1
+                if self.version >= 3:
+                    for _ in range(r.index()):
+                        r.index()
+                        r.index()
+                        if self.version >= 6:
+                            r.index()
+            out[fi] = t
+        return out
 
     def type_str(self, ti: int) -> str:
         if ti < 0 or ti >= len(self.types):

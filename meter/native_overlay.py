@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import ctypes
 import json
+import colorsys
 import math
 import os
 import queue
@@ -126,6 +127,8 @@ _U32.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
 _U32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int,
                               ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
 _U32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+_U32.GetForegroundWindow.restype = wintypes.HWND
+_U32.SetForegroundWindow.argtypes = [wintypes.HWND]
 _U32.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
 _U32.GetWindowLongW.restype = ctypes.c_long
 _U32.SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
@@ -182,6 +185,8 @@ AC_SRC_ALPHA = 1
 WM_DESTROY = 0x0002
 WM_SETCURSOR = 0x0020
 WM_MOUSEACTIVATE = 0x0021
+WM_KEYDOWN = 0x0100
+WM_CHAR = 0x0102
 WM_MOUSEMOVE = 0x0200
 WM_LBUTTONDOWN = 0x0201
 WM_LBUTTONUP = 0x0202
@@ -322,6 +327,9 @@ class _UiThread:
                     return 0
                 if msg == WM_CAPTURECHANGED:
                     o.on_mouse("cancel", 0, 0)
+                    return 0
+                if msg in (WM_KEYDOWN, WM_CHAR) and hasattr(o, "on_key"):
+                    o.on_key(msg == WM_CHAR, wp)
                     return 0
                 if msg == WM_MOUSEWHEEL:
                     pt = wintypes.POINT(_signed16(lp), _signed16(lp >> 16))
@@ -3021,21 +3029,30 @@ class ConfigView:
     TAB_H = 44
     GROUP_H = 30                        # a group's heading in the menu
     # each overlay's glyph (the app's tabs', the game's)
-    TAB_ICONS = {"combat": "Hunt", "general": "Build", "meter": "Live", "meterheal": "Character",
+    TAB_ICONS = {"combat": "Hunt", "interface": "Encyclopedia", "general": "Build",
+                 "meter": "Live", "meterheal": "Character",
                  "luck": "Collection",
                  "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
                  "minimap": "Map"}
-    ROW, SEC, PAD = 28, 32, 14
+    ROW, SEC, PAD = 28, 34, 14
+    SUB = 26                            # a part of a section: its heading
+    SEC_BG = (184, 158, 147)            # a section's heading band
     CTL_W = 180                          # a range's, a choice's width
 
     def __init__(self, tr):
         self.tr = tr
 
-    def _height(self, rows):
+    def _height(self, rows, folded=()):
         h = self.PAD
-        for r in rows:
+        skip = False
+        for i, r in enumerate(rows):
             if r["k"] == "sec":
                 h += self.SEC
+                skip = i in folded
+            elif skip:
+                continue
+            elif r["k"] == "sub":
+                h += self.SUB
             elif r["k"] == "grid":
                 h += self.ROW * math.ceil(len(r["items"]) / 3)
             elif r["k"] == "cards":
@@ -3050,8 +3067,13 @@ class ConfigView:
         cur = next((t for t in tabs if t["id"] == tab), tabs[0] if tabs else None)
         groups = (data or {}).get("groups") or {}
         n_groups = len({t.get("group") for t in tabs if t.get("group") in groups})
-        body = max([self._height(t["rows"]) for t in tabs]
-                   + [len(tabs) * (self.TAB_H + 2) + n_groups * self.GROUP_H + 2])
+        menu_h = len(tabs) * (self.TAB_H + 2) + n_groups * self.GROUP_H + 2
+        # as tall as its tallest tab, up to about the game's own menu (Échap):
+        # the rows past it scrolled
+        fold = ui.get("folded") or set()
+        folded_of = lambda tid: {i for (t_, i) in fold if t_ == tid}
+        body = min(max([self._height(t["rows"], folded_of(t["id"])) for t in tabs] + [menu_h]),
+                   max(menu_h, self.MAX_BODY))
         W = self.W
         H = 44 + body + 22
         hits = []
@@ -3064,6 +3086,7 @@ class ConfigView:
         # lighter, framed inside)
         mx, mw = 8, self.MENU_W
         p.fill(mx, 44, mw, body, self.MENU_BG)
+        p.fill(mx + mw, 44, 3, body, self.INK, 0.7)
         y = 44 + 2
         last_group = None
         for t in tabs:
@@ -3084,21 +3107,149 @@ class ConfigView:
             glyph = _piece(f"ui_tab_{self.TAB_ICONS.get(t['id'], 'Live')}.png")
             if glyph is not None:
                 p.mask_image(glyph, mx + 14, y + (th - 24) / 2, 24, 24, "#FFFFFF")
-            self._tab_name(p, t["t"], mx + 50, y + th / 2, mw - 60, dpi_k)
+            tag_w = 0
+            if t.get("tag"):
+                # a small pill on its right (an experimental part, say)
+                tag_w = p.width(t["tag"], 10, 700) + 12
+                tx = mx + mw - 10 - tag_w
+                p.fill(tx, y + th / 2 - 9, tag_w, 18, self.GOLD, 0.9, r=9)
+                p.text(t["tag"], tx, y + th / 2 - LH11 / 2, LH11, 10, 700, (60, 44, 36),
+                       align="center", w=tag_w)
+            self._tab_name(p, t["t"], mx + 50, y + th / 2, mw - 60 - (tag_w + 6 if tag_w else 0), dpi_k)
             hits.append((mx, y, mw, th, "tab", t["id"]))
             y += th + 2
         if cur is None:
             return p, hits, W, H
-        # the tab's rows
-        x0, x1 = mx + mw + 20, W - 24
+        # the tab's rows (drawn whole aside and cut to the view when they
+        # are taller than it, their places moved by the scroll)
+        content = self._height(cur["rows"], folded_of(cur["id"]))
+        self.max_scroll = max(0, content - body)
+        x0, x1 = mx + mw + 20, W - (34 if self.max_scroll else 24)
+        self.cur_id = cur["id"]
+        scroll = max(0, min(self.max_scroll, (ui.get("scroll") or {}).get(cur["id"], 0)))
+        if self.max_scroll:
+            rp = Paint(W, 44 + content + 2, k)
+            rp.fill(8, 44, W - 16, content, self.BG)
+            rh = []
+            row_y = self._rows(rp, cur, x0, x1, rh, ui, local, icon_fn, preview_fn)
+            left = mx + mw + 3
+            cut = rp.img.crop((round(left * k), round((44 + scroll) * k),
+                               round((W - 8) * k), round((44 + scroll + body) * k)))
+            p._put(cut, round(left * k), round(44 * k))
+            for hx, hy, hw, hh, kind, arg in rh:
+                y0, y1 = max(44, hy - scroll), min(44 + body, hy - scroll + hh)
+                if y1 > y0:
+                    hits.append((hx, y0, hw, y1 - y0, kind, arg))
+            row_y = {i: y - scroll for i, y in row_y.items()}
+            # its bar: the track, the thumb (held to drag, the track clicked)
+            ty, th_ = 48, body - 8
+            tb = max(28, th_ * body / content)
+            tpos = ty + (th_ - tb) * scroll / self.max_scroll
+            p.fill(W - 19, ty, 6, th_, self.LINE, 0.45, r=3)
+            p.fill(W - 19, tpos, 6, tb, self.INK, 0.85, r=3)
+            hits.insert(0, (W - 23, ty, 14, th_, "cfg_scroll", (ty, th_, tb)))
+        else:
+            row_y = self._rows(p, cur, x0, x1, hits, ui, local, icon_fn, preview_fn)
+        pk = ui.get("picker")
+        if pk and pk["ref"][0] == cur["id"] and pk["ref"][1] in row_y:
+            top = []
+            self._picker(p, x1, row_y[pk["ref"][1]], H, pk, top)
+            hits[:0] = top
+        md = ui.get("modal")
+        if md:
+            top = []
+            self._import_box(p, W, H, md, top)
+            hits[:0] = top
+        return p, hits, W, H
+
+    def _field(self, p, x, y, w, label, text, hint, focus, hits, kind):
+        """A text field: its label over it, its text (its end when longer),
+        a caret when typed in; a click gives it the keyboard."""
+        p.text(label, x, y, LH12, 12, 700, self.INK)
+        fy, fh = y + LH12 + 4, 30
+        p.fill(x, fy, w, fh, (255, 252, 246), r=4)
+        p.ring(x, fy, w, fh, 2 if focus else 1, self.RED if focus else self.LINE, r=4)
+        shown = text
+        while shown and p.width(shown, 13, 400) > w - 24:
+            shown = shown[max(1, len(shown) // 8):] if len(shown) > 40 else shown[1:]
+        if text:
+            p.text(("…" if shown != text else "") + shown, x + 10, fy + 15 - LH13 / 2, LH13, 13,
+                   400, self.INK)
+        else:
+            p.text(hint, x + 10, fy + 15 - LH13 / 2, LH13, 13, 400, self.INK, alpha=0.45)
+        if focus:
+            cw = p.width(("…" if shown != text else "") + shown, 13, 400) if text else 0
+            p.fill(x + 11 + cw, fy + 8, 1.5, 14, self.INK)
+        hits.append((x, fy, w, fh, kind, None))
+        return fy + fh
+
+    def _import_box(self, p, W, H, md, hits):
+        """The import of a quick setup: its name, its code (pasted), the
+        app's answer when it refuses it; Importer / Annuler."""
+        tr = self.tr
+        p.fill(8, 44, W - 16, H - 66, (0, 0, 0), 0.35)
+        bw, bh = 440, 268
+        bx, by = (W - bw) / 2, max(56, (H - bh) / 2)
+        p.fill(bx + 2, by + 3, bw, bh, (0, 0, 0), 0.25, r=8)
+        p.fill(bx, by, bw, bh, self.BOX, r=8)
+        p.ring(bx, by, bw, bh, 1, self.LINE, r=8)
+        x, w = bx + 20, bw - 40
+        p.text(tr("Importer une configuration"), x, by + 16, LH13, 15, 700, self.INK)
+        y = by + 16 + 30
+        y = self._field(p, x, y, w, tr("Nom"), md["name"], tr("Le nom dans la liste"),
+                        md["focus"] == "name", hits, "imp_name")
+        y = self._field(p, x, y + 12, w, tr("Code"), md["code"], tr("Colle le code ici (Ctrl+V)"),
+                        md["focus"] == "code", hits, "imp_code")
+        if md.get("err"):
+            p.text(md["err"], x, y + 8, LH12, 12, 700, self.RED, clip=w)
+        elif md.get("seq") is not None:
+            p.text(tr("Vérification…"), x, y + 8, LH12, 12, 400, self.INK)
+        ty = by + bh - 16 - 28
+        ow = p.width(tr("Importer"), 13, 700) + 32
+        cw_ = p.width(tr("Annuler"), 13, 700) + 32
+        ox = bx + bw - 20 - ow
+        cx = ox - 10 - cw_
+        p.fill(cx, ty, cw_, 28, self.TRACK, r=4)
+        p.text(tr("Annuler"), cx, ty + 14 - LH13 / 2, LH13, 13, 700, self.CREAM, align="center", w=cw_)
+        p.fill(ox, ty, ow, 28, self.RED, r=4)
+        p.text(tr("Importer"), ox, ty + 14 - LH13 / 2, LH13, 13, 700, self.CREAM, align="center", w=ow)
+        hits += [(cx, ty, cw_, 28, "imp_cancel", None), (ox, ty, ow, 28, "imp_ok", None)]
+        hits.append((0, 0, W, H, "imp_box", None))
+
+    MAX_BODY = 540
+    max_scroll = 0
+    cur_id = None
+
+    def _rows(self, p, cur, x0, x1, hits, ui, local, icon_fn, preview_fn):
+        """A tab's rows from the top of the body; their places (by index)."""
         y = 44 + self.PAD
+        row_y = {}
+        folded = {i for (t_, i) in (ui.get("folded") or ()) if t_ == cur["id"]}
+        skip = False
         for i, r in enumerate(cur["rows"]):
             kind = r["k"]
             if kind == "sec":
-                p.text(r["t"].upper(), x0, y + self.SEC - 7 - LH11, LH11, 11, 700, self.INK,
+                # its heading on a darker band, folded or not (its arrow)
+                row_y[i] = y
+                skip = i in folded
+                top, hh = y + 6, self.SEC - 8
+                p.fill(x0 - 8, top, x1 - x0 + 16, hh, self.SEC_BG, r=4)
+                _triangle(p, x0 + 3, top + hh / 2, 7, 1 if skip else 2, self.INK)
+                p.text(r["t"].upper(), x0 + 14, top + hh / 2 - LH11 / 2, LH11, 11, 700, self.INK,
                        spacing=0.8)
-                p.hline(x0, y + self.SEC - 4, x1 - x0, self.LINE, 0.8)
+                hits.append((x0 - 8, top, x1 - x0 + 16, hh, "sec_fold", (cur["id"], i)))
                 y += self.SEC
+                continue
+            if skip:
+                continue
+            row_y[i] = y
+            if kind == "sub":
+                # a part's heading: its name, small, a rule after it
+                mid = y + self.SUB / 2 + 3
+                p.text(r["t"], x0, mid - LH12 / 2, LH12, 12, 700, self.INK, alpha=0.85)
+                tw = p.width(r["t"], 12, 700)
+                p.hline(x0 + tw + 10, mid, max(0, x1 - x0 - tw - 10), self.LINE, 0.7)
+                y += self.SUB
                 continue
             if kind == "grid":
                 items = r["items"]
@@ -3118,16 +3269,140 @@ class ConfigView:
                 self._toggle_row(p, x0, x1, y, r, (cur["id"], i, None), hits, icon_fn, local)
             else:
                 mid = y + self.ROW / 2
-                p.text(r["t"], x0, mid - LH13 / 2, LH13, 13, 400, self.INK)
+                p.text(r["t"], x0, mid - LH13 / 2, LH13, 13, 400, self.INK,
+                       clip=(x1 - x0 - 230) if kind == "btns" else None)
                 cx = x1 - self.CTL_W
-                self._connector(p, x0 + p.width(r["t"], 13, 400) + 10, cx - 10, mid)
+                if kind != "btns":
+                    self._connector(p, x0 + p.width(r["t"], 13, 400) + 10, cx - 10, mid)
                 if kind == "range":
                     v = local.get((cur["id"], i), r["v"])
                     self._range(p, cx, mid, self.CTL_W, r, v, (cur["id"], i), hits)
+                elif kind == "color":
+                    self._color(p, cx, mid, self.CTL_W, r, (cur["id"], i), hits, ui)
+                elif kind == "btns":
+                    self._btns(p, x1, mid, r, (cur["id"], i), hits, ui)
                 else:
                     self._choice(p, cx, mid, self.CTL_W, r, (cur["id"], i), hits)
             y += self.ROW
-        return p, hits, W, H
+        return row_y
+
+    def _btns(self, p, x1, mid, r, ref, hits, ui):
+        """Buttons right of the row (its text a note: what the last did)."""
+        h = 24
+        bx = x1
+        for j in reversed(range(len(r["items"]))):
+            it = r["items"][j]
+            w = p.width(it["t"], 12, 700) + 24
+            bx -= w
+            hov = ui.get("hover") == ("btn", (ref, j))
+            p.fill(bx, mid - h / 2, w, h, self.RED, 1.0 if hov else 0.9, r=4)
+            p.text(it["t"], bx, mid - LH12 / 2, LH12, 12, 700, self.CREAM, align="center", w=w)
+            hits.append((bx, mid - h / 2, w, h, "btn", (ref, j)))
+            bx -= 8
+
+    # -- a colour: its row, its palette ------------------------------------
+    def _color(self, p, x, mid, w, r, ref, hits, ui):
+        """The colour's swatch and its code ("#RRGGBB", or what none means:
+        the game's colour, no halo); a click opens the palette."""
+        h = 24
+        top = mid - h / 2
+        hov = ui.get("hover") == ("pick_open", ref)
+        p.fill(x, top, w, h, self.BOX, r=4)
+        if hov:
+            p.ring(x, top, w, h, 1, self.LINE, r=4)
+        v = r["v"]
+        p.fill(x + 6, top + 4, 30, h - 8, self.INK, r=3)
+        if v:
+            a = _hex_alpha(v)
+            if a < 1:
+                _checker(p, x + 7, top + 5, 28, h - 10)
+            p.fill(x + 7, top + 5, 28, h - 10, v[:7], a, r=2)
+        else:
+            # none: the panel's own ground, crossed
+            p.fill(x + 7, top + 5, 28, h - 10, self.BG, r=2)
+            for i in range(24):
+                p.fill(x + 9 + i, top + 6 + i * (h - 13) / 24, 1.2, 1.2, self.RED)
+        p.text(v or r.get("none", ""), x + 44, mid - LH12 / 2, LH12, 12, 700 if v else 400,
+               self.INK, clip=w - 52)
+        hits.append((x, top, w, h, "pick_open", ref))
+
+    PICK_W, PICK_SQ_W, PICK_SQ_H = 300, 276, 136
+
+    def _picker(self, p, x1, row_y, H, pk, hits):
+        """Over the rows, under (or over) its row: the hues across, white
+        down (the square), the brightness under it, the colour and its
+        code (typed when clicked), back to none, a button to close it."""
+        tr = self.tr
+        pw, sw, sh = self.PICK_W, self.PICK_SQ_W, self.PICK_SQ_H
+        alpha = pk.get("a") is not None
+        ph = 12 + sh + 10 + 14 + 14 + 28 + 12 + 22 + 10 + (24 if alpha else 0)
+        px = x1 - pw
+        py = row_y + self.ROW + 2
+        if py + ph > H - 14:
+            py = row_y - ph - 2
+        py = max(48, py)
+        p.fill(px + 2, py + 3, pw, ph, (0, 0, 0), 0.22, r=7)
+        p.fill(px, py, pw, ph, self.BOX, r=7)
+        p.ring(px, py, pw, ph, 1, self.LINE, r=7)
+        k = p.k
+        sx, sy = px + 12, py + 12
+        p._put(_hue_square(round(sw * k), round(sh * k)), round(sx * k), round(sy * k))
+        p.ring(sx, sy, sw, sh, 1, self.LINE, 0.9)
+        mx, my = sx + pk["h"] * sw, sy + (1 - pk["s"]) * sh
+        p.ring(mx - 7, my - 7, 14, 14, 1, (40, 30, 26), 0.7, r=7)
+        p.ring(mx - 6, my - 6, 12, 12, 2, (255, 255, 255), r=6)
+        vy = sy + sh + 10
+        p._put(_value_bar(round(sw * k), round(14 * k), pk["h"], pk["s"]), round(sx * k), round(vy * k))
+        p.ring(sx, vy, sw, 14, 1, self.LINE, 0.9)
+        vx = sx + pk["v"] * sw
+        p.fill(vx - 3, vy - 4, 6, 22, (40, 30, 26), 0.7, r=2)
+        p.fill(vx - 2, vy - 3, 4, 20, (255, 255, 255), r=2)
+        by = vy + 14 + 14
+        col = _hsv_hex(pk["h"], pk["s"], pk["v"])
+        if alpha:
+            # its opacity: clear (the checker) to the colour
+            ay = vy + 14 + 10
+            _checker(p, sx, ay, sw, 14)
+            p._put(_alpha_bar(round(sw * k), round(14 * k), col), round(sx * k), round(ay * k))
+            p.ring(sx, ay, sw, 14, 1, self.LINE, 0.9)
+            ax = sx + pk["a"] * sw
+            p.fill(ax - 3, ay - 4, 6, 22, (40, 30, 26), 0.7, r=2)
+            p.fill(ax - 2, ay - 3, 4, 20, (255, 255, 255), r=2)
+            hits.insert(0, (sx - 4, ay - 5, sw + 8, 24, "pick_a", (sx, sw)))
+            by = ay + 14 + 14
+        # the colour, its code (a field), the button
+        code = _pk_hex(pk)
+        p.fill(sx, by, 36, 28, self.INK, r=4)
+        if alpha:
+            _checker(p, sx + 2, by + 2, 32, 24)
+        p.fill(sx + 2, by + 2, 32, 24, col, pk["a"] if alpha else 1.0, r=3)
+        fx, fw = sx + 44, 126
+        typing = pk.get("text") is not None
+        p.fill(fx, by, fw, 28, (255, 252, 246), r=4)
+        p.ring(fx, by, fw, 28, 2 if typing else 1, self.RED if typing else self.LINE, r=4)
+        shown = pk["text"] if typing else code
+        p.text(shown, fx + 10, by + 14 - LH13 / 2, LH13, 13, 700, self.INK)
+        if typing:
+            cw = p.width(shown, 13, 700)
+            p.fill(fx + 11 + cw, by + 7, 1.5, 14, self.INK)
+        bw = 84
+        bx = sx + sw - bw
+        p.fill(bx, by, bw, 28, self.RED, r=4)
+        p.text(tr("Valider"), bx, by + 14 - LH13 / 2, LH13, 13, 700, self.CREAM,
+               align="center", w=bw)
+        # back to none (the game's colour, no halo)
+        ny = by + 28 + 12
+        label = tr("Revenir à : {x}").replace("{x}", pk.get("none", "")) if pk.get("none") else ""
+        if label:
+            p.text(label, sx, ny + 11 - LH12 / 2, LH12, 12, 400, self.INK)
+            lw = p.width(label, 12, 400)
+            p.hline(sx, ny + 18, lw, self.INK, 0.6)
+            hits.append((sx, ny, lw, 22, "pick_none", None))
+        hits[:0] = [(sx - 4, sy - 4, sw + 8, sh + 8, "pick_sq", (sx, sy, sw, sh)),
+                    (sx - 4, vy - 5, sw + 8, 24, "pick_v", (sx, sw)),
+                    (fx, by, fw, 28, "pick_hex", None),
+                    (bx, by, bw, 28, "pick_ok", None)]
+        hits.append((px, py, pw, ph, "pick_box", None))
 
     CARD_W, CARD_H = 250, 178
 
@@ -3245,8 +3520,11 @@ class NativeConfig(NativeOverlay):
     own. Each change goes to the app (its row's action); an overlay's
     size and opacity show on it at once."""
 
-    HAND = NativeOverlay.HAND + ("step", "choice", "card")
-    HOVER_ARGS = NativeOverlay.HOVER_ARGS + ("card",)
+    HAND = NativeOverlay.HAND + ("step", "choice", "card", "pick_open", "pick_sq", "pick_v", "pick_a",
+                                 "pick_ok", "pick_none", "sec_fold", "btn", "imp_name",
+                                 "imp_code", "imp_ok", "imp_cancel")
+    HOVER_ARGS = NativeOverlay.HOVER_ARGS + ("card", "pick_open", "btn")
+    MODAL_HAND = ("imp_name", "imp_code", "imp_ok", "imp_cancel")
     HOLD_TO_MOVE = (None,)
 
     def __init__(self, pipe, lang, catalog, folder, overlays):
@@ -3260,6 +3538,14 @@ class NativeConfig(NativeOverlay):
         self._local = {}                    # (tab, row[, item]) -> its value, before the app's
         self._user_at = None
         self._ui["settings"] = True
+        self._scroll = {}                   # tab -> its rows' scroll (px)
+        self._folded = set()                # (tab, section row) folded
+        self._sb_drag = None                # its scrollbar held: (arg, y, scroll)
+        self._picker = None                 # the palette open: {ref, h, s, v}
+        self._modal = None                  # the import open: {name, code, focus, err, seq}
+        self._modal_seq = 0
+        self._pick_drag = None              # its square or bar held
+        self._pick_swallow = False          # a press that closed it: its release ignored
 
     def attach(self):
         if self._make():
@@ -3284,6 +3570,7 @@ class NativeConfig(NativeOverlay):
                 self.redraw()
         if data != self._data:
             self._data = data
+            self._import_answer()
             # a value the app now has: no more held here
             self._local = {k: v for k, v in self._local.items() if self._row_value(k) != v}
             if self.shown:
@@ -3331,6 +3618,10 @@ class NativeConfig(NativeOverlay):
 
     def close(self):
         if self.shown and self.hwnd:
+            if self._picker is not None:
+                self.ui.run(self._pick_close)
+            if self._modal is not None:
+                self.ui.run(self._import_close)
             self.ui.run(lambda: _U32.ShowWindow(self.hwnd, SW_HIDE))
         self.shown = False
 
@@ -3342,7 +3633,9 @@ class NativeConfig(NativeOverlay):
             return
         k = self._dpi_k()
         self._k = k
-        p, hits, _w, _h = self._view.draw(k, k, self._data, self._tab, dict(self._ui),
+        p, hits, _w, _h = self._view.draw(k, k, self._data, self._tab,
+                                          dict(self._ui, picker=self._picker, scroll=self._scroll,
+                                               folded=self._folded, modal=self._modal),
                                           self._local, self._icon, self._preview)
         self._hits = hits
         self._img = p.img
@@ -3405,6 +3698,297 @@ class NativeConfig(NativeOverlay):
             self._present()
 
     # -- its controls -------------------------------------------------------
+    # -- the import of a quick setup ---------------------------------------
+    def _import_open(self):
+        if self._picker is not None:
+            self._pick_close()
+        self._modal = {"name": "", "code": "", "focus": "name", "err": None, "seq": None}
+        self._keys(True)
+        self._redraw()
+
+    def _import_close(self):
+        self._modal = None
+        self._keys(False)
+        self._redraw()
+
+    def _import_send(self):
+        md = self._modal
+        if md is None or md.get("seq") is not None:
+            return
+        if not md["name"].strip():
+            md["err"] = self.tr("Donne un nom à cette configuration")
+            md["focus"] = "name"
+        elif not md["code"].strip():
+            md["err"] = self.tr("Colle le code à importer")
+            md["focus"] = "code"
+        else:
+            self._modal_seq += 1
+            md.update(err=None, seq=self._modal_seq)
+            self._notify("quick_import", {"name": md["name"].strip(), "code": md["code"].strip(),
+                                          "seq": self._modal_seq})
+        self._redraw()
+
+    def _import_answer(self):
+        """The app's answer to the import sent: closed when it took it,
+        its reason shown when it refused it."""
+        md = self._modal
+        if md is None or md.get("seq") is None:
+            return
+        for t in (self._data or {}).get("tabs") or ():
+            for r in t["rows"]:
+                ans = r.get("imp") if r.get("k") == "btns" else None
+                if ans and ans.get("seq") == md["seq"]:
+                    if ans.get("ok"):
+                        self._import_close()
+                    else:
+                        md.update(seq=None, err=ans.get("msg") or "")
+                        self._redraw()
+                    return
+
+    def _import_key(self, char, code):
+        md = self._modal
+        f = md["focus"]
+        most = 40 if f == "name" else 8000
+        if char:
+            if code == 0x16:                    # Ctrl+V
+                try:
+                    from winsys import read_text_from_clipboard
+                    txt = read_text_from_clipboard() or ""
+                except Exception:  # noqa: BLE001
+                    txt = ""
+                txt = " ".join(txt.split()) if f == "name" else "".join(txt.split())
+                md[f] = (md[f] + txt)[:most]
+            elif code >= 32 and len(md[f]) < most:
+                md[f] += chr(code)
+            else:
+                return
+            md["err"] = None
+            self._redraw()
+            return
+        if code == 0x08:                        # Backspace
+            md[f] = md[f][:-1]
+        elif code == 0x09:                      # Tab
+            md["focus"] = "code" if f == "name" else "name"
+        elif code == 0x0D:                      # Enter
+            self._import_send()
+            return
+        elif code == 0x1B:                      # Escape
+            self._import_close()
+            return
+        else:
+            return
+        self._redraw()
+
+    def on_wheel(self, delta, x, y):
+        if self._modal is not None:
+            return
+        if self._view.max_scroll:
+            self._scroll_to(self._scroll.get(self._view.cur_id, 0) - delta / 120 * 48)
+
+    def _scroll_to(self, v):
+        tab = self._view.cur_id
+        v = max(0, min(self._view.max_scroll, round(v)))
+        if v != self._scroll.get(tab, 0):
+            self._scroll[tab] = v
+            self._redraw()
+
+    def on_mouse(self, ev, x, y):
+        """The import window first, while open (nothing else under it). The
+        palette next, while open: its square and bar held and dragged, a
+        press elsewhere closes it (and does nothing else). The scrollbar
+        held moves the rows."""
+        if self._modal is not None:
+            if ev == "move":
+                kind, _a, _r = self._hit(x, y)
+                self._cursor_kind = "hand" if kind in self.MODAL_HAND else "arrow"
+                return
+            if ev != "down":
+                return
+            kind, _a, _r = self._hit(x, y)
+            if kind == "imp_name":
+                self._modal["focus"] = "name"
+                self._redraw()
+            elif kind == "imp_code":
+                self._modal["focus"] = "code"
+                self._redraw()
+            elif kind == "imp_ok":
+                self._import_send()
+            elif kind == "imp_cancel":
+                self._import_close()
+            return
+        if self._sb_drag is not None:
+            (ty, th_, tb), y0, s0 = self._sb_drag
+            if ev == "move":
+                span = max(1, th_ - tb)
+                self._scroll_to(s0 + (y - y0) / self._k / span * self._view.max_scroll)
+                return
+            if ev in ("up", "cancel"):
+                self._sb_drag = None
+                return
+        if ev == "down" and self._picker is None:
+            kind, arg, _r = self._hit(x, y)
+            if kind == "cfg_scroll":
+                ty, th_, tb = arg
+                cur = self._scroll.get(self._view.cur_id, 0)
+                ms = max(1, self._view.max_scroll)
+                tpos = ty + (th_ - tb) * cur / ms
+                cy = y / self._k
+                if not tpos <= cy <= tpos + tb:
+                    # the track: the thumb's middle brought there
+                    cur = (cy - tb / 2 - ty) / max(1, th_ - tb) * ms
+                    self._scroll_to(cur)
+                    cur = self._scroll.get(self._view.cur_id, 0)
+                self._sb_drag = (arg, y, cur)
+                return
+        if self._picker is not None:
+            if ev == "down":
+                kind, arg, _r = self._hit(x, y)
+                if kind in ("pick_sq", "pick_v", "pick_a"):
+                    self._pick_drag = (kind, arg)
+                    self._pick_at(x, y, final=False)
+                    return
+                if kind == "pick_hex":
+                    self._picker["text"] = _pk_hex(self._picker)
+                    self._keys(True)
+                    self._redraw()
+                    return
+                if kind == "pick_none":
+                    r = self._row(self._picker["ref"])
+                    if r is not None:
+                        self._send(r, "")
+                    self._pick_close()
+                    return
+                if kind == "pick_box":
+                    return
+                if kind == "pick_ok":
+                    self._pick_commit()
+                else:
+                    self._pick_swallow = True
+                self._pick_close()
+                return
+            if ev == "move" and self._pick_drag is not None:
+                self._pick_at(x, y, final=False)
+                return
+            if ev in ("up", "cancel") and self._pick_drag is not None:
+                self._pick_at(x, y, final=True)
+                self._pick_drag = None
+                return
+        if ev in ("up", "cancel") and self._pick_swallow:
+            self._pick_swallow = False
+            self._press = None
+            return
+        if ev == "down" and self._picker is None:
+            self._pick_swallow = False
+        super().on_mouse(ev, x, y)
+
+    def _pick_open(self, ref):
+        r = self._row(ref)
+        if r is None:
+            return
+        c = r["v"] if isinstance(r["v"], str) and r["v"].startswith("#") else r.get("start") or "#D93A2B"
+        h, s, v = colorsys.rgb_to_hsv(*(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+        self._picker = {"ref": ref, "h": h, "s": s, "v": v, "text": None,
+                        "none": r.get("none"), "a": _hex_alpha(c) if r.get("alpha") else None}
+        self._redraw()
+
+    def _pick_close(self):
+        self._picker = None
+        self._pick_drag = None
+        self._keys(False)
+        self._redraw()
+
+    def _pick_commit(self):
+        """A code typed in full: the colour."""
+        pk = self._picker
+        t = (pk or {}).get("text")
+        if t is None:
+            return
+        t = t if t.startswith("#") else "#" + t
+        ok = (7, 9) if pk.get("a") is not None else (7,)
+        if len(t) in ok and all(ch in "0123456789abcdefABCDEF" for ch in t[1:]):
+            h, s, v = colorsys.rgb_to_hsv(*(int(t[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+            pk.update(h=h, s=s, v=v)
+            if pk.get("a") is not None:
+                pk["a"] = _hex_alpha(t)
+            r = self._row(pk["ref"])
+            if r is not None:
+                self._send(r, _pk_hex(pk))
+
+    def _keys(self, on):
+        """The keyboard while a code is typed (the panel never takes it
+        otherwise), given back to what had it (the game) after."""
+        ex = _U32.GetWindowLongW(self.hwnd, GWL_EXSTYLE) & 0xFFFFFFFF
+        if on and getattr(self, "_keys_from", None) is None:
+            self._keys_from = _U32.GetForegroundWindow() or 0
+            want = ex & ~WS_EX_NOACTIVATE
+            _U32.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
+                                ctypes.c_long(want - (1 << 32) if want & 0x80000000 else want))
+            _U32.SetForegroundWindow(self.hwnd)
+        elif not on and getattr(self, "_keys_from", None) is not None:
+            back, self._keys_from = self._keys_from, None
+            want = ex | WS_EX_NOACTIVATE
+            _U32.SetWindowLongW(self.hwnd, GWL_EXSTYLE,
+                                ctypes.c_long(want - (1 << 32) if want & 0x80000000 else want))
+            if back and back != self.hwnd:
+                _U32.SetForegroundWindow(back)
+
+    def on_key(self, char, code):
+        """A code typed: hex digits (a # first), Backspace, Enter (kept),
+        Escape (dropped). The colour follows as soon as it is whole."""
+        if self._modal is not None:
+            self._import_key(char, code)
+            return
+        pk = self._picker
+        if pk is None or pk.get("text") is None:
+            return
+        t = pk["text"]
+        if char:
+            ch = chr(code)
+            most = 8 if pk.get("a") is not None else 6
+            if ch in "0123456789abcdefABCDEF" and len(t.lstrip("#")) < most:
+                pk["text"] = ("#" + t.lstrip("#") + ch.upper())
+                if len(pk["text"]) == most + 1:
+                    self._pick_commit()
+            elif ch == "#":
+                pk["text"] = "#"
+            self._redraw()
+            return
+        if code == 0x08:                    # Backspace
+            pk["text"] = "#" + t.lstrip("#")[:-1]
+            self._redraw()
+        elif code == 0x0D:                  # Enter
+            self._pick_commit()
+            self._pick_close()
+        elif code == 0x1B:                  # Escape
+            pk["text"] = None
+            self._keys(False)
+            self._redraw()
+
+    def _pick_at(self, x, y, final):
+        kind, arg = self._pick_drag
+        pk = self._picker
+        pk["text"] = None
+        cx, cy = x / self._k, y / self._k
+        if kind == "pick_sq":
+            sx, sy, sw, sh = arg
+            pk["h"] = max(0.0, min(0.999, (cx - sx) / sw))
+            pk["s"] = max(0.0, min(1.0, 1 - (cy - sy) / sh))
+            if pk["v"] < 0.15:
+                pk["v"] = 1.0           # a hue picked on black: seen at once
+        elif kind == "pick_a":
+            sx, sw = arg
+            pk["a"] = max(0.0, min(1.0, (cx - sx) / sw))
+        else:
+            sx, sw = arg
+            pk["v"] = max(0.0, min(1.0, (cx - sx) / sw))
+        self._redraw()
+        now = time.monotonic()
+        if final or now - self._last_send > 0.08:
+            self._last_send = now
+            r = self._row(pk["ref"])
+            if r is not None:
+                self._send(r, _pk_hex(pk))
+
     def _send(self, r, value):
         self._notify(r["act"], dict(r.get("p") or {}, value=value))
 
@@ -3457,6 +4041,20 @@ class NativeConfig(NativeOverlay):
             r = self._row(ref)
             if r is not None:
                 self._send(r, v)
+        elif kind == "pick_open":
+            self._pick_open(arg)
+        elif kind == "btn":
+            ref, j = arg
+            r = self._row(ref)
+            if r is not None and j < len(r.get("items") or ()):
+                it = r["items"][j]
+                if it["act"] == "@import":
+                    self._import_open()          # the window here, the app sent to after
+                else:
+                    self._notify(it["act"], dict(it.get("p") or {}))
+        elif kind == "sec_fold":
+            self._folded ^= {arg}
+            self._redraw()
         elif kind == "choice":
             ref, d = arg
             r = self._row(ref)
@@ -3471,6 +4069,76 @@ class NativeConfig(NativeOverlay):
                 self._local[arg] = on
                 self._redraw()
                 self._send(r, on)
+
+
+def _hsv_hex(h, s, v):
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def _hex_alpha(c):
+    """A colour's opacity (0..1): "#RRGGBBAA"'s AA, 1 for "#RRGGBB"."""
+    try:
+        return int(c[7:9], 16) / 255 if isinstance(c, str) and len(c) == 9 else 1.0
+    except ValueError:
+        return 1.0
+
+
+def _pk_hex(pk):
+    """The palette's colour as kept: "#RRGGBB", "#RRGGBBAA" with an opacity."""
+    c = _hsv_hex(pk["h"], pk["s"], pk["v"])
+    a = pk.get("a")
+    return c if a is None else c + "%02X" % round(a * 255)
+
+
+def _checker(p, x, y, w, h, n=5):
+    """A checker under a colour that lets through (its opacity seen)."""
+    p.fill(x, y, w, h, (250, 250, 250))
+    j = 0
+    while j * n < h:
+        i = j % 2
+        while i * n < w:
+            p.fill(x + i * n, y + j * n, min(n, w - i * n), min(n, h - j * n), (200, 200, 200))
+            i += 2
+        j += 1
+
+
+def _alpha_bar(w, h, col):
+    """The palette's opacity, w x h px: clear to the colour."""
+    r, g, b = (int(col[i:i + 2], 16) for i in (1, 3, 5))
+    row = Image.new("RGBA", (w, 1))
+    row.putdata([(r, g, b, round(255 * i / max(1, w - 1))) for i in range(w)])
+    return row.resize((w, h), Image.NEAREST)
+
+
+_HUE_SQ = {}
+
+
+def _hue_square(w, h):
+    """The palette's square, w x h px: the hues across, white towards the
+    foot (kept by size)."""
+    img = _HUE_SQ.get((w, h))
+    if img is None:
+        row = Image.new("RGB", (w, 1))
+        row.putdata([tuple(round(c * 255) for c in colorsys.hsv_to_rgb(i / max(1, w - 1) * 0.999, 1, 1))
+                      for i in range(w)])
+        img = row.resize((w, h), Image.NEAREST).convert("RGBA")
+        fade = Image.new("L", (1, h))
+        fade.putdata([round(255 * j / max(1, h - 1)) for j in range(h)])
+        white = Image.new("RGBA", (w, h), (255, 255, 255, 255))
+        white.putalpha(fade.resize((w, h)))
+        img.alpha_composite(white)
+        _HUE_SQ[(w, h)] = img
+    return img
+
+
+def _value_bar(w, h, hue, sat):
+    """The palette's brightness, w x h px: black to the colour."""
+    r, g, b = colorsys.hsv_to_rgb(hue, sat, 1)
+    row = Image.new("RGBA", (w, 1))
+    row.putdata([(round(r * 255 * t), round(g * 255 * t), round(b * 255 * t), 255)
+                 for t in (i / max(1, w - 1) for i in range(w))])
+    return row.resize((w, h), Image.NEAREST)
 
 
 def _diamond(p, cx, cy, r, color, alpha=1.0):
@@ -3488,14 +4156,15 @@ def _diamond(p, cx, cy, r, color, alpha=1.0):
 
 
 def _triangle(p, cx, cy, size, direction, color):
-    """A small arrowhead centred on (cx, cy), pointing left (-1) or right
-    (1)."""
+    """A small arrowhead centred on (cx, cy), pointing left (-1), right
+    (1) or down (2)."""
     x0, y0, pw, ph = p.box(cx - size / 2, cy - size / 2, size, size)
     if pw <= 0 or ph <= 0:
         return
     W_, H_ = pw * SS, ph * SS
     m = Image.new("L", (W_, H_), 0)
     pts = ([(W_ * 0.2, H_ / 2), (W_ * 0.8, 0), (W_ * 0.8, H_ - 1)] if direction < 0
+           else [(0, H_ * 0.2), (W_ - 1, H_ * 0.2), (W_ / 2, H_ * 0.8)] if direction == 2
            else [(W_ * 0.8, H_ / 2), (W_ * 0.2, 0), (W_ * 0.2, H_ - 1)])
     ImageDraw.Draw(m).polygon(pts, fill=255)
     m = m.resize((pw, ph), Image.BOX)
