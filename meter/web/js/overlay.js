@@ -285,6 +285,7 @@ function renderMeter(box) {
     const row = el('div', 'rkr' + (r.ck ? ' c-' + r.ck : '') + (r.rank <= 3 && !r.zero ? ' top' : '')
       + (r.zero ? ' zero' : ''));
     row.style.setProperty('--fill', (Math.max(0, Math.min(1, r.f || 0)) * 100) + '%');
+    if (r.f2 != null) row.style.setProperty('--fill2', (Math.max(0, Math.min(1, r.f2)) * 100) + '%');
     const ic = el('span', 'ic');
     const icon = (window.__ICONS__ || {})[r.ck];
     if (icon) { const im = el('img'); im.src = icon; im.alt = ''; ic.appendChild(im); }
@@ -438,6 +439,7 @@ function renderTip(box) {
     t.skills.forEach((s) => {
       const r = el('div', 'tipr');
       r.style.setProperty('--f', (Math.max(0, Math.min(1, s.f || 0)) * 100) + '%');
+      if (s.f2 != null) r.style.setProperty('--f2', (Math.max(0, Math.min(1, s.f2)) * 100) + '%');
       const ic = el('span', 'tic');
       if (s.img) { const im = el('img'); im.src = s.img; im.alt = ''; ic.appendChild(im); }
       r.appendChild(ic);

@@ -2780,7 +2780,9 @@ html.lt-1000 .columns { grid-template-columns: minmax(0, 1fr); }
   background: linear-gradient(90deg,
     color-mix(in srgb, var(--cc) 80%, transparent) 0,
     color-mix(in srgb, var(--cc) 55%, transparent) var(--fill, 0%),
-    var(--zebra, transparent) var(--fill, 0%));
+    color-mix(in srgb, color-mix(in srgb, var(--cc) 45%, #000) 80%, transparent) var(--fill, 0%),
+    color-mix(in srgb, color-mix(in srgb, var(--cc) 45%, #000) 80%, transparent) var(--fill2, var(--fill, 0%)),
+    var(--zebra, transparent) var(--fill2, var(--fill, 0%)));
 }
 .rk.rkfill { transition: filter .12s; }
 .rk.rkfill:hover { filter: brightness(1.18); }

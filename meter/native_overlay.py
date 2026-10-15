@@ -1281,6 +1281,7 @@ class MeterView:
         shade inside its edge, its icon, its name and numbers."""
         cc = CLASS_COLORS.get(r.get("ck"), CLASS_DEFAULT)
         f = max(0.0, min(1.0, float(r.get("f") or 0)))
+        f2 = max(f, min(1.0, float(r.get("f2") or 0)))
         x0, y0, pw, ph = p.box(x, y, w, ROW_H)
         if pw > 0 and ph > 0:
             k = p.k
@@ -1292,6 +1293,12 @@ class MeterView:
                 grad.putdata([c + (round(255 * (0.8 - 0.25 * (i / max(1, fw - 1)))),)
                               for i in range(fw)])
                 layer.alpha_composite(grad.resize((fw, ph)), (0, 0))
+            # the overheal known, after it, faded
+            ow = round(w * f2 * k) - max(0, fw)
+            if ow > 0:
+                dark = tuple(round(v * 0.45) for v in _rgba(cc)[:3])
+                layer.alpha_composite(Image.new("RGBA", (ow, ph), dark + (204,)),
+                                      (max(0, fw), 0))
             layer.putalpha(ImageChops.multiply(layer.getchannel("A"), p._mask(pw, ph, 3 * k)))
             p._put(layer, x0, y0)
             p.ring(x, y, w, ROW_H, 1.5, _mix(cc, "#FFFFFF", 0.7), 1.0, r=3)
@@ -1676,7 +1683,11 @@ class TipView:
         need = 20 + 6 + probe.width(name, 13, 700) + 6 + kw + 24
         stats = t.get("stats") or []
         skills = t.get("skills") or []
-        W = max(230, min(300, math.ceil(need)))
+        # each stat's label and value side by side, two a line
+        for label, v in stats:
+            need = max(need, 2 * (probe.width(str(label), 12) + 10
+                                  + probe.width(str(v), 12, 700)) + 12 + 24)
+        W = max(230, min(340, math.ceil(need)))
         iw = W - 24
         stats_h = 0.0
         if stats:
@@ -1714,10 +1725,17 @@ class TipView:
             return p, W, H
         for s in skills:
             f = max(0.0, min(1.0, float(s.get("f") or 0)))
+            f2 = max(f, min(1.0, float(s.get("f2") or 0)))
             col, a = ((76, 138, 36), 0.45) if heal else ((233, 118, 91), 0.35)
             p.fill(x, y, iw, 22, (255, 255, 255), 0.05, r=3)
             if f > 0:
                 _clipped_fill(p, x, y, iw * f, 22, col, a, iw, 3)
+            if f2 > f:
+                # the overheal known: a darker shade after what landed
+                if f > 0:
+                    p.fill(x + iw * f, y, iw * (f2 - f), 22, (30, 58, 14), 0.8)
+                else:
+                    _clipped_fill(p, x, y, iw * f2, 22, (30, 58, 14), 0.8, iw, 3)
             p.fill(x + 2, y + 2, 18, 18, (0, 0, 0), 0.45, r=3)
             img = s.get("img_pil")
             if img is not None:

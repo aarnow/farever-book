@@ -1450,5 +1450,9 @@
  "Placer et dimensionner ma barre de vie": "Place and size my health bar",
  "Largeur (0 : celle du jeu)": "Width (0: the game's)",
  "Hauteur (0 : celle du jeu)": "Height (0: the game's)",
- "Effets actifs (suivent la barre)": "Active effects (follow the bar)"
+ "Effets actifs (suivent la barre)": "Active effects (follow the bar)",
+ "Soins effectifs": "Effective healing",
+ "inconnu": "unknown",
+ "Mesuré": "Measured",
+ "{n}/{t} soins": "{n}/{t} heals"
 }

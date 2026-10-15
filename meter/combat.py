@@ -273,11 +273,18 @@ class PlayerAgg:
     heal_total: float = 0.0     # raw healing (see HealSizeEstimator)
     heal_landed: float = 0.0    # ...of which actually restored health
     heal_self: float = 0.0      # ...and of which the healer was the target
+    # the heals the game gave the size of (rpcDisplayHeal): their size, what
+    # of it landed; their difference the only overheal known (the others'
+    # sizes are estimates)
+    heal_game: float = 0.0
+    heal_game_landed: float = 0.0
+    heal_n: int = 0             # heals counted, of which the game sized
+    heal_game_n: int = 0
     # skill -> [hits, total, crits]  (damage)
     skills: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0]))
-    # skill -> [hits, total, crits, self_total]  (healing; self_total splits
-    # the bar into self/others)
-    heals: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0, 0.0]))
+    # skill -> [hits, total, crits, self_total, over]  (healing: what landed;
+    # self_total splits the bar into self/others; over: the overheal known)
+    heals: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0, 0, 0.0, 0.0]))
     # element -> [hits, total]
     elements: dict[str, list] = field(default_factory=lambda: defaultdict(lambda: [0, 0.0]))
     # skill -> element -> total (its bar in its element's colour)
@@ -296,19 +303,33 @@ class PlayerAgg:
         e[0] += 1; e[1] += amount
         self.skill_el[skill][element] += amount
 
-    def record_heal(self, skill, amount, crit, landed=0.0, is_self=False):
+    def record_heal(self, skill, amount, crit, landed=0.0, is_self=False, sized=None):
+        # its skills, on self: what landed (the heal really given)
         self.heal_total += amount
         self.heal_landed += landed
+        self.heal_n += 1
+        over = 0.0
+        if sized == "game":
+            self.heal_game += amount
+            self.heal_game_landed += landed
+            self.heal_game_n += 1
+            over = max(0.0, amount - landed)
         if is_self:
-            self.heal_self += amount
+            self.heal_self += landed
         s = self.heals[skill]
-        s[0] += 1; s[1] += amount; s[2] += crit
-        s[3] += amount if is_self else 0.0
+        s[0] += 1; s[1] += landed; s[2] += crit
+        s[3] += landed if is_self else 0.0
+        s[4] += over
+
+    @property
+    def heal_over(self):
+        """The overheal known: on the heals the game gave the size of."""
+        return max(0.0, self.heal_game - self.heal_game_landed)
 
     @property
     def overheal_pct(self):
-        """Share of this player's healing that restored no health (0 if none)."""
-        return _overheal_pct(self.heal_total, self.heal_landed)
+        """Share of the heals the game sized that restored no health."""
+        return _overheal_pct(self.heal_game, self.heal_game_landed)
 
 
 class PartySession:
@@ -446,7 +467,7 @@ class PartySession:
             p.record_heal(self._skill_of(ev),
                           float(ev.get("amount", 0.0)), int(ev.get("crit", 0)),
                           float(ev.get("landed", 0.0)),
-                          bool(ev.get("self")))
+                          bool(ev.get("self")), ev.get("sized"))
 
     def set_combat(self, state: dict):
         with self.lock:
@@ -507,7 +528,7 @@ class PartySession:
                                   float(ev.get("amount", 0.0)),
                                   int(ev.get("crit", 0)),
                                   float(ev.get("landed", 0.0)),
-                                  bool(ev.get("self")))
+                                  bool(ev.get("self")), ev.get("sized"))
             # In combat for the whole replayed stretch, else those seconds
             # would miss the DPS divisor.
             if self.enc_start:

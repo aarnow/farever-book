@@ -26,6 +26,7 @@ function rankTable(rows, rateLabel, onPick) {
     row.appendChild(ic);
     const bar = el('div', 'rkbar');
     row.style.setProperty('--fill', (r.zero ? 0 : Math.max(0, Math.min(1, r.f || 0)) * 100) + '%');
+    if (r.f2 != null && !r.zero) row.style.setProperty('--fill2', (Math.max(0, Math.min(1, r.f2)) * 100) + '%');
     bar.appendChild(el('span', 'nm', r.rank + '. ' + r.name));
     bar.appendChild(el('span', 'num', r.rate));
     bar.appendChild(el('span', 'num', r.total));
@@ -192,10 +193,11 @@ function playerSources(card, ph, ck) {
     [tr('Compétence')].concat(cols.map((c) => c[0])).forEach((c, i) => hb.appendChild(el('span', i ? 'num' : '', c)));
     hd.appendChild(hb);
     t.appendChild(hd);
-    const top = Math.max(...rows.map((r) => r.f || 0)) || 1;
+    const top = Math.max(...rows.map((r) => Math.max(r.f || 0, r.f2 || 0))) || 1;
     rows.forEach((r) => {
       const row = el('div', 'rk rkfill' + (ck ? ' c-' + ck : ''));
       row.style.setProperty('--fill', (Math.max(0, Math.min(1, (r.f || 0) / top)) * 100) + '%');
+      if (r.f2 != null) row.style.setProperty('--fill2', (Math.max(0, Math.min(1, r.f2 / top)) * 100) + '%');
       if (r.c) row.style.setProperty('--cc', r.c);
       const ic = el('span', 'rkic');
       const src = (r.ids || []).map((id) => (window.__SKILL__ || {})[id]).find(Boolean);
@@ -220,7 +222,10 @@ function playerSources(card, ph, ck) {
   table(tr('Sources de dégâts'), ph.skills || [],
         [[tr('Part'), 'pct'], [tr('Dégâts'), 't'], [tr('Coups'), 'hits'], [tr('Crit.'), 'crit'], [tr('Moy.'), 'avg']]);
   if ((ph.heals || []).length) {
-    table(tr('Sources de soins'), ph.heals, [[tr('Part'), 'pct'], [tr('Soins'), 't'], [tr('Nombre'), 'hits']]);
+    // the live detail: the overheal known (a column, the bar's dark end)
+    const ov = ph.heals.some((r) => r.ov != null);
+    table(tr('Sources de soins'), ph.heals, [[tr('Part'), 'pct'], [tr('Soins'), 't']]
+      .concat(ov ? [[tr('Excès'), 'ov']] : []).concat([[tr('Nombre'), 'hits']]));
   }
   if ((ph.elements || []).length) {
     card.appendChild(el('div', 'sub2 rtab', tr('Dégâts par type')));

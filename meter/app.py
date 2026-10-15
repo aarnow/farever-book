@@ -1446,10 +1446,14 @@ class App:
                  limit=MAX_PLAYER_ROWS * 3):
         """One ranking as the rift reports draw it (report.js rankTable):
         damage or heals, best first, a bar against the best."""
-        val = (lambda p: p.heal_total) if heal else (lambda p: p.total)
-        got = sorted((p for p in rows if val(p) > 0), key=lambda p: -val(p))
+        # heals: the heal given (what landed), the overheal known after it
+        val = (lambda p: p.heal_landed) if heal else (lambda p: p.total)
+        over = (lambda p: p.heal_over) if heal else (lambda p: 0.0)
+        # a healer listed with only overheal too (all on full health)
+        got = sorted((p for p in rows if val(p) + over(p) > 0),
+                     key=lambda p: (-val(p), -over(p)))
         total = sum(val(p) for p in got) or 1.0
-        top = val(got[0]) if got else 1.0
+        top = max((val(p) + over(p) for p in got), default=0.0) or 1.0
         return [{"rank": i, "name": p.name, "me": bool(p.is_me),
                  "cls": _class_tag(self.world.class_of(p.name)),
                  "ck": class_key(self.world.class_of(p.name)),
@@ -1457,8 +1461,19 @@ class App:
                  "total": _n(val(p)),
                  "pct": f"{val(p) / total * 100:.0f}%",
                  "f": round(val(p) / top, 4),
+                 "f2": round((val(p) + over(p)) / top, 4),
                  "on": p.name == focus}
                 for i, p in enumerate(got[:limit], 1)]
+
+    @staticmethod
+    def _over_stats(p):
+        """A healer's overheal known: [[label, value]] (unknown if no heal
+        the game gave the size of)."""
+        if p.heal_game <= 0:
+            return [[tr("Excès"), tr("inconnu")]]
+        return [[tr("Excès"), f"{_n(p.heal_over)} ({p.overheal_pct:.0f}%)"],
+                [tr("Mesuré"), tr("{n}/{t} soins").replace("{n}", _n(p.heal_game_n))
+                 .replace("{t}", _n(p.heal_n))]]
 
     def _player_tip(self, p, duration, heal):
         """A player's details for the meter overlay's tip: its damage, or
@@ -1467,15 +1482,16 @@ class App:
             return None
         kind = self.world.class_of(p.name)
         if heal:
-            total = p.heal_total
-            stats = [[tr("Soins"), _n(total)],
+            total = p.heal_landed
+            stats = [[tr("Soins effectifs"), _n(total)],
                      ["HPS", _n(total / duration) if duration > 0 else "—"]]
             if total > 0.5:
                 # on self and on the others (the hook tells a self-heal)
                 mine = p.heal_self / total * 100
                 stats.append([tr("Sur soi"), f"{mine:.0f}%"])
                 stats.append([tr("Sur les autres"), f"{100 - mine:.0f}%"])
-                stats.append([tr("Soin en excès"), f"{p.overheal_pct:.0f}%"])
+            if total > 0.5 or p.heal_game > 0:
+                stats += self._over_stats(p)
             table = p.heals
         else:
             total = p.total
@@ -1488,7 +1504,7 @@ class App:
                 stats.append([tr("Kills"), _n(p.kills)])
             table = p.skills
         entries = self._merge_named(table)[:6]
-        top = max((e[1] for e in entries), default=0.0) or 1.0
+        top = max((e[1] + e[5] for e in entries), default=0.0) or 1.0
         # a row's icon: the first of its skills (merged by name) that has
         # its own picture; a summon's by its skill
         icons = {}
@@ -1506,8 +1522,9 @@ class App:
                 "skills": [{"t": label, "v": _n(amount),
                             "pct": f"{(amount / total * 100) if total else 0:.0f}%",
                             "n": hits, "f": round(amount / top, 4),
+                            "f2": round((amount + over) / top, 4),
                             "ic": icons.get(label, "")}
-                           for label, amount, hits, _c, _s in entries]}
+                           for label, amount, hits, _c, _s, over in entries]}
 
     def _page_live(self):
         rows, duration, holding, in_combat = self._live
@@ -1531,7 +1548,7 @@ class App:
              "t": self._tick(self._parse_journal, tr("Journal du parse"))},
         ]
         party_total = sum(p.total for p in rows)
-        heal_total = sum(p.heal_total for p in rows)
+        heal_total = sum(p.heal_landed for p in rows)
         cards = [
             {"title": tr("Combat"),
              "value": _mmss(duration) if duration > 0 else "—",
@@ -1544,7 +1561,7 @@ class App:
              "value": _n(party_total) if party_total else "—",
              "sub": (f"{_n(party_total / duration)} DPS"
                      if duration > 0 and party_total else "")},
-            {"title": tr("Soins"),
+            {"title": tr("Soins effectifs"),
              "value": _n(heal_total) if heal_total else "—",
              "sub": (f"{_n(heal_total / duration)} HPS"
                      if duration > 0 and heal_total else "")},
@@ -1613,10 +1630,9 @@ class App:
                   if fp.hits else "—"],
                  ["Kills", _n(fp.kills)]]
         if self._show_heal:
-            facts.append([tr("Soins"), _n(fp.heal_total)])
-            if fp.heal_total > 0.5:
-                facts.append([tr("Soin en excès"),
-                              f"{fp.overheal_pct:.0f}{pct_sp()}"])
+            facts.append([tr("Soins effectifs"), _n(fp.heal_landed)])
+            if fp.heal_landed > 0.5 or fp.heal_game > 0:
+                facts += self._over_stats(fp)
 
         def sources(table, total, heal):
             """By display name (every weapon's "Attaque" one row), the
@@ -1624,19 +1640,24 @@ class App:
             merged, ids, els = {}, {}, {}
             for sid, vals in table.items():
                 label = self.session.skill_names.get(sid) or _pretty_id(sid)
-                m = merged.setdefault(label, [0, 0.0, 0])
+                m = merged.setdefault(label, [0, 0.0, 0, 0.0])
                 m[0] += vals[0]; m[1] += vals[1]; m[2] += vals[2]
+                m[3] += vals[4] if heal and len(vals) > 4 else 0.0
                 ids.setdefault(label, []).append(str(sid).split(":")[-1])
                 for e, a in (fp.skill_el.get(sid) or {}).items() if not heal else ():
                     w = els.setdefault(label, {})
                     w[e] = w.get(e, 0.0) + a
             out = []
-            for label, (hits, amt, crits) in sorted(merged.items(),
-                                                    key=lambda kv: -kv[1][1]):
+            for label, (hits, amt, crits, over) in sorted(merged.items(),
+                                                          key=lambda kv: (-kv[1][1], -kv[1][3])):
                 row = {"n": label, "t": _n(amt), "ids": ids[label],
                        "f": round(amt / total, 4) if total else 0,
                        "pct": _pct1(amt / total * 100 if total else 0),
                        "hits": _n(hits)}
+                if heal:
+                    # bars against the biggest heal and overheal (f2 its end)
+                    row["ov"] = _n(over) if over > 0 else "—"
+                    row["_w"] = (amt, amt + over)
                 if not heal:
                     el_ = max(els[label], key=els[label].get) if els.get(label) else None
                     row.update({"c": element_color(el_) if el_ else "",
@@ -1644,6 +1665,11 @@ class App:
                                         if hits else "—",
                                 "avg": _n(amt / hits) if hits else "—"})
                 out.append(row)
+            if heal:
+                top = max((r["_w"][1] for r in out), default=0.0) or 1.0
+                for r in out:
+                    a, b = r.pop("_w")
+                    r["f"], r["f2"] = round(a / top, 4), round(b / top, 4)
             return out[:MAX_SKILL_ROWS]
 
         el = sorted(fp.elements.items(), key=lambda kv: -kv[1][1])
@@ -1652,7 +1678,7 @@ class App:
                 "ck": class_key(self.world.class_of(fp.name)),
                 "facts": facts,
                 "skills": sources(fp.skills, fp.total, False),
-                "heals": sources(fp.heals, fp.heal_total, True)
+                "heals": sources(fp.heals, fp.heal_landed, True)
                 if self._show_heal else [],
                 "elements": [{"t": element_label(k),
                               "pct": _pct1(v[1] / fp.total * 100
@@ -5301,14 +5327,15 @@ class App:
 
         Damage rows are [hits, total, crits]; healing rows add the self-healed
         share, which damage reports as 0."""
-        merged: dict[str, list] = defaultdict(lambda: [0, 0.0, 0, 0.0])
+        merged: dict[str, list] = defaultdict(lambda: [0, 0.0, 0, 0.0, 0.0])
         for sid, vals in table.items():
             label = self.session.skill_names.get(sid) or _pretty_id(sid)
             m = merged[label]
             m[0] += vals[0]; m[1] += vals[1]; m[2] += vals[2]
             m[3] += vals[3] if len(vals) > 3 else 0.0
-        out = [(label, v[1], v[0], v[2], v[3]) for label, v in merged.items()]
-        out.sort(key=lambda t: -t[1])
+            m[4] += vals[4] if len(vals) > 4 else 0.0
+        out = [(label, v[1], v[0], v[2], v[3], v[4]) for label, v in merged.items()]
+        out.sort(key=lambda t: (-t[1], -t[5]))
         return out[:MAX_SKILL_ROWS]
 
     def _hold_last(self, rows, duration):
