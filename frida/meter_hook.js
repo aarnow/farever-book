@@ -288,6 +288,7 @@ let classTint = {};
 let skillBarMin = false, skillBarAlpha = 55, skillBarRadius = 10;
 // the hero's own health bar: moved, sized (px; 0: the game's), its text;
 // the effects on the hero moved with it (and their own offset)
+let meColor = null, meColorEnd = null, meLag = null, meBg = null;
 let meBar = false, meW = 0, meH = 0, meDx = 0, meDy = 0, fxDx = 0, fxDy = 0, meText = "none";
 let targetGlowA = 100, targetLineA = 100;       // the halo's, the target's frame's (%)
 let barColors = { mine: null, aggro: null, neutral: null };
@@ -365,6 +366,10 @@ function listenConfig() {
         allyColorEnd = rgb(msg.allyColorEnd);
         allyLag = rgb(msg.allyLag);
         allyBg = rgb(msg.allyBg);
+        meColor = rgb(msg.meColor);
+        meColorEnd = rgb(msg.meColorEnd);
+        meLag = rgb(msg.meLag);
+        meBg = rgb(msg.meBg);
         bossColorEnd = rgb(msg.bossColorEnd);
         const be = msg.barColorsEnd || {};
         barColorsEnd = { mine: rgb(be.mine), aggro: rgb(be.aggro), neutral: rgb(be.neutral) };
@@ -2678,6 +2683,7 @@ function main() {
                     }
                 }
                 me.set = null;
+                if (me.st && !stale(me.st)) styleBar(me.st, null, null, null, 0, 0, null);
                 if (me.hb && me.off) moveInFlow(me.hb, me, "off", 0, 0);
                 for (const f of me.fx || []) if (f.st.off) moveInFlow(f.o, f.st, "off", 0, 0);
                 if (me.txt && me.txtShown && setVisibleFn) setVisibleFn(me.txt, 0);
@@ -2733,13 +2739,16 @@ function main() {
                     }
                     log("my bar: effects " + all.length + " status bar(s): " + (names.join(", ") || "none"));
                     me.set = me.off = null;
+                    me.st = barState(g, null, me.hb);
+                    me.st.sig = sigOf(me.st);
                     // its text: as chosen (the allies' way: a holder of ours)
                     me.who = { name: null, me: true };
                     if (me.txt && !me.txt.isNull()) barTexts.set(me.txt.toString(), me.who);
                     barTexts.set(g.toString(), me.who);
                 }
                 if (!meBar) {
-                    if (me.set || me.off || (me.fx || []).some(f => f.st.off) || me.txtShown) meUndo();
+                    if (me.set || me.off || (me.fx || []).some(f => f.st.off) || me.txtShown
+                        || (me.st && (me.st.own || me.st.bgOwn))) meUndo();
                     return;
                 }
                 // its size: the game's set again (a new layout) taken as its own
@@ -2761,6 +2770,9 @@ function main() {
                         me.set = { w: W, h: Hh };
                     }
                 }
+                // its colours (as the allies': a gradient, the life being lost, under it)
+                if (me.st && stale(me.st)) { me.st = barState(g, null, me.hb); me.st.sig = sigOf(me.st); }
+                if (me.st) styleBar(me.st, meColor, meLag, meBg, 0, 0, meColorEnd);
                 // its place, the effects' (with it, then their own offset)
                 if (me.hb && !me.hb.isNull()) moveInFlow(me.hb, me, "off", meDx, meDy);
                 for (const f of me.fx || []) moveInFlow(f.o, f.st, "off", meDx + fxDx, meDy + fxDy);
@@ -3841,8 +3853,17 @@ function main() {
             const fn = (fi, ret, args) => new NativeFunction(base.add(fi * 8).readPointer(), ret, args);
             const newButton = fn(btnFi, "void", ["pointer", "pointer", "pointer", "pointer", "pointer"]);
             const setOnClick = fn(clickFi, "pointer", ["pointer", "pointer"]);
+            // the menu closed as the game closes its windows (its click
+            // runs on the game thread), the menu the last one opened
+            const closeFi = MF["ui.win.BaseWindow.closeWindow"];
+            const closeWin = closeFi != null ? fn(closeFi, "uint8", ["pointer", "pointer"]) : null;
+            let openMenu = null;
             const onClick = new NativeCallback(function () {
                 try { send({ kind: "open_panel" }); } catch (e) {}
+                try {
+                    if (closeWin && openMenu && typeName(openMenu) === "ui.win.EscapeMenu") closeWin(openMenu, NULL);
+                } catch (e) { log("menu not closed: " + e); }
+                openMenu = null;
             }, "void", []);
             let menuFailed = false;
             // the buttons made: hidden when the hook goes (their click is ours)
@@ -3871,6 +3892,7 @@ function main() {
                     try {
                         const menu = this.menu;
                         if (typeName(menu) !== "ui.win.EscapeMenu") return;
+                        openMenu = menu;
                         const quit = menu.add(OFF.EscapeMenu.quitButton).readPointer();
                         const opt = menu.add(OFF.EscapeMenu.optionsBtn).readPointer();
                         if (typeName(quit) !== "ui.comp.Button" || typeName(opt) !== "ui.comp.Button") return;

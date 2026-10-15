@@ -306,6 +306,10 @@ class App:
         self._ally_color_end = ""
         self._ally_lag = ""
         self._ally_bg = ""
+        self._me_color = ""
+        self._me_color_end = ""
+        self._me_lag = ""
+        self._me_bg = ""
         # every life's gradient end ("": the game's, in its own ratio)
         self._bar_colors_end = {"mine": "", "aggro": "", "neutral": ""}
         self._boss_color_end = ""
@@ -498,7 +502,8 @@ class App:
             self._boss_level_scale = data["boss_level_scale"]
         if data.get("ally_text") in self.BAR_TEXTS:
             self._ally_text = data["ally_text"]
-        for key in ("ally_color", "ally_color_end", "ally_lag", "ally_bg", "boss_color_end"):
+        for key in ("ally_color", "ally_color_end", "ally_lag", "ally_bg", "boss_color_end",
+                    "me_color", "me_color_end", "me_lag", "me_bg"):
             if self._hex_ok(data.get(key)):
                 setattr(self, "_" + key, data[key])
         be = data.get("bar_colors_end") if isinstance(data.get("bar_colors_end"), dict) else {}
@@ -683,6 +688,7 @@ class App:
                     "foe_text_scale", "boss_text_scale", "ally_extra", "ally_width",
                     "ally_level_show", "ally_level_scale", "ally_level_dx", "ally_text",
                     "ally_color", "ally_color_end", "ally_lag", "ally_bg", "boss_color_end",
+                    "me_color", "me_color_end", "me_lag", "me_bg",
                     "ally_level_dy", "ally_class", "ally_class_scale", "ally_class_dx",
                     "class_colors",
                     "ally_class_dy")},
@@ -2347,6 +2353,13 @@ class App:
                         "target_option", {"key": "me_dx"}, step=1),
                     rng(tr("Décalage vertical"), -400, 400, self._me_dy,
                         "target_option", {"key": "me_dy"}, step=1),
+                    swatch(tr("Fond"), self._me_bg, game_col, "me_bg", start="#3F3935"),
+                    swatch(tr("Couleur de la vie"), self._me_color, game_col, "me_color",
+                           start="#5DBB4C"),
+                    swatch(tr("Couleur de la vie (fin du dégradé)"), self._me_color_end,
+                           game_col, "me_color_end", start="#2E7D32"),
+                    swatch(tr("Couleur de la vie en cours de perte"), self._me_lag, game_col,
+                           "me_lag", start="#FFFFFF"),
                     cho(tr("Contenu"), self._me_text,
                         [[k, tr(n)] for k, n in self.BAR_TEXTS.items()],
                         "target_option", {"key": "me_text"}),
@@ -4610,6 +4623,10 @@ class App:
                          "allyColorEnd": self._rgb(self._ally_color_end),
                          "allyLag": self._rgb(self._ally_lag),
                          "allyBg": self._rgb(self._ally_bg),
+                         "meColor": self._rgb(self._me_color),
+                         "meColorEnd": self._rgb(self._me_color_end),
+                         "meLag": self._rgb(self._me_lag),
+                         "meBg": self._rgb(self._me_bg),
                          "bossColorEnd": self._rgb(self._boss_color_end),
                          "barColorsEnd": {k: self._rgb(v) for k, v in self._bar_colors_end.items()},
                          "allyLevelDx": int(self._ally_level_dx),
@@ -4870,7 +4887,8 @@ class App:
             elif key == "ally_text" and v in self.BAR_TEXTS:
                 self._ally_text = v
             elif key in ("ally_color", "ally_color_end", "ally_lag", "ally_bg",
-                         "boss_color_end") and self._hex_ok(v):
+                         "boss_color_end", "me_color", "me_color_end", "me_lag",
+                         "me_bg") and self._hex_ok(v):
                 setattr(self, "_" + key, v.upper())
             elif str(key).startswith("end_") and key[4:] in self._bar_colors_end and self._hex_ok(v):
                 self._bar_colors_end[key[4:]] = v.upper()

@@ -63,7 +63,7 @@ TARGETS = (
     # game makes its own (a Button, its click, its place after Options)
     ("menu_fns", ("ui.win.EscapeMenu.init", "ui.comp.$Button.__constructor__",
                   "ui.UIElement.set_onClick", "h2d.Object.addChildAt",
-                  "h2d.Object.getChildIndex"), "menu target",
+                  "h2d.Object.getChildIndex", "ui.win.BaseWindow.closeWindow"), "menu target",
      "no Farever Book button in the game's menu"),
     # the character picked on the select screen: its id in the game's
     # database (HeroData is null on the client), two may share a name
@@ -96,6 +96,7 @@ SIGNATURES = {
     "ui.comp.$Button.__constructor__": "(ui.comp.Button,String,String,null<bool>,h2d.Object)->void",
     "ui.UIElement.set_onClick": "(ui.UIElement,()->void)->()->void",
     "ui.win.EscapeMenu.init": "(ui.win.EscapeMenu)->void",
+    "ui.win.BaseWindow.closeWindow": "(ui.win.BaseWindow,null<bool>)->bool",
     "h2d.Object.set_visible": "(h2d.Object,bool)->bool",
     "ui.comp.BaseGauge.set_barWidth": "(ui.comp.BaseGauge,i32)->i32",
     "ui.comp.BaseGauge.applyColorTo": "(ui.comp.BaseGauge,h2d.Flow,null<i32>)->void",
