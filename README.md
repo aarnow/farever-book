@@ -39,15 +39,23 @@ Available in English and French, **for Windows only** (Windows 10 or 11).
 * **Inspect**: the gear, talents and spells of the players around you.
 * **Build**: create and compare builds (gear, talents, runes, spells and
   passives), with their stats and a damage simulation, then share them.
+* **Overlays and in-game panel**: the meter, the minimap, your quests around
+  you and other overlays on top of the game, set from a panel opened from the
+  Escape menu.
 
-## Read-only
+## What it does in the game
 
 Farever Book relies entirely on the data of **your installed version of the
 game**, and on your sessions when it runs alongside Farever.
 
-It **only reads**: nothing is ever written or changed in the game, and nothing
-is displayed in it. No data is collected: everything the app keeps stays on
-your computer. Its code is public so anyone can check it.
+By default, it **only reads**. Only the Farever Book button in the Escape menu
+and the options of the in-game panel's **Game** tabs (marked *Experimental*)
+change how the game is displayed: health bars, skill bar, chat… They act in
+memory only, for the session: nothing is written to the game's files, and
+closing Farever Book gives the game back its original display.
+
+No data is collected: everything the app keeps stays on your computer. Its code
+is public so anyone can check it.
 
 ## Installation
 

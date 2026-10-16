@@ -332,6 +332,13 @@ class App:
         self._esc_button = True
         # the skills' bar: its frame a plain dark rectangle (opacity %, corners px)
         self._skillbar_min = False
+        self._group_hide = False            # the game's group (top left) hidden
+        self._menubar_hide = False          # the game's menu shortcuts (bottom right) hidden
+        # the game's chat: its ground in our colour, opacity %, corners px
+        self._chat_on = False
+        self._chat_color = "#0C0C10"
+        self._chat_alpha = 62
+        self._chat_radius = 8
         self._skillbar_alpha = 55
         self._skillbar_radius = 10
         # the hero's own health bar: moved, sized (px, 0 the game's), its
@@ -543,6 +550,18 @@ class App:
                 setattr(self, "_" + key, data[key])
         if data.get("me_text") in self.BAR_TEXTS:
             self._me_text = data["me_text"]
+        if isinstance(data.get("chat_on"), bool):
+            self._chat_on = data["chat_on"]
+        if self._hex_ok(data.get("chat_color")):
+            self._chat_color = data["chat_color"]
+        if isinstance(data.get("chat_alpha"), int) and 0 <= data["chat_alpha"] <= 100:
+            self._chat_alpha = data["chat_alpha"]
+        if isinstance(data.get("chat_radius"), int) and 0 <= data["chat_radius"] <= 30:
+            self._chat_radius = data["chat_radius"]
+        if isinstance(data.get("menubar_hide"), bool):
+            self._menubar_hide = data["menubar_hide"]
+        if isinstance(data.get("group_hide"), bool):
+            self._group_hide = data["group_hide"]
         if isinstance(data.get("skillbar_min"), bool):
             self._skillbar_min = data["skillbar_min"]
         if isinstance(data.get("skillbar_alpha"), int) and 0 <= data["skillbar_alpha"] <= 100:
@@ -693,6 +712,10 @@ class App:
                     "class_colors",
                     "ally_class_dy")},
                 "esc_button": bool(self._esc_button),
+                "group_hide": bool(self._group_hide), "chat_on": bool(self._chat_on),
+                "menubar_hide": bool(self._menubar_hide),
+                "chat_color": self._chat_color, "chat_alpha": int(self._chat_alpha),
+                "chat_radius": int(self._chat_radius),
                 "skillbar_min": bool(self._skillbar_min), "skillbar_alpha": int(self._skillbar_alpha),
                 "skillbar_radius": int(self._skillbar_radius),
                 "me_bar": bool(self._me_bar), "me_w": int(self._me_w), "me_h": int(self._me_h),
@@ -2394,6 +2417,18 @@ class App:
                         "target_option", {"key": "fx_dx"}, step=1),
                     rng(tr("Décalage vertical"), -400, 400, self._fx_dy,
                         "target_option", {"key": "fx_dy"}, step=1),
+                    sec(tr("Raccourcis de menu")),
+                    tog(tr("Masquer les raccourcis de menu (en bas à droite)"), self._menubar_hide,
+                        "target_option", {"key": "menubar_hide"}),
+                    sec(tr("Chat")),
+                    tog(tr("Personnaliser le fond du chat"), self._chat_on,
+                        "target_option", {"key": "chat_on"}),
+                    swatch(tr("Couleur du fond"), self._chat_color, tr("Couleur du jeu"),
+                           "chat_color", start="#0C0C10"),
+                    rng(tr("Opacité du fond"), 0, 100, self._chat_alpha,
+                        "target_option", {"key": "chat_alpha"}, step=5),
+                    rng(tr("Arrondi des coins"), 0, 30, self._chat_radius,
+                        "target_option", {"key": "chat_radius"}, step=1),
                     sec(tr("Barre de sorts")),
                     tog(tr("Fond minimaliste (rectangle sombre)"), self._skillbar_min,
                         "target_option", {"key": "skillbar_min"}),
@@ -4662,6 +4697,10 @@ class App:
                          "allyClassDx": int(self._ally_class_dx),
                          "allyClassDy": int(self._ally_class_dy),
                          "skillBarMin": bool(self._skillbar_min),
+                         "groupHide": bool(self._group_hide), "chatOn": bool(self._chat_on),
+                         "menuBarHide": bool(self._menubar_hide),
+                         "chatColor": self._rgb(self._chat_color or "#0C0C10"),
+                         "chatAlpha": int(self._chat_alpha), "chatRadius": int(self._chat_radius),
                          "meBar": bool(self._me_bar), "meW": int(self._me_w), "meH": int(self._me_h),
                          "meDx": int(self._me_dx), "meDy": int(self._me_dy),
                          "fxDx": int(self._fx_dx), "fxDy": int(self._fx_dy), "meText": self._me_text,
@@ -4940,6 +4979,18 @@ class App:
                 self._me_text = v
             elif key == "skillbar_min":
                 self._skillbar_min = bool(v)
+            elif key == "group_hide":
+                self._group_hide = bool(v)
+            elif key == "menubar_hide":
+                self._menubar_hide = bool(v)
+            elif key == "chat_on":
+                self._chat_on = bool(v)
+            elif key == "chat_color" and (v == "" or self._hex_ok(v)):
+                self._chat_color = v.upper() if v else "#0C0C10"
+            elif key == "chat_alpha":
+                self._chat_alpha = max(0, min(100, int(v)))
+            elif key == "chat_radius":
+                self._chat_radius = max(0, min(30, int(v)))
             elif key == "skillbar_alpha":
                 self._skillbar_alpha = max(0, min(100, int(v)))
             elif key == "skillbar_radius":

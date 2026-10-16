@@ -1454,5 +1454,11 @@
  "Soins effectifs": "Effective healing",
  "inconnu": "unknown",
  "Mesuré": "Measured",
- "{n}/{t} soins": "{n}/{t} heals"
+ "{n}/{t} soins": "{n}/{t} heals",
+ "Masquer le groupe du jeu (en haut à gauche)": "Hide the game's group (top left)",
+ "Chat": "Chat",
+ "Personnaliser le fond du chat": "Customise the chat's background",
+ "Couleur du fond": "Background colour",
+ "Raccourcis de menu": "Menu shortcuts",
+ "Masquer les raccourcis de menu (en bas à droite)": "Hide the menu shortcuts (bottom right)"
 }

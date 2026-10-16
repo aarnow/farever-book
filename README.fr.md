@@ -43,16 +43,23 @@ ou 11).
 * **Build** : composer et comparer des builds (équipement, talents, runes,
   sorts et passifs), avec leurs statistiques et une simulation des dégâts,
   puis les partager.
+* **Overlays et panneau en jeu** : le compteur, la minimap, tes quêtes autour
+  de toi et d'autres overlays par-dessus le jeu, réglés depuis un panneau
+  ouvert par le menu Échap.
 
-## Lecture seule
+## Ce qu'il fait dans le jeu
 
 Farever Book s'appuie entièrement sur les données de **ta version installée du
 jeu**, et sur tes sessions quand il tourne en même temps que Farever.
 
-Il ne fait **que lire** : rien n'est jamais écrit ni modifié dans le jeu, et
-rien n'y est affiché. Aucune donnée n'est collectée : tout ce que l'application
-garde reste sur ton ordinateur. Son code est public pour que chacun puisse le
-vérifier.
+Par défaut, il ne fait **que lire**. Seuls le bouton Farever Book du menu Échap
+et les options des onglets **Jeu** du panneau en jeu (marquées *Expérimental*)
+modifient l'affichage du jeu : barres de vie, barre de sorts, chat… Ils
+agissent uniquement en mémoire, le temps de la session : rien n'est écrit dans
+les fichiers du jeu, et fermer Farever Book lui rend son affichage d'origine.
+
+Aucune donnée n'est collectée : tout ce que l'application garde reste sur ton
+ordinateur. Son code est public pour que chacun puisse le vérifier.
 
 ## Installation
 

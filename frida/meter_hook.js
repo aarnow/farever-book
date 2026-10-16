@@ -289,6 +289,13 @@ let skillBarMin = false, skillBarAlpha = 55, skillBarRadius = 10;
 // the hero's own health bar: moved, sized (px; 0: the game's), its text;
 // the effects on the hero moved with it (and their own offset)
 let meColor = null, meColorEnd = null, meLag = null, meBg = null;
+// the game's group (top left) hidden, or the game's
+let groupHide = false;
+// the game's menu shortcuts (bottom right) hidden, or the game's
+let menuBarHide = false;
+// the game's chat: its ground in a colour of ours (its opacity %, its
+// corners' radius px), or the game's
+let chatOn = false, chatColor = 0x0C0C10, chatAlpha = 62, chatRadius = 8;
 let meBar = false, meW = 0, meH = 0, meDx = 0, meDy = 0, fxDx = 0, fxDy = 0, meText = "none";
 let targetGlowA = 100, targetLineA = 100;       // the halo's, the target's frame's (%)
 let barColors = { mine: null, aggro: null, neutral: null };
@@ -366,6 +373,12 @@ function listenConfig() {
         allyColorEnd = rgb(msg.allyColorEnd);
         allyLag = rgb(msg.allyLag);
         allyBg = rgb(msg.allyBg);
+        groupHide = !!msg.groupHide;
+        menuBarHide = !!msg.menuBarHide;
+        chatOn = !!msg.chatOn;
+        chatColor = msg.chatColor == null ? 0x0C0C10 : msg.chatColor | 0;
+        chatAlpha = Math.max(0, Math.min(100, msg.chatAlpha == null ? 62 : msg.chatAlpha | 0));
+        chatRadius = Math.max(0, Math.min(30, msg.chatRadius == null ? 8 : msg.chatRadius | 0));
         meColor = rgb(msg.meColor);
         meColorEnd = rgb(msg.meColorEnd);
         meLag = rgb(msg.meLag);
@@ -2648,11 +2661,44 @@ function main() {
             // its corners: the game's sync gives a DynamicBackground's shader
             // its own radius each frame (none: 0); ours given after it
             let oursKey = null;
+            // the chat's ground (its ChatBox's DynamicBackground): the
+            // overlays' minimal one (their panels' dark ground, its opacity,
+            // round corners), written after the game's own each frame
+            let chatBgKey = null, chatOwn = null;
+
             const syncFi = FF["shiro.ui.DynamicBackground.sync"];
             if (syncFi != null) {
                 Interceptor.attach(base.add(syncFi * 8).readPointer(), {
-                    onEnter() { this.ours = oursKey !== null && this.context.rcx.toString() === oursKey; },
+                    onEnter() {
+                        const k = this.context.rcx.toString();
+                        this.ours = oursKey !== null && k === oursKey;
+                        this.chat = chatBgKey !== null && k === chatBgKey ? this.context.rcx : null;
+                    },
                     onLeave() {
+                        if (this.chat) {
+                            try {
+                                const sh = this.chat.add(D.dynShader).readPointer();
+                                if (!sh || sh.isNull()) return;
+                                const cv = sh.add(D.dynColor).readPointer();
+                                const rv = sh.add(D.dynRadius).readPointer();
+                                const F = [D.vx, D.vy, D.vz, D.vw];
+                                // its colour is not set again by the game: its own
+                                // kept, given back when minimal is left
+                                if (!chatOn) {
+                                    if (chatOwn && cv && !cv.isNull()) F.forEach((f, i) => cv.add(f).writeDouble(chatOwn[i]));
+                                    chatOwn = null;
+                                    return;
+                                }
+                                if (cv && !cv.isNull()) {
+                                    if (!chatOwn) chatOwn = F.map(f => cv.add(f).readDouble());
+                                    const c = [(chatColor >> 16 & 255) / 255, (chatColor >> 8 & 255) / 255,
+                                               (chatColor & 255) / 255, chatAlpha / 100];
+                                    F.forEach((f, i) => cv.add(f).writeDouble(c[i]));
+                                }
+                                if (rv && !rv.isNull()) F.forEach(f => rv.add(f).writeDouble(chatRadius));
+                            } catch (e) {}
+                            return;
+                        }
                         if (!this.ours || !skillBarMin || !sb.ours) return;
                         try {
                             const sh = sb.ours.add(D.dynShader).readPointer();
@@ -2785,6 +2831,83 @@ function main() {
             };
             restorers.push(function () { try { meUndo(); } catch (e) {} });
             // each frame (the camera's tick): the hero's bar still the one met
+            // ---- the game's group (ui.Hud.groupBar, top left): hidden, the
+            // game's visibility given back; the HUD met above the hero's bar ----
+            const grp = { hud: null, bar: null, hid: false };
+            const groupUndo = function () {
+                if (grp.hid && grp.bar && setVisibleFn && typeName(grp.bar) === "ui.hud.GroupBar")
+                    setVisibleFn(grp.bar, 1);
+                grp.hid = false;
+            };
+            const groupTick = function () {
+                if (!OFF.GroupHud || !setVisibleFn) return;
+                if (!grp.hud || typeName(grp.hud) !== "ui.Hud") {
+                    grp.hud = null;
+                    let o = heroBar;
+                    for (let i = 0; i < 12 && o && !o.isNull(); i++) {
+                        if (typeName(o) === "ui.Hud") { grp.hud = o; break; }
+                        o = o.add(OFF.Object.parent).readPointer();
+                    }
+                    if (!grp.hud) return;
+                }
+                const bar = grp.hud.add(OFF.GroupHud.hudBar).readPointer();
+                if (!bar || bar.isNull() || typeName(bar) !== "ui.hud.GroupBar") return;
+                if (grp.bar && !bar.equals(grp.bar)) grp.hid = false;
+                grp.bar = bar;
+                const vis = bar.add(OFF.Object.visible).readU8() !== 0;
+                if (groupHide && vis) { setVisibleFn(bar, 0); grp.hid = true; }
+                else if (!groupHide && grp.hid) groupUndo();
+            };
+            restorers.push(function () { try { groupUndo(); } catch (e) {} });
+            // ---- the game's menu shortcuts (ui.Hud.menuBar, bottom right):
+            // hidden, the game's visibility given back ----
+            const mb = { bar: null, hid: false };
+            const menuBarUndo = function () {
+                if (mb.hid && mb.bar && setVisibleFn && typeName(mb.bar) === "ui.hud.MenuBar")
+                    setVisibleFn(mb.bar, 1);
+                mb.hid = false;
+            };
+            const menuBarTick = function () {
+                if (!grp.hud || !OFF.GroupHud || OFF.GroupHud.menuBar == null || !setVisibleFn) return;
+                const bar = grp.hud.add(OFF.GroupHud.menuBar).readPointer();
+                if (!bar || bar.isNull() || typeName(bar) !== "ui.hud.MenuBar") return;
+                if (mb.bar && !bar.equals(mb.bar)) mb.hid = false;
+                mb.bar = bar;
+                const vis = bar.add(OFF.Object.visible).readU8() !== 0;
+                if (menuBarHide && vis) { setVisibleFn(bar, 0); mb.hid = true; }
+                else if (!menuBarHide && mb.hid) menuBarUndo();
+            };
+            restorers.push(function () { try { menuBarUndo(); } catch (e) {} });
+            // ---- the game's chat (ui.Hud.chat): hidden but while typed in ----
+            const chat = { box: null };
+            const chatTick = function () {
+                if (!grp.hud || !OFF.GroupHud || OFF.GroupHud.chat == null || !setVisibleFn) return;
+                const box = grp.hud.add(OFF.GroupHud.chat).readPointer();
+                if (!box || box.isNull() || typeName(box) !== "ui.hud.ChatBox") return;
+                chat.box = box;
+                // its ground, styled in the sync (minimal) or left to the game
+                const bg = box.add(D.background).readPointer();
+                const key = bg && !bg.isNull() && typeName(bg) === "shiro.ui.DynamicBackground"
+                    ? bg.toString() : null;
+                if (key !== chatBgKey) chatOwn = null;
+                chatBgKey = key;
+            };
+            restorers.push(function () {
+                // its ground's own colour back (no sync of ours after this)
+                try {
+                    if (chatOwn && chatBgKey) {
+                        const bg = ptr(chatBgKey);
+                        if (typeName(bg) === "shiro.ui.DynamicBackground") {
+                            const sh = bg.add(D.dynShader).readPointer();
+                            const cv = sh && !sh.isNull() ? sh.add(D.dynColor).readPointer() : null;
+                            if (cv && !cv.isNull())
+                                [D.vx, D.vy, D.vz, D.vw].forEach((f, i) => cv.add(f).writeDouble(chatOwn[i]));
+                        }
+                    }
+                    chatOwn = null;
+                    chatBgKey = null;
+                } catch (e) {}
+            });
             // gone (or failed): looked for again when a gauge of its draws
             const lose = function () {
                 if (heroGauge) gaugeBoss.delete(heroGauge);
@@ -2796,6 +2919,9 @@ function main() {
                     || typeName(ptr(heroGauge)) !== "ui.comp.AttributeBar") { lose(); return; }
                 try { skillBarTick(); } catch (e) { log("skills' bar failed: " + e); lose(); return; }
                 try { meBarTick(); } catch (e) { log("own health bar failed: " + e); lose(); }
+                try { groupTick(); } catch (e) { log("group failed: " + e); }
+                try { chatTick(); } catch (e) { log("chat failed: " + e); }
+                try { menuBarTick(); } catch (e) { log("menu shortcuts failed: " + e); }
             };
             if (colorFi != null && hltI32) {
                 Interceptor.attach(base.add(colorFi * 8).readPointer(), {
