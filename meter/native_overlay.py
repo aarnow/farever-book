@@ -790,10 +790,17 @@ def _class_icon(ck):
 FRAME_SLICE, FRAME_CSS = 32, 32
 
 
+# an overlay drawn bare: its content alone, no frame nor header (then laid
+# in a shorter frame, its title hidden)
+BARE = [False]
+
+
 def _frame(p, w, h):
     """The game's window frame (overlay.css html.framed #ov: border-image
     32 fill / 32px stretch) over the whole w x h box; in the minimal theme,
     a dark ground, light, its corners rounded."""
+    if BARE[0]:
+        return False
     if _minimal():
         (c, a) = MINIMAL_FRAME
         p.fill(2, 2, w - 4, h - 4, c, a * _BG[0], r=8)
@@ -985,10 +992,12 @@ def _border_px(css, k):
     return max(1, math.floor(css * k)) / k
 
 
-def _head(p, W, title, dpi_k, ui, hits, extra=None, close=False):
+def _head(p, W, title, dpi_k, ui, hits, extra=None, close=False, fold=None):
     """A panel's header (overlay.css .head, html.framed): the title in the
     game's font, centred; on the right `extra` (a dim text) then the gear.
     Its whole width drags the window."""
+    if BARE[0]:
+        return
     k = p.k
     # the title, a bitmap font, at its own pixels; an overlay made smaller
     # than that makes it smaller too (it would pass its header); in the
@@ -1032,11 +1041,78 @@ def _head(p, W, title, dpi_k, ui, hits, extra=None, close=False):
         p.fill(gx, gy, 23, 23, OV_LINE, 0.12, r=6)
     _icon(p, "gear", gx + 3, gy + 3, 17, 17, OV_TEXT if on else OV_DIM,
           1.0 if on or hover == "gear" else 0.85)
+    right = gx
+    if fold is not None:
+        # fold / unfold (its content hidden, its header kept): a chevron
+        # left of the gear, down when folded (to unfold), up otherwise
+        fx = gx - 26
+        if hover == "fold":
+            p.fill(fx, gy, 23, 23, OV_LINE, 0.12, r=6)
+        _chevron(p, fx + 11.5, gy + 11.5, 4.5, down=bool(fold),
+                 color=OV_TEXT if hover == "fold" else OV_DIM)
+        hits.append((fx, gy, 23, 23, "fold", None))
+        right = fx
     if extra:
         p.text(extra, 18, 12 + (32 - LH12) / 2, LH12, 12, 400, OV_DIM,
-               align="right", w=gx - 6 - 18)
+               align="right", w=right - 6 - 18)
     hits.append((gx, gy, 23, 23, "gear", None))
     hits.append((18, 12, W - 36, 32, "drag", None))
+
+
+def _chevron(p, cx, cy, r, down, color):
+    """A small chevron centred on (cx, cy), r its half width: down (v) or
+    up (^), two strokes."""
+    x0, y0, pw, ph = p.box(cx - r - 1, cy - r - 1, 2 * r + 2, 2 * r + 2)
+    if pw <= 0 or ph <= 0:
+        return
+    S = 4
+    m = Image.new("L", (pw * S, ph * S), 0)
+    d = ImageDraw.Draw(m)
+    k = p.k * S
+    w = max(1, round(1.8 * k))
+    ox, oy = (cx - r - 1) * p.k * S - x0 * S, (cy - r - 1) * p.k * S - y0 * S
+    h = r * 0.55
+    a, b = (r + 1 - h, r + 1 + h) if down else (r + 1 + h, r + 1 - h)
+    pts = [(ox + 1 * k, oy + a * k), (ox + (r + 1) * k, oy + b * k), (ox + (2 * r + 1) * k, oy + a * k)]
+    d.line(pts, fill=255, width=w, joint="curve")
+    m = m.resize((pw, ph), Image.LANCZOS)
+    c = _rgba(color)
+    layer = Image.new("RGBA", (pw, ph), c[:3] + (0,))
+    layer.putalpha(m.point(lambda v: v * c[3] // 255))
+    p._put(layer, x0, y0)
+
+
+def _untitled(draw, k, ui):
+    """An overlay without its title: drawn bare (its content where it is,
+    under a header's place), then laid 32 px higher in a frame of its own;
+    its gear in the corner, seen with the mouse over it (as the meter's)."""
+    BARE[0] = True
+    try:
+        p, hits, W, H = draw()
+    finally:
+        BARE[0] = False
+    H2 = H - 32
+    q = Paint(W, H2, k)
+    _frame(q, W, H2)
+    s = round(32 * k)
+    q._put(p.img.crop((0, s, p.img.width, s + q.img.height)), 0, 0)
+    out = [(x, y - 32, w, h, kind, arg) for (x, y, w, h, kind, arg) in hits]
+    gx, gy = W - 26, 0
+    if ui.get("hover") is not None:
+        q.fill(gx, gy, 20, 20, (58, 46, 39), 0.85, r=10)
+        _icon(q, "gear", gx + 3, gy + 3, 14, 14, "#FFFFFF")
+    out.insert(0, (gx, gy, 20, 20, "gear", None))
+    return q, out, W, H2
+
+
+def _folded(k, dpi_k, W, title, ui, hits, extra=None):
+    """An overlay folded: its frame and header alone (its fold button to
+    unfold it). -> (Paint, hits, W, H)"""
+    H = 44 + 22
+    p = Paint(W, H, k)
+    _frame(p, W, H)
+    _head(p, W, title, dpi_k, ui, hits, extra, fold=True)
+    return p, hits, W, H
 
 
 def _settings(p, W, style, ui, hits, tr, switches=(), title=None, scale_max=110):
@@ -1144,6 +1220,8 @@ class MeterView:
                 (tr("Deux overlays : dégâts et soins"), bool(split), "split")])
             return p, hits, W, H
         W = self.layout_width(Paint(1, 1, k), m)
+        if style.get("fold") and not m.get("noTitle"):
+            return _folded(k, dpi_k, W, title, ui, hits)
         # the list: its rows' height, at most the player's (max-height),
         # or exactly the one being set with the grip
         gripping = ui.get("grip_h") is not None
@@ -1164,7 +1242,7 @@ class MeterView:
         p = Paint(W, H, k)
         _frame(p, W, H)
         if not no_title:
-            _head(p, W, title, dpi_k, ui, hits)
+            _head(p, W, title, dpi_k, ui, hits, fold=False)
         # -- the duration line and the tabs ---------------------------------
         if bar_bottom > T:
             p.fill(8, T, W - 16, bar_bottom - T, OV_BG)
@@ -1369,6 +1447,11 @@ class LuckView:
             _head(p, W, tr(self.title), dpi_k, ui, hits)
             _settings(p, W, style, ui, hits, tr, switches=switches, title=tr("Affichage"))
             return p, hits, W, H
+        if style.get("notitle") and not BARE[0]:
+            return _untitled(lambda: self.draw(k, dpi_k, data, dict(style, notitle=False, fold=False), ui),
+                             k, ui)
+        if style.get("fold"):
+            return _folded(k, dpi_k, W, tr(self.title), ui, hits)
         # the lines the player keeps
         rows = [r for r in rows or () if not r.get("hide")] if rows is not None else None
         # the bonus dungeon on top, when it is in this overlay
@@ -1383,7 +1466,7 @@ class LuckView:
         H = 44 + body_h + 22
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, tr(self.title), dpi_k, ui, hits)
+        _head(p, W, tr(self.title), dpi_k, ui, hits, fold=False)
         p.fill(8, 44, W - 16, body_h, OV_BG)
         p.hline(8, 44, W - 16, OV_LINE, 0.35)
         p.hline(8, 44 + body_h - 1, W - 16, OV_LINE, 0.35)
@@ -1518,6 +1601,11 @@ class GoalsView:
             _head(p, W, tr(self.title), dpi_k, ui, hits, extra)
             _settings(p, W, style, ui, hits, tr)
             return p, hits, W, H
+        if style.get("notitle") and not BARE[0]:
+            return _untitled(lambda: self.draw(k, dpi_k, g, dict(style, notitle=False, fold=False), ui),
+                             k, ui)
+        if style.get("fold"):
+            return _folded(k, dpi_k, W, tr(self.title), ui, hits, extra)
         row_h = 4 + LH13 + 2 + LH11 + 4
         content = sum(row_h + (1 if i else 0) for i in range(len(rows)))
         add_h = LH12 + 14 + 2 * _border_px(1.5, k)
@@ -1526,7 +1614,7 @@ class GoalsView:
         H = 44 + body_h + 22
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, tr(self.title), dpi_k, ui, hits, extra)
+        _head(p, W, tr(self.title), dpi_k, ui, hits, extra, fold=False)
         p.fill(8, 44, W - 16, body_h, OV_BG)
         p.hline(8, 44, W - 16, OV_LINE, 0.35)
         p.hline(8, 44 + body_h - 1, W - 16, OV_LINE, 0.35)
@@ -2093,7 +2181,7 @@ class NativeOverlay(_NativeWindow):
         self._topmost()
 
     # -- the mouse (the UI thread) --------------------------------------------
-    HAND = ("gear", "tab", "fit", "slider", "reset", "add", "del", "switch")
+    HAND = ("gear", "tab", "fit", "slider", "reset", "add", "del", "switch", "fold")
     HOVER_ARGS = ("row", "goal", "del", "switch")       # hovers kept with their arg
     # where a press held and moved moves it (anywhere but on a control)
     HOLD_TO_MOVE = (None, "row", "list", "pet", "goal")
@@ -2240,7 +2328,7 @@ class NativeOverlay(_NativeWindow):
         self.pipe.send({"t": "call", "id": 0, "m": "ov_style",
                         "p": {"id": self.id, "opacity": st.get("opacity", 100),
                               "scale": st.get("scale", 100), "maxh": st.get("maxh", 0),
-                              "save": save}})
+                              "fold": bool(st.get("fold")), "save": save}})
 
     def _notify(self, method, params=None):
         self.pipe.send({"t": "call", "id": 0, "m": method, "p": params or {}})
@@ -2258,6 +2346,11 @@ class NativeOverlay(_NativeWindow):
             else:
                 self._ui.pop("style", None)
             self._hide_tip()
+            self._redraw()
+        elif kind == "fold":
+            self._style["fold"] = not self._style.get("fold")
+            self._hide_tip()
+            self._send_style(save=True)
             self._redraw()
         elif kind == "reset":
             self._style.update(opacity=100, scale=self.SCALE_DEFAULT)
@@ -2421,6 +2514,11 @@ class QuestView:
             _head(p, W, tr(self.title), dpi_k, ui, hits, extra)
             _settings(p, W, style, ui, hits, tr)
             return p, hits, W, H
+        if style.get("notitle") and not BARE[0]:
+            return _untitled(lambda: self.draw(k, dpi_k, q, dict(style, notitle=False, fold=False), ui),
+                             k, ui)
+        if style.get("fold"):
+            return _folded(k, dpi_k, W, tr(self.title), ui, hits, extra)
         ix = 16
         tx = ix + 34
         tw_ = W - 16 - tx - 8
@@ -2449,7 +2547,7 @@ class QuestView:
         H = 44 + body + 22
         p = Paint(W, H, k)
         _frame(p, W, H)
-        _head(p, W, tr(self.title), dpi_k, ui, hits, extra)
+        _head(p, W, tr(self.title), dpi_k, ui, hits, extra, fold=False)
         p.fill(8, 44, W - 16, body, OV_BG)
         y = 44 + 6
         if where:
@@ -2670,6 +2768,85 @@ def _currency_icon(cid):
     if not cid.replace("_", "").isalnum():
         return None
     return _piece(f"item_icons/{cid}.png")
+
+
+def _ov_glyph(oid):
+    """An overlay's glyph (white, its shape in its alpha): its tab's in the
+    overlays' panel, the quests' the game's star (the minimap has the map)."""
+    if oid == "quest":
+        return _piece("ui_banner_4.png")
+    return _piece(f"ui_tab_{ConfigView.TAB_ICONS.get(oid, 'Live')}.png")
+
+
+class LauncherView:
+    """The overlays' bar: a button each (its glyph), lit when its overlay
+    is shown, a click shows or hides it; the gear at its end. Held
+    anywhere to move. data: {items: [{id, t, on}]}."""
+
+    B, GAP, PAD = 32, 4, 5
+
+    def __init__(self, tr=None):
+        self.tr = tr or (lambda t: t)
+
+    def draw(self, k, dpi_k, data, style, ui):
+        items = (data or {}).get("items") or []
+        B, G, P = self.B, self.GAP, self.PAD
+        n = len(items) + 1                              # the gear at the end
+        W = P * 2 + n * B + (n - 1) * G + 6
+        H = P * 2 + B
+        p = Paint(W, H, k)
+        hits = []
+        minimal = _minimal()
+        ground = MINIMAL_FRAME[0] if minimal else (58, 46, 39)
+        p.fill(0, 0, W, H, ground, (MINIMAL_FRAME[1] if minimal else 0.88) * _BG[0], r=9)
+        p.border(0, 0, W, H, (255, 255, 255), 0.08 * _BG[0], r=9)
+        hover = ui.get("hover")
+        x = P
+        for it in items:
+            on, hov = bool(it.get("on")), hover == ("ovt", it["id"])
+            if on:
+                p.fill(x, P, B, B, OV_ACCENT if not minimal else (255, 255, 255),
+                       0.32 if not minimal else 0.16, r=6)
+            elif hov:
+                p.fill(x, P, B, B, (255, 255, 255), 0.1, r=6)
+            g = _ov_glyph(it["id"])
+            if g is not None:
+                p.mask_image(g, x + 6, P + 6, B - 12, B - 12, "#FFFFFF",
+                             1.0 if on or hov else 0.42)
+            hits.append((x, P, B, B, "ovt", it["id"]))
+            x += B + G
+        # a thin line, then the gear (the overlays' panel)
+        p.fill(x - G / 2 + 1, P + 6, 1, B - 12, (255, 255, 255), 0.18)
+        x += 6
+        if hover == "gear":
+            p.fill(x, P, B, B, (255, 255, 255), 0.1, r=6)
+        _icon(p, "gear", x + 8, P + 8, B - 16, B - 16, "#FFFFFF", 1.0 if hover == "gear" else 0.6)
+        hits.append((x, P, B, B, "gear", None))
+        return p, hits, W, H
+
+
+class NativeLauncher(NativeOverlay):
+    """The overlays' bar (LauncherView): its buttons show or hide them."""
+
+    VIEW = LauncherView
+    HAND = NativeOverlay.HAND + ("ovt",)
+    HOVER_ARGS = NativeOverlay.HOVER_ARGS + ("ovt",)
+    HOLD_TO_MOVE = NativeOverlay.HOLD_TO_MOVE + ("ovt",)
+
+    def _default_pos(self, gw, gh, w, h):
+        return {"ax": "l", "dx": 24, "ay": "b", "dy": 24}               # bottom left
+
+    def _click(self, kind, arg):
+        if kind == "ovt":
+            items = (self._data or {}).get("items") or []
+            it = next((i for i in items if i.get("id") == arg), None)
+            if it is None:
+                return
+            it["on"] = not it.get("on")                 # at once, the app's word after
+            self._notify("ov_show", {"id": arg, "value": it["on"]})
+            self._redraw()
+            return
+        super()._click(kind, arg)
 
 
 class NativeCurrencies(NativeOverlay):
@@ -3253,7 +3430,7 @@ class ConfigView:
                  "luck": "Collection",
                  "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
                  "quest": "Map",
-                 "minimap": "Map"}
+                 "minimap": "Map", "launcher": "Build"}
     ROW, SEC, PAD = 28, 34, 14
     SUB = 26                            # a part of a section: its heading
     SEC_BG = (184, 158, 147)            # a section's heading band

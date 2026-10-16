@@ -166,7 +166,11 @@ def _ov_style(v, oid=None):
             "scale": num("scale", 70, OV_SCALE_MAX_OF.get(oid, OV_SCALE_MAX)),
             # its background's own opacity (its frame, its panels), 0-100 %
             "bg": num("bg", 0, 100),
-            "maxh": max(30, min(900, maxh)) if maxh else 0}
+            "maxh": max(30, min(900, maxh)) if maxh else 0,
+            # folded: its header alone (its fold button, left of the gear)
+            "fold": bool(v.get("fold")),
+            # its title hidden (the quests', the goals', the luck's)
+            "notitle": bool(v.get("notitle"))}
 
 
 # the saved settings' revision: 1, the boss pull reset turned on for all
@@ -220,7 +224,8 @@ class App:
         self._ov_on = {"meter": True, "goals": False, "luck": False,
                        "bonus": True,       # shown, per overlay
                        "meterheal": True,   # (the heals' meter, split)
-                       "currencies": False, "minimap": False, "quest": False}
+                       "currencies": False, "minimap": False, "quest": False,
+                       "launcher": False}
         # the quests overlay: its kinds shown, its lines at most
         self._quest_kinds = {"drop": True, "codex": True, "ach": True}
         self._quest_max = 12
@@ -2144,10 +2149,13 @@ class App:
     def _ov_style_set(self, p):
         """Réglages › Overlay: one of an overlay's settings (its gear's)."""
         oid, key = p.get("id"), p.get("key")
-        if oid not in self._ov_on or key not in ("opacity", "scale", "bg"):
+        if oid not in self._ov_on or key not in ("opacity", "scale", "bg", "title"):
             return
         st = dict(self._ov_style.get(oid) or _ov_style({}, oid))
-        st[key] = p.get("value")
+        if key == "title":
+            st["notitle"] = not p.get("value")
+        else:
+            st[key] = p.get("value")
         self._ov_style[oid] = _ov_style(st, oid)
         self._save_settings()
 
@@ -2164,7 +2172,7 @@ class App:
             return
         # what it sends over what it has (its background's opacity kept)
         st = dict(self._ov_style.get(oid) or _ov_style({}, oid))
-        st.update({k: p[k] for k in ("opacity", "scale", "maxh", "bg") if k in p})
+        st.update({k: p[k] for k in ("opacity", "scale", "maxh", "bg", "fold") if k in p})
         self._ov_style[oid] = _ov_style(st, oid)
         if p.get("save", True):
             self._save_settings()
@@ -2235,7 +2243,8 @@ class App:
         # (the bonus dungeon's name shortened: the menu's width)
         names.update({"luck": tr("Chance de butin"), "bonus": tr("Donjon bonus"),
                       "goals": tr("Objectifs"), "currencies": tr("Monnaies"),
-                      "minimap": tr("Minimap"), "quest": tr("Quêtes")})
+                      "minimap": tr("Minimap"), "quest": tr("Quêtes"),
+                      "launcher": tr("Barre des overlays")})
         if self._luck_merge:
             names.pop("bonus")
         def swatch(t, cur, none, key, start="#D93A2B", alpha=False):
@@ -2458,7 +2467,10 @@ class App:
                              "meter_part", {"id": oid, "key": "time"}),
                          tog(tr("Deux overlays : dégâts et soins"), self._ov_split,
                              "ov_split", {})]
-            elif oid == "luck":
+            if oid in ("luck", "goals", "quest"):
+                rows.append(tog(tr("Afficher le titre"), not st.get("notitle"),
+                                "ov_style_set", {"id": oid, "key": "title"}))
+            if oid == "luck":
                 rows.append(tog(tr("Donjon héroïque bonus"), self._luck_merge, "luck_merge", {}))
                 lines = (spec.get("luck") or {}).get("rows") or []
                 if lines:
@@ -3037,6 +3049,12 @@ class App:
                 self._quest_err_logged = True
                 print(f"[meter] quests not made: {e!r}", file=sys.stderr)
         spec["minimap"] = self._minimap_spec()
+        spec["launcher"] = {"items": [
+            {"id": oid, "on": bool(self._ov_on.get(oid))}
+            for oid in ("meter", "meterheal", "goals", "luck", "bonus", "currencies",
+                        "minimap", "quest")
+            if (oid != "meterheal" or self._ov_split)
+            and (oid != "bonus" or not self._luck_merge)]}
         # the overlays' settings window (any overlay's gear opens it)
         spec["config"] = self._overlay_config(spec)
         # the overlays' looks (OVERLAY_THEMES): colours only
@@ -4418,7 +4436,8 @@ class App:
                       "bonus": tr("Donjon héroïque bonus"),
                       "currencies": tr("Monnaies"),
                       "minimap": tr("Minimap"),
-                      "quest": tr("Quêtes")})
+                      "quest": tr("Quêtes"),
+                      "launcher": tr("Barre des overlays")})
         if self._luck_merge:
             # the bonus dungeon is in the loot luck overlay
             names.pop("bonus")
