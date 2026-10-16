@@ -225,7 +225,7 @@ class App:
                        "bonus": True,       # shown, per overlay
                        "meterheal": True,   # (the heals' meter, split)
                        "currencies": False, "minimap": False, "quest": False,
-                       "launcher": False}
+                       "launcher": False, "group": False}
         # the quests overlay: its kinds shown, its lines at most
         self._quest_kinds = {"drop": True, "codex": True, "ach": True}
         self._quest_max = 12
@@ -338,7 +338,11 @@ class App:
         # the skills' bar: its frame a plain dark rectangle (opacity %, corners px)
         self._skillbar_min = False
         self._group_hide = False            # the game's group (top left) hidden
+        self._group_members = []            # the group, as the hook reads it
         self._menubar_hide = False          # the game's menu shortcuts (bottom right) hidden
+        # the group's invitation: at the screen's top (its distance, px), minimal
+        self._invite_center = False
+        self._invite_min = False
         # the game's chat: its ground in our colour, opacity %, corners px
         self._chat_on = False
         self._chat_color = "#0C0C10"
@@ -563,6 +567,9 @@ class App:
             self._chat_alpha = data["chat_alpha"]
         if isinstance(data.get("chat_radius"), int) and 0 <= data["chat_radius"] <= 30:
             self._chat_radius = data["chat_radius"]
+        for key in ("invite_center", "invite_min"):
+            if isinstance(data.get(key), bool):
+                setattr(self, "_" + key, data[key])
         if isinstance(data.get("menubar_hide"), bool):
             self._menubar_hide = data["menubar_hide"]
         if isinstance(data.get("group_hide"), bool):
@@ -719,6 +726,8 @@ class App:
                 "esc_button": bool(self._esc_button),
                 "group_hide": bool(self._group_hide), "chat_on": bool(self._chat_on),
                 "menubar_hide": bool(self._menubar_hide),
+                "invite_center": bool(self._invite_center),
+                "invite_min": bool(self._invite_min),
                 "chat_color": self._chat_color, "chat_alpha": int(self._chat_alpha),
                 "chat_radius": int(self._chat_radius),
                 "skillbar_min": bool(self._skillbar_min), "skillbar_alpha": int(self._skillbar_alpha),
@@ -2244,7 +2253,7 @@ class App:
         names.update({"luck": tr("Chance de butin"), "bonus": tr("Donjon bonus"),
                       "goals": tr("Objectifs"), "currencies": tr("Monnaies"),
                       "minimap": tr("Minimap"), "quest": tr("Quêtes"),
-                      "launcher": tr("Barre des overlays")})
+                      "group": tr("Groupe"), "launcher": tr("Barre des overlays")})
         if self._luck_merge:
             names.pop("bonus")
         def swatch(t, cur, none, key, start="#D93A2B", alpha=False):
@@ -2426,6 +2435,14 @@ class App:
                         "target_option", {"key": "fx_dx"}, step=1),
                     rng(tr("Décalage vertical"), -400, 400, self._fx_dy,
                         "target_option", {"key": "fx_dy"}, step=1),
+                    sec(tr("Groupe")),
+                    tog(tr("Masquer le groupe du jeu (en haut à gauche)"), self._group_hide,
+                        "target_option", {"key": "group_hide"}),
+                    sec(tr("Invitation de groupe")),
+                    tog(tr("Notification au centre de l'écran"), self._invite_center,
+                        "target_option", {"key": "invite_center"}),
+                    tog(tr("Style minimaliste"), self._invite_min,
+                        "target_option", {"key": "invite_min"}),
                     sec(tr("Raccourcis de menu")),
                     tog(tr("Masquer les raccourcis de menu (en bas à droite)"), self._menubar_hide,
                         "target_option", {"key": "menubar_hide"}),
@@ -3049,10 +3066,23 @@ class App:
                 self._quest_err_logged = True
                 print(f"[meter] quests not made: {e!r}", file=sys.stderr)
         spec["minimap"] = self._minimap_spec()
+        # the group (others than the hero): a block each, its class's colour
+        # as far as its health
+        rows = []
+        for m in self._group_members:
+            hp, mx = m.get("hp"), m.get("max")
+            f = max(0.0, min(1.0, hp / mx)) if isinstance(hp, (int, float)) and mx else None
+            sh = m.get("sh") if isinstance(m.get("sh"), (int, float)) else 0
+            rows.append({"name": m.get("name") or "?", "ck": class_key(m.get("cls")),
+                         "f": f, "pct": f"{round(f * 100)} %" if f is not None else "—",
+                         # its shield: against its greatest health, shown as +amount
+                         "fs": max(0.0, min(1.0, sh / mx)) if sh > 0 and mx else 0.0,
+                         "sh": f"(+{_n(sh)})" if sh > 0 else ""})
+        spec["group"] = {"rows": rows} if rows else None
         spec["launcher"] = {"items": [
             {"id": oid, "on": bool(self._ov_on.get(oid))}
             for oid in ("meter", "meterheal", "goals", "luck", "bonus", "currencies",
-                        "minimap", "quest")
+                        "minimap", "quest", "group")
             if (oid != "meterheal" or self._ov_split)
             and (oid != "bonus" or not self._luck_merge)]}
         # the overlays' settings window (any overlay's gear opens it)
@@ -3060,6 +3090,12 @@ class App:
         # the overlays' looks (OVERLAY_THEMES): colours only
         spec["theme"] = self._ov_theme
         return spec
+
+    def on_group(self, p):
+        """The group read in game (hook thread): its members, others than
+        the hero, their name, class and health."""
+        m = p.get("m")
+        self._group_members = [x for x in m if isinstance(x, dict)] if isinstance(m, list) else []
 
     def on_achievements(self, p):
         """The achievements read in game: the account's completion times and
@@ -4437,6 +4473,7 @@ class App:
                       "currencies": tr("Monnaies"),
                       "minimap": tr("Minimap"),
                       "quest": tr("Quêtes"),
+                      "group": tr("Groupe"),
                       "launcher": tr("Barre des overlays")})
         if self._luck_merge:
             # the bonus dungeon is in the loot luck overlay
@@ -4718,6 +4755,8 @@ class App:
                          "skillBarMin": bool(self._skillbar_min),
                          "groupHide": bool(self._group_hide), "chatOn": bool(self._chat_on),
                          "menuBarHide": bool(self._menubar_hide),
+                         "inviteCenter": bool(self._invite_center),
+                         "inviteMin": bool(self._invite_min),
                          "chatColor": self._rgb(self._chat_color or "#0C0C10"),
                          "chatAlpha": int(self._chat_alpha), "chatRadius": int(self._chat_radius),
                          "meBar": bool(self._me_bar), "meW": int(self._me_w), "meH": int(self._me_h),
@@ -5002,6 +5041,8 @@ class App:
                 self._group_hide = bool(v)
             elif key == "menubar_hide":
                 self._menubar_hide = bool(v)
+            elif key in ("invite_center", "invite_min"):
+                setattr(self, "_" + key, bool(v))
             elif key == "chat_on":
                 self._chat_on = bool(v)
             elif key == "chat_color" and (v == "" or self._hex_ok(v)):

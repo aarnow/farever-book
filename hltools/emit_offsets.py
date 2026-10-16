@@ -179,6 +179,14 @@ def hook_layout(code):
         # the game's group (the HUD's, top left): its members' banners
         "GroupHud": {"hudBar": offs("ui.Hud")["groupBar"][0], "chat": offs("ui.Hud")["chat"][0],
                      "menuBar": offs("ui.Hud")["menuBar"][0],
+                     "notifyKind": offs("ui.notify.BaseNotify")["kind"][0],
+                     "popupTitle": offs("ui.notify.ConfirmNotify")["popupTitle"][0],
+                     "popupDesc": offs("ui.notify.ConfirmNotify")["popupDesc"][0],
+                     "dlgHeadline": offs("ui.win.BaseDialog")["headline"][0],
+                     "dlgDescription": offs("ui.win.BaseDialog")["description"][0],
+                     "dlgDesc": offs("ui.win.BaseDialog")["desc"][0],
+                     "dlgButtons": offs("ui.win.BaseDialog")["buttons"][0],
+                     "textColor": offs("h2d.Text")["textColor"][0],
                   "banners": offs("ui.hud.GroupBar")["banners"][0],
                   "unit": offs("ui.hud.UnitBanner")["unit"][0]},
         "Draw": {"x": offs("h2d.Object")["x"][0], "y": offs("h2d.Object")["y"][0],
@@ -271,6 +279,7 @@ def hook_layout(code):
         # The rest of the heal skills scale off one of the caster's primary
         # attributes (Faith on 17 of them, then Intellect/Strength/Dexterity).
         "UnitAttributes": {"unit": ua["unit"][0], "health": ua["health"][0],
+                           "maxHealth": ua["maxHealth"][0], "shield": ua["shield"][0],
                            "faith": ua["faith"][0],
                            "intellect": ua["intellect"][0],
                            "strength": ua["strength"][0],

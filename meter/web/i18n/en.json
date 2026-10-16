@@ -1461,5 +1461,8 @@
  "Couleur du fond": "Background colour",
  "Raccourcis de menu": "Menu shortcuts",
  "Masquer les raccourcis de menu (en bas à droite)": "Hide the menu shortcuts (bottom right)",
- "Barre des overlays": "Overlays bar"
+ "Barre des overlays": "Overlays bar",
+ "Invitation de groupe": "Group invitation",
+ "Style minimaliste": "Minimalist style",
+ "Notification au centre de l'écran": "Notification at the centre of the screen"
 }

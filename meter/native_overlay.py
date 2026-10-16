@@ -2849,6 +2849,77 @@ class NativeLauncher(NativeOverlay):
         super()._click(kind, arg)
 
 
+class GroupView:
+    """The group (others than the hero): a block each, filled in its
+    class's colour as far as its health; its class's icon and name on a
+    line, its health in % under it. Held anywhere to move; the gear in the
+    corner, seen with the mouse over it. data: {rows: [{name, ck, f, pct}]}."""
+
+    W, ROW, GAP, PAD = 190, 42, 4, 4
+
+    def __init__(self, tr=None):
+        self.tr = tr or (lambda t: t)
+
+    def draw(self, k, dpi_k, data, style, ui):
+        rows = (data or {}).get("rows") or []
+        W, R, G, P = self.W, self.ROW, self.GAP, self.PAD
+        if ui.get("settings"):
+            H = _settings_height() + 22
+            p = Paint(W + 60, H, k)
+            hits = []
+            _frame(p, W + 60, H)
+            _head(p, W + 60, self.tr("Groupe"), dpi_k, ui, hits)
+            _settings(p, W + 60, style, ui, hits, self.tr)
+            return p, hits, W + 60, H
+        H = P * 2 + len(rows) * R + max(0, len(rows) - 1) * G
+        p = Paint(W, H, k)
+        hits = []
+        y = P
+        for r in rows:
+            cc = CLASS_COLORS.get(r.get("ck"), CLASS_DEFAULT)
+            # its ground, dark, then its health in its class's colour
+            p.fill(P, y, W - 2 * P, R, (14, 14, 18), 0.72 * _BG[0] + 0.2, r=5)
+            f = r.get("f") or 0.0
+            bw = W - 2 * P
+            if f:
+                _clipped_fill(p, P, y, bw * f, R, cc, 0.9, bw, 5)
+            fs = r.get("fs") or 0.0
+            if fs:
+                # its shield: a lighter layer over its health, from the left
+                # (as the hero's own bar shows it)
+                _clipped_fill(p, P, y, bw * fs, R, (255, 255, 255), 0.35, bw, 5)
+            p.border(P, y, W - 2 * P, R, (255, 255, 255), 0.1, r=5)
+            icon = _class_icon(r.get("ck"))
+            x = P + 7
+            if icon is not None:
+                p.image(icon, x, y + 4, 16, 16, r=3)
+                x += 20
+            p.text(str(r.get("name") or ""), x, y + 3, LH12, 12, 700, "#FFFFFF",
+                   shadow=TEXT_SH, clip=W - P - 6 - x)
+            pct = str(r.get("pct") or "")
+            p.text(pct, P + 7, y + 22, LH11, 11, 400, "#F4F4F8", shadow=TEXT_SH)
+            if r.get("sh"):
+                p.text(str(r["sh"]), P + 7 + p.width(pct, 11) + 5, y + 22, LH11, 11, 700,
+                       "#E2F4FF", shadow=TEXT_SH)
+            y += R + G
+        gx, gy = W - 22, 0
+        if ui.get("hover") is not None:
+            p.fill(gx, gy, 20, 20, (58, 46, 39), 0.85, r=10)
+            _icon(p, "gear", gx + 3, gy + 3, 14, 14, "#FFFFFF")
+        hits.append((gx, gy, 20, 20, "gear", None))
+        return p, hits, W, H
+
+
+class NativeGroup(NativeOverlay):
+    """The group's overlay (GroupView): shown while in a group."""
+
+    VIEW = GroupView
+    KEYED = True
+
+    def _default_pos(self, gw, gh, w, h):
+        return {"ax": "l", "dx": 20, "ay": "t", "dy": 20}               # the game's group's place
+
+
 class NativeCurrencies(NativeOverlay):
     """The currencies held: a text alone over the game, held to move;
     shown only with one to show at least (the player picks them)."""
@@ -3430,7 +3501,7 @@ class ConfigView:
                  "luck": "Collection",
                  "bonus": "Dungeons", "goals": "Achievements", "currencies": "account",
                  "quest": "Map",
-                 "minimap": "Map", "launcher": "Build"}
+                 "minimap": "Map", "launcher": "Build", "group": "Character"}
     ROW, SEC, PAD = 28, 34, 14
     SUB = 26                            # a part of a section: its heading
     SEC_BG = (184, 158, 147)            # a section's heading band

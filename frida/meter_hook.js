@@ -293,6 +293,10 @@ let meColor = null, meColorEnd = null, meLag = null, meBg = null;
 let groupHide = false;
 // the game's menu shortcuts (bottom right) hidden, or the game's
 let menuBarHide = false;
+// the group's invitation: at the screen's top (its y, px), minimal
+// the group's invitation: its notification at the screen's centre, its
+// dialog minimal
+let inviteCenter = false, inviteMin = false;
 // the game's chat: its ground in a colour of ours (its opacity %, its
 // corners' radius px), or the game's
 let chatOn = false, chatColor = 0x0C0C10, chatAlpha = 62, chatRadius = 8;
@@ -375,6 +379,8 @@ function listenConfig() {
         allyBg = rgb(msg.allyBg);
         groupHide = !!msg.groupHide;
         menuBarHide = !!msg.menuBarHide;
+        inviteCenter = !!msg.inviteCenter;
+        inviteMin = !!msg.inviteMin;
         chatOn = !!msg.chatOn;
         chatColor = msg.chatColor == null ? 0x0C0C10 : msg.chatColor | 0;
         chatAlpha = Math.max(0, Math.min(100, msg.chatAlpha == null ? 62 : msg.chatAlpha | 0));
@@ -2665,6 +2671,9 @@ function main() {
             // overlays' minimal one (their panels' dark ground, its opacity,
             // round corners), written after the game's own each frame
             let chatBgKey = null, chatOwn = null;
+            // other grounds styled after the game's sync: key -> {c (rgba or
+            // null: theirs), r (corners px), own (their colour, kept), at}
+            const styled = new Map();
 
             const syncFi = FF["shiro.ui.DynamicBackground.sync"];
             if (syncFi != null) {
@@ -2673,8 +2682,24 @@ function main() {
                         const k = this.context.rcx.toString();
                         this.ours = oursKey !== null && k === oursKey;
                         this.chat = chatBgKey !== null && k === chatBgKey ? this.context.rcx : null;
+                        this.st = styled.size ? styled.get(k) || null : null;
                     },
                     onLeave() {
+                        if (this.st) {
+                            try {
+                                const st = this.st, F = [D.vx, D.vy, D.vz, D.vw];
+                                const sh = st.at.add(D.dynShader).readPointer();
+                                if (!sh || sh.isNull()) return;
+                                const cv = sh.add(D.dynColor).readPointer();
+                                const rv = sh.add(D.dynRadius).readPointer();
+                                if (st.c && cv && !cv.isNull()) {
+                                    if (!st.own) st.own = F.map(f => cv.add(f).readDouble());
+                                    F.forEach((f, i) => cv.add(f).writeDouble(st.c[i]));
+                                }
+                                if (rv && !rv.isNull()) F.forEach(f => rv.add(f).writeDouble(st.r));
+                            } catch (e) {}
+                            return;
+                        }
                         if (this.chat) {
                             try {
                                 const sh = this.chat.add(D.dynShader).readPointer();
@@ -2834,6 +2859,12 @@ function main() {
             // ---- the game's group (ui.Hud.groupBar, top left): hidden, the
             // game's visibility given back; the HUD met above the hero's bar ----
             const grp = { hud: null, bar: null, hid: false };
+            // a hero's greatest health, as the game works it out (its
+            // attribute is not sent for the others: it reads 0)
+            const unitMaxHealth = fnOf(FF["ent.Unit.get_maxHealth"], "double", ["pointer"]);
+            // its shield, as the game works it out (its statuses'; the
+            // attribute reads 0 for the others)
+            const unitShield = fnOf(FF["ent.Unit.getShield"], "double", ["pointer"]);
             const groupUndo = function () {
                 if (grp.hid && grp.bar && setVisibleFn && typeName(grp.bar) === "ui.hud.GroupBar")
                     setVisibleFn(grp.bar, 1);
@@ -2854,6 +2885,50 @@ function main() {
                 if (!bar || bar.isNull() || typeName(bar) !== "ui.hud.GroupBar") return;
                 if (grp.bar && !bar.equals(grp.bar)) grp.hid = false;
                 grp.bar = bar;
+                // its members (a banner each, others than the hero): their
+                // name and class (the hero's), their health as the game
+                // shows it (the banner's gauge); sent when it changes, at
+                // most every 150 ms
+                const now = Date.now();
+                if (now - (grp.sentAt || 0) >= 150) {
+                    const out = [];
+                    for (const b of arrayObjItems(bar.add(OFF.GroupHud.banners).readPointer(), 8)) {
+                        if (typeName(b) !== "ui.hud.UnitBanner") continue;
+                        const u = b.add(OFF.GroupHud.unit).readPointer();
+                        if (!u || u.isNull() || typeName(u) !== "ent.Hero") continue;
+                        // its health: the hero's own attributes, live (the
+                        // banner's gauge read 0 / 1, then never moved)
+                        let hp = null, max = null, sh = 0;
+                        const at = u.add(OFF.Unit.attr).readPointer();
+                        const atType = at && !at.isNull() ? typeName(at) : "";
+                        if (atType === "ent.HeroAttributes" || atType === "ent.UnitAttributes") {
+                            hp = Math.round(at.add(OFF.UnitAttributes.health).readDouble());
+                            max = Math.round(at.add(OFF.UnitAttributes.maxHealth).readDouble());
+                            sh = Math.max(0, Math.round(at.add(OFF.UnitAttributes.shield).readDouble()));
+                        }
+                        const hb = findChild(b, "ui.comp.HealthBar", 0);
+                        const g = hb ? findChild(hb, "ui.comp.AttributeBar", 0) : null;
+                        const gv = g ? Math.round(g.add(OFF.Gauge.value).readDouble()) : null;
+                        const gm = g ? Math.round(g.add(OFF.Gauge.max).readDouble()) : null;
+                        if (!(max > 0) && unitMaxHealth) max = Math.round(unitMaxHealth(u));
+                        if (unitShield) sh = Math.max(sh, Math.round(unitShield(u)) || 0);
+                        if (!grp.told) {
+                            grp.told = true;
+                            log("group: health read " + hp + " / " + max + " (" + atType + "), "
+                                + gv + " / " + gm + " (banner gauge)");
+                        }
+                        if (!(max > 0)) { hp = gv; max = gm; }
+                        out.push({ name: hlStr(u.add(OFF.Hero.name).readPointer()) || "",
+                                   cls: hlStr(u.add(OFF.Unit.kind).readPointer()) || "",
+                                   hp: hp, max: max, sh: sh });
+                    }
+                    const sig = JSON.stringify(out);
+                    if (sig !== grp.sent) {
+                        grp.sent = sig;
+                        grp.sentAt = now;
+                        send({ kind: "group", m: out });
+                    }
+                }
                 const vis = bar.add(OFF.Object.visible).readU8() !== 0;
                 if (groupHide && vis) { setVisibleFn(bar, 0); grp.hid = true; }
                 else if (!groupHide && grp.hid) groupUndo();
@@ -2878,6 +2953,199 @@ function main() {
                 else if (!menuBarHide && mb.hid) menuBarUndo();
             };
             restorers.push(function () { try { menuBarUndo(); } catch (e) {} });
+            // ---- the group's invitation: its dialog (a BaseDialog, the game's
+            // confirmations' own) known by its text, the one of the group's
+            // invitation's notification (kind PlayerGroupInvited) shown just
+            // before; placed at the screen's top, its frame a plain dark
+            // ground, its texts light, its buttons see-through ----
+            const invite = { desc: null, dlg: null, done: false, own: null };
+            const textColor = fnOf(FF["h2d.Text.set_textColor"], "int", ["pointer", "int"]);
+            const showFi = FF["ui.notify.NotifyManager.show"];
+            if (showFi != null) {
+                Interceptor.attach(base.add(showFi * 8).readPointer(), {
+                    onEnter() { this.n = this.context.rdx; },
+                    onLeave() {
+                        try {
+                            const n = this.n, G = OFF.GroupHud;
+                            if (typeName(n) !== "ui.notify.ConfirmNotify") return;
+                            if (hlStr(n.add(G.notifyKind).readPointer()) !== "PlayerGroupInvited") return;
+                            invite.desc = hlStr(n.add(G.popupDesc).readPointer()) || null;
+                            invite.note = n;
+                            invite.noteSt = {};
+                        } catch (e) {}
+                    }
+                });
+            }
+            const dlgFi = FF["ui.win.BaseDialog.init"];
+            if (dlgFi != null) {
+                Interceptor.attach(base.add(dlgFi * 8).readPointer(), {
+                    onEnter() { this.d = this.context.rcx; },
+                    onLeave() {
+                        try {
+                            const d = this.d;
+                            if (!invite.desc || typeName(d) !== "ui.win.BaseDialog") return;
+                            if (hlStr(d.add(OFF.GroupHud.dlgDescription).readPointer()) !== invite.desc) return;
+                            invite.dlg = d;
+                            invite.done = false;
+                            invite.own = null;
+                        } catch (e) {}
+                    }
+                });
+            }
+            const LIGHT = 0xECECF2;
+            // its parts made minimal, once (the game's own kept to give back)
+            const inviteStyle = function (d) {
+                const own = { hid: [], texts: [], frame: null, frameA: undefined };
+                // the frame invisible (its place kept), its decorations hidden
+                const frame = d.add(D.background).readPointer();
+                if (frame && !frame.isNull() && typeName(frame) === "h2d.ScaleGrid") {
+                    const v = frame.add(D.color).readPointer();
+                    if (v && !v.isNull()) {
+                        own.frame = frame;
+                        own.frameA = v.add(D.vw).readDouble();
+                        v.add(D.vw).writeDouble(0);
+                    }
+                }
+                const hide = function (o) {
+                    if (o && !o.isNull() && o.add(OFF.Object.visible).readU8()) {
+                        setVisibleFn(o, 0);
+                        own.hid.push(o);
+                    }
+                };
+                hide(findChild(d, "ui.comp.Block", 0));
+                const header = findChild(d, "ui.comp.WindowHeader", 0);
+                if (header) hide(findChild(header, "ui.comp.DialogGrid", 0));
+                // its texts light (the title, the question)
+                const texts = [header ? findChild(header, "ui.comp.FmtText", 0) : null,
+                               d.add(OFF.GroupHud.dlgDesc).readPointer()];
+                for (const t of texts) {
+                    if (!t || t.isNull() || typeName(t) !== "ui.comp.FmtText") continue;
+                    const v = t.add(D.color).readPointer();
+                    if (!v || v.isNull()) continue;
+                    own.texts.push([t, [D.vx, D.vy, D.vz].map(f => v.add(f).readDouble()),
+                                    t.add(OFF.GroupHud.textColor).readS32()]);
+                }
+                // its buttons: see-through, round (written in the grounds' sync)
+                let like = null;
+                for (const b of arrayObjItems(d.add(OFF.GroupHud.dlgButtons).readPointer(), 6)) {
+                    if (typeName(b) !== "ui.comp.Button") continue;
+                    const bg = b.add(D.background).readPointer();
+                    if (!bg || bg.isNull() || typeName(bg) !== "shiro.ui.DynamicBackground") continue;
+                    like = like || bg;
+                    styled.set(bg.toString(), { c: [1, 1, 1, 0.12], r: 6, own: null, at: bg });
+                }
+                // a ground of ours under it all, the dialog's size
+                if (own.frame && like && newDyn && colorTile && glowAlloc && hlRoot && gridW && gridH
+                        && dynColor && dynAlpha) {
+                    const white = colorTile(0xFFFFFF, NULL, NULL, NULL);
+                    if (white && !white.isNull()) {
+                        hlRoot.writePointer(white);
+                        const o = glowAlloc(like.readPointer());
+                        if (o && !o.isNull()) {
+                            hlRoot.add(8).writePointer(o);
+                            newDyn(o, white, own.frame);
+                            gridW(o, d.add(D.flowCW).readDouble());
+                            gridH(o, d.add(D.flowCH).readDouble());
+                            dynColor(o, 0x0C0C10);
+                            dynAlpha(o, 0.92);
+                            styled.set(o.toString(), { c: null, r: 10, own: null, at: o });
+                            own.ground = o;
+                        }
+                        hlRoot.writePointer(NULL);
+                        hlRoot.add(8).writePointer(NULL);
+                    }
+                }
+                return own;
+            };
+            const inviteUndo = function () {
+                const d = invite.dlg, own = invite.own;
+                invite.own = null;
+                if (!own || !d || typeName(d) !== "ui.win.BaseDialog") return;
+                if (own.frame && own.frameA !== undefined) {
+                    const v = own.frame.add(D.color).readPointer();
+                    if (v && !v.isNull()) v.add(D.vw).writeDouble(own.frameA);
+                }
+                for (const o of own.hid) setVisibleFn(o, 1);
+                for (const [t, c] of own.texts) {
+                    if (typeName(t) !== "ui.comp.FmtText") continue;
+                    const v = t.add(D.color).readPointer();
+                    if (v && !v.isNull()) [D.vx, D.vy, D.vz].forEach((f, i) => v.add(f).writeDouble(c[i]));
+                }
+                if (own.ground) setVisibleFn(own.ground, 0);
+                for (const [k, st] of styled) {
+                    if (st.own && st.at) {
+                        const sh = st.at.add(D.dynShader).readPointer();
+                        const cv = sh && !sh.isNull() ? sh.add(D.dynColor).readPointer() : null;
+                        if (cv && !cv.isNull()) [D.vx, D.vy, D.vz, D.vw].forEach((f, i) => cv.add(f).writeDouble(st.own[i]));
+                    }
+                    styled.delete(k);
+                }
+            };
+            // the notification at the screen's centre: its offset in its
+            // container's layout, the gap between where it would be and the
+            // centre (the HUD's size, its scale)
+            const noteTick = function () {
+                const n = invite.note;
+                if (!n) return;
+                if (typeName(n) !== "ui.notify.ConfirmNotify" || n.add(OFF.Object.parent).readPointer().isNull()) {
+                    invite.note = null;
+                    return;
+                }
+                const st = invite.noteSt;
+                if (!inviteCenter) {
+                    if (st.off) moveInFlow(n, st, "off", 0, 0);
+                    return;
+                }
+                const hud = grp.hud;
+                if (!hud) return;
+                const s = hud.add(D.matA).readDouble() || 1;
+                const sw = hud.add(D.flowCW).readDouble() * s, sh = hud.add(D.flowCH).readDouble() * s;
+                const w = n.add(D.flowCW).readDouble() * s, h = n.add(D.flowCH).readDouble() * s;
+                if (!(sw > 0) || !(w > 0)) return;
+                // where it would be without our offset (screen px)
+                const off = st.off;
+                const ox = off ? (off.x - off.bx) * s : 0, oy = off ? (off.y - off.by) * s : 0;
+                const nx = n.add(D.absX).readDouble() - ox, ny = n.add(D.absY).readDouble() - oy;
+                const hx = hud.add(D.absX).readDouble(), hy = hud.add(D.absY).readDouble();
+                const dx = Math.round((hx + (sw - w) / 2 - nx) / s), dy = Math.round((hy + (sh - h) / 2 - ny) / s);
+                moveInFlow(n, st, "off", dx, dy);
+            };
+            const inviteTick = function () {
+                noteTick();
+                const d = invite.dlg;
+                if (!d) return;
+                // closed (answered): forgotten, its parts the game's to free
+                if (typeName(d) !== "ui.win.BaseDialog" || d.add(OFF.Object.parent).readPointer().isNull()) {
+                    invite.dlg = invite.own = null;
+                    styled.clear();
+                    return;
+                }
+                if (inviteMin && !invite.own && setVisibleFn) invite.own = inviteStyle(d);
+                else if (!inviteMin && invite.own) inviteUndo();
+                // its texts light: their colour (their base, the game's
+                // brown) times what lifts it to LIGHT, each frame
+                if (invite.own) {
+                    for (const [t, c, base] of invite.own.texts) {
+                        if (typeName(t) !== "ui.comp.FmtText") continue;
+                        const v = t.add(D.color).readPointer();
+                        if (!v || v.isNull()) continue;
+                        // its base light (its brown in its markup): the brown
+                        // seen on screen (2026-10-16) instead
+                        let b = [base >> 16 & 255, base >> 8 & 255, base & 255];
+                        if (Math.min(b[0], b[1], b[2]) > 200) b = [0x8A, 0x62, 0x52];
+                        const l = [LIGHT >> 16 & 255, LIGHT >> 8 & 255, LIGHT & 255];
+                        [D.vx, D.vy, D.vz].forEach((f, i) =>
+                            v.add(f).writeDouble(c[i] * Math.min(8, l[i] / Math.max(16, b[i]))));
+                    }
+                }
+            };
+            restorers.push(function () {
+                try { inviteUndo(); } catch (e) {}
+                try {
+                    if (invite.note && invite.noteSt.off && typeName(invite.note) === "ui.notify.ConfirmNotify")
+                        moveInFlow(invite.note, invite.noteSt, "off", 0, 0);
+                } catch (e) {}
+            });
             // ---- the game's chat (ui.Hud.chat): hidden but while typed in ----
             const chat = { box: null };
             const chatTick = function () {
@@ -2922,6 +3190,7 @@ function main() {
                 try { groupTick(); } catch (e) { log("group failed: " + e); }
                 try { chatTick(); } catch (e) { log("chat failed: " + e); }
                 try { menuBarTick(); } catch (e) { log("menu shortcuts failed: " + e); }
+                try { inviteTick(); } catch (e) { log("group invitation failed: " + e); invite.dlg = null; }
             };
             if (colorFi != null && hltI32) {
                 Interceptor.attach(base.add(colorFi * 8).readPointer(), {

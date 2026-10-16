@@ -236,10 +236,11 @@ class AppWindow:
                            "luck": native_overlay.NativeLuck,
                            "goals": native_overlay.NativeGoals,
                            "currencies": native_overlay.NativeCurrencies,
-                           "launcher": native_overlay.NativeLauncher}[oid]
+                           "launcher": native_overlay.NativeLauncher,
+                           "group": native_overlay.NativeGroup}[oid]
                     self.overlays.append(cls(oid, pipe, self._lang, i18n.catalog,
                                              TIP, PICKER))
-                elif oid in ("meterheal", "currencies", "minimap", "quest", "launcher"):
+                elif oid in ("meterheal", "currencies", "minimap", "quest", "launcher", "group"):
                     continue        # the native overlays only
                 else:
                     self.overlays.append(Overlay(oid, pipe, self._theme,
@@ -697,7 +698,7 @@ CURSOR_WHY = [""]       # why cursor_captured() last said held, for the log
 SW_HIDE, SW_SHOWNOACTIVATE = 0, 4
 HWND_TOPMOST = ctypes.c_void_p(-1)   # a handle: a plain -1 would go out as 32 bits
 OVERLAY_IDS = ("meter", "meterheal", "goals", "luck", "bonus", "currencies", "minimap", "quest",
-               "launcher")
+               "group", "launcher")
 # the overlays drawn natively (native_overlay: no WebView2, see why there),
 # the meter's tip and the menu's button too; FAREVER_WEBVIEW_OVERLAYS=1
 # keeps them all pages, as before. The goals' chooser stays a page: it
@@ -705,7 +706,7 @@ OVERLAY_IDS = ("meter", "meterheal", "goals", "luck", "bonus", "currencies", "mi
 # see-through.
 NATIVE = (set() if os.environ.get("FAREVER_WEBVIEW_OVERLAYS")
           else {"meter", "meterheal", "luck", "goals", "bonus", "currencies", "minimap", "quest",
-                "launcher", "tip", "esc"})
+                "group", "launcher", "tip", "esc"})
 
 
 def _bonus_art():
