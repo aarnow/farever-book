@@ -59,6 +59,8 @@ english.LaunchNow=Launch Farever Book now
 french.LaunchNow=Lancer Farever Book maintenant
 english.StillOpen=Farever Book is still open.%n%nRight-click its icon in the notification area (near the clock, click the ^ arrow if you don't see it) and choose "Stop the meter".%n%nStopping it this way detaches it cleanly from Farever. Then click Retry to continue %1.
 french.StillOpen=Farever Book est encore ouvert.%n%nFais un clic droit sur son icône dans la zone de notification (près de l'horloge, clique sur la flèche ^ si tu ne la vois pas) et choisis « Arrêter le compteur ».%n%nL'arrêter ainsi le détache proprement de Farever. Clique ensuite sur Réessayer pour continuer %1.
+english.StillBusy=Farever Book is still closing (its files are in use). Wait a few seconds, check that no FareverBook.exe is left in the Task Manager, then run the installation again.
+french.StillBusy=Farever Book est encore en train de se fermer (ses fichiers sont utilisés). Patiente quelques secondes, vérifie qu'aucun FareverBook.exe ne reste dans le Gestionnaire des tâches, puis relance l'installation.
 english.TheInstall=the installation
 french.TheInstall=l'installation
 english.TheUninstall=the uninstallation
@@ -181,6 +183,53 @@ begin
      and (CompareText(MovedFrom, RemoveBackslashUnlessRoot(ExpandConstant('{app}'))) <> 0)
      and (FileExists(MovedFrom + '\FareverBook.exe') or FileExists(MovedFrom + '\FareverFrance.exe')) then
     DelTree(MovedFrom, True, True, True);
+end;
+
+{ The app's executable still open by one of its processes (the app, its
+  overlays' host): it can't be opened for writing. The tray icon goes first,
+  the processes may end a moment later (the game given back its display,
+  the overlays closed): copying then failed, and a silent update (its
+  messages suppressed) rolled back (2026-10-16). }
+const
+  GENERIC_WRITE = $40000000;
+  OPEN_EXISTING = 3;
+  INVALID_HANDLE_VALUE = -1;
+
+function CreateFileW(Name: String; Access, Share: Cardinal; Security: Cardinal;
+  Disposition, Flags: Cardinal; Template: Cardinal): Integer;
+  external 'CreateFileW@kernel32.dll stdcall';
+function CloseHandle(Handle: Integer): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+function FileInUse(const Path: String): Boolean;
+var
+  H: Integer;
+begin
+  Result := False;
+  if not FileExists(Path) then
+    Exit;
+  H := CreateFileW(Path, GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  if H = INVALID_HANDLE_VALUE then
+    Result := True
+  else
+    CloseHandle(H);
+end;
+
+{ Before copying: up to 30 s for the app's processes to end. }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Exe: String;
+  i: Integer;
+begin
+  Result := '';
+  Exe := AddBackslash(ExpandConstant('{app}')) + '{#AppExe}';
+  for i := 1 to 120 do
+  begin
+    if not FileInUse(Exe) then
+      Exit;
+    Sleep(250);
+  end;
+  Result := CustomMessage('StillBusy');
 end;
 
 function InitializeSetup(): Boolean;
